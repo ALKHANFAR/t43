@@ -32,7 +32,7 @@ window.addEventListener("DOMContentLoaded",function(){
   }
   function card(p){
     var ini=p.n.replace(/[^A-Za-z0-9\u0600-\u06FF]/g,"").slice(0,2)||"•";
-    return '<div class="card"><span class="card__i"><img src="'+p.logo+'" alt="" loading="lazy" data-fb="1"></span>'+
+    return '<div class="card"><span class="card__i"><img src="'+p.logo+'" alt="" loading="lazy" crossorigin="anonymous" referrerpolicy="no-referrer" data-fb="1"></span>'+
       '<div><div class="card__n">'+p.n+'</div><div class="card__d" title="'+(p.d||"").replace(/"/g,"&quot;")+'">'+(p.d||"")+'</div><div class="card__c">'+(lang==="ar"?p.c:CAT_EN[p.c])+'</div></div></div>';
   }
   function render(){

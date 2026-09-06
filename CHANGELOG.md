@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/), versioning: [SemVer](https://semver.org/).
 
+## [1.3.0] — 2026-09-06
+### Changed
+- One `site.js` for both languages (strings picked by `<html lang>`); `index.js` and `ar.js` removed
+- Logo and icon moved from inline base64 to `assets/wordmark.png` and `assets/icon.png` (preloaded, cached across pages); HTML payload roughly halved on every page
+- Arabic metric label reads "4 موظفين"
+- Integration logos requested without cookies (`crossorigin=anonymous`, no referrer); catalog grid reserves height (CLS 0)
+- Demo stage has an intrinsic size before JS scales it (CLS 0); demo page has a main landmark
+- Lighthouse (mobile): performance 95–100 on every page, accessibility / best practices 100, SEO 100 on indexable pages
+
 ## [1.2.0] — 2026-09-06
 ### Changed
 - Typography: 6-step type scale instead of 35 ad-hoc sizes; display weight 300 (was 200); micro-label tracking capped at .08em; Arabic display line-height 1.3

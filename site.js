@@ -1,5 +1,5 @@
 /* ==========================================================================
-   CONFIG — edit here only
+   CONFIG — edit here only (shared by index.html and ar.html; strings below are picked by <html lang>)
    ========================================================================== */
 var CONFIG = {
   // 1) Google Sheet — الحل الأبسط والموصى به.
@@ -20,6 +20,22 @@ var CONFIG = {
 
 (function () {
   "use strict";
+  var AR = document.documentElement.lang === "ar";
+  var L = AR ? {
+    brief: "أبي أحد يتابع كل عميل جديد خلال خمس دقائق، ويطالب بالفواتير اللي تأخرت أكثر من سبعة أيام، ويرد على أسئلة الدعم المتكررة على طول.",
+    typeMs: 26,
+    reserving: "جاري الحجز…",
+    mailSubject: "حجز مقعد — ",
+    mailBody: ["طلب حجز مقعد", "الاسم", "البريد", "الجوال", "الشركة", "الدور"],
+    notifySubject: "تسجيل جديد - "
+  } : {
+    brief: "Follow up with every new lead within five minutes, chase invoices more than seven days late, and answer the support questions we get over and over.",
+    typeMs: 22,
+    reserving: "Reserving…",
+    mailSubject: "Seat request - ",
+    mailBody: ["Seat request", "Name", "Email", "Phone", "Company", "Role"],
+    notifySubject: "New seat request - "
+  };
   var reduce = (window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false);
   var $ = function (s, c) { return (c || document).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
@@ -62,7 +78,7 @@ var CONFIG = {
   $$("[data-count]").forEach(function (el) { cio.observe(el); });
 
   /* live console */
-  var BRIEF = "Follow up with every new lead within five minutes, chase invoices more than seven days late, and answer the support questions we get over and over.";
+  var BRIEF = L.brief;
   var typed = $("#typed"), caret = $("#caret"), status = $("#status"), cfoot = $("#cfoot"), clock = $("#clock");
   var units = $$(".unit"), timers = [], tick = null, sec = 0;
 
@@ -88,7 +104,7 @@ var CONFIG = {
     (function type() {
       if (i <= BRIEF.length) {
         typed.textContent = BRIEF.slice(0, i++);
-        timers.push(setTimeout(type, 22));
+        timers.push(setTimeout(type, L.typeMs));
       } else {
         caret.classList.add("off");
         status.classList.add("on");
@@ -120,7 +136,8 @@ var CONFIG = {
   tabs.forEach(function (t, i) {
     t.addEventListener("click", function () { select(i); });
     t.addEventListener("keydown", function (e) {
-      var d = e.key === "ArrowDown" || e.key === "ArrowRight" ? 1 : (e.key === "ArrowUp" || e.key === "ArrowLeft" ? -1 : 0);
+      var next = AR ? "ArrowLeft" : "ArrowRight", prev = AR ? "ArrowRight" : "ArrowLeft";
+      var d = (e.key === "ArrowDown" || e.key === next) ? 1 : ((e.key === "ArrowUp" || e.key === prev) ? -1 : 0);
       if (!d) return;
       e.preventDefault();
       var n = (i + d + tabs.length) % tabs.length;
@@ -193,14 +210,15 @@ var CONFIG = {
     $("#done").scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
   }
   function mailtoFallback(d) {
-    var body = "Seat request%0D%0A%0D%0A"
-      + "Name: " + d.name + "%0D%0A"
-      + "Email: " + d.email + "%0D%0A"
-      + "Phone: " + d.country_code + " " + d.phone + "%0D%0A"
-      + "Company: " + (d.company || "-") + "%0D%0A"
-      + "Role: " + d.role;
+    var M = L.mailBody;
+    var body = M[0] + "%0D%0A%0D%0A"
+      + M[1] + ": " + d.name + "%0D%0A"
+      + M[2] + ": " + d.email + "%0D%0A"
+      + M[3] + ": " + d.country_code + " " + d.phone + "%0D%0A"
+      + M[4] + ": " + (d.company || "-") + "%0D%0A"
+      + M[5] + ": " + d.role;
     window.location.href = "mailto:" + CONFIG.fallbackEmail
-      + "?subject=" + encodeURIComponent("Seat request - " + d.name) + "&body=" + body;
+      + "?subject=" + encodeURIComponent(L.mailSubject + d.name) + "&body=" + body;
   }
   form.addEventListener("submit", function (e) {
     e.preventDefault();
@@ -225,7 +243,7 @@ var CONFIG = {
 
     btn.disabled = true;
     var label = btn.innerHTML;
-    btn.textContent = "Reserving…";
+    btn.textContent = L.reserving;
 
     function post(url, payload) {
       return fetch(url, {
@@ -269,7 +287,7 @@ var CONFIG = {
     if (CONFIG.web3formsKey) {
       jobs.push(post("https://api.web3forms.com/submit", {
         access_key: CONFIG.web3formsKey,
-        subject: "New seat request - " + data.name,
+        subject: L.notifySubject + data.name,
         from_name: "Siyadah AI",
         replyto: data.email,
         Name: data.name,

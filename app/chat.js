@@ -299,7 +299,7 @@ var I = {
   function tcard(t){
     var st=t.on?'<span class="st"><i></i>مربوطة</span>':(t.sug?'<span class="st st--w">'+t.sug+'</span>':'');
     var ini=t.n.replace(/[^A-Za-z\u0600-\u06FF0-9]/g,"").slice(0,2)||"•";
-    return '<div class="tl'+(t.on?' tl--on':'')+'"><span class="tl__i"><img src="'+t.logo+'" alt="" loading="lazy" data-fb="1"></span><div><div class="tl__n">'+t.n+'</div>'+
+    return '<div class="tl'+(t.on?' tl--on':'')+'"><span class="tl__i"><img src="'+t.logo+'" alt="" loading="lazy" crossorigin="anonymous" referrerpolicy="no-referrer" data-fb="1"></span><div><div class="tl__n">'+t.n+'</div>'+
       '<div class="tl__d">'+(t.d||t.c)+(t.on?'<br><span class="who" style="direction:rtl">يستخدمها: '+t.by+'</span>':'')+'</div>'+
       '<div class="tl__f">'+(t.on?'<button class="lnk">إدارة</button>':'<button class="lnk lnk--fill" data-c="'+t.s+'">اربط</button>')+st+'</div></div></div>';
   }
@@ -331,7 +331,7 @@ var I = {
       var m=e.target.closest("#more"); if(m){ tshown+=24; renderThread(); return; }
       var c=e.target.closest("[data-c]"); if(!c) return;
       picked=TOOLS.filter(function(x){return x.s===c.dataset.c})[0];
-      $("#mI").innerHTML='<img src="'+picked.logo+'" alt="" style="width:26px;height:26px;object-fit:contain">'; $("#mN").textContent=picked.n; $("#mD").textContent="بعد الربط يقدر موظفوك يستخدمون "+picked.n+". "+picked.d+".";
+      $("#mI").innerHTML='<img src="'+picked.logo+'" alt="" crossorigin="anonymous" referrerpolicy="no-referrer" style="width:26px;height:26px;object-fit:contain">'; $("#mN").textContent=picked.n; $("#mD").textContent="بعد الربط يقدر موظفوك يستخدمون "+picked.n+". "+picked.d+".";
       openModal();
     });
   }

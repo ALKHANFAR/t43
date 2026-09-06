@@ -1,4 +1,4 @@
-# سيادة — تقرير الامتثال للمعايير (6 سبتمبر 2026 · v1.2.0)
+# سيادة — تقرير الامتثال للمعايير (6 سبتمبر 2026 · v1.3.0)
 
 كل رقم هنا مُنتَج بأداة قابلة لإعادة التشغيل (`npm test`)، وكل حدّ للأداة مذكور صراحة. ما لا تقيسه الأدوات مكتوب على أنه غير مقيس.
 
@@ -69,17 +69,30 @@ title · description بطول مناسب · canonical واحد لكل صفحة �
 
 ## 7) الأداء — ميزانية النقل (gzip)
 
-| الصفحة | HTML | JS | الخطوط (woff2، مرة واحدة ثم cache) |
+| الصفحة | HTML | JS | صور وخطوط (تُحمَّل مرة ثم cache لكل الصفحات) |
 |---|---|---|---|
-| index.html | 52 KB | 4 KB | Jost + Inter (Latin) |
-| ar.html | 54 KB | 4 KB | Readex Pro + IBM Plex Sans Arabic (Arabic) |
-| integrations.html | 43 KB | 2 + 27 KB (كتالوج 717 أداة) | Jost + Inter |
-| demo.html | 47 KB | 4 KB | Readex Pro |
-| app/chat.html | 78 KB | 12 + 27 KB (الكتالوج) | Readex Pro + IBM Plex |
-| app/onboard.html | 75 KB | 4 KB | Readex Pro + IBM Plex |
+| index.html | 13 KB | 5 KB (site.js) | الشعار 30 KB + Jost/Inter |
+| ar.html | 14 KB | 5 KB (site.js) | الشعار + Readex Pro/IBM Plex Sans Arabic |
+| integrations.html | 4 KB | 2 + 27 KB (كتالوج 717 أداة) | الشعار + Jost/Inter |
+| demo.html | 8 KB | 4 KB | الشعار + Readex Pro |
+| app/chat.html | 9 KB | 12 + 27 KB (الكتالوج) | الشعار + Readex Pro/IBM Plex |
+| app/onboard.html | 6 KB | 4 KB | الشعار + Readex Pro/IBM Plex |
 
-بدون إطار عمل، بدون jQuery، بدون خط أيقونات. الخطوط محلية (Jost و Inter و Readex Pro كخطوط متغيرة: ملف واحد لكل عائلة/subset) مع `preload` للخط الحرج و `font-display:swap`، فلا يوجد مورد خارجي يحجب الرسم. كل `<script>` بـ `defer`. الشعارات lazy.
-غير مقيس هنا: Core Web Vitals على أجهزة حقيقية.
+بدون إطار عمل، بدون jQuery، بدون خط أيقونات. الشعار والأيقونة ملفان في `assets/` بدل base64 مضمّن (كان يضاعف حجم كل صفحة ولا يُخزَّن مؤقتًا). الخطوط محلية (Jost و Inter و Readex Pro كخطوط متغيرة: ملف واحد لكل عائلة/subset) مع `preload` للخط الحرج والشعار و `font-display:swap`، فلا يوجد مورد خارجي يحجب الرسم. كل `<script>` بـ `defer`. الشعارات lazy.
+درجات Lighthouse (mobile emulation, headless Chrome) في الجدول أدناه. غير مقيس هنا: Core Web Vitals على أجهزة حقيقية.
+
+| الصفحة | Performance | Accessibility | Best Practices | SEO |
+|---|---|---|---|---|
+| index.html | 99 | 100 | 100 | 100 |
+| ar.html | 99 | 100 | 100 | 100 |
+| integrations.html | 98 | 100 | 100 | 100 |
+| demo.html | 97 | 100 | 100 | 100 |
+| privacy.html | 98 | 100 | 100 | 100 |
+| 404.html | 100 | 100 | 100 | — (noindex) |
+| app/chat.html | 95 | 100 | 100 | — (noindex) |
+| app/onboard.html | 99 | 100 | 100 | — (noindex) |
+
+CLS = 0 على كل الصفحات، TBT = 0 ms. صفحات التطبيق و404 موسومة `noindex` عمدًا، لذلك لا تنطبق عليها درجة SEO.
 
 ## 8) التدويل — i18n
 
