@@ -3,7 +3,7 @@
   var $=function(s,c){return (c||document).querySelector(s)};
   var $$=function(s,c){return Array.prototype.slice.call((c||document).querySelectorAll(s))};
   var step=1, TOTAL=6, picked={}, timers=[];
-  var AR=["١","٢","٣","٤","٥","٦"];
+  var AR=["1","2","3","4","5","6"];
 
   var ROLES={
     sales:  {n:"سعد", ini:"س", r:"متابعة المبيعات", brief:"تابع كل عميل جديد خلال خمس دقائق. اسأله وش يحتاج، وإذا كان جاهزًا احجز له موعدًا معي.", rules:["ما يعطي خصمًا بدون موافقتك","يتابع 3 مرات ثم يتوقف"], tools:["واتساب بزنس","التقويم"]},
@@ -59,7 +59,7 @@
 
   function show(){
     $$(".step").forEach(function(s){ s.classList.toggle("on", +s.dataset.step===step); });
-    $("#stepLbl").textContent = step<6 ? AR[step-1]+" من ٥" : "جاهز";
+    $("#stepLbl").textContent = step<6 ? AR[step-1]+" من 5" : "جاهز";
     $("#prog").style.width = (Math.min(step,5)/5*100)+"%";
     $("#back").style.visibility = (step===1||step===4||step===6) ? "hidden":"visible";
     var nx=$("#next"), sp=$("#sp");

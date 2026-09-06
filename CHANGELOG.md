@@ -1,6 +1,16 @@
 # Changelog
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/), versioning: [SemVer](https://semver.org/).
 
+## [1.2.0] — 2026-09-06
+### Changed
+- Typography: 6-step type scale instead of 35 ad-hoc sizes; display weight 300 (was 200); micro-label tracking capped at .08em; Arabic display line-height 1.3
+- Copy (EN/AR): the repeated "not X, but Y" construction reduced to one instance; em-dashes in prose halved; one tagline, one CTA ("Reserve your seat" / «احجز مقعدك»), one stage name ("Private beta" / «البيتا الخاصة»)
+- Arabic: grammar and register fixes (14 ساعة، أبي أحد، active voice in the sales card), Western digits everywhere, chip typos fixed
+- Security and privacy claims made accurate: no "end-to-end" or "SOC 2" wording; privacy policy states cross-border processing (Activepieces Cloud, Google) under PDPL; Arabic policy in formal register
+- Terminology: the product unit is "AI employee" / «موظف» in marketing copy
+- Seat meter, countdown and queue position are now driven by the backend (`CONFIG.seatsClaimed`, `CONFIG.deadline`) and hidden until real values exist; no illustrative numbers are shown
+- Chat prototype: canned reply no longer says "this is a design mockup"
+
 ## [1.1.0] — 2026-09-06
 ### Added
 - Lighthouse accessibility audit in real Chrome (`npm run a11y:chrome`), run in CI alongside axe; contrast is now actually measured

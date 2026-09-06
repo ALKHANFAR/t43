@@ -14,8 +14,8 @@ var CONFIG = {
 
   fallbackEmail: "anis@sondos-ai.com",
   seatsTotal: 500,
-  seatsClaimed: 390,                       // ← illustrative, replace with the real number
-  deadline: new Date(2026, 8, 30, 23, 59)  // month is 0-based: 8 = September
+  seatsClaimed: null,                      // real number from the backend; null hides the seat meter and queue position
+  deadline: null                           // real closing date from the backend; null hides the countdown
 };
 
 (function () {
@@ -145,19 +145,21 @@ var CONFIG = {
   });
 
   /* seats + countdown */
-  var claimed = Math.min(CONFIG.seatsClaimed, CONFIG.seatsTotal);
+  var hasSeats = typeof CONFIG.seatsClaimed === "number";
+  var claimed = hasSeats ? Math.min(CONFIG.seatsClaimed, CONFIG.seatsTotal) : 0;
   var left = Math.max(CONFIG.seatsTotal - claimed, 0);
-  $("#left").textContent = left;
-  $("#leftMini").textContent = left;
+  if (!hasSeats) { $(".meter").hidden = true; $(".done__no").hidden = true; $(".sticky__t").textContent = $(".sticky__t").dataset.plain; }
+  if (hasSeats) { $("#left").textContent = left; $("#leftMini").textContent = left; }
   var mio = new IntersectionObserver(function (es) {
     if (!es[0].isIntersecting) return;
     countTo($("#claimed"), claimed, 1500);
     $("#barfill").style.width = (claimed / CONFIG.seatsTotal * 100) + "%";
     mio.disconnect();
   }, { threshold: 0.4 });
-  mio.observe($(".meter"));
+  if (hasSeats) mio.observe($(".meter"));
 
   function countdown() {
+    if (!CONFIG.deadline) { $("#cd").hidden = true; return; }
     var ms = CONFIG.deadline - new Date();
     if (ms < 0) ms = 0;
     $('[data-cd="d"]').textContent = two(Math.floor(ms / 864e5));
@@ -187,7 +189,7 @@ var CONFIG = {
   function succeed() {
     card.classList.add("sent");
     $("#done").classList.add("on");
-    $("#rank").textContent = "#" + (claimed + 1);
+    if (hasSeats) $("#rank").textContent = "#" + (claimed + 1);
     $("#done").scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
   }
   function mailtoFallback(d) {
