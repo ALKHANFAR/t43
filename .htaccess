@@ -1,0 +1,46 @@
+# ============ سيادة — إعدادات الاستضافة ============
+
+# 1) حماية ملفات البيانات والسجلات
+<FilesMatch "\.(csv|log)$">
+  Require all denied
+</FilesMatch>
+
+# 2) رؤوس الأمان (OWASP Secure Headers)
+<IfModule mod_headers.c>
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+  Header always set Cross-Origin-Opener-Policy "same-origin"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: https://cdn.activepieces.com; connect-src 'self' https://cloud.activepieces.com https://api.web3forms.com https://script.google.com https://script.googleusercontent.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self' https://api.web3forms.com; upgrade-insecure-requests"
+  Header unset X-Powered-By
+</IfModule>
+
+# 3) إجبار HTTPS و www→بدون
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} off
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+  RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+  RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# 4) ضغط
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript text/plain application/json image/svg+xml
+</IfModule>
+
+# 5) تخزين مؤقت
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/html "access plus 1 hour"
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+  ExpiresByType image/jpeg "access plus 30 days"
+  ExpiresByType image/png "access plus 30 days"
+</IfModule>
+
+# 6) صفحة 404 والبداية
+ErrorDocument 404 /404.html
+DirectoryIndex index.html

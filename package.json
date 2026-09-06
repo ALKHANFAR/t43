@@ -1,0 +1,13 @@
+{
+  "name": "siyadah-site",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Siyadah AI — public site and product prototype",
+  "scripts": {
+    "validate": "html-validate index.html ar.html integrations.html demo.html privacy.html 404.html app/chat.html app/onboard.html app/demo.html",
+    "a11y": "node scripts/a11y.js index.html ar.html integrations.html privacy.html app/chat.html app/onboard.html",
+    "lint:js": "node --check index.js && node --check ar.js && node --check integrations.js && node --check demo.js && node --check app/chat.js && node --check app/onboard.js && node --check app/demo.js",
+    "test": "npm run lint:js && npm run validate && npm run a11y"
+  },
+  "devDependencies": { "axe-core": "^4.10.0", "html-validate": "^9.0.0", "jsdom": "^26.0.0" }
+}
