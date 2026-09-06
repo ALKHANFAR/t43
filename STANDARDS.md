@@ -26,6 +26,8 @@
 
 ## 2) تباين الألوان — WCAG 2.1 (محسوب من القيم الفعلية في CSS)
 
+نفس القيم مستخدمة في الصفحات الثماني كلها، بما فيها حالات لا يراها Lighthouse لأنها مخفية وقت الفحص (مشاهد الديمو قبل التشغيل).
+
 | الاستخدام | الزوج | النسبة | المستوى |
 |---|---|---|---|
 | نص أساسي | `#0A0A0A` على `#FFFFFF` | 19.8:1 | AAA |
@@ -45,7 +47,7 @@
 `html-validate:recommended` على الصفحات الثماني: **0 أخطاء**.
 القواعد المُطفأة في `.htmlvalidate.json` هي قواعد أسلوب فقط، وليست قواعد صحة أو وصولية:
 `no-inline-style`, `no-trailing-whitespace`, `long-title`, `attribute-boolean-style`, `void-style`, `no-raw-characters`, `attr-quotes`, `prefer-native-element`, `require-sri` (لا موارد خارجية أصلًا), `prefer-button`.
-كل `<button>` يحمل `type` صريحًا، ولا أدوار ARIA زائدة.
+كل `<button>` في HTML الثابت يحمل `type` صريحًا (الأزرار المولّدة بـ JS خارج أي `<form>`)، ولا أدوار ARIA زائدة.
 
 ## 4) الأمان
 
@@ -76,7 +78,7 @@ title · description بطول مناسب · canonical واحد لكل صفحة �
 | app/chat.html | 78 KB | 12 + 27 KB (الكتالوج) | Readex Pro + IBM Plex |
 | app/onboard.html | 75 KB | 4 KB | Readex Pro + IBM Plex |
 
-بدون إطار عمل، بدون jQuery، بدون خط أيقونات. الخطوط محلية مع `preload` للخط الحرج و `font-display:swap`، فلا يوجد مورد خارجي يحجب الرسم. كل `<script>` بـ `defer`. الشعارات lazy.
+بدون إطار عمل، بدون jQuery، بدون خط أيقونات. الخطوط محلية (Jost و Inter و Readex Pro كخطوط متغيرة: ملف واحد لكل عائلة/subset) مع `preload` للخط الحرج و `font-display:swap`، فلا يوجد مورد خارجي يحجب الرسم. كل `<script>` بـ `defer`. الشعارات lazy.
 غير مقيس هنا: Core Web Vitals على أجهزة حقيقية.
 
 ## 8) التدويل — i18n
@@ -86,8 +88,8 @@ title · description بطول مناسب · canonical واحد لكل صفحة �
 ## 9) المستودع — معايير الهندسة
 
 LICENSE · SECURITY.md · CHANGELOG.md (Keep a Changelog + SemVer) · .editorconfig · .nvmrc · `.nojekyll` · قالب Issues · `package-lock.json` متتبَّع.
-**CI (GitHub Actions):** `npm ci` من ملف القفل + cache، ثم `npm test` = فحص JS + صحة HTML + axe (jsdom) + Lighthouse في Chrome. يفشل البناء عند أي مخالفة.
-لا PHP، لا أسرار، لا كلمات مرور في المستودع. كتالوج الأدوات (`pieces.js`) ملف واحد بـ 717 أداة، لكل منها شعار ووصف من سطر واحد.
+**CI (GitHub Actions):** `npm ci` من ملف القفل + cache، ثم `npm test` = فحص JS + سلامة الكتالوج + صحة HTML + axe (jsdom) + Lighthouse في Chrome. يفشل البناء عند أي مخالفة.
+لا PHP، لا أسرار، لا كلمات مرور في المستودع. كتالوج الأدوات (`pieces.js`) ملف واحد بـ 717 أداة، لكل منها شعار ووصف من سطر واحد، ويتحقق منه `npm run catalog` في CI (لا وصف فارغ أو مبتور، والشعارات من مصدر واحد).
 
 ## إعادة التشغيل
 ```bash

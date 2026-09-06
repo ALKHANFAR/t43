@@ -25,8 +25,8 @@
 <meta property="og:image" content="https://siyadah-ai.com/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
 
-<link rel="preload" href="fonts/jost-200-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/inter-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="fonts.css">
 
 <style>
@@ -142,7 +142,8 @@ h1,h2,h3{font-family:var(--f-display);font-weight:200;letter-spacing:-.025em;lin
 .nav__links a{transition:color .25s}
 .nav__links a:hover{color:var(--accent)}
 .nav__lang{font-family:var(--f-display);letter-spacing:.16em;font-size:.74rem}
-.nav .btn{padding:11px 22px;font-size:.88rem}
+.nav .btn{padding:11px 22px;font-size:.88rem;white-space:nowrap}
+@media (max-width:640px){.nav .btn{padding:9px 14px;font-size:.82rem}}
 
 /* ==========================================================================
    hero
@@ -150,7 +151,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:200;letter-spacing:-.025em;lin
 .hero{padding:clamp(130px,16vw,180px) 0 clamp(50px,7vw,80px)}
 .hero__grid{display:grid;grid-template-columns:1fr;gap:clamp(44px,6vw,84px)}
 .hero h1{margin-bottom:34px;max-width:15ch}
-.hero__row{display:grid;grid-template-columns:1.15fr 1fr;gap:clamp(30px,5vw,72px);align-items:end}
+.hero__row{display:grid;grid-template-columns:1.15fr 1fr;gap:clamp(30px,5vw,72px);align-items:start}
 .hero__cta{display:flex;flex-wrap:wrap;gap:14px;margin-top:34px}
 .hero__fine{margin:20px 0 0;font-size:.83rem;color:var(--ash);display:flex;flex-wrap:wrap;gap:6px 22px}
 
@@ -161,7 +162,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:200;letter-spacing:-.025em;lin
 .metric__l{font-size:.8rem;color:var(--ash);margin-top:12px;max-width:19ch;line-height:1.5}
 
 /* ---------- live console ---------- */
-.console{border:1px solid var(--hair);background:var(--paper);display:flex;flex-direction:column}
+.console{border:1px solid var(--hair);background:var(--paper);display:flex;flex-direction:column;align-self:end}
 .console__bar{display:flex;align-items:center;gap:11px;padding:14px 18px;border-bottom:1px solid var(--hair);
   font-family:var(--f-display);font-size:.7rem;letter-spacing:.24em;text-transform:uppercase;color:var(--ash)}
 .console__bar .drop{width:12px;color:var(--ink)}

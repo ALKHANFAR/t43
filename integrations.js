@@ -33,7 +33,7 @@ window.addEventListener("DOMContentLoaded",function(){
   function card(p){
     var ini=p.n.replace(/[^A-Za-z0-9\u0600-\u06FF]/g,"").slice(0,2)||"•";
     return '<div class="card"><span class="card__i"><img src="'+p.logo+'" alt="" loading="lazy" data-fb="1"></span>'+
-      '<div><div class="card__n">'+p.n+'</div><div class="card__d">'+(p.d||"")+'</div><div class="card__c">'+(lang==="ar"?p.c:CAT_EN[p.c])+'</div></div></div>';
+      '<div><div class="card__n">'+p.n+'</div><div class="card__d" title="'+(p.d||"").replace(/"/g,"&quot;")+'">'+(p.d||"")+'</div><div class="card__c">'+(lang==="ar"?p.c:CAT_EN[p.c])+'</div></div></div>';
   }
   function render(){
     var f=P.filter(function(p){ return (cat==="all"||p.c===cat) && (!q||(p.n+" "+p.d+" "+p.s).toLowerCase().indexOf(q)>-1); });
@@ -47,6 +47,6 @@ window.addEventListener("DOMContentLoaded",function(){
   $("#more").addEventListener("click",function(){ shown+=36; render(); });
   $("#langBtn").addEventListener("click",function(){ lang=lang==="ar"?"en":"ar"; paint(); });
   document.addEventListener("keydown",function(e){ if(e.key==="/"&&document.activeElement!==$("#q")){ e.preventDefault(); $("#q").focus(); } });
-  if(/[\u0600-\u06FF]/.test(navigator.language)||location.search.indexOf("ar")>-1||location.hash==="#ar") lang="ar";
+  if(/[\u0600-\u06FF]/.test(navigator.language)||new URLSearchParams(location.search).get("lang")==="ar"||location.hash==="#ar") lang="ar";
   paint();
 });
