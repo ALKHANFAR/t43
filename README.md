@@ -17,5 +17,6 @@
 الرابط والإعدادات في بلوك `CONFIG` أول `index.js` و `ar.js`. لا يحتاج أي ملف على الخادم.
 
 ## ملاحظات
-- `pieces.js` لازم يكون بجانب `integrations.html` و `app/chat.html` (كتالوج Activepieces، 717 أداة).
+- `pieces.js` في الجذر هو كتالوج الأدوات (717 أداة، شعار + وصف لكل أداة) وتستخدمه `integrations.html` و `app/chat.html`.
+- الخطوط مستضافة محليًا في `fonts/` (لا طلبات لـ Google Fonts).
 - `.htaccess` يعمل على Apache فقط (cPanel). على GitHub Pages يُتجاهل بلا ضرر.

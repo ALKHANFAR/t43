@@ -1,64 +1,97 @@
-# سيادة — تقرير الامتثال للمعايير (6 سبتمبر 2026 · v1.0.0)
+# سيادة — تقرير الامتثال للمعايير (6 سبتمبر 2026 · v1.1.0)
 
-كل نتيجة هنا مُنتجة بأداة، لا بتقدير. الأوامر قابلة لإعادة التشغيل.
+كل رقم هنا مُنتَج بأداة قابلة لإعادة التشغيل (`npm test`)، وكل حدّ للأداة مذكور صراحة. ما لا تقيسه الأدوات مكتوب على أنه غير مقيس.
 
-## 1) الوصولية — WCAG 2.1 AA (axe-core 4.x)
-| الصفحة | مخالفات | فحوصات ناجحة |
+## 1) الوصولية — WCAG 2.1 AA
+
+فحصان مستقلان:
+
+**أ) Lighthouse داخل Chrome حقيقي** (`npm run a11y:chrome`) — يشمل التباين الفعلي والتركيز والأدوار.
+
+| الصفحة | Accessibility | فحوصات فاشلة |
 |---|---|---|
-| index.html | **0** | 43 |
-| ar.html | **0** | 43 |
-| integrations.html | **0** | 30 |
-| privacy.html | **0** | 17 |
-| app/chat.html | **0** | 24 |
-| app/onboard.html | **0** | 22 |
+| index.html | **100** | 0 |
+| ar.html | **100** | 0 |
+| integrations.html | **100** | 0 |
+| demo.html | **100** | 0 |
+| privacy.html | **100** | 0 |
+| 404.html | **100** | 0 |
+| app/chat.html | **100** | 0 |
+| app/onboard.html | **100** | 0 |
 
-القواعد المفحوصة: wcag2a, wcag2aa, wcag21a, wcag21aa, best-practice. تشمل: المعالم (landmarks)، التسميات، أسماء الروابط، ترتيب العناوين، التباين، السمات lang/dir.
+**ب) axe-core في jsdom** (`npm run a11y`) — فحص بنيوي سريع: 0 مخالفات على الصفحات الست الرئيسية.
+حدّ الأداة: jsdom بلا canvas، لذا لا يستطيع axe هنا حساب `color-contrast` ويُبلّغ عنه كـ "incomplete" بدل إخفائه. التباين مغطّى فعليًا بالفحص (أ) وبالجدول أدناه.
 
-## 2) تباين الألوان — WCAG 2.1
-| الاستخدام | النسبة | المستوى |
-|---|---|---|
-| حبر على أبيض `#0A0A0A` | 19.8:1 | AAA |
-| نص ثانوي `#767674` | 4.55:1 | AA |
-| الأخضر `#0B844B` على أبيض | 4.76:1 | AA |
-| الأخضر `#40E799` على أسود | 12.4:1 | AAA |
-| رمادي `#A5A5A2` على أسود | 8.0:1 | AAA |
+خارج نطاق الأدوات ومُعالَج يدويًا: نافذة ربط الأداة في `app/chat.html` تنقل التركيز داخلها، تحبس Tab، تُغلق بـ Escape، وتعيد التركيز للزر الفاتح. لا يوجد `outline:none` بلا بديل مرئي.
 
-## 3) صحة HTML — WHATWG (html-validate recommended)
-كل الصفحات السبع: **0 أخطاء**.
+## 2) تباين الألوان — WCAG 2.1 (محسوب من القيم الفعلية في CSS)
 
-## 4) الأمان — OWASP Secure Headers (في .htaccess)
-> **تنبيه:** هذه الرؤوس تُطبَّق على استضافة Apache (cPanel) فقط. GitHub Pages يتجاهل `.htaccess`، فعند النشر عليه لا تُرسل هذه الرؤوس من الخادم.
+| الاستخدام | الزوج | النسبة | المستوى |
+|---|---|---|---|
+| نص أساسي | `#0A0A0A` على `#FFFFFF` | 19.8:1 | AAA |
+| نص ثانوي `--ash` | `#6E6E6C` على `#FFFFFF` | 5.1:1 | AA |
+| نص ثانوي على الخلفية الفاتحة | `#6E6E6C` على `#F7F7FB` | 4.8:1 | AA |
+| نص ثانوي في التطبيق `--ash-2` | `#6F6F6D` على `#FFFFFF` | 5.0:1 | AA |
+| placeholder الحقول | `#757575` على `#FFFFFF` | 4.6:1 | AA |
+| الأخضر على أبيض / أبيض على الأخضر | `#0B844B` ↔ `#FFFFFF` | 4.8:1 | AA |
+| الأخضر الفاتح على أسود | `#40E799` على `#0A0A0A` | 12.4:1 | AAA |
+| رمادي على أسود | `#A5A5A2` على `#0A0A0A` | 8.0:1 | AAA |
+| وسوم قسم التكلفة على أسود | `#8C8C8A` على `#0A0A0A` | 5.9:1 | AA |
+| رسائل الخطأ | `#B03A2E` على `#FFFFFF` | 6.0:1 | AA |
+| حدود حقول الإدخال (غير نصي، 3:1) | `#8A8A88` على `#FFFFFF` | 3.5:1 | AA |
 
-HSTS (preload) · **CSP صارمة: `script-src 'self'` بلا `unsafe-inline` — كل السكربتات ملفات خارجية ولا معالجات مضمّنة** · قائمة مصادر صريحة · X-Content-Type-Options · X-Frame-Options · Referrer-Policy · Permissions-Policy · COOP · إجبار HTTPS · منع تحميل CSV/LOG · إخفاء X-Powered-By · `/.well-known/security.txt` (RFC 9116).
-النموذج: honeypot + تحقق خادم + تنقية المدخلات + منع التكرار. لا reCAPTCHA (لا بيانات لطرف ثالث).
+## 3) صحة HTML — WHATWG (html-validate)
+
+`html-validate:recommended` على الصفحات الثماني: **0 أخطاء**.
+القواعد المُطفأة في `.htmlvalidate.json` هي قواعد أسلوب فقط، وليست قواعد صحة أو وصولية:
+`no-inline-style`, `no-trailing-whitespace`, `long-title`, `attribute-boolean-style`, `void-style`, `no-raw-characters`, `attr-quotes`, `prefer-native-element`, `require-sri` (لا موارد خارجية أصلًا), `prefer-button`.
+كل `<button>` يحمل `type` صريحًا، ولا أدوار ARIA زائدة.
+
+## 4) الأمان
+
+**رؤوس الأمان** (في `.htaccess`): HSTS preload · CSP بـ `script-src 'self'` بلا `unsafe-inline` (كل السكربتات ملفات خارجية، لا معالجات مضمّنة) · `font-src 'self'` · X-Content-Type-Options · X-Frame-Options · Referrer-Policy · Permissions-Policy · COOP · إجبار HTTPS · إخفاء X-Powered-By · `/.well-known/security.txt` (RFC 9116).
+
+> **حدّ مهم:** هذه الرؤوس تُرسَل فقط عند الاستضافة على Apache (cPanel). **GitHub Pages يتجاهل `.htaccess` ولا يرسل أيًّا منها.** إذا كان النشر على GitHub Pages فالحماية الفعلية هي: لا سكربتات مضمّنة، لا موارد طرف ثالث، لا أسرار. لتفعيل الرؤوس فعليًا انقل الاستضافة إلى Cloudflare Pages أو Netlify (`_headers`).
+
+**النموذج:** honeypot + تحقق في المتصفح + تحقق داخل فلو Activepieces. لا reCAPTCHA. رابط الويب هوك عام بطبيعته (يُستدعى من المتصفح) ولا يحميه من الإرسال الآلي إلا الفلو نفسه.
 
 ## 5) الخصوصية — PDPL السعودي + GDPR
-صفر متتبعات، صفر كوكيز طرف ثالث. سطر موافقة صريح عند التسجيل. سياسة خصوصية ثنائية اللغة تذكر: ما يُجمع، لماذا، أين، الحقوق (اطلاع/تصحيح/حذف خلال 30 يومًا)، وتعهد عدم التدريب على البيانات.
 
-## 6) SEO — الأساسيات الكاملة
-title · description · canonical · hreflang (en/ar/x-default) · Open Graph + Twitter Card بصورتين 1200×630 · h1 واحد لكل صفحة · lang+dir · sitemap.xml مع بدائل اللغة · robots.txt · 404 مخصصة · manifest + أيقونات.
+صفر متتبعات، صفر كوكيز، **صفر طلبات لطرف ثالث عند تصفح الموقع** (الخطوط مستضافة محليًا في `fonts/` منذ 1.1.0، فلا يُرسَل IP الزائر إلى Google Fonts).
+الطلب الوحيد لطرف ثالث يحدث عند إرسال نموذج التسجيل (إلى Activepieces Cloud). سياسة الخصوصية ثنائية اللغة تذكر: ما يُجمع، لماذا، أين، الحقوق (اطلاع/تصحيح/حذف خلال 30 يومًا)، وتعهد عدم التدريب على البيانات.
+
+## 6) SEO
+
+title · description بطول مناسب · canonical واحد لكل صفحة · hreflang متبادل (en/ar/x-default) على الصفحتين الرئيسيتين · Open Graph + Twitter Card بصورتين 1200×630 · h1 واحد · lang+dir · JSON-LD صالح (Organization, SoftwareApplication, FAQPage) · sitemap.xml · robots.txt · 404 مخصصة · manifest + أيقونات.
+صفحات التطبيق (`app/*`) موسومة `noindex`. لا صفحات مكررة (أُزيلت نسخ `app/demo.*` و `app/pieces.js`).
 
 ## 7) الأداء — ميزانية النقل (gzip)
-| الصفحة | مضغوطة |
-|---|---|
-| index.html | 56 KB |
-| ar.html | 57 KB |
-| integrations.html + pieces.js | 45 + 24 KB |
-| app/chat.html | 89 KB |
 
-بدون أي إطار عمل، بدون jQuery، بدون خط أيقونات. الخطوط بـ `display=swap` و preconnect. الشعارات lazy. `pieces.js` بـ defer. ضغط وتخزين مؤقت من الخادم.
+| الصفحة | HTML | JS | الخطوط (woff2، مرة واحدة ثم cache) |
+|---|---|---|---|
+| index.html | 52 KB | 4 KB | Jost + Inter (Latin) |
+| ar.html | 54 KB | 4 KB | Readex Pro + IBM Plex Sans Arabic (Arabic) |
+| integrations.html | 43 KB | 2 + 27 KB (كتالوج 717 أداة) | Jost + Inter |
+| demo.html | 47 KB | 4 KB | Readex Pro |
+| app/chat.html | 78 KB | 12 + 27 KB (الكتالوج) | Readex Pro + IBM Plex |
+| app/onboard.html | 75 KB | 4 KB | Readex Pro + IBM Plex |
+
+بدون إطار عمل، بدون jQuery، بدون خط أيقونات. الخطوط محلية مع `preload` للخط الحرج و `font-display:swap`، فلا يوجد مورد خارجي يحجب الرسم. كل `<script>` بـ `defer`. الشعارات lazy.
+غير مقيس هنا: Core Web Vitals على أجهزة حقيقية.
 
 ## 8) التدويل — i18n
-RTL/LTR بخصائص منطقية (`inline-start/end`) لا `left/right`. خطان لكل لغة. أرقام tabular. `hreflang` متبادل.
+
+`ar.html` مبنية بالكامل بخصائص منطقية (`inline-start/end`, `block-start/end`). خطان لكل لغة. الأرقام المختلطة مثل 24/7 داخل `dir="ltr"`. `hreflang` متبادل. صفحة التكاملات تبدّل اللغة والاتجاه في المكان.
 
 ## 9) المستودع — معايير الهندسة
-LICENSE · SECURITY.md (سياسة إبلاغ) · CHANGELOG.md (Keep a Changelog + SemVer) · .editorconfig · `.nojekyll` · قالب Issues ·
-**CI على GitHub Actions**: كل push يشغّل فحص JS + صحة HTML + تدقيق WCAG، ويفشل البناء عند أي مخالفة.
-لا PHP، لا أسرار، لا كلمات مرور في المستودع.
+
+LICENSE · SECURITY.md · CHANGELOG.md (Keep a Changelog + SemVer) · .editorconfig · .nvmrc · `.nojekyll` · قالب Issues · `package-lock.json` متتبَّع.
+**CI (GitHub Actions):** `npm ci` من ملف القفل + cache، ثم `npm test` = فحص JS + صحة HTML + axe (jsdom) + Lighthouse في Chrome. يفشل البناء عند أي مخالفة.
+لا PHP، لا أسرار، لا كلمات مرور في المستودع. كتالوج الأدوات (`pieces.js`) ملف واحد بـ 717 أداة، لكل منها شعار ووصف من سطر واحد.
 
 ## إعادة التشغيل
 ```bash
-npm install
-npm test        # lint:js + validate (WHATWG) + a11y (WCAG 2.1 AA)
+npm ci
+npm test
 ```
-نفس الأمر يعمل تلقائيًا في GitHub Actions مع كل تعديل.
+`a11y:chrome` يحتاج Chrome مثبتًا على الجهاز (موجود على ubuntu-latest في GitHub Actions).

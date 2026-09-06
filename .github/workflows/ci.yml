@@ -1,11 +1,16 @@
 name: Standards
 on: [push, pull_request]
+permissions:
+  contents: read
 jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22 }
-      - run: npm install --no-audit --no-fund
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      # lint:js + HTML validity (WHATWG) + axe structure (jsdom) + Lighthouse WCAG audit in real Chrome (incl. contrast)
       - run: npm test

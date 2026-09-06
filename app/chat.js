@@ -284,6 +284,8 @@ var I = {
   /* القائمة الجانبية */
   $("#closeSide").addEventListener("click",function(){ $("#app").classList.add("closed"); $("#app").classList.remove("open"); });
   $("#openSide").addEventListener("click",function(){ $("#app").classList.remove("closed"); $("#app").classList.toggle("open"); });
+  /* mobile drawer: picking anything in the sidebar closes it */
+  $(".side").addEventListener("click",function(e){ if(e.target.closest("button,a")&&window.matchMedia("(max-width:820px)").matches) setTimeout(function(){ $("#app").classList.remove("open"); },0); });
 
   /* ---------- الأدوات — الكتالوج الكامل (الحقيقي يجي من Activepieces /v1/pieces) ---------- */
   /* الكتالوج الحقيقي من pieces.js: [slug, name, description, category, logo] */
@@ -330,12 +332,17 @@ var I = {
       var c=e.target.closest("[data-c]"); if(!c) return;
       picked=TOOLS.filter(function(x){return x.s===c.dataset.c})[0];
       $("#mI").innerHTML='<img src="'+picked.logo+'" alt="" style="width:26px;height:26px;object-fit:contain">'; $("#mN").textContent=picked.n; $("#mD").textContent="بعد الربط يقدر موظفوك يستخدمون "+picked.n+". "+picked.d+".";
-      $("#modal").classList.add("on");
+      openModal();
     });
   }
-  $("#mX").addEventListener("click",function(){ $("#modal").classList.remove("on"); });
-  $("#modal").addEventListener("click",function(e){ if(e.target===this) this.classList.remove("on"); });
-  $("#mGo").addEventListener("click",function(){ if(picked){picked.on=true;picked.by="بانتظار تعيين موظف";} $("#modal").classList.remove("on"); $("#toolsCnt").textContent=TOOLS.filter(function(t){return t.on}).length+" مربوطة"; renderThread(); });
+  /* dialog: focus in, trap Tab, Escape closes, focus returns to the opener */
+  var modalOpener=null;
+  function openModal(){ modalOpener=document.activeElement; $("#modal").classList.add("on"); var f=$("#mGo")||$("#mX"); if(f) f.focus(); }
+  function closeModal(){ $("#modal").classList.remove("on"); var back=(modalOpener&&document.contains(modalOpener))?modalOpener:$("#tq"); if(back&&back.focus) back.focus(); modalOpener=null; }
+  $("#mX").addEventListener("click",closeModal);
+  $("#modal").addEventListener("click",function(e){ if(e.target===this) closeModal(); });
+  $("#modal").addEventListener("keydown",function(e){ if(e.key!=="Tab") return; var f=$$("button,[href],input,textarea,[tabindex]:not([tabindex=\"-1\"])",this).filter(function(x){return !x.disabled&&x.offsetParent!==null}); if(!f.length) return; var a=f[0],z=f[f.length-1]; if(e.shiftKey&&document.activeElement===a){ e.preventDefault(); z.focus(); } else if(!e.shiftKey&&document.activeElement===z){ e.preventDefault(); a.focus(); } });
+  $("#mGo").addEventListener("click",function(){ if(picked){picked.on=true;picked.by="بانتظار تعيين موظف";} closeModal(); $("#toolsCnt").textContent=TOOLS.filter(function(t){return t.on}).length+" مربوطة"; renderThread(); });
   function openTools(){ who="tools"; chatId=null; renderSide(); renderBar(); renderThread(); }
   $("#toolsLink").addEventListener("click",openTools);
   document.addEventListener("keydown",function(e){ if(e.key==="/"&&document.activeElement.tagName!=="INPUT"&&document.activeElement.tagName!=="TEXTAREA"){ e.preventDefault(); openTools(); setTimeout(function(){ var q=$("#tq"); if(q) q.focus(); },30); } });
@@ -356,7 +363,7 @@ var I = {
   $(".sheet__h").addEventListener("click",function(e){ var t=e.target.closest(".tab"); if(t) openSheet(t.dataset.pane); });
   $("#sheetX").addEventListener("click",function(){ sheet.classList.remove("on"); });
   sheet.addEventListener("click",function(e){ if(e.target===sheet) sheet.classList.remove("on"); });
-  document.addEventListener("keydown",function(e){ if(e.key==="Escape"){ sheet.classList.remove("on"); pop.classList.remove("on"); } });
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape"){ sheet.classList.remove("on"); pop.classList.remove("on"); if($("#modal").classList.contains("on")) closeModal(); } });
   $$(".swm").forEach(function(b){ b.addEventListener("click",function(){ this.setAttribute("aria-checked", this.getAttribute("aria-checked")!=="true"); }); });
   $$(".srow .seg").forEach(function(seg){ $$("button",seg).forEach(function(b){ b.addEventListener("click",function(){ $$("button",seg).forEach(function(x){x.setAttribute("aria-pressed","false")}); b.setAttribute("aria-pressed","true"); }); }); });
 

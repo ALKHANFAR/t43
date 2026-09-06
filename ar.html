@@ -22,9 +22,9 @@
 <meta property="og:locale" content="ar_AR">
 <meta name="twitter:card" content="summary_large_image">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400&family=IBM+Plex+Sans+Arabic:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/readex-pro-200-arabic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/ibm-plex-sans-arabic-400-arabic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="fonts.css">
 
 <style>
 .skip{position:absolute;inset-inline-start:-999px;top:12px;z-index:200;background:var(--ink);color:var(--paper);padding:10px 16px;font-family:var(--f-display)}
@@ -39,7 +39,7 @@
   --paper:#FFFFFF;
   --wash:#F7F7FB;
   --ink:#0A0A0A;
-  --ash:#767674;
+  --ash:#6E6E6C;
   --hair:#E0E1E8;
   --hair-i:rgba(255,255,255,.16);
   --accent:#0B844B;
@@ -192,7 +192,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:200;letter-spacing:-.01em;line
 .cost__h{font-family:var(--f-display);font-weight:300;font-size:clamp(1.15rem,2.1vw,1.5rem);line-height:1.5;margin-block-end:12px;max-width:28ch}
 .cost__p{margin:0;color:#A5A5A2;font-size:.96rem;max-width:52ch}
 .cost__tag{font-family:var(--f-display);font-weight:300;font-size:clamp(1rem,1.6vw,1.18rem);color:var(--paper);padding-block-start:8px}
-.cost__tag span{display:block;font-family:var(--f-body);font-size:.78rem;color:#75756F;margin-block-start:6px}
+.cost__tag span{display:block;font-family:var(--f-body);font-size:.78rem;color:#8C8C8A;margin-block-start:6px}
 .cost__close{margin-block-start:44px;font-family:var(--f-display);font-weight:300;
   font-size:clamp(1.15rem,2.2vw,1.8rem);line-height:1.5;max-width:26ch}
 
@@ -216,7 +216,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:200;letter-spacing:-.01em;line
 .tab{text-align:start;background:none;border:0;border-block-end:1px solid var(--hair);padding:22px 4px;cursor:pointer;
   display:flex;align-items:baseline;gap:16px;color:var(--ash);transition:color .3s,padding-inline-start .4s var(--ease)}
 .tab:hover,.tab[aria-selected="true"]{color:var(--ink);padding-inline-start:10px}
-.tab__n{font-family:var(--f-display);font-size:.76rem;color:#8A8A88;direction:ltr}
+.tab__n{font-family:var(--f-display);font-size:.76rem;color:#6E6E6C;direction:ltr}
 .tab[aria-selected="true"] .tab__n{color:var(--accent)}
 .tab__t{font-family:var(--f-display);font-weight:300;font-size:clamp(1.05rem,1.8vw,1.28rem)}
 .panel{display:none}
@@ -227,7 +227,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:200;letter-spacing:-.01em;line
 .chain{list-style:none;margin:0 0 28px;padding:0;counter-reset:c}
 .chain li{display:grid;grid-template-columns:36px 1fr;gap:6px;padding:13px 0;border-block-start:1px solid var(--hair);font-size:.95rem;line-height:1.7}
 .chain li::before{counter-increment:c;content:counter(c,decimal-leading-zero);
-  font-family:var(--f-display);font-size:.74rem;color:#8A8A88;padding-block-start:5px;direction:ltr}
+  font-family:var(--f-display);font-size:.74rem;color:#6E6E6C;padding-block-start:5px;direction:ltr}
 .tools{display:flex;flex-wrap:wrap;gap:8px;padding-block-start:22px;border-block-start:1px solid var(--hair)}
 .tool{font-family:var(--f-display);font-size:.76rem;color:var(--ash);border:1px solid var(--hair);padding:6px 13px}
 
@@ -264,10 +264,10 @@ h1,h2,h3{font-family:var(--f-display);font-weight:200;letter-spacing:-.01em;line
 .form__s{color:var(--ash);font-size:.92rem;margin:0 0 30px}
 .field{margin-block-end:20px}
 .field label{display:block;font-family:var(--f-display);font-size:.8rem;color:var(--ash);margin-block-end:9px}
-.ctrl{width:100%;padding:12px 0;background:transparent;border:0;border-block-end:1px solid var(--hair);
+.ctrl{width:100%;padding:12px 0;background:transparent;border:0;border-block-end:1px solid #8A8A88;
   font-size:1rem;transition:border-color .25s}
 .ctrl:focus{outline:none;border-block-end-color:var(--accent);box-shadow:0 1px 0 0 var(--accent)}
-.ctrl::placeholder{color:#8F8F8C}
+.ctrl::placeholder{color:#757575}
 select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' fill='none' stroke='%23767674' stroke-width='1.4'%3E%3Cpath d='M1 1l4.5 4.5L10 1'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:left 2px center;cursor:pointer}
 .phone{display:grid;grid-template-columns:130px 1fr;gap:16px}
 .phone input{direction:ltr;text-align:left}
@@ -362,7 +362,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
 <body>
 
 <a href="#top" class="skip">تخطَّ إلى المحتوى</a>
-<header class="nav" id="nav" role="banner">
+<header class="nav" id="nav">
   <div class="wrap nav__in">
     <a href="#top" aria-label="سيادة، الصفحة الرئيسية"><span class="logo" role="img" aria-label="Siyadah AI"></span></a>
     <nav class="nav__links" aria-label="الرئيسية">
@@ -392,7 +392,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
         <p class="lead">سيادة هي الفريق اللي ما تقدر توظفه، شغّال داخل محادثة واحدة. يتابع كل عميل محتمل خلال دقائق، يطارد الفواتير اللي محد يبي يطاردها، يرد على عملائك في ثوانٍ، ويخلي تسويقك ما يسكت — وأنت نايم.</p>
         <div class="hero__cta">
           <a href="#join" class="btn">احجز مقعدك <span class="drop" aria-hidden="true"></span></a>
-          <a href="demo.html" class="btn btn--line">شوف الديمو · ١:٥٠</a>
+          <a href="demo.html" class="btn btn--line">شوف الديمو · 2:00</a>
         </div>
         <p class="hero__fine"><span>الحجز مجاني.</span><span>بدون بطاقة بنكية.</span><span>السعر المبكر يثبت لك مدى الحياة.</span></p>
       </div>
@@ -425,7 +425,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
     <div class="metrics">
       <div class="metric"><div class="metric__v"><span class="num" data-count="3">0</span> دقائق</div><div class="metric__l">من أول جملة إلى فريق شغّال</div></div>
       <div class="metric"><div class="metric__v"><span class="num" data-count="4">0</span> أقسام</div><div class="metric__l">تشتغل بالتوازي في نفس الوقت</div></div>
-      <div class="metric"><div class="metric__v"><span class="num" data-count="24">0</span>/<span class="num" data-count="7">0</span></div><div class="metric__l">شغّال وأنت نايم أو مسافر</div></div>
+      <div class="metric"><div class="metric__v"><span dir="ltr"><span class="num" data-count="24">0</span>/<span class="num" data-count="7">0</span></span></div><div class="metric__l">شغّال وأنت نايم أو مسافر</div></div>
       <div class="metric"><div class="metric__v">صفر</div><div class="metric__l">أسماء جديدة على كشف رواتبك</div></div>
     </div>
   </div>
@@ -517,10 +517,10 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
 
     <div class="dept">
       <div class="tabs" role="tablist" aria-label="أقسام سيادة">
-        <button class="tab" role="tab" aria-selected="true" aria-controls="p1" id="t1"><span class="tab__n">01</span><span class="tab__t">متابعة المبيعات</span></button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="p2" id="t2" tabindex="-1"><span class="tab__n">02</span><span class="tab__t">تحصيل الفواتير</span></button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="p3" id="t3" tabindex="-1"><span class="tab__n">03</span><span class="tab__t">دعم العملاء</span></button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="p4" id="t4" tabindex="-1"><span class="tab__n">04</span><span class="tab__t">التسويق</span></button>
+        <button type="button" class="tab" role="tab" aria-selected="true" aria-controls="p1" id="t1"><span class="tab__n">01</span><span class="tab__t">متابعة المبيعات</span></button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="p2" id="t2" tabindex="-1"><span class="tab__n">02</span><span class="tab__t">تحصيل الفواتير</span></button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="p3" id="t3" tabindex="-1"><span class="tab__n">03</span><span class="tab__t">دعم العملاء</span></button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="p4" id="t4" tabindex="-1"><span class="tab__n">04</span><span class="tab__t">التسويق</span></button>
       </div>
 
       <div>
@@ -701,7 +701,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
           <input class="hp" type="text" tabindex="-1" autocomplete="off" id="website" name="website" placeholder="اتركه فارغًا">
 
           <button class="btn btn--wide" type="submit" id="submitBtn">احجز مقعدي <span class="drop" aria-hidden="true"></span></button>
-          <p class="form__fine" id="formFine">بالتسجيل توافق على تواصلنا معك بخصوص الوصول المبكر فقط. تقدر تلغي في أي وقت. <a href="privacy.html#ar">سياسة الخصوصية</a>. <a href="privacy.html#ar" style="text-decoration:underline">سياسة الخصوصية</a>.</p>
+          <p class="form__fine" id="formFine">بالتسجيل توافق على تواصلنا معك بخصوص الوصول المبكر فقط. تقدر تلغي في أي وقت. <a href="privacy.html#ar">سياسة الخصوصية</a>.</p>
         </div>
       </form>
 
@@ -764,7 +764,6 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
     </div>
     <div class="foot__bot">
       <a href="mailto:info@siyadah-ai.com" class="mail">info@siyadah-ai.com</a> · <a href="privacy.html#ar">الخصوصية</a>
-      <a href="privacy.html#ar" class="mail">الخصوصية</a>
       <span>© <span id="yr">2026</span> سيادة. جميع الحقوق محفوظة.</span>
     </div>
   </div>
