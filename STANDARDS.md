@@ -1,4 +1,4 @@
-# سيادة — تقرير الامتثال للمعايير (7 سبتمبر 2026 · v1.6.0)
+# سيادة — تقرير الامتثال للمعايير (7 سبتمبر 2026 · v1.7.0)
 
 كل رقم هنا مُنتَج بأداة قابلة لإعادة التشغيل (`npm test`)، وكل حدّ للأداة مذكور صراحة. ما لا تقيسه الأدوات مكتوب على أنه غير مقيس.
 
@@ -71,12 +71,12 @@ title · description بطول مناسب · canonical واحد لكل صفحة �
 
 | الصفحة | HTML | JS | صور وخطوط (تُحمَّل مرة ثم cache لكل الصفحات) |
 |---|---|---|---|
-| index.html | 13 KB | 5 KB (site.js) | الشعار 30 KB + Jost/Inter |
-| ar.html | 14 KB | 5 KB (site.js) | الشعار + Readex Pro/IBM Plex Sans Arabic |
+| index.html | 10 KB | 5 KB (site.js) | الشعار 30 KB + Jost/Inter |
+| ar.html | 11 KB | 5 KB (site.js) | الشعار + Readex Pro/IBM Plex Sans Arabic |
 | integrations.html | 4 KB | 2 + 43 KB (كتالوج 712 أداة بوصف إنجليزي وعربي) | الشعار + Jost/Inter |
 | demo.html | 8 KB | 4 KB | الشعار + Readex Pro |
-| app/chat.html | 9 KB | 12 + 43 KB (الكتالوج) | الشعار + Readex Pro/IBM Plex |
-| app/onboard.html | 6 KB | 4 KB | الشعار + Readex Pro/IBM Plex |
+| app/chat.html | 8 KB | 13 + 43 KB (الكتالوج) | الشعار + Readex Pro/IBM Plex |
+| app/onboard.html | 4 KB | 4 KB | الشعار + Readex Pro/IBM Plex |
 
 بدون إطار عمل، بدون jQuery، بدون خط أيقونات. الشعار والأيقونة ملفان في `assets/` بدل base64 مضمّن (كان يضاعف حجم كل صفحة ولا يُخزَّن مؤقتًا). الخطوط محلية (Jost و Inter و Readex Pro كخطوط متغيرة: ملف واحد لكل عائلة/subset) مع `preload` للخط الحرج والشعار و `font-display:swap`، فلا يوجد مورد خارجي يحجب الرسم. كل `<script>` بـ `defer`. الشعارات lazy.
 درجات Lighthouse (mobile emulation, headless Chrome) في الجدول أدناه. غير مقيس هنا: Core Web Vitals على أجهزة حقيقية.

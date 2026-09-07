@@ -13,8 +13,8 @@
 <style>
 /* ==========================================================================
    سيادة — الإعداد الأول
-   شاشة وحدة، سؤال واحد في كل مرة، بدون قوائم ولا إعدادات.
-   الهدف: أول موظف شغّال خلال ثلاث دقائق — والعميل يحس إنه هو اللي بناه.
+   أربع لحظات: موقعك، جملتك، الخطة، شغّل. سؤال واحد في كل مرة، بدون قوائم ولا إعدادات.
+   الأدوات تُربط لاحقًا وقت الحاجة من داخل المحادثة — ما فيه خطوة ربط هنا.
    ========================================================================== */
 :root{
   --paper:#FFFFFF; --wash:#F7F7FB; --ink:#0A0A0A; --ash:#6E6E6C; --ash-2:#6F6F6D; --hair:#E0E1E8;
@@ -55,19 +55,8 @@ h1{font-family:var(--f-display);font-weight:300;font-size:clamp(1.7rem,4vw,2.5re
 textarea.in{resize:none;min-height:120px;line-height:1.8;border:1px solid var(--hair);padding:14px 16px;font-size:1.02rem}
 textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-wash)}
 
-.opts{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.opt{text-align:start;background:var(--paper);border:1px solid var(--hair);padding:18px 18px 16px;transition:.2s;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start}
-.opt:hover{border-color:var(--ink)}
-.opt[aria-pressed="true"]{border-color:var(--ink);background:var(--wash)}
-.optx{display:block}
-.opt b{display:block;font-family:var(--f-display);font-weight:400;font-size:1.02rem;margin-block-end:4px}
-.opt span{color:var(--ash);font-size:.875rem;line-height:1.55}
-.opt .chk{width:18px;height:18px;border:1px solid var(--hair);display:grid;place-items:center;margin-block-start:3px}
-.opt[aria-pressed="true"] .chk{border-color:var(--ink)}
-.opt[aria-pressed="true"] .chk::after{content:"";width:9px;height:9px;background:var(--ink)}
 
 .hint{display:flex;align-items:center;gap:10px;font-size:.875rem;color:var(--ash);margin-block-start:12px}
-.hint button{background:none;border:0;padding:0;color:var(--accent);font-size:.875rem}
 
 /* قراءة الموقع — تصير في الخلفية، العميل يشوف النتيجة فقط */
 .site{border:1px solid var(--hair);padding:12px 14px;margin-block-start:10px;display:flex;align-items:center;gap:12px;font-size:.875rem;color:var(--ash);min-height:46px;transition:.3s}
@@ -90,21 +79,8 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 /* بدون موقع — بدائل بنفس الوزن */
 .nosite{background:none;border:0;padding:0;font-size:.875rem;color:var(--ash);text-decoration:underline;text-underline-offset:4px;margin-block-start:10px}
 .nosite:hover{color:var(--ink)}
-.alts{display:none;margin-block-start:14px;border:1px solid var(--hair)}
-.alts.on{display:block;animation:in .3s var(--ease)}
-.alt{display:grid;grid-template-columns:36px 1fr auto;gap:12px;align-items:center;padding:12px 14px;border-block-end:1px solid var(--hair)}
-.alt:last-child{border-block-end:0}
-.alt .av{width:36px;height:36px;font-size:.875rem}
-.alt b{font-family:var(--f-display);font-weight:400;display:block;font-size:.95rem}
-.alt span{color:var(--ash);font-size:.8rem}
-.alt input{width:170px;padding:8px 10px;border:1px solid var(--hair);font-size:.875rem;direction:ltr;text-align:left}
-.alt input:focus{outline:none;border-color:var(--accent)}
-.alt .go{background:var(--ink);color:var(--paper);border:0;padding:8px 14px;font-family:var(--f-display);font-size:.8rem}
-.alt textarea{grid-column:1/-1;width:100%;border:1px solid var(--hair);padding:10px 12px;font-size:.875rem;resize:none;min-height:80px;line-height:1.7}
-.alt textarea:focus{outline:none;border-color:var(--accent)}
-.alt--wide{grid-template-columns:36px 1fr}
-.alt .none{color:var(--ash);font-size:.8rem;line-height:1.6}
-.alt .none b{display:inline;font-family:var(--f-body);font-weight:500;color:var(--ink);font-size:.8rem}
+.alts{display:none;margin-block-start:18px;animation:in .3s var(--ease)}
+.alts.on{display:block}
 
 /* البناء */
 .build{border:1px solid var(--hair)}
@@ -128,12 +104,6 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 .prow .rules span{font-family:var(--f-display);font-size:.7rem;border:1px solid var(--hair);padding:2px 8px;color:var(--ash)}
 .note{font-size:.875rem;color:var(--ash);display:flex;align-items:center;gap:10px;margin-block-end:22px}
 
-/* الربط */
-.conn{border:1px solid var(--hair);display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:center;padding:16px;margin-block-end:10px}
-.conn b{font-family:var(--f-display);font-weight:400;display:block}
-.conn span{color:var(--ash);font-size:.875rem}
-.conn.ok{border-color:rgba(11,132,75,.35)}
-.conn .st{font-family:var(--f-display);font-size:.75rem;color:var(--accent);display:flex;align-items:center;gap:6px}
 
 /* النهاية */
 .done{text-align:center;padding-block-start:20px}
@@ -155,68 +125,46 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 .btn--ghost:hover{color:var(--ink);background:none}
 .bar .sp{margin-inline-start:auto;font-size:.8rem;color:var(--ash-2)}
 
-@media (max-width:600px){ .opts{grid-template-columns:1fr} }
 @media (prefers-reduced-motion:reduce){ *{animation:none !important;transition:none !important} }
 </style>
 </head>
 <body>
 
-<header class="top"><span class="logo"></span><small id="stepLbl">1 من 5</small></header>
+<header class="top"><span class="logo"></span><small id="stepLbl">1 من 4</small></header>
 <div class="prog"><i id="prog"></i></div>
 
 <main class="wrap">
 
-  <!-- 1 — من أنت -->
+  <!-- 1 — موقعك -->
   <section class="step on" data-step="1">
     <div class="k"><span class="drop"></span>ثلاث دقائق، وعندك أول موظف</div>
     <h1>وين نقرأ عن شركتك؟</h1>
     <p class="sub">اكتب موقعك. سيادة تقرأه كامل — خدماتك، أسعارك، أسئلتك الشائعة، وصوتك — وتبني منه معرفة موظفيك. أنت ما تكتب شيئًا.</p>
-    <div class="field"><label>موقعك — نقرأه ونعبّي الباقي عنك</label><input class="in" id="site" type="url" dir="ltr" style="text-align:left" placeholder="ufuq.sa" autofocus>
+    <div class="field"><label for="site">موقعك — نقرأه ونعبّي الباقي عنك</label><input class="in" id="site" type="url" dir="ltr" style="text-align:left" placeholder="ufuq.sa" autofocus>
       <div class="site" id="siteSt" style="display:none"><span class="drop"></span><div id="siteTx"></div></div>
-      <button class="nosite" id="noSite" type="button">ما عندي موقع</button>
+      <button class="nosite" id="noSite" type="button" aria-expanded="false" aria-controls="alts">ما عندي موقع</button>
       <div class="alts" id="alts">
-        <div class="alt"><span class="av">IG</span><div><b>إنستغرام</b><span>منشوراتك وتعليقاتك — فيها خدماتك وأسئلة عملائك</span></div>
-          <div style="display:flex;gap:6px"><input id="ig" type="text" placeholder="@ufuq.sa"><button type="button" class="go" data-src="ig">اقرأ</button></div></div>
-        <div class="alt"><span class="av">in</span><div><b>لينكدإن</b><span>صفحة الشركة: من أنتم، وش تقدمون، ولمين</span></div>
-          <div style="display:flex;gap:6px"><input id="li" type="text" placeholder="linkedin.com/company/ufuq"><button type="button" class="go" data-src="li">اقرأ</button></div></div>
-        <div class="alt"><span class="av">PDF</span><div><b>ملف عندك</b><span>قائمة أسعار، بروشور، عرض تقديمي، أي شيء</span></div>
-          <button type="button" class="go" data-src="file">ارفع ملفًا</button></div>
-        <div class="alt alt--wide"><span class="av">✎</span><div><b>اكتب ثلاثة أسطر</b><span>وش تبيع، لمين، ووش يسألونك دايمًا</span></div>
-          <textarea id="lines3" placeholder="نوصّل طلبات المطاعم في الرياض وجدة. عملاؤنا مطاعم متوسطة. أكثر سؤال: كم عمولتكم وكم يوم التفعيل؟"></textarea>
-          <div style="grid-column:1/-1;display:flex;justify-content:flex-end"><button type="button" class="go" data-src="text">اقرأ</button></div></div>
-        <div class="alt"><span class="av">—</span><div class="none"><b>ولا شيء؟ عادي.</b> يبدأ موظفوك بالحد الأدنى، وأول سؤال ما يعرفونه يسألونك مرة ويحفظون الجواب.</div><button type="button" class="go" data-src="none">أكمل بدون</button></div>
+        <div class="field"><label for="lines3">اكتب ثلاثة أسطر — وش تبيع، لمين، ووش يسألونك دايمًا</label>
+          <textarea class="in" id="lines3" rows="3" placeholder="نوصّل طلبات المطاعم في الرياض وجدة. عملاؤنا مطاعم متوسطة. أكثر سؤال: كم عمولتكم وكم يوم التفعيل؟"></textarea></div>
+        <div class="field"><label for="co">اسم الشركة</label><input class="in" id="co" type="text" placeholder="شركة الأفق"></div>
       </div>
     </div>
-    <div class="field" id="coWrap" style="display:none;margin-block-start:22px"><label>اسم الشركة — الشيء الوحيد اللي نحتاجه منك</label><input class="in" id="co" type="text" placeholder="شركة الأفق"><input type="hidden" id="what"></div>
   </section>
 
-  <!-- 2 — وش ياكل وقتك -->
+  <!-- 2 — جملتك -->
   <section class="step" data-step="2">
-    <div class="k"><span class="drop"></span>سؤال واحد</div>
-    <h1>وش أكثر شيء ياكل وقتك؟</h1>
-    <p class="sub">اختر واحدًا أو أكثر. نبدأ بالأهم، والباقي يجي بعدين.</p>
-    <div class="opts" id="opts">
-      <button type="button" class="opt" data-v="sales" aria-pressed="false"><span class="optx"><b>متابعة العملاء</b><span>ليدات تجي وتبرد قبل ما ترد.</span></span><span class="chk"></span></button>
-      <button type="button" class="opt" data-v="inv" aria-pressed="false"><span class="optx"><b>الفواتير المتأخرة</b><span>فلوسك عند غيرك ومحد يطالب.</span></span><span class="chk"></span></button>
-      <button type="button" class="opt" data-v="support" aria-pressed="false"><span class="optx"><b>أسئلة العملاء</b><span>نفس السؤال، أربعين مرة.</span></span><span class="chk"></span></button>
-      <button type="button" class="opt" data-v="mkt" aria-pressed="false"><span class="optx"><b>التسويق</b><span>أول شيء يسقط لما تنشغل.</span></span><span class="chk"></span></button>
-    </div>
-  </section>
-
-  <!-- 3 — بكلماتك -->
-  <section class="step" data-step="3">
     <div class="k"><span class="drop"></span>بكلماتك</div>
     <h1>قول له وش تبي، زي ما تقول لموظف جديد.</h1>
-    <p class="sub">كتبنا لك بداية من اختيارك. عدّلها براحتك — هذي اللي يشتغل عليها.</p>
-    <textarea class="in" id="brief"></textarea>
+    <p class="sub">جملة وحدة تكفي. سيادة تفهم منها مين تحتاج — مبيعات، تحصيل، دعم، تسويق — وتبني لك الفريق.</p>
+    <textarea class="in" id="brief" aria-label="وش تبي من فريقك" placeholder="أبي أحد يتابع كل عميل جديد خلال خمس دقائق، ويطالب بالفواتير اللي تأخرت أكثر من سبعة أيام، ويرد على أسئلة الدعم المتكررة."></textarea>
     <div class="hint"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4M12 16h.01"/></svg>ما يحتاج تكون دقيقًا. سيادة تسأل لو احتاجت شيئًا.</div>
   </section>
 
-  <!-- 4 — البناء ثم الخطة -->
-  <section class="step" data-step="4">
+  <!-- 3 — الخطة -->
+  <section class="step" data-step="3">
     <div class="k"><span class="drop"></span>سيادة تبني</div>
-    <h1 id="h4">لحظة… أقرأ طلبك.</h1>
-    <p class="sub" id="s4">أبني الموظفين وأربطهم بأدواتك — وأوريك الخطة قبل ما يتحرك شيء.</p>
+    <h1 id="h3">لحظة… أقرأ طلبك.</h1>
+    <p class="sub" id="s3">أبني الموظفين — وأوريك الخطة قبل ما يتحرك شيء.</p>
     <div class="build" id="build">
       <div class="build__h"><span class="drop"></span>جلسة البناء<span class="t" id="clock">00:00</span></div>
       <div id="lines"></div>
@@ -224,21 +172,12 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
     <div id="plan" style="display:none"></div>
   </section>
 
-  <!-- 5 — الربط -->
-  <section class="step" data-step="5">
-    <div class="k"><span class="drop"></span>الأخيرة</div>
-    <h1>اربط أداة وحدة عشان يبدأ.</h1>
-    <p class="sub">يحتاج مكانًا يرسل منه. اربط واحدة الحين والباقي بعدين — أو تخطّ كل شيء ويشتغل بالبريد.</p>
-    <div id="conns"></div>
-    <div class="hint"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/></svg>ما يوصل موظف لأداة ما ربطتها أنت.</div>
-  </section>
-
-  <!-- 6 — جاهز -->
-  <section class="step done" data-step="6">
+  <!-- 4 — شغّل -->
+  <section class="step done" data-step="4">
     <div class="av" id="doneAv">س</div>
     <h1 id="doneH">سعد شغّال.</h1>
     <p class="sub" id="doneP">أول ليد يوصلك، يرد عليه خلال دقائق. وأول شيء يحتاج قرارك، يوصلك أنت.</p>
-    <div class="first"><svg class="ic" viewBox="0 0 24 24" style="margin-block-start:4px"><path d="M8 13V6a1.5 1.5 0 013 0v6M11 12V4.5a1.5 1.5 0 013 0V12M14 12V6a1.5 1.5 0 013 0v8.5c0 3.5-2.5 6-6 6-2.5 0-4-1-5.5-3L4 15.5a1.4 1.4 0 012-2l2 2"/></svg><div>أول شيء بيسويه: يرسل لك رسالة تجريبية على واتساب خلال دقيقة.<small>عشان تشوف نبرته قبل ما يكلم عميلًا حقيقيًا.</small></div></div>
+    <div class="first"><svg class="ic" viewBox="0 0 24 24" style="margin-block-start:4px"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg><div>أول ما يحتاج موظف أداة، يطلبها منك داخل المحادثة.<small>ما يوصل موظف لأداة ما ربطتها أنت.</small></div></div>
   </section>
 
 </main>

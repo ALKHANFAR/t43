@@ -149,13 +149,6 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
 .hero__cta{display:flex;flex-wrap:wrap;gap:14px;margin-block-start:34px}
 .hero__fine{margin:20px 0 0;font-size:.875rem;color:var(--ash);display:flex;flex-wrap:wrap;gap:6px 22px}
 
-.metrics{display:grid;grid-template-columns:repeat(4,1fr);border-block-start:1px solid var(--hair);margin-block-start:clamp(56px,7vw,88px)}
-.metric{padding:26px 0 0;padding-inline-end:22px;border-inline-end:1px solid var(--hair)}
-.metric:last-child{border-inline-end:0}
-.metric__v{font-family:var(--f-display);font-weight:300;font-size:clamp(1.7rem,3.1vw,2.5rem);line-height:1.1;letter-spacing:-.02em}
-.metric__v .num{display:inline-block}
-.metric__l{font-size:.8rem;color:var(--ash);margin-block-start:12px;max-width:20ch;line-height:1.6}
-
 /* ---------- الكونسول الحي ---------- */
 .console{border:1px solid var(--hair);background:var(--paper);display:flex;flex-direction:column;align-self:end}
 .console__bar{display:flex;align-items:center;gap:11px;padding:14px 18px;border-block-end:1px solid var(--hair);
@@ -186,21 +179,6 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
 .replay:hover{color:var(--ink);border-color:var(--ink)}
 
 /* ==========================================================================
-   التكلفة (مقلوب)
-   ========================================================================== */
-.cost__head{max-width:24ch;margin-block-end:clamp(30px,4vw,44px)}
-.cost__item{display:grid;grid-template-columns:64px 1fr 220px;gap:clamp(18px,3vw,48px);
-  padding:34px 0;border-block-start:1px solid var(--hair-i);align-items:start}
-.cost__item:last-of-type{border-block-end:1px solid var(--hair-i)}
-.cost__n{font-family:var(--f-display);font-size:.8rem;color:#8C8C8A;padding-block-start:9px}
-.cost__h{font-family:var(--f-display);font-weight:300;font-size:clamp(1.15rem,2.1vw,1.5rem);line-height:1.5;margin-block-end:12px;max-width:28ch}
-.cost__p{margin:0;color:#A5A5A2;font-size:.95rem;max-width:52ch}
-.cost__tag{font-family:var(--f-display);font-weight:300;font-size:clamp(1rem,1.6vw,1.18rem);color:var(--paper);padding-block-start:8px}
-.cost__tag span{display:block;font-family:var(--f-body);font-size:.8rem;color:#8C8C8A;margin-block-start:6px}
-.cost__close{margin-block-start:44px;font-family:var(--f-display);font-weight:300;
-  font-size:clamp(1.15rem,2.2vw,1.8rem);line-height:1.5;max-width:26ch}
-
-/* ==========================================================================
    الخطوات
    ========================================================================== */
 .steps{border-block-start:1px solid var(--hair);margin-block-start:clamp(38px,5vw,60px)}
@@ -213,48 +191,44 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
 .said cite{display:block;font-family:var(--f-body);font-style:normal;font-size:.8rem;color:var(--ash);margin-block-end:12px}
 
 /* ==========================================================================
-   الأقسام
+   الموظفون
    ========================================================================== */
-.dept{display:grid;grid-template-columns:.85fr 1.15fr;gap:clamp(30px,5vw,80px);margin-block-start:clamp(40px,5vw,64px);align-items:start}
-.tabs{display:flex;flex-direction:column;border-block-start:1px solid var(--hair)}
-.tab{text-align:start;background:none;border:0;border-block-end:1px solid var(--hair);padding:22px 4px;cursor:pointer;
-  display:flex;align-items:baseline;gap:16px;color:var(--ash);transition:color .3s,padding-inline-start .4s var(--ease)}
-.tab:hover,.tab[aria-selected="true"]{color:var(--ink);padding-inline-start:10px}
-.tab__n{font-family:var(--f-display);font-size:.8rem;color:#6E6E6C;direction:ltr}
-.tab[aria-selected="true"] .tab__n{color:var(--accent)}
-.tab__t{font-family:var(--f-display);font-weight:300;font-size:clamp(1.05rem,1.8vw,1.28rem)}
-.panel{display:none}
-.panel.on{display:block;animation:in .55s var(--ease)}
-@keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.panel__h{margin-block-end:16px;max-width:24ch}
-.panel__p{color:var(--ash);margin:0 0 30px;max-width:52ch}
-.chain{list-style:none;margin:0 0 28px;padding:0;counter-reset:c}
-.chain li{display:grid;grid-template-columns:36px 1fr;gap:6px;padding:13px 0;border-block-start:1px solid var(--hair);font-size:.95rem;line-height:1.7}
-.chain li::before{counter-increment:c;content:counter(c,decimal-leading-zero);
-  font-family:var(--f-display);font-size:.75rem;color:#6E6E6C;padding-block-start:5px;direction:ltr}
-.tools{display:flex;flex-wrap:wrap;gap:8px;padding-block-start:22px;border-block-start:1px solid var(--hair)}
-.tool{font-family:var(--f-display);font-size:.8rem;color:var(--ash);border:1px solid var(--hair);padding:6px 13px}
+.emp{list-style:none;margin:clamp(38px,5vw,60px) 0 0;padding:0;border-block-start:1px solid var(--hair)}
+.emp li{display:grid;grid-template-columns:.75fr 1.5fr .75fr;gap:clamp(18px,3vw,48px);padding:clamp(24px,3vw,34px) 0;border-block-end:1px solid var(--hair);align-items:baseline}
+.emp__n{font-family:var(--f-display);font-weight:300;font-size:clamp(1.1rem,1.9vw,1.4rem);line-height:1.45;margin:0}
+.emp__p{margin:0;color:var(--ash);max-width:54ch}
+.emp__t{margin:0;font-family:var(--f-display);font-size:.8rem;color:var(--ash)}
 
 /* ==========================================================================
-   الوصول المبكر
+   الأسعار (مقلوب)
    ========================================================================== */
-.perks{display:grid;grid-template-columns:repeat(3,1fr);border-block-start:1px solid var(--hair-i);margin-block-start:clamp(40px,5vw,64px)}
-.perk{padding:36px 0 40px;padding-inline-end:34px;border-inline-end:1px solid var(--hair-i)}
-.perk:last-child{border-inline-end:0}
-.perk__n{font-family:var(--f-display);font-size:.8rem;color:#8C8C8A;display:block;margin-block-end:20px}
-.perk__h{font-family:var(--f-display);font-weight:300;font-size:1.2rem;margin-block-end:12px;line-height:1.45}
-.perk__p{margin:0;color:#A5A5A2;font-size:.95rem;max-width:36ch}
-
-.meter{margin-block-start:clamp(48px,6vw,72px);border-block-start:1px solid var(--hair-i);padding-block-start:32px}
-.meter__top{display:flex;flex-wrap:wrap;align-items:baseline;gap:16px;margin-block-end:20px}
-.meter__v{font-family:var(--f-display);font-weight:300;font-size:clamp(1.9rem,3.6vw,2.8rem);line-height:1.1;direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums}
-.meter__v small{font-size:.44em;color:#8C8C8A;margin-inline-start:6px}
-.meter__l{color:#A5A5A2;font-size:.95rem}
-.meter__cd{margin-inline-start:auto;display:flex;gap:22px;font-family:var(--f-display);font-size:.8rem;color:#8C8C8A}
-.meter__cd b{display:block;font-weight:300;font-size:1.5rem;color:var(--paper);font-variant-numeric:tabular-nums;direction:ltr}
-.bar{height:2px;background:rgba(255,255,255,.16)}
-.bar i{display:block;height:100%;width:0;background:var(--accent-lt);transition:width 1.7s var(--ease)}
-.meter__f{margin:16px 0 0;font-size:.875rem;color:#A5A5A2}
+.bill{display:inline-flex;border:1px solid var(--hair-i);margin-block-start:clamp(34px,4vw,48px)}
+.bill__b{background:none;border:0;padding:11px 20px;cursor:pointer;font-family:var(--f-display);font-size:.9rem;color:#A5A5A2;
+  display:inline-flex;gap:10px;align-items:center;transition:background .25s,color .25s}
+.bill__b:hover{color:var(--paper)}
+.bill__b[aria-pressed="true"]{background:var(--paper);color:var(--ink)}
+.bill__note{font-size:.75rem;color:var(--accent-lt)}
+.bill__b[aria-pressed="true"] .bill__note{color:var(--accent)}
+.plans{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-block-start:clamp(28px,4vw,40px)}
+.plans[data-cols="3"]{grid-template-columns:repeat(3,1fr)}
+.plan{border:1px solid var(--hair-i);padding:clamp(26px,3.2vw,40px);display:flex;flex-direction:column}
+.plan--hi{border-color:var(--paper)}
+.plan__tag{margin:0 0 18px;font-family:var(--f-display);font-size:.8rem;color:#8C8C8A}
+.plan--hi .plan__tag{color:var(--accent-lt)}
+.plan__n{font-family:var(--f-display);font-weight:300;font-size:1.3rem;margin:0 0 22px}
+.plan__price{margin:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;font-family:var(--f-display);font-weight:300}
+.plan__v{font-size:clamp(2.4rem,4vw,3.2rem);line-height:1.1;font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.plan__v--txt{font-size:clamp(1.5rem,2.6vw,2rem);direction:rtl}
+.plan__cur,.plan__per{font-size:1rem;color:#A5A5A2}
+.plan__was{color:#8C8C8A;font-size:1.1rem;text-decoration:line-through;direction:ltr;unicode-bidi:isolate}
+.plan__bill{margin:10px 0 0;font-size:.8rem;color:#8C8C8A}
+.plan__early{margin:18px 0 0;padding-block-start:14px;border-block-start:1px solid var(--hair-i);font-size:.9rem;color:var(--paper)}
+.plan__list{list-style:none;margin:20px 0 28px;padding:0;border-block-start:1px solid var(--hair-i);flex:1}
+.plan__list li{padding:12px 0;border-block-end:1px solid var(--hair-i);font-size:.95rem;color:#A5A5A2}
+.inv .btn--line{background:transparent;color:var(--paper);border-color:var(--paper)}
+.inv .btn--line:hover{background:var(--paper);color:var(--ink)}
+.plans__use{margin:clamp(30px,4vw,44px) 0 0;max-width:64ch;font-size:1rem;line-height:1.9}
+.plans__foot{margin:14px 0 0;font-size:.8rem;color:#8C8C8A;max-width:72ch}
 
 /* ==========================================================================
    قائمة الانتظار
@@ -272,9 +246,9 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
   font-size:1rem;transition:border-color .25s}
 .ctrl:focus{outline:none;border-block-end-color:var(--accent);box-shadow:0 1px 0 0 var(--accent)}
 .ctrl::placeholder{color:#757575}
-select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' fill='none' stroke='%23767674' stroke-width='1.4'%3E%3Cpath d='M1 1l4.5 4.5L10 1'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:left 2px center;cursor:pointer}
-.phone{display:grid;grid-template-columns:130px 1fr;gap:16px}
+.phone{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:end;direction:ltr}
 .phone input{direction:ltr;text-align:left}
+.phone__cc{padding:12px 0;border-block-end:1px solid #8A8A88;color:var(--ash);font-variant-numeric:tabular-nums;line-height:1.6}
 .err{display:none;color:#B03A2E;font-size:.8rem;margin-block-start:7px}
 .field.bad .ctrl{border-block-end-color:#B03A2E}
 .field.bad .err{display:block}
@@ -313,38 +287,21 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
 .mail{transition:color .25s;direction:ltr;unicode-bidi:isolate}
 .mail:hover{color:var(--accent)}
 
-.sticky{position:fixed;inset-block-end:0;inset-inline:0;z-index:90;background:rgba(255,255,255,.93);
-  backdrop-filter:blur(14px);border-block-start:1px solid var(--hair);transform:translateY(110%);transition:transform .55s var(--ease)}
-.sticky.on{transform:none}
-.sticky__in{display:flex;align-items:center;gap:18px;padding:12px 0}
-.sticky__t{font-size:.875rem;color:var(--ash)}
-.sticky__t b{font-weight:500;color:var(--ink)}
-.sticky .btn{margin-inline-start:auto;padding:11px 22px;font-size:.875rem;white-space:nowrap}
-
 /* ==========================================================================
    الاستجابة
    ========================================================================== */
 @media (max-width:1000px){
-  .hero__row,.dept,.join{grid-template-columns:1fr}
+  .hero__row,.join{grid-template-columns:1fr}
   .hero__row{gap:38px}
-  .metrics{grid-template-columns:repeat(2,1fr)}
-  .metric{border-block-end:1px solid var(--hair);padding-block-end:22px}
-  .metric:nth-child(2n){border-inline-end:0}
-  .perks{grid-template-columns:1fr}
-  .perk{border-inline-end:0;border-block-end:1px solid var(--hair-i);padding:30px 0}
+  .emp li{grid-template-columns:1fr;gap:8px}
+  .emp__t{padding-block-start:6px}
   .nav__links a:not(.nav__lang){display:none}
 }
 @media (max-width:640px){
   body{font-size:16px}
-  .cost__item{grid-template-columns:1fr;gap:10px}
-  .cost__n{padding-block-start:0}
   .step{grid-template-columns:1fr;gap:8px}
   .step__n{padding-block-start:0}
-  .meter__cd{margin-inline-start:0;width:100%}
   .hero__cta .btn{width:100%}
-  .sticky__t{display:none}
-  .sticky .btn{width:100%;margin-inline-start:0}
-  .phone{grid-template-columns:112px 1fr}
 }
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
@@ -367,16 +324,18 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
   .nav__links a:last-child{border-block-end:0}
   .nav.open{background:var(--paper);border-bottom-color:var(--hair)}
 }
+@media (max-width:760px){ .plans,.plans[data-cols="3"]{grid-template-columns:1fr} .bill{display:flex} .bill__b{flex:1;justify-content:center} }
 @media (max-width:480px){ .nav .btn{padding:9px 12px;font-size:.8rem} }
 </style>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
  {"@type":"Organization","@id":"https://siyadah-ai.com/#org","name":"Siyadah AI","url":"https://siyadah-ai.com/ar.html","logo":"https://siyadah-ai.com/og.jpg","email":"info@siyadah-ai.com","sameAs":[]},
- {"@type":"SoftwareApplication","name":"Siyadah AI","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://siyadah-ai.com/","description":"AI operations team built from a single chat: sales follow-up, invoice collection, customer support and marketing, working inside the tools you already use.","offers":{"@type":"Offer","price":"0","priceCurrency":"SAR","description":"Free to reserve early access"},"publisher":{"@id":"https://siyadah-ai.com/#org"}},
- {"@type":"FAQPage","mainEntity":[
-  {"@type":"Question","name":"How is this different from ChatGPT or Claude?","acceptedAnswer":{"@type":"Answer","text":"Chat tools give you an answer. Siyadah takes action inside your tools: it sends the message, updates the customer record, triggers the follow-up sequence, and pursues the invoice."}},
-  {"@type":"Question","name":"Do I need to be technical?","acceptedAnswer":{"@type":"Answer","text":"No. If you can explain a task to a new hire, you can run Siyadah. You describe what you want in plain language; it builds the agents, connects the tools, and shows you the plan before executing."}},
-  {"@type":"Question","name":"Is my business data safe?","acceptedAnswer":{"@type":"Answer","text":"Encrypted in transit and at rest. Hosting inside the Kingdom is on the beta roadmap, and we tell you exactly where your data sits before you connect a single tool. Your data is never used to train models."}}
+ {"@type":"SoftwareApplication","name":"Siyadah AI","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://siyadah-ai.com/","description":"AI employees run from a single chat: lead follow-up, invoice collection, customer support and marketing, working inside the tools you already use.","offers":{"@type":"Offer","price":"499","priceCurrency":"SAR","description":"Business plan, private beta price per month, excluding VAT. Free to reserve."},"publisher":{"@id":"https://siyadah-ai.com/#org"}},
+ {"@type":"FAQPage","inLanguage":"ar","mainEntity":[
+  {"@type":"Question","name":"وش الفرق بينها وبين ChatGPT أو Claude؟","acceptedAnswer":{"@type":"Answer","text":"أدوات المحادثة تعطيك جوابًا. سيادة تنفّذ داخل أدواتك: ترسل الرسالة، تحدّث سجل العميل، تشغّل سلسلة المتابعة، وتلاحق الفاتورة."}},
+  {"@type":"Question","name":"هل أحتاج خلفية تقنية؟","acceptedAnswer":{"@type":"Answer","text":"لا. لو تقدر تشرح مهمة لموظف جديد، تقدر تشغّل سيادة. تكتب طلبك بلغة عادية، وهي تبني الموظفين وتربط الأدوات وتعرض عليك الخطة قبل التنفيذ."}},
+  {"@type":"Question","name":"هل بيانات شركتي بأمان؟","acceptedAnswer":{"@type":"Answer","text":"تشفير أثناء النقل والتخزين. الاستضافة داخل المملكة على خارطة طريق البيتا، ونقول لك بالضبط وين بياناتك قبل ما تربط أي أداة. ولا نستخدم بياناتك في تدريب أي نموذج."}},
+  {"@type":"Question","name":"أقدر ألغي؟ ووش يصير بعد البيتا؟","acceptedAnswer":{"@type":"Answer","text":"الحجز ما يكلف شيئًا وما فيه شيء تلغيه. الخطط المدفوعة تُدفع شهريًا وتقدر تلغي في أي وقت. السعر المبكر خصم 50% على سعر الخطة ويبقى لك ما دام اشتراكك مستمرًا، حتى بعد انتهاء البيتا."}}
  ]}
 ]}
 </script>
@@ -389,9 +348,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
     <a href="#top" aria-label="سيادة، الصفحة الرئيسية"><span class="logo" role="img" aria-label="Siyadah AI"></span></a>
     <nav class="nav__links" id="nav-links" aria-label="الرئيسية">
       <a href="#how">كيف تشتغل</a>
-      <a href="#dept">الأقسام</a>
-      <a href="#founders">البيتا الخاصة</a>
-      <a href="#faq">أسئلة</a>
+      <a href="#pricing">الأسعار</a>
       <a href="integrations.html#ar">التكاملات</a>
       <a href="index.html" class="nav__lang">EN</a>
     </nav>
@@ -444,58 +401,13 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
         </div>
       </div>
     </div>
-
-    <div class="metrics">
-      <div class="metric"><div class="metric__v"><span class="num" data-count="3">0</span> دقائق</div><div class="metric__l">من أول جملة إلى فريق شغّال</div></div>
-      <div class="metric"><div class="metric__v"><span class="num" data-count="4">0</span> موظفين</div><div class="metric__l">يشتغلون في نفس الوقت</div></div>
-      <div class="metric"><div class="metric__v"><span dir="ltr"><span class="num" data-count="24">0</span>/<span class="num">7</span></span></div><div class="metric__l">شغّال وأنت نايم أو مسافر</div></div>
-      <div class="metric"><div class="metric__v">صفر</div><div class="metric__l">أسماء جديدة على كشف رواتبك</div></div>
-    </div>
-  </div>
-</section>
-
-<!-- ============================== التكلفة ============================== -->
-<section class="sect inv">
-  <div class="wrap">
-    <p class="idx">01 — كم تكلفك إنك تسويها بنفسك</p>
-    <h2 class="d2 cost__head rv"><span>ما بدأت شركتك عشان تصير موظفها.</span></h2>
-    <p class="lead" style="max-width:56ch;margin-block-end:clamp(44px,6vw,72px)">كل مستشار يقول لك نفس الكلام: «وظّف». نصيحة ممتازة، لو عندك ميزانية الرواتب أصلًا. لكن محد يسعّر لك المسافة بين اليوم واليوم اللي تقدر فيه توظّف. وهذي المسافة تكلفك أكثر من الرواتب نفسها.</p>
-
-    <div class="cost__item">
-      <div class="cost__n">01</div>
-      <div>
-        <h3 class="cost__h">الليد اللي جاك الساعة 11 ليلًا، ردّيت عليه بعد يومين.</h3>
-        <p class="cost__p">هو ما انتظرك. راح لأول واحد رد عليه. خسرت عميلًا كان فعلًا لك.</p>
-      </div>
-      <div class="cost__tag">فرصة ضاعت<span>وما حسّيت</span></div>
-    </div>
-
-    <div class="cost__item">
-      <div class="cost__n">02</div>
-      <div>
-        <h3 class="cost__h">فاتورة عمرها أربعين يومًا، ومحد طالبها.</h3>
-        <p class="cost__p">مو لأنك ما تبي فلوسك. لأن مطاردة الفواتير شغل ممل ومحرج ودايمًا في آخر القائمة. والنتيجة: سيولتك محبوسة في حساب غيرك.</p>
-      </div>
-      <div class="cost__tag">كاش متجمّد<span>في حساب غيرك</span></div>
-    </div>
-
-    <div class="cost__item">
-      <div class="cost__n">03</div>
-      <div>
-        <h3 class="cost__h">14 ساعة شغل باليوم، على مهام قيمتها 20 ريالًا في الساعة.</h3>
-        <p class="cost__p">نسخ بيانات. رد على نفس السؤال للمرة الأربعين. متابعة يدوية. الشركة توقفت عن النمو لأن صاحبها مشغول بالشغل اللي المفروض يتأتمت.</p>
-      </div>
-      <div class="cost__tag">نمو متوقف<span>وتنحرق أنت</span></div>
-    </div>
-
-    <p class="cost__close">الشغل يطلع من مكتبك. وما يرجع.</p>
   </div>
 </section>
 
 <!-- ============================== كيف تشتغل ============================== -->
 <section class="sect" id="how">
   <div class="wrap">
-    <p class="idx">02 — كيف تشتغل</p>
+    <p class="idx">01 — كيف تشتغل</p>
     <h2 class="d2 rv" style="max-width:20ch"><span>ثلاث دقائق من الفوضى إلى فريق شغّال.</span></h2>
     <p class="lead" style="margin-block-start:24px">ما فيه تكاملات تعدّها. ما فيه مخططات ترسمها. تكلم سيادة مثل ما تكلم موظفًا جديدًا في أول يوم.</p>
 
@@ -516,7 +428,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
         <div class="step__n">الخطوة 02</div>
         <div>
           <h3 class="d3 step__h">سيادة تقرأ شركتك، تبني الفريق، وتوريك الخطة</h3>
-          <p class="step__p">أعطها موقعك أو إنستغرامك. تقرأه كامل: خدماتك، أسعارك، سياساتك، أسئلة عملائك، وحتى نبرتك، وتحوّله لمعرفة يشتغل بها موظفوك من أول يوم. بعدها توظّف لك موظفًا لكل قسم، تربطه بأدواتك، وتعرض عليك بالضبط وش تنوي تسوي قبل ما تسوي أي شيء. أنت توافق، أو تعدّل بجملة وحدة.</p>
+          <p class="step__p">أعطها موقعك أو إنستغرامك. تقرأ خدماتك وأسعارك وسياساتك ونبرتك، توظّف لك موظفًا لكل قسم، تربطه بأدواتك، وتعرض عليك الخطة قبل ما تسوي أي شيء. أنت توافق، أو تعدّل بجملة وحدة.</p>
         </div>
       </div>
 
@@ -531,119 +443,107 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
   </div>
 </section>
 
-<!-- ============================== الأقسام ============================== -->
+<!-- ============================== الموظفون ============================== -->
 <section class="sect" id="dept" style="padding-block-start:0">
   <div class="wrap">
-    <p class="idx">03 — الأقسام</p>
-    <h2 class="d2 rv" style="max-width:20ch"><span>محادثة وحدة. أربعة موظفين. ولا اسم على كشف الرواتب.</span></h2>
-    <p class="lead" style="margin-block-start:24px">اختر القسم. هذا الشغل اللي تسويه سيادة داخله، خطوة خطوة.</p>
+    <p class="idx">02 — الموظفون</p>
+    <h2 class="d2 rv" style="max-width:20ch"><span>أربعة موظفين. محادثة وحدة.</span></h2>
+    <p class="lead" style="margin-block-start:24px">كل موظف يمسك وظيفة وحدة ويشتغل داخل الأدوات اللي تستخدمها أصلًا. وأنت توجّه الأربعة من نفس المحادثة.</p>
 
-    <div class="dept">
-      <div class="tabs" role="tablist" aria-label="أقسام سيادة">
-        <button type="button" class="tab" role="tab" aria-selected="true" aria-controls="p1" id="t1"><span class="tab__n">01</span><span class="tab__t">متابعة المبيعات</span></button>
-        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="p2" id="t2" tabindex="-1"><span class="tab__n">02</span><span class="tab__t">تحصيل الفواتير</span></button>
-        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="p3" id="t3" tabindex="-1"><span class="tab__n">03</span><span class="tab__t">دعم العملاء</span></button>
-        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="p4" id="t4" tabindex="-1"><span class="tab__n">04</span><span class="tab__t">التسويق</span></button>
-      </div>
-
-      <div>
-        <div class="panel on" id="p1" role="tabpanel" aria-labelledby="t1">
-          <h3 class="d3 panel__h">كل عميل محتمل ياخذ رده خلال دقائق، مو أيام</h3>
-          <p class="panel__p">أسرع رد يفوز غالبًا. سيادة تخليك أنت الأسرع دائمًا، حتى لو وصلك الليد الساعة ثلاثة الفجر.</p>
-          <ul class="chain">
-            <li>يوصل ليد جديد من نموذجك أو إعلانك أو واتساب</li>
-            <li>موظف المبيعات يرد عليه خلال دقائق برسالة تخص طلبه بالذات</li>
-            <li>يسأله سؤالين للتأهيل ويصنّفه: جاهز، يحتاج متابعة، أو مو مناسب</li>
-            <li>الجاهز يحجز له موعد في تقويمك مباشرة</li>
-            <li>البارد يدخله سلسلة متابعة بدل ما ينساه</li>
-            <li>يوصلك ملخص يومي واحد: كم ليد، كم تأهّل، وش يحتاج قرارك</li>
-          </ul>
-          <div class="tools"><span class="tool">واتساب</span><span class="tool">البريد</span><span class="tool">نظام العملاء</span><span class="tool">التقويم</span><span class="tool">النماذج</span></div>
-        </div>
-
-        <div class="panel" id="p2" role="tabpanel" aria-labelledby="t2">
-          <h3 class="d3 panel__h">يطارد فلوسك عشان ما تتحرج أنت</h3>
-          <p class="panel__p">المطالبة المنتظمة المهذبة تحصّل أكثر من المطالبة المتوترة المتأخرة. وسيادة ما تنسى ولا تتحرج من السؤال.</p>
-          <ul class="chain">
-            <li>يتابع كل فاتورة مستحقة ويعرف بالضبط كم تأخرت</li>
-            <li>يرسل تذكيرًا مهذبًا تتصاعد نبرته مع كل مرحلة تأخير</li>
-            <li>يتوقف لحظة وصول السداد. بدون متابعات محرجة</li>
-            <li>يسجّل كل دفعة ويحدّث جدولك أو نظامك المحاسبي</li>
-            <li>يعطيك صورة أسبوعية: الداخل، الخارج، والمتوقع</li>
-            <li>ينبّهك على ضغط السيولة قبل ما يصير مشكلة الشهر الجاي</li>
-          </ul>
-          <div class="tools"><span class="tool">الفوترة</span><span class="tool">الجداول</span><span class="tool">البريد</span><span class="tool">واتساب</span><span class="tool">التنبيهات</span></div>
-        </div>
-
-        <div class="panel" id="p3" role="tabpanel" aria-labelledby="t3">
-          <h3 class="d3 panel__h">عملاؤك ياخذون جوابهم في ثوانٍ، على مدار الساعة</h3>
-          <p class="panel__p">أغلب أسئلة الدعم مكررة. سيادة تحلها فورًا، وترفع لك فقط اللي يستاهل وقتك فعلًا.</p>
-          <ul class="chain">
-            <li>يجمع الرسائل من واتساب والبريد وموقعك في مكان واحد</li>
-            <li>يجاوب من معرفتك أنت: أسعارك، سياساتك، خدماتك</li>
-            <li>يحل الطلبات المتكررة من أولها لآخرها بدون تدخلك</li>
-            <li>يصعّد الحالات الحساسة لك مع ملخص جاهز للقرار</li>
-            <li>يشتغل بالعربي والإنجليزي بالنبرة اللي تحددها أنت</li>
-            <li>يرصد الأسئلة المتكررة ويقول لك وش تصلح في منتجك</li>
-          </ul>
-          <div class="tools"><span class="tool">واتساب</span><span class="tool">شات الموقع</span><span class="tool">البريد</span><span class="tool">قاعدة المعرفة</span></div>
-        </div>
-
-        <div class="panel" id="p4" role="tabpanel" aria-labelledby="t4">
-          <h3 class="d3 panel__h">علامتك ما تسكت أبدًا</h3>
-          <p class="panel__p">التسويق أول شيء يسقط لما ينضغط الفريق. سيادة تخليه يمشي حتى في أزحم أسبوع عندك.</p>
-          <ul class="chain">
-            <li>يبني تقويم محتوى شهريًا مبنيًا على خدماتك وجمهورك</li>
-            <li>يكتب المنشورات والقوائم البريدية بصوت علامتك</li>
-            <li>يجدول النشر ويذكّرك بالمواسم والمواعيد المهمة</li>
-            <li>يعيد صياغة المحتوى الشغّال بصيغ جديدة بدل ما تبدأ من صفر</li>
-            <li>يقول لك بالأرقام وش يستاهل التكرار</li>
-          </ul>
-          <div class="tools"><span class="tool">لينكدإن</span><span class="tool">إكس</span><span class="tool">إنستغرام</span><span class="tool">القوائم البريدية</span><span class="tool">التقارير</span></div>
-        </div>
-      </div>
-    </div>
+    <ul class="emp">
+      <li>
+        <h3 class="emp__n">متابعة العملاء المحتملين</h3>
+        <p class="emp__p">يرد على كل عميل محتمل خلال دقائق، يسأله أسئلة التأهيل، ويحجز الجاهز في تقويمك مباشرة.</p>
+        <p class="emp__t">واتساب · نظام العملاء · التقويم</p>
+      </li>
+      <li>
+        <h3 class="emp__n">تحصيل الفواتير</h3>
+        <p class="emp__p">يتابع كل فاتورة مستحقة، يرسل تذكيرات تتصاعد نبرتها مع كل أسبوع تأخير، ويتوقف لحظة وصول السداد.</p>
+        <p class="emp__t">الفوترة · الجداول · واتساب</p>
+      </li>
+      <li>
+        <h3 class="emp__n">دعم العملاء</h3>
+        <p class="emp__p">يجاوب على الأسئلة المتكررة من أسعارك وسياساتك أنت على مدار الساعة، ويصعّد لك الحالات الحساسة مع ملخص جاهز.</p>
+        <p class="emp__t">واتساب · البريد · شات الموقع</p>
+      </li>
+      <li>
+        <h3 class="emp__n">التسويق</h3>
+        <p class="emp__p">يخلي تقويم المحتوى الشهري شغّالًا بصوت علامتك، يجدول النشر، ويقول لك بالأرقام وش يستاهل التكرار.</p>
+        <p class="emp__t">لينكدإن · إنستغرام · القوائم البريدية</p>
+      </li>
+    </ul>
   </div>
 </section>
 
-<!-- ============================== الوصول المبكر ============================== -->
-<section class="sect inv" id="founders">
+<!-- ============================== الأسعار ============================== -->
+<section class="sect inv" id="pricing">
   <div class="wrap">
-    <p class="idx">04 — البيتا الخاصة</p>
-    <h2 class="d2 rv" style="max-width:22ch"><span>اللي يوصل بدري، له معاملة ثانية.</span></h2>
-    <p class="lead" style="margin-block-start:24px">هذي الشروط تختفي لحظة ما نفتح للعامة. بدون استثناءات، وبدون رجعة.</p>
+    <p class="idx">03 — الأسعار</p>
+    <h2 class="d2 rv" style="max-width:20ch"><span>تسعير بسيط. سطر واحد للاستخدام.</span></h2>
 
-    <div class="perks">
-      <div class="perk">
-        <span class="perk__n">السعر</span>
-        <h3 class="perk__h">خصم 50% مدى الحياة</h3>
-        <p class="perk__p">السعر العام راح يكون أعلى بوضوح. والسعر المبكر ما يرتفع أبدًا، حتى ونحن نضيف أقسامًا وتكاملات وقدرات جديدة.</p>
+    <div class="bill" role="group" aria-label="فترة الفوترة">
+      <button type="button" class="bill__b" data-period="monthly" aria-pressed="true">شهري</button>
+      <button type="button" class="bill__b" data-period="annual" aria-pressed="false">سنوي <span class="bill__note">شهران مجانًا</span></button>
+    </div>
+
+    <div class="plans" id="plans" data-cols="2">
+      <div class="plan plan--hi" id="plan-business">
+        <p class="plan__tag">الأكثر اختيارًا</p>
+        <h3 class="plan__n">الأعمال</h3>
+        <p class="plan__price">
+          <span class="plan__v" data-price="business">998</span>
+          <span class="plan__cur">ر.س</span><span class="plan__per">/ شهر</span>
+          <s class="plan__was" data-was="business" hidden>998</s>
+        </p>
+        <p class="plan__bill" data-bill>تُدفع شهريًا</p>
+        <p class="plan__early" data-early hidden>الوصول المبكر: خصم 50% على سعر الخطة، مدى الحياة</p>
+        <ul class="plan__list">
+          <li data-employees>4 موظفين بالذكاء الاصطناعي</li>
+          <li>دردشة بلا حدود</li>
+          <li data-actions>رصيد شهري من الإجراءات</li>
+          <li>جلسة إعداد مع الفريق</li>
+          <li>دعم بأولوية</li>
+        </ul>
+        <a href="#join" class="btn btn--wide">احجز مقعدك <span class="drop" aria-hidden="true"></span></a>
       </div>
-      <div class="perk">
-        <span class="perk__n">التفعيل</span>
-        <h3 class="perk__h">جلسة إعداد نسويها معك</h3>
-        <p class="perk__p">شخص من الفريق يجهّز معك أول موظفيك مباشرة. تطلع من الجلسة وعندك فريق شغّال فعليًا.</p>
-      </div>
-      <div class="perk">
-        <span class="perk__n">التأثير</span>
-        <h3 class="perk__h">أنت ترسم خارطة الطريق</h3>
-        <p class="perk__p">قناة مباشرة مع فريق سيادة. تطلب ميزة، تبلّغ عن خلل، وتشوف فكرتك تنزل. الأوائل يحضرون اجتماع خارطة الطريق كل شهر.</p>
+
+      <div class="plan" id="plan-enterprise">
+        <p class="plan__tag">للفرق الأكبر</p>
+        <h3 class="plan__n">المؤسسات</h3>
+        <p class="plan__price"><span class="plan__v plan__v--txt">حسب الاتفاق</span></p>
+        <p class="plan__bill">عقد سنوي وفوترة بالفاتورة</p>
+        <ul class="plan__list">
+          <li>موظفون مخصصون لشركتك</li>
+          <li>تسجيل دخول موحّد (SSO)</li>
+          <li>استضافة داخل المملكة</li>
+          <li>اتفاقية مستوى خدمة (SLA)</li>
+          <li>فوترة بالفاتورة</li>
+        </ul>
+        <a href="mailto:info@siyadah-ai.com" class="btn btn--line btn--wide">كلّم المبيعات</a>
       </div>
     </div>
 
-    <div class="meter">
-      <div class="meter__top">
-        <span class="meter__v"><span id="claimed">0</span><small>/ 500</small></span>
-        <span class="meter__l">مقعد مبكر محجوز</span>
-        <span class="meter__cd" id="cd">
-          <span><b data-cd="d">--</b> يوم</span>
-          <span><b data-cd="h">--</b> ساعة</span>
-          <span><b data-cd="m">--</b> دقيقة</span>
-        </span>
+    <template id="planStarter">
+      <div class="plan" id="plan-starter">
+        <p class="plan__tag">للبداية</p>
+        <h3 class="plan__n">الأساسية</h3>
+        <p class="plan__price">
+          <span class="plan__v" data-price="starter">0</span>
+          <span class="plan__cur">ر.س</span><span class="plan__per">/ شهر</span>
+          <s class="plan__was" data-was="starter" hidden>0</s>
+        </p>
+        <p class="plan__bill" data-bill>تُدفع شهريًا</p>
+        <ul class="plan__list">
+          <li data-employees>موظفون بالذكاء الاصطناعي</li>
+          <li>دردشة بلا حدود</li>
+          <li data-actions>رصيد شهري من الإجراءات</li>
+        </ul>
+        <a href="#join" class="btn btn--line btn--wide">احجز مقعدك</a>
       </div>
-      <div class="bar"><i id="barfill"></i></div>
-      <p class="meter__f"><span id="left">—</span> مقعد باقي. لما تخلص، هذي المرحلة تنقفل نهائيًا.</p>
-    </div>
+    </template>
+
+    <p class="plans__use">الدردشة بلا حدود. الإجراءات التي ينفّذها موظفوك داخل أدواتك تُحسب من رصيدك الشهري. تضيف رصيدًا مسبق الدفع متى شئت، ولا فاتورة مفاجئة.</p>
+    <p class="plans__foot" id="vatNote">الأسعار بالريال السعودي ولا تشمل ضريبة القيمة المضافة 15%. فواتير ضريبية متوافقة مع هيئة الزكاة والضريبة والجمارك. مدى وفيزا وماستركارد. إلغاء في أي وقت.</p>
   </div>
 </section>
 
@@ -651,14 +551,13 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
 <section class="sect" id="join">
   <div class="wrap join">
     <div>
-      <p class="idx">05 — احجز مقعدك</p>
-      <h2 class="d2 rv"><span>احجز مقعدك قبل ما يُقفل الباب.</span></h2>
-      <p class="lead" style="margin-block-start:24px">الحجز مجاني بالكامل. تدخل القائمة، ونتواصل معك أول ما تفتح دفعتك، تجرّب، وبعدين تقرر.</p>
+      <p class="idx">04 — احجز مقعدك</p>
+      <h2 class="d2 rv"><span>احجز مقعدك، جرّب، وبعدين قرر.</span></h2>
+      <p class="lead" style="margin-block-start:24px">الحجز مجاني. تدخل القائمة، ونتواصل معك أول ما تفتح دفعتك، تجرّب بالسعر المبكر، وبعدين تقرر.</p>
       <ul class="assure">
         <li><span class="drop" aria-hidden="true"></span> بدون بطاقة، بدون التزام، وما فيه شيء تلغيه</li>
         <li><span class="drop" aria-hidden="true"></span> نرسلها عبر HTTPS، ونحفظها عندنا فقط، ونحذفها لحظة ما تطلب. وما ندرّب عليها أي نموذج</li>
         <li><span class="drop" aria-hidden="true"></span> رسالة واحدة فقط: لما يجي دورك</li>
-        <li><span class="drop" aria-hidden="true"></span> السعر المبكر ينقفل باسمك لحظة تسجيلك</li>
       </ul>
     </div>
 
@@ -674,53 +573,24 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
             <div class="err" role="alert">اكتب اسمك الكامل من فضلك.</div>
           </div>
 
+          <div class="field" id="f-phone">
+            <label for="phone">رقم الواتساب</label>
+            <div class="phone">
+              <span class="phone__cc">+966</span>
+              <input class="ctrl" id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="5X XXX XXXX">
+            </div>
+            <div class="err" role="alert">اكتب رقم واتساب صحيح.</div>
+          </div>
+
           <div class="field" id="f-email">
             <label for="email">بريد العمل</label>
             <input class="ctrl" id="email" name="email" type="email" inputmode="email" autocomplete="email" dir="ltr" placeholder="name@company.com">
             <div class="err" role="alert">تأكد من صيغة البريد الإلكتروني.</div>
           </div>
 
-          <div class="field" id="f-phone">
-            <label for="phone">رقم الجوال</label>
-            <div class="phone">
-              <select class="ctrl" id="cc" name="country_code" aria-label="مفتاح الدولة">
-                <option value="+966" selected>‏+966 السعودية</option>
-                <option value="+971">‏+971 الإمارات</option>
-                <option value="+965">‏+965 الكويت</option>
-                <option value="+974">‏+974 قطر</option>
-                <option value="+973">‏+973 البحرين</option>
-                <option value="+968">‏+968 عمان</option>
-                <option value="+20">‏+20 مصر</option>
-                <option value="+962">‏+962 الأردن</option>
-                <option value="+216">‏+216 تونس</option>
-                <option value="+212">‏+212 المغرب</option>
-                <option value="+213">‏+213 الجزائر</option>
-                <option value="+44">‏+44 بريطانيا</option>
-                <option value="+1">‏+1 أمريكا</option>
-                <option value="other">دولة أخرى</option>
-              </select>
-              <input class="ctrl" id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="5X XXX XXXX">
-            </div>
-            <div class="err" role="alert">اكتب رقم جوال صحيح.</div>
-          </div>
-
           <div class="field">
             <label for="company">اسم الشركة (اختياري)</label>
             <input class="ctrl" id="company" name="company" type="text" autocomplete="organization" placeholder="شركة الأفق">
-          </div>
-
-          <div class="field" id="f-role">
-            <label for="role">دورك في الشركة</label>
-            <select class="ctrl" id="role" name="role">
-              <option value="" selected disabled>اختر دورك</option>
-              <option>المالك</option>
-              <option>الرئيس التنفيذي / المدير العام</option>
-              <option>مدير عمليات</option>
-              <option>مدير مبيعات أو تسويق</option>
-              <option>عامل حر / وكالة</option>
-              <option>غير ذلك</option>
-            </select>
-            <div class="err" role="alert">اختر دورك من القائمة.</div>
           </div>
 
           <input class="hp" type="text" tabindex="-1" autocomplete="off" id="website" name="website" placeholder="اتركه فارغًا">
@@ -743,14 +613,10 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
 <!-- ============================== الأسئلة ============================== -->
 <section class="sect" id="faq" style="padding-block-start:0">
   <div class="wrap">
-    <p class="idx">06 — أسئلة</p>
+    <p class="idx">05 — أسئلة</p>
     <h2 class="d2 rv"><span>إجابات مباشرة.</span></h2>
 
     <div class="faq">
-      <div class="q">
-        <button class="q__b" type="button" aria-expanded="false">هل فعلًا الذكاء الاصطناعي يقدر يشيل الشغل التشغيلي؟<span class="sign"></span></button>
-        <div class="q__a"><p>الجزء المتكرر منه، نعم، وبثبات: المتابعة، التذكير، الرد على المكرر، التصنيف، التسجيل، والتقارير. أما القرارات الكبيرة فتبقى لك: التسعير، الاستراتيجية، العلاقات اللي تفرق. حكمك يبقى لك، والساعات اللي تستهلكه تروح لسيادة.</p></div>
-      </div>
       <div class="q">
         <button class="q__b" type="button" aria-expanded="false">وش الفرق بينها وبين ChatGPT أو Claude؟<span class="sign"></span></button>
         <div class="q__a"><p>أدوات المحادثة تعطيك جوابًا. سيادة تنفّذ: ترسل الرسالة فعليًا، تحدّث سجل العميل، تشغّل سلسلة المتابعة، وتلاحق الفاتورة داخل أدواتك الحقيقية. الفرق مثل الفرق بين إنك تسأل واحد ذكي رأيه، وإنك توظّفه يسوي الشغل عنك.</p></div>
@@ -760,20 +626,12 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
         <div class="q__a"><p>لا. لو تقدر تشرح مهمة لموظف جديد، تقدر تشغّل سيادة. تكتب طلبك بلغة عادية، وهي تبني الموظفين وتربط الأدوات وتعرض عليك الخطة قبل التنفيذ. وفي البيتا، فريقنا يجهّز معك أول موظفيك بنفسه.</p></div>
       </div>
       <div class="q">
-        <button class="q__b" type="button" aria-expanded="false">وين المصيدة؟ دايمًا فيه مصيدة.<span class="sign"></span></button>
-        <div class="q__a"><p>بصراحة: النسخة المبكرة ما راح تكون مثالية. راح تلقى حالات ما توقعناها، وتبي مزايا ما بنيناها بعد. عشان كذا حصرناها في 500 شركة، نشتغل معكم عن قرب قبل ما نفتح للعامة. أنت تاخذ خصمًا حقيقيًا مقابل ملاحظاتك.</p></div>
-      </div>
-      <div class="q">
         <button class="q__b" type="button" aria-expanded="false">هل بيانات شركتي بأمان؟<span class="sign"></span></button>
         <div class="q__a"><p>تشفير أثناء النقل والتخزين. الاستضافة داخل المملكة على خارطة طريق البيتا، ونقول لك بالضبط وين بياناتك قبل ما تربط أي أداة. ولا نستخدم بياناتك في تدريب أي نموذج، لا نموذجنا ولا نموذج غيرنا. قوائم عملائك وأرقامك ومحادثاتك تبقى ملكك.</p></div>
       </div>
       <div class="q">
-        <button class="q__b" type="button" aria-expanded="false">سجّلت وطلعت مو مناسبة لي؟<span class="sign"></span></button>
-        <div class="q__a"><p>الحجز ما يكلف شيئًا: لا بطاقة ولا التزام. لما تفتح دفعتك تجرّب وتقرر وقتها. وإذا ما ناسبتك، تمشي بدون أي تكلفة.</p></div>
-      </div>
-      <div class="q">
-        <button class="q__b" type="button" aria-expanded="false">متى يجي دوري؟<span class="sign"></span></button>
-        <div class="q__a"><p>نفتح على دفعات صغيرة عشان كل شركة تاخذ إعدادًا صحيحًا. الترتيب حسب تاريخ التسجيل، مع أولوية للشركات اللي عندها عمليات يومية واضحة تقدر سيادة تشيلها من أول يوم.</p></div>
+        <button class="q__b" type="button" aria-expanded="false">أقدر ألغي؟ ووش يصير بعد البيتا؟<span class="sign"></span></button>
+        <div class="q__a"><p>الحجز ما يكلف شيئًا وما فيه شيء تلغيه. لما تفتح دفعتك تجرّب وتقرر وقتها. الخطط المدفوعة تُدفع شهريًا، وتقدر تلغي من حسابك في أي وقت. السعر المبكر خصم 50% على سعر الخطة، ويبقى لك ما دام اشتراكك مستمرًا، حتى بعد ما تنتهي البيتا. وبالمقابل توقّع نسخة مبكرة: راح تلقى حالات ما توقعناها، وتبي مزايا ما بنيناها بعد. عشان كذا حصرنا البيتا في 500 شركة ونشتغل مع كل وحدة عن قرب.</p></div>
       </div>
     </div>
   </div>
@@ -793,13 +651,6 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
     </div>
   </div>
 </footer>
-
-<aside class="sticky" id="sticky" aria-label="احجز مقعدك">
-  <div class="wrap sticky__in">
-    <span class="sticky__t" data-plain="بيتا خاصة · الحجز مجاني · بدون بطاقة"><b id="leftMini">—</b> مقعد مبكر باقي · الحجز مجاني</span>
-    <a href="#join" class="btn">احجز مقعدك</a>
-  </div>
-</aside>
 
 <script src="site.js" defer></script>
 </body>

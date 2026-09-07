@@ -158,12 +158,6 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
 .hero__cta{display:flex;flex-wrap:wrap;gap:14px;margin-top:34px}
 .hero__fine{margin:20px 0 0;font-size:.8rem;color:var(--ash);display:flex;flex-wrap:wrap;gap:6px 22px}
 
-.metrics{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--hair);margin-top:clamp(56px,7vw,88px)}
-.metric{padding:26px 22px 0 0;border-right:1px solid var(--hair)}
-.metric:last-child{border-right:0}
-.metric__v{font-family:var(--f-display);font-weight:300;font-size:clamp(1.9rem,3.4vw,2.7rem);line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
-.metric__l{font-size:.8rem;color:var(--ash);margin-top:12px;max-width:19ch;line-height:1.5}
-
 /* ---------- live console ---------- */
 .console{border:1px solid var(--hair);background:var(--paper);display:flex;flex-direction:column;align-self:end}
 .console__bar{display:flex;align-items:center;gap:11px;padding:14px 18px;border-bottom:1px solid var(--hair);
@@ -194,19 +188,6 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
 .replay:hover{color:var(--ink);border-color:var(--ink)}
 
 /* ==========================================================================
-   cost (inverted)
-   ========================================================================== */
-.cost__head{max-width:26ch;margin-bottom:clamp(44px,6vw,72px)}
-.cost__item{display:grid;grid-template-columns:64px 1fr 220px;gap:clamp(18px,3vw,48px);padding:34px 0;border-top:1px solid var(--hair-i);align-items:start}
-.cost__item:last-of-type{border-bottom:1px solid var(--hair-i)}
-.cost__n{font-family:var(--f-display);font-size:.8rem;letter-spacing:.08em;color:#8C8C8A;padding-top:9px}
-.cost__h{font-family:var(--f-display);font-weight:300;font-size:clamp(1.2rem,2.2vw,1.62rem);line-height:1.32;margin-bottom:12px;max-width:26ch}
-.cost__p{margin:0;color:#A5A5A2;font-size:.95rem;max-width:52ch}
-.cost__tag{font-family:var(--f-display);font-weight:300;font-size:clamp(1rem,1.6vw,1.2rem);color:var(--paper);padding-top:6px}
-.cost__tag span{display:block;font-family:var(--f-body);font-size:.8rem;color:#8C8C8A;margin-top:6px;letter-spacing:.02em}
-.cost__close{margin-top:44px;font-family:var(--f-display);font-weight:300;font-size:clamp(1.2rem,2.4vw,1.9rem);line-height:1.35;max-width:22ch}
-
-/* ==========================================================================
    steps
    ========================================================================== */
 .steps{border-top:1px solid var(--hair);margin-top:clamp(38px,5vw,60px)}
@@ -220,49 +201,44 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
   text-transform:uppercase;color:var(--ash);margin-bottom:12px}
 
 /* ==========================================================================
-   departments
+   employees
    ========================================================================== */
-.dept{display:grid;grid-template-columns:.85fr 1.15fr;gap:clamp(30px,5vw,80px);margin-top:clamp(40px,5vw,64px);align-items:start}
-.tabs{display:flex;flex-direction:column;border-top:1px solid var(--hair)}
-.tab{text-align:left;background:none;border:0;border-bottom:1px solid var(--hair);padding:22px 4px;cursor:pointer;
-  display:flex;align-items:baseline;gap:16px;color:var(--ash);transition:color .3s,padding-left .4s var(--ease)}
-.tab:hover{color:var(--ink);padding-left:10px}
-.tab[aria-selected="true"]{color:var(--ink);padding-left:10px}
-.tab__n{font-family:var(--f-display);font-size:.75rem;letter-spacing:.08em;color:#6E6E6C}
-.tab[aria-selected="true"] .tab__n{color:var(--accent)}
-.tab__t{font-family:var(--f-display);font-weight:300;font-size:clamp(1.08rem,1.9vw,1.34rem);letter-spacing:-.01em}
-.panel{display:none}
-.panel.on{display:block;animation:in .55s var(--ease)}
-@keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.panel__h{margin-bottom:16px;max-width:22ch}
-.panel__p{color:var(--ash);margin:0 0 30px;max-width:52ch}
-.chain{list-style:none;margin:0 0 28px;padding:0;counter-reset:c}
-.chain li{display:grid;grid-template-columns:34px 1fr;gap:6px;padding:13px 0;border-top:1px solid var(--hair);font-size:.95rem;line-height:1.6}
-.chain li::before{counter-increment:c;content:counter(c,decimal-leading-zero);
-  font-family:var(--f-display);font-size:.75rem;letter-spacing:.06em;color:#6E6E6C;padding-top:4px}
-.tools{display:flex;flex-wrap:wrap;gap:8px;padding-top:22px;border-top:1px solid var(--hair)}
-.tool{font-family:var(--f-display);font-size:.75rem;letter-spacing:.06em;color:var(--ash);border:1px solid var(--hair);padding:6px 13px}
+.emp{list-style:none;margin:clamp(38px,5vw,60px) 0 0;padding:0;border-top:1px solid var(--hair)}
+.emp li{display:grid;grid-template-columns:.75fr 1.5fr .75fr;gap:clamp(18px,3vw,48px);padding:clamp(24px,3vw,34px) 0;border-bottom:1px solid var(--hair);align-items:baseline}
+.emp__n{font-family:var(--f-display);font-weight:300;font-size:clamp(1.15rem,2vw,1.5rem);letter-spacing:-.015em;line-height:1.3;margin:0}
+.emp__p{margin:0;color:var(--ash);max-width:54ch}
+.emp__t{margin:0;font-family:var(--f-display);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ash)}
 
 /* ==========================================================================
-   founders
+   pricing (inverted)
    ========================================================================== */
-.perks{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--hair-i);margin-top:clamp(40px,5vw,64px)}
-.perk{padding:36px 34px 40px 0;border-right:1px solid var(--hair-i)}
-.perk:last-child{border-right:0}
-.perk__n{font-family:var(--f-display);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:#8C8C8A;display:block;margin-bottom:20px}
-.perk__h{font-family:var(--f-display);font-weight:300;font-size:1.24rem;margin-bottom:12px;line-height:1.3}
-.perk__p{margin:0;color:#A5A5A2;font-size:.95rem;max-width:34ch}
-
-.meter{margin-top:clamp(48px,6vw,72px);border-top:1px solid var(--hair-i);padding-top:32px}
-.meter__top{display:flex;flex-wrap:wrap;align-items:baseline;gap:16px;margin-bottom:20px}
-.meter__v{font-family:var(--f-display);font-weight:300;font-size:clamp(2rem,4vw,3rem);letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
-.meter__v small{font-size:.42em;color:#8C8C8A;letter-spacing:.06em;margin-left:6px}
-.meter__l{color:#A5A5A2;font-size:.875rem}
-.meter__cd{margin-left:auto;display:flex;gap:22px;font-family:var(--f-display);font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:#8C8C8A}
-.meter__cd b{display:block;font-weight:300;font-size:1.5rem;letter-spacing:-.02em;color:var(--paper);font-variant-numeric:tabular-nums;text-transform:none}
-.bar{height:2px;background:rgba(255,255,255,.16)}
-.bar i{display:block;height:100%;width:0;background:var(--accent-lt);transition:width 1.7s var(--ease)}
-.meter__f{margin:16px 0 0;font-size:.875rem;color:#A5A5A2}
+.bill{display:inline-flex;border:1px solid var(--hair-i);margin-top:clamp(34px,4vw,48px)}
+.bill__b{background:none;border:0;padding:11px 20px;cursor:pointer;font-family:var(--f-display);font-size:.875rem;letter-spacing:.02em;color:#A5A5A2;
+  display:inline-flex;gap:10px;align-items:center;transition:background .25s,color .25s}
+.bill__b:hover{color:var(--paper)}
+.bill__b[aria-pressed="true"]{background:var(--paper);color:var(--ink)}
+.bill__note{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-lt)}
+.bill__b[aria-pressed="true"] .bill__note{color:var(--accent)}
+.plans{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:clamp(28px,4vw,40px)}
+.plans[data-cols="3"]{grid-template-columns:repeat(3,1fr)}
+.plan{border:1px solid var(--hair-i);padding:clamp(26px,3.2vw,40px);display:flex;flex-direction:column}
+.plan--hi{border-color:var(--paper)}
+.plan__tag{margin:0 0 18px;font-family:var(--f-display);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:#8C8C8A}
+.plan--hi .plan__tag{color:var(--accent-lt)}
+.plan__n{font-family:var(--f-display);font-weight:300;font-size:1.3rem;letter-spacing:-.01em;margin:0 0 22px}
+.plan__price{margin:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;font-family:var(--f-display);font-weight:300}
+.plan__v{font-size:clamp(2.4rem,4vw,3.2rem);line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.plan__v--txt{font-size:clamp(1.7rem,2.8vw,2.2rem)}
+.plan__cur,.plan__per{font-size:1rem;color:#A5A5A2}
+.plan__was{color:#8C8C8A;font-size:1.1rem;text-decoration:line-through}
+.plan__bill{margin:10px 0 0;font-size:.8rem;color:#8C8C8A}
+.plan__early{margin:18px 0 0;padding-top:14px;border-top:1px solid var(--hair-i);font-size:.875rem;color:var(--paper)}
+.plan__list{list-style:none;margin:20px 0 28px;padding:0;border-top:1px solid var(--hair-i);flex:1}
+.plan__list li{padding:12px 0;border-bottom:1px solid var(--hair-i);font-size:.95rem;color:#A5A5A2}
+.inv .btn--line{background:transparent;color:var(--paper);border-color:var(--paper)}
+.inv .btn--line:hover{background:var(--paper);color:var(--ink)}
+.plans__use{margin:clamp(30px,4vw,44px) 0 0;max-width:64ch;font-size:1rem;line-height:1.7}
+.plans__foot{margin:14px 0 0;font-size:.8rem;color:#8C8C8A;max-width:72ch}
 
 /* ==========================================================================
    waitlist
@@ -280,14 +256,13 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
   font-size:1rem;transition:border-color .25s}
 .ctrl:focus{outline:none;border-bottom-color:var(--accent);box-shadow:0 1px 0 0 var(--accent)}
 .ctrl::placeholder{color:#757575}
-select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' fill='none' stroke='%23767674' stroke-width='1.4'%3E%3Cpath d='M1 1l4.5 4.5L10 1'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 2px center;cursor:pointer}
-.phone{display:grid;grid-template-columns:120px 1fr;gap:16px}
+.phone{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:end}
+.phone__cc{padding:12px 0;border-bottom:1px solid #8A8A88;color:var(--ash);font-variant-numeric:tabular-nums;line-height:1.5}
 .err{display:none;color:#B03A2E;font-size:.8rem;margin-top:7px}
 .field.bad .ctrl{border-bottom-color:#B03A2E}
 .field.bad .err{display:block}
 .hp{position:absolute;left:-9999px;opacity:0;height:0}
 .form__fine{margin:16px 0 0;font-size:.8rem;color:var(--ash);line-height:1.6}
-.form__fine a{text-decoration:underline;text-underline-offset:2px}
 .form__fine a{text-decoration:underline;text-underline-offset:2px}
 .done{display:none}
 .done.on{display:block;animation:in .6s var(--ease)}
@@ -320,39 +295,21 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
 .mail:hover{color:var(--accent)}
 .foot__bot{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between;margin-top:clamp(40px,6vw,64px);padding-top:24px;border-top:1px solid var(--hair);font-size:.8rem;color:var(--ash)}
 
-.sticky{position:fixed;bottom:0;left:0;right:0;z-index:90;background:rgba(255,255,255,.93);backdrop-filter:blur(14px);
-  border-top:1px solid var(--hair);transform:translateY(110%);transition:transform .55s var(--ease)}
-.sticky.on{transform:none}
-.sticky__in{display:flex;align-items:center;gap:18px;padding:12px 0}
-.sticky__t{font-size:.875rem;color:var(--ash)}
-.sticky__t b{font-weight:500;color:var(--ink)}
-.sticky .btn{margin-left:auto;padding:11px 22px;font-size:.875rem;white-space:nowrap}
-
 /* ==========================================================================
    responsive
    ========================================================================== */
 @media (max-width:1000px){
-  .hero__row,.dept,.join{grid-template-columns:1fr}
+  .hero__row,.join{grid-template-columns:1fr}
   .hero__row{gap:38px}
-  .metrics{grid-template-columns:repeat(2,1fr)}
-  .metric{border-bottom:1px solid var(--hair);padding-bottom:22px}
-  .metric:nth-child(2n){border-right:0}
-  .perks{grid-template-columns:1fr}
-  .perk{border-right:0;border-bottom:1px solid var(--hair-i);padding:30px 0}
+  .emp li{grid-template-columns:1fr;gap:8px}
+  .emp__t{padding-top:6px}
   .nav__links a:not(.nav__lang){display:none}
 }
 @media (max-width:640px){
   body{font-size:16px}
-  .cost__item{grid-template-columns:1fr;gap:10px}
-  .cost__n{padding-top:0}
-  .cost__tag{padding-top:8px}
   .step{grid-template-columns:1fr;gap:8px}
   .step__n{padding-top:0}
-  .meter__cd{margin-left:0;width:100%}
   .hero__cta .btn{width:100%}
-  .sticky__t{display:none}
-  .sticky .btn{width:100%;margin-left:0}
-  .phone{grid-template-columns:104px 1fr}
 }
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
@@ -375,16 +332,18 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
   .nav__links a:last-child{border-block-end:0}
   .nav.open{background:var(--paper);border-bottom-color:var(--hair)}
 }
+@media (max-width:760px){ .plans,.plans[data-cols="3"]{grid-template-columns:1fr} .bill{display:flex} .bill__b{flex:1;justify-content:center} }
 @media (max-width:480px){ .nav .btn{padding:9px 12px;font-size:.8rem} }
 </style>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
  {"@type":"Organization","@id":"https://siyadah-ai.com/#org","name":"Siyadah AI","url":"https://siyadah-ai.com/","logo":"https://siyadah-ai.com/og.jpg","email":"info@siyadah-ai.com","sameAs":[]},
- {"@type":"SoftwareApplication","name":"Siyadah AI","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://siyadah-ai.com/","description":"AI operations team built from a single chat: sales follow-up, invoice collection, customer support and marketing, working inside the tools you already use.","offers":{"@type":"Offer","price":"0","priceCurrency":"SAR","description":"Free to reserve early access"},"publisher":{"@id":"https://siyadah-ai.com/#org"}},
+ {"@type":"SoftwareApplication","name":"Siyadah AI","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://siyadah-ai.com/","description":"AI employees run from a single chat: lead follow-up, invoice collection, customer support and marketing, working inside the tools you already use.","offers":{"@type":"Offer","price":"499","priceCurrency":"SAR","description":"Business plan, private beta price per month, excluding VAT. Free to reserve."},"publisher":{"@id":"https://siyadah-ai.com/#org"}},
  {"@type":"FAQPage","mainEntity":[
   {"@type":"Question","name":"How is this different from ChatGPT or Claude?","acceptedAnswer":{"@type":"Answer","text":"Chat tools give you an answer. Siyadah takes action inside your tools: it sends the message, updates the customer record, triggers the follow-up sequence, and pursues the invoice."}},
   {"@type":"Question","name":"Do I need to be technical?","acceptedAnswer":{"@type":"Answer","text":"No. If you can explain a task to a new hire, you can run Siyadah. You describe what you want in plain language; it builds the AI employees, connects the tools, and shows you the plan before executing."}},
-  {"@type":"Question","name":"Is my business data safe?","acceptedAnswer":{"@type":"Answer","text":"Encrypted in transit and at rest. Hosting inside the Kingdom is on the beta roadmap, and we tell you exactly where your data sits before you connect a single tool. Your data is never used to train models."}}
+  {"@type":"Question","name":"Is my business data safe?","acceptedAnswer":{"@type":"Answer","text":"Encrypted in transit and at rest. Hosting inside the Kingdom is on the beta roadmap, and we tell you exactly where your data sits before you connect a single tool. Your data is never used to train models."}},
+  {"@type":"Question","name":"Can I cancel? And what happens after the beta?","acceptedAnswer":{"@type":"Answer","text":"Reserving costs nothing and there is nothing to cancel. Paid plans are billed monthly and you can cancel at any time. The early rate is 50% off the plan price and stays yours for as long as you keep the subscription, including after the beta ends."}}
  ]}
 ]}
 </script>
@@ -397,9 +356,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
     <a href="#top" aria-label="Siyadah AI, home"><span class="logo" role="img" aria-label="Siyadah AI"></span></a>
     <nav class="nav__links" id="nav-links" aria-label="Primary">
       <a href="#how">How it works</a>
-      <a href="#dept">Departments</a>
-      <a href="#founders">Private beta</a>
-      <a href="#faq">FAQ</a>
+      <a href="#pricing">Pricing</a>
       <a href="integrations.html">Integrations</a>
       <a href="ar.html" class="nav__lang">AR</a>
     </nav>
@@ -455,59 +412,14 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
           </div>
         </div>
       </div>
-
-      <div class="metrics">
-        <div class="metric"><div class="metric__v"><span data-count="3">0</span> min</div><div class="metric__l">From first sentence to a working team</div></div>
-        <div class="metric"><div class="metric__v"><span data-count="4">0</span></div><div class="metric__l">AI employees running in parallel</div></div>
-        <div class="metric"><div class="metric__v"><span data-count="24">0</span>/<span>7</span></div><div class="metric__l">Running while you sleep or travel</div></div>
-        <div class="metric"><div class="metric__v">Zero</div><div class="metric__l">New names on your payroll</div></div>
-      </div>
     </div>
-  </div>
-</section>
-
-<!-- ============================== cost ============================== -->
-<section class="sect inv">
-  <div class="wrap">
-    <p class="idx">01 — The cost of doing it yourself</p>
-    <h2 class="d2 cost__head rv"><span>You didn't start a company to become its employee.</span></h2>
-    <p class="lead" style="max-width:56ch;margin-bottom:clamp(44px,6vw,72px)">Every advisor says the same thing: hire. Good advice, if you already have the payroll. Nobody prices the gap between today and the day you can afford it. That gap costs more than the salaries would.</p>
-
-    <div class="cost__item">
-      <div class="cost__n">01</div>
-      <div>
-        <h3 class="cost__h">The lead that came in at 11pm. You replied two days later.</h3>
-        <p class="cost__p">They didn't wait. They went with whoever answered first. You lost a customer you had already won.</p>
-      </div>
-      <div class="cost__tag">Opportunity, gone<span>Quietly, without a trace</span></div>
-    </div>
-
-    <div class="cost__item">
-      <div class="cost__n">02</div>
-      <div>
-        <h3 class="cost__h">An invoice that's forty days old, and nobody has asked for it.</h3>
-        <p class="cost__p">Not because you don't want your money. Because chasing invoices is tedious, awkward, and permanently last on the list. Your cash sits in someone else's account.</p>
-      </div>
-      <div class="cost__tag">Cash, frozen<span>In someone else's account</span></div>
-    </div>
-
-    <div class="cost__item">
-      <div class="cost__n">03</div>
-      <div>
-        <h3 class="cost__h">Fourteen-hour days spent on twenty-riyal-an-hour work.</h3>
-        <p class="cost__p">Copying data. Answering the same question for the fortieth time. Following up by hand. The company stops growing because the owner is busy doing what should have been automated.</p>
-      </div>
-      <div class="cost__tag">Growth, stalled<span>And burnout wins</span></div>
-    </div>
-
-    <p class="cost__close">The work leaves your desk. It doesn't come back.</p>
   </div>
 </section>
 
 <!-- ============================== how ============================== -->
 <section class="sect" id="how">
   <div class="wrap">
-    <p class="idx">02 — How it works</p>
+    <p class="idx">01 — How it works</p>
     <h2 class="d2 rv" style="max-width:18ch"><span>Three minutes from overwhelmed to operational.</span></h2>
     <p class="lead" style="margin-top:24px">No integrations to configure. No workflows to map. You talk to Siyadah the way you'd talk to someone joining on their first day.</p>
 
@@ -528,7 +440,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
         <div class="step__n">Step 02</div>
         <div>
           <h3 class="d3 step__h">Siyadah reads your company, builds the team, and shows you the plan</h3>
-          <p class="step__p">Give it your website or Instagram. It reads everything: services, prices, policies, the questions customers ask, even your tone, and turns it into what your employees know from day one. It then builds one AI employee per department, connects it to the tools you already use, and shows you exactly what it intends to do before it does any of it. You approve, or you adjust it with a sentence.</p>
+          <p class="step__p">Give it your website or Instagram. It reads your services, prices, policies and tone, builds one AI employee per department, connects the tools you already use, and shows you the plan before doing anything. You approve, or adjust it with a sentence.</p>
         </div>
       </div>
 
@@ -536,141 +448,128 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
         <div class="step__n">Step 03</div>
         <div>
           <h3 class="d3 step__h">Go live, then go home</h3>
-          <p class="step__p">The team starts immediately. Leads get followed up. Invoices get chased. Customers get answers. You go back to the work only you can do — and you get your evenings back.</p>
+          <p class="step__p">The team starts immediately. Leads get followed up. Invoices get chased. Customers get answers. You go back to the work only you can do, and you get your evenings back.</p>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ============================== departments ============================== -->
+<!-- ============================== employees ============================== -->
 <section class="sect" id="dept" style="padding-top:0">
   <div class="wrap">
-    <p class="idx">03 — Departments</p>
-    <h2 class="d2 rv" style="max-width:16ch"><span>One chat. Four AI employees. Nobody on payroll.</span></h2>
-    <p class="lead" style="margin-top:24px">Pick a department. This is the work Siyadah does inside it, step by step.</p>
+    <p class="idx">02 — Employees</p>
+    <h2 class="d2 rv" style="max-width:16ch"><span>Four AI employees. One chat.</span></h2>
+    <p class="lead" style="margin-top:24px">Each one owns a function and works inside the tools you already use. You brief all four from the same conversation.</p>
 
-    <div class="dept">
-      <div class="tabs" role="tablist" aria-label="Departments">
-        <button type="button" class="tab" role="tab" aria-selected="true" aria-controls="p1" id="t1"><span class="tab__n">01</span><span class="tab__t">Sales follow-up</span></button>
-        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="p2" id="t2" tabindex="-1"><span class="tab__n">02</span><span class="tab__t">Invoice collection</span></button>
-        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="p3" id="t3" tabindex="-1"><span class="tab__n">03</span><span class="tab__t">Customer support</span></button>
-        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="p4" id="t4" tabindex="-1"><span class="tab__n">04</span><span class="tab__t">Marketing</span></button>
-      </div>
-
-      <div>
-        <div class="panel on" id="p1" role="tabpanel" aria-labelledby="t1">
-          <h3 class="d3 panel__h">Every lead answered in minutes, not days</h3>
-          <p class="panel__p">The fastest reply usually wins. Siyadah makes you the fastest one, even when the lead arrives at 3am.</p>
-          <ul class="chain">
-            <li>A lead arrives from your form, your ads, or WhatsApp</li>
-            <li>They get a personal reply within minutes, referencing what they actually asked for</li>
-            <li>Qualifying questions get asked, and the lead is sorted: ready, needs nurturing, or not a fit</li>
-            <li>Ready leads are booked straight into your calendar</li>
-            <li>Cold ones enter a follow-up sequence instead of being forgotten</li>
-            <li>You get one daily summary: how many, how many qualified, what needs you</li>
-          </ul>
-          <div class="tools"><span class="tool">WhatsApp</span><span class="tool">Email</span><span class="tool">CRM</span><span class="tool">Calendar</span><span class="tool">Web forms</span></div>
-        </div>
-
-        <div class="panel" id="p2" role="tabpanel" aria-labelledby="t2">
-          <h3 class="d3 panel__h">It chases your money so you don't have to</h3>
-          <p class="panel__p">Steady, polite reminders collect more than tense, late ones. Siyadah never forgets and never feels awkward about asking.</p>
-          <ul class="chain">
-            <li>Tracks every outstanding invoice and knows exactly how late each one is</li>
-            <li>Sends a polite reminder that escalates in tone with each stage of delay</li>
-            <li>Stops the moment payment lands. No embarrassing follow-ups</li>
-            <li>Logs each payment and updates your sheet or accounting tool</li>
-            <li>Gives you a weekly picture of money in, money out, money expected</li>
-            <li>Flags a cash squeeze before it becomes next month's problem</li>
-          </ul>
-          <div class="tools"><span class="tool">Invoicing</span><span class="tool">Sheets</span><span class="tool">Email</span><span class="tool">WhatsApp</span><span class="tool">Alerts</span></div>
-        </div>
-
-        <div class="panel" id="p3" role="tabpanel" aria-labelledby="t3">
-          <h3 class="d3 panel__h">Customers answered in seconds, around the clock</h3>
-          <p class="panel__p">Most support questions repeat. Siyadah resolves those instantly and escalates only what genuinely deserves your attention.</p>
-          <ul class="chain">
-            <li>Collects messages from WhatsApp, email, and your site in one place</li>
-            <li>Answers from your knowledge: your pricing, your policies, your services</li>
-            <li>Resolves repeat requests end to end without involving you</li>
-            <li>Escalates sensitive cases with a summary ready for your decision</li>
-            <li>Works in Arabic and English, in the tone you define</li>
-            <li>Spots recurring questions and tells you what to fix in the product</li>
-          </ul>
-          <div class="tools"><span class="tool">WhatsApp</span><span class="tool">Site chat</span><span class="tool">Email</span><span class="tool">Knowledge base</span></div>
-        </div>
-
-        <div class="panel" id="p4" role="tabpanel" aria-labelledby="t4">
-          <h3 class="d3 panel__h">Your brand never goes quiet</h3>
-          <p class="panel__p">Marketing is the first thing to drop when the team gets busy. Siyadah keeps it running through your worst week.</p>
-          <ul class="chain">
-            <li>Builds a monthly content calendar around your services and your audience</li>
-            <li>Writes posts and newsletters in your brand's voice</li>
-            <li>Schedules publishing and reminds you of seasons and key dates</li>
-            <li>Reworks what performed into new formats instead of starting from scratch</li>
-            <li>Reports what's worth repeating, in plain numbers</li>
-          </ul>
-          <div class="tools"><span class="tool">LinkedIn</span><span class="tool">X</span><span class="tool">Instagram</span><span class="tool">Newsletter</span><span class="tool">Reporting</span></div>
-        </div>
-      </div>
-    </div>
+    <ul class="emp">
+      <li>
+        <h3 class="emp__n">Lead follow-up</h3>
+        <p class="emp__p">Replies to every new lead within minutes, asks the qualifying questions, and books the ready ones straight into your calendar.</p>
+        <p class="emp__t">WhatsApp · CRM · Calendar</p>
+      </li>
+      <li>
+        <h3 class="emp__n">Invoice collection</h3>
+        <p class="emp__p">Tracks every unpaid invoice, sends reminders that firm up with each week of delay, and stops the moment payment lands.</p>
+        <p class="emp__t">Invoicing · Sheets · WhatsApp</p>
+      </li>
+      <li>
+        <h3 class="emp__n">Customer support</h3>
+        <p class="emp__p">Answers repeat questions from your own pricing and policies around the clock, and escalates sensitive cases to you with a summary.</p>
+        <p class="emp__t">WhatsApp · Email · Site chat</p>
+      </li>
+      <li>
+        <h3 class="emp__n">Marketing</h3>
+        <p class="emp__p">Keeps a monthly content calendar running in your brand's voice, schedules publishing, and reports what is worth repeating.</p>
+        <p class="emp__t">LinkedIn · Instagram · Newsletter</p>
+      </li>
+    </ul>
   </div>
 </section>
 
-<!-- ============================== founders ============================== -->
-<section class="sect inv" id="founders">
+<!-- ============================== pricing ============================== -->
+<section class="sect inv" id="pricing">
   <div class="wrap">
-    <p class="idx">04 — Private beta</p>
-    <h2 class="d2 rv" style="max-width:20ch"><span>The people who arrive early are treated differently.</span></h2>
-    <p class="lead" style="margin-top:24px">These terms disappear the moment we open to the public. No exceptions, no reinstating them later.</p>
+    <p class="idx">03 — Pricing</p>
+    <h2 class="d2 rv" style="max-width:16ch"><span>Simple pricing. One usage line.</span></h2>
 
-    <div class="perks">
-      <div class="perk">
-        <span class="perk__n">Pricing</span>
-        <h3 class="perk__h">50% off, for life</h3>
-        <p class="perk__p">Public pricing will be meaningfully higher. The early rate never rises, not as we add departments, integrations, or capabilities.</p>
+    <div class="bill" role="group" aria-label="Billing period">
+      <button type="button" class="bill__b" data-period="monthly" aria-pressed="true">Monthly</button>
+      <button type="button" class="bill__b" data-period="annual" aria-pressed="false">Annual <span class="bill__note">2 months free</span></button>
+    </div>
+
+    <div class="plans" id="plans" data-cols="2">
+      <div class="plan plan--hi" id="plan-business">
+        <p class="plan__tag">Most popular</p>
+        <h3 class="plan__n">Business</h3>
+        <p class="plan__price">
+          <span class="plan__v" data-price="business">998</span>
+          <span class="plan__cur">SAR</span><span class="plan__per">/month</span>
+          <s class="plan__was" data-was="business" hidden>998</s>
+        </p>
+        <p class="plan__bill" data-bill>Billed monthly</p>
+        <p class="plan__early" data-early hidden>Private beta: 50% off the plan price, for life</p>
+        <ul class="plan__list">
+          <li data-employees>4 AI employees</li>
+          <li>Unlimited chat</li>
+          <li data-actions>A monthly action allowance</li>
+          <li>Setup session with the team</li>
+          <li>Priority support</li>
+        </ul>
+        <a href="#join" class="btn btn--wide">Reserve your seat <span class="drop" aria-hidden="true"></span></a>
       </div>
-      <div class="perk">
-        <span class="perk__n">Onboarding</span>
-        <h3 class="perk__h">A setup session, run with you</h3>
-        <p class="perk__p">Someone from the team configures your first AI employees live, with you. You leave with a team that is already running.</p>
-      </div>
-      <div class="perk">
-        <span class="perk__n">Influence</span>
-        <h3 class="perk__h">You shape the roadmap</h3>
-        <p class="perk__p">A direct channel to the founding team. Request features, report what breaks, watch your ideas ship. Early members sit on the roadmap call every month.</p>
+
+      <div class="plan" id="plan-enterprise">
+        <p class="plan__tag">For larger teams</p>
+        <h3 class="plan__n">Enterprise</h3>
+        <p class="plan__price"><span class="plan__v plan__v--txt">Custom</span></p>
+        <p class="plan__bill">Annual contract, invoice billing</p>
+        <ul class="plan__list">
+          <li>Dedicated AI employees</li>
+          <li>SSO</li>
+          <li>Hosting inside the Kingdom</li>
+          <li>SLA</li>
+          <li>Invoice billing</li>
+        </ul>
+        <a href="mailto:info@siyadah-ai.com" class="btn btn--line btn--wide">Talk to sales</a>
       </div>
     </div>
 
-    <div class="meter">
-      <div class="meter__top">
-        <span class="meter__v"><span id="claimed">0</span><small>/ 500</small></span>
-        <span class="meter__l">early seats claimed</span>
-        <span class="meter__cd" id="cd">
-          <span><b data-cd="d">--</b> days</span>
-          <span><b data-cd="h">--</b> hrs</span>
-          <span><b data-cd="m">--</b> min</span>
-        </span>
+    <template id="planStarter">
+      <div class="plan" id="plan-starter">
+        <p class="plan__tag">Getting started</p>
+        <h3 class="plan__n">Starter</h3>
+        <p class="plan__price">
+          <span class="plan__v" data-price="starter">0</span>
+          <span class="plan__cur">SAR</span><span class="plan__per">/month</span>
+          <s class="plan__was" data-was="starter" hidden>0</s>
+        </p>
+        <p class="plan__bill" data-bill>Billed monthly</p>
+        <ul class="plan__list">
+          <li data-employees>AI employees</li>
+          <li>Unlimited chat</li>
+          <li data-actions>A monthly action allowance</li>
+        </ul>
+        <a href="#join" class="btn btn--line btn--wide">Reserve your seat</a>
       </div>
-      <div class="bar"><i id="barfill"></i></div>
-      <p class="meter__f"><span id="left">—</span> seats remaining. When they're gone, this tier closes for good.</p>
-    </div>
+    </template>
+
+    <p class="plans__use">Chatting is unlimited. Actions your employees execute inside your tools count toward your monthly allowance. Add prepaid credits any time. Never a surprise bill.</p>
+    <p class="plans__foot" id="vatNote">Prices in Saudi riyals, excluding 15% VAT. ZATCA-compliant tax invoices. Mada, Visa and Mastercard. Cancel any time.</p>
   </div>
 </section>
 
-<!-- ============================== waitlist ============================== -->
+<!-- ============================== reserve ============================== -->
 <section class="sect" id="join">
   <div class="wrap join">
     <div>
-      <p class="idx">05 — Reserve a seat</p>
-      <h2 class="d2 rv"><span>Reserve your seat before the door closes.</span></h2>
-      <p class="lead" style="margin-top:24px">Reserving is completely free. You join the queue, we reach out when your wave opens, you try it, and then you decide.</p>
+      <p class="idx">04 — Reserve a seat</p>
+      <h2 class="d2 rv"><span>Reserve your seat, try it, then decide.</span></h2>
+      <p class="lead" style="margin-top:24px">Reserving is free. You join the queue, we reach out when your wave opens, you try it with the early price, and then you decide.</p>
       <ul class="assure">
         <li><span class="drop" aria-hidden="true"></span> No card, no commitment, nothing to cancel</li>
         <li><span class="drop" aria-hidden="true"></span> Sent over HTTPS, stored privately, deleted on request. We never train models on your data</li>
         <li><span class="drop" aria-hidden="true"></span> One email, and only one: when it's your turn</li>
-        <li><span class="drop" aria-hidden="true"></span> Early pricing locked to your name the second you sign up</li>
       </ul>
     </div>
 
@@ -686,53 +585,24 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
             <div class="err" role="alert">Please enter your full name.</div>
           </div>
 
+          <div class="field" id="f-phone">
+            <label for="phone">WhatsApp number</label>
+            <div class="phone">
+              <span class="phone__cc">+966</span>
+              <input class="ctrl" id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="5X XXX XXXX">
+            </div>
+            <div class="err" role="alert">Please enter a valid WhatsApp number.</div>
+          </div>
+
           <div class="field" id="f-email">
             <label for="email">Work email</label>
             <input class="ctrl" id="email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="name@company.com">
             <div class="err" role="alert">That email doesn't look right.</div>
           </div>
 
-          <div class="field" id="f-phone">
-            <label for="phone">Phone</label>
-            <div class="phone">
-              <select class="ctrl" id="cc" name="country_code" aria-label="Country code">
-                <option value="+966" selected>+966 SA</option>
-                <option value="+971">+971 AE</option>
-                <option value="+965">+965 KW</option>
-                <option value="+974">+974 QA</option>
-                <option value="+973">+973 BH</option>
-                <option value="+968">+968 OM</option>
-                <option value="+20">+20 EG</option>
-                <option value="+962">+962 JO</option>
-                <option value="+216">+216 TN</option>
-                <option value="+212">+212 MA</option>
-                <option value="+44">+44 UK</option>
-                <option value="+1">+1 US</option>
-                <option value="+213">+213 DZ</option>
-                <option value="other">Other</option>
-              </select>
-              <input class="ctrl" id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="5X XXX XXXX">
-            </div>
-            <div class="err" role="alert">Please enter a valid phone number.</div>
-          </div>
-
           <div class="field">
             <label for="company">Company <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
             <input class="ctrl" id="company" name="company" type="text" autocomplete="organization" placeholder="Acme Inc.">
-          </div>
-
-          <div class="field" id="f-role">
-            <label for="role">Your role</label>
-            <select class="ctrl" id="role" name="role">
-              <option value="" selected disabled>Select your role</option>
-              <option>Owner</option>
-              <option>CEO / Managing director</option>
-              <option>Operations lead</option>
-              <option>Sales or marketing lead</option>
-              <option>Freelancer / Agency</option>
-              <option>Other</option>
-            </select>
-            <div class="err" role="alert">Please select your role.</div>
           </div>
 
           <input class="hp" type="text" tabindex="-1" autocomplete="off" id="website" name="website" placeholder="Leave empty">
@@ -755,14 +625,10 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
 <!-- ============================== faq ============================== -->
 <section class="sect" id="faq" style="padding-top:0">
   <div class="wrap">
-    <p class="idx">06 — Questions</p>
+    <p class="idx">05 — Questions</p>
     <h2 class="d2 rv"><span>Straight answers.</span></h2>
 
     <div class="faq">
-      <div class="q">
-        <button class="q__b" type="button" aria-expanded="false">Can AI really take over operational work?<span class="sign"></span></button>
-        <div class="q__a"><p>The repeatable part, yes, and reliably: following up, reminding, answering what repeats, sorting, logging, reporting. The big calls stay with you: pricing, strategy, the relationships that matter. Your judgement stays yours. The hours that exhaust it go to Siyadah.</p></div>
-      </div>
       <div class="q">
         <button class="q__b" type="button" aria-expanded="false">How is this different from ChatGPT or Claude?<span class="sign"></span></button>
         <div class="q__a"><p>Chat tools give you an answer. Siyadah takes action: it sends the message, updates the customer record, triggers the follow-up sequence, and pursues the invoice inside your actual tools. It's the difference between asking a smart person for advice and hiring them to do the work.</p></div>
@@ -772,20 +638,12 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
         <div class="q__a"><p>No. If you can explain a task to a new hire, you can run Siyadah. You describe what you want in ordinary language; it builds the AI employees, connects the tools, and shows you the plan before executing. During the beta, our team also sets up your first AI employees with you directly.</p></div>
       </div>
       <div class="q">
-        <button class="q__b" type="button" aria-expanded="false">What's the catch? There's always a catch.<span class="sign"></span></button>
-        <div class="q__a"><p>Honestly: an early version won't be perfect. You'll find edge cases we didn't anticipate and want features we haven't built. That's exactly why we're capping this at 500 companies — so we can work closely with you before opening to the public. You get a serious discount in exchange for your feedback.</p></div>
-      </div>
-      <div class="q">
         <button class="q__b" type="button" aria-expanded="false">Is my business data safe?<span class="sign"></span></button>
         <div class="q__a"><p>Encrypted in transit and at rest. Hosting inside the Kingdom is on the beta roadmap, and we tell you exactly where your data sits before you connect a single tool. We never use your data to train models, ours or anyone else's. Your customer lists, financials, and conversations stay yours.</p></div>
       </div>
       <div class="q">
-        <button class="q__b" type="button" aria-expanded="false">What if I sign up and it isn't for me?<span class="sign"></span></button>
-        <div class="q__a"><p>Reserving costs nothing: no card, no commitment. When your wave opens you try it and decide then. If it isn't the right fit, you walk away at zero cost.</p></div>
-      </div>
-      <div class="q">
-        <button class="q__b" type="button" aria-expanded="false">When does my turn come?<span class="sign"></span></button>
-        <div class="q__a"><p>We open in small waves so every company gets a proper setup. Order follows signup date, with priority to businesses that have clear daily operations Siyadah can take over from day one.</p></div>
+        <button class="q__b" type="button" aria-expanded="false">Can I cancel? And what happens after the beta?<span class="sign"></span></button>
+        <div class="q__a"><p>Reserving costs nothing and there is nothing to cancel. When your wave opens you try it and decide then. Paid plans are billed monthly, and you can cancel from your account at any time. The early rate is 50% off the plan price and stays yours for as long as you keep the subscription, including after the beta ends. In return, expect an early version: you will find edge cases we missed and want features we have not built yet, which is why we cap the beta at 500 companies and work closely with each one.</p></div>
       </div>
     </div>
   </div>
@@ -805,13 +663,6 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
     </div>
   </div>
 </footer>
-
-<aside class="sticky" id="sticky" aria-label="Reserve a seat">
-  <div class="wrap sticky__in">
-    <span class="sticky__t" data-plain="Private beta · free to reserve · no card required"><b id="leftMini">—</b> early seats remaining · free to reserve</span>
-    <a href="#join" class="btn">Reserve your seat</a>
-  </div>
-</aside>
 
 <script src="site.js" defer></script>
 </body>

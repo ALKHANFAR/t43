@@ -15,13 +15,13 @@
 /* ==========================================================================
    سيادة — تخطيط المحادثة
    نفس الترتيب اللي يعرفه كل الناس من ChatGPT: قائمة على الجنب، محادثة في النص.
-   الفرق: الموظفون جزء من القائمة، وتقدر تتكلم مع سيادة أو مع موظف بعينه.
+   الفرق: الموظفون جزء من القائمة، وكل موظف صفحته محادثة معه.
    ========================================================================== */
 :root{
   --paper:#FFFFFF; --wash:#F7F7FB; --ink:#0A0A0A;
   --ash:#6E6E6C; --ash-2:#6F6F6D; --hair:#E0E1E8;
   --accent:#0B844B; --accent-lt:#40E799; --accent-wash:#F2FAF6;
-  --ok:#12784F; --warn:#8A6E2C; --warn-wash:#FBF7EE;
+  --ok:#12784F; --warn:#8A6E2C; --warn-wash:#FBF7EE; --bad:#A3352C; --bad-wash:#FBF0EE;
   --f-display:"Readex Pro", system-ui, sans-serif;
   --f-body:"IBM Plex Sans Arabic", system-ui, sans-serif;
   --side:290px; --ease:cubic-bezier(.16,1,.3,1);
@@ -31,9 +31,11 @@ html,body{height:100%}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15.5px;line-height:1.75;-webkit-font-smoothing:antialiased;overflow:hidden}
 button,input,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
+[hidden]{display:none !important}
 :focus-visible{outline:1.5px solid var(--accent);outline-offset:3px}
 ::selection{background:var(--accent);color:#fff}
 .num{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px solid var(--hair);padding:1px 6px;direction:ltr;unicode-bidi:isolate}
 
 .logo{display:block;background:currentColor;aspect-ratio:802/99;
   -webkit-mask:url(../assets/wordmark.png) center/contain no-repeat;
@@ -59,8 +61,6 @@ button{cursor:pointer}
 .newc .plus{font-size:1.1rem;line-height:1;color:var(--ash)}
 .side__scroll{flex:1;overflow-y:auto;padding:0 8px 8px}
 .lbl{font-family:var(--f-display);font-size:.7rem;color:var(--ash-2);padding:14px 10px 6px;display:flex;align-items:center;justify-content:space-between}
-.lbl a{font-size:.7rem;color:var(--ash);text-decoration:none}
-.lbl a:hover{color:var(--ink)}
 
 .emp{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;width:100%;padding:8px 10px;background:none;border:0;
   border-radius:2px;text-align:start;transition:.2s}
@@ -77,18 +77,32 @@ button{cursor:pointer}
 .badge{font-family:var(--f-display);font-size:.7rem;background:var(--warn-wash);color:var(--warn);border:1px solid rgba(138,110,44,.35);padding:0 6px}
 .emp[aria-current="true"] .badge{background:transparent;color:#E8CB7A;border-color:rgba(232,203,122,.45)}
 
+/* بحث السجل — ⌘K */
+.hq{width:100%;margin:12px 0 2px;padding:8px 10px;border:1px solid var(--hair);background:var(--paper);font-size:.85rem;border-radius:2px}
+.hq:focus{outline:none;border-color:var(--accent)}
+.hq::placeholder{color:#757575}
+.hq__none{font-size:.8rem;color:var(--ash);padding:10px}
+
 .hist{display:block;width:100%;padding:8px 10px;background:none;border:0;border-radius:2px;text-align:start;font-size:.875rem;color:var(--ink);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:.2s}
 .hist:hover{background:var(--hair)}
 .hist[aria-current="true"]{background:var(--paper);border:1px solid var(--hair)}
 .hist small{color:var(--ash-2);font-size:.75rem;margin-inline-start:6px}
 
-.side__foot{border-block-start:1px solid var(--hair);padding:12px 12px}
-.me{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;background:none;border:0;border-radius:2px;text-align:start;transition:.2s}
+.side__foot{border-block-start:1px solid var(--hair);padding:12px 12px;position:relative}
+.foot__r{display:flex;align-items:center;gap:4px}
+.me{display:flex;align-items:center;gap:10px;flex:1;min-width:0;padding:8px 10px;background:none;border:0;border-radius:2px;text-align:start;transition:.2s}
 .me:hover{background:var(--hair)}
-.me .av{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.me__n{font-size:.875rem;line-height:1.25}
-.me__n small{display:block;font-size:.75rem;color:var(--ash)}
+.me .av{background:var(--ink);color:var(--paper);border-color:var(--ink);flex:none}
+.me__n{font-size:.875rem;line-height:1.25;min-width:0}
+.me__n small{display:block;font-size:.75rem;color:var(--ash);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{display:inline-block;font-family:var(--f-display);font-size:.7rem;line-height:1.6;background:var(--warn-wash);color:var(--warn);border:1px solid rgba(138,110,44,.35);padding:0 7px;border-radius:2px;white-space:nowrap}
+.me .pill{margin-block-start:3px}
+.keys__b{font-family:var(--f-display);font-size:.9rem;flex:none}
+.keys{border:1px solid var(--hair);background:var(--paper);padding:8px 10px;margin-block-end:8px;animation:in .2s var(--ease)}
+.keys ul{list-style:none;margin:0;padding:0}
+.keys li{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.8rem;color:var(--ash);padding:4px 0}
+.keys li span:first-child{color:var(--ink)}
 
 /* ==========================  المحادثة  ========================== */
 .main{display:flex;flex-direction:column;height:100vh;min-width:0;position:relative}
@@ -98,18 +112,12 @@ button{cursor:pointer}
 .who{display:inline-flex;align-items:center;gap:10px;background:none;border:1px solid transparent;padding:7px 12px;border-radius:2px;
   font-family:var(--f-display);font-size:1rem;transition:.2s}
 .who .av{width:24px;height:24px;font-size:.8rem}
-.who .chev{width:10px;height:10px;border-inline-end:1.5px solid var(--ash);border-block-end:1.5px solid var(--ash);transform:rotate(45deg);margin-block-start:-4px}
-.bar__r{margin-inline-start:auto;display:flex;align-items:center;gap:8px}
 
-/* شريط الموظف — يظهر فقط لما تتكلم مع موظف */
-.strip{display:none;align-items:center;gap:22px;padding:10px 24px;border-block-end:1px solid var(--hair);background:var(--wash);font-size:.8rem;color:var(--ash);flex-wrap:wrap}
-.strip.on{display:flex}
-.strip b{font-family:var(--f-display);font-weight:300;font-size:1.15rem;color:var(--ink);margin-inline-end:6px}
-.strip .sw{width:40px;height:22px;border-radius:11px;background:var(--hair);position:relative;border:0;padding:0;transition:.25s;margin-inline-start:auto}
-.strip .sw::after{content:"";position:absolute;inset-block-start:3px;inset-inline-start:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .25s var(--ease)}
-.strip .sw[aria-checked="true"]{background:var(--accent)}
-[dir="rtl"] .strip .sw[aria-checked="true"]::after{transform:translateX(-18px)}
-.strip .link{color:var(--accent);font-size:.8rem;background:none;border:0;padding:0}
+/* لافتة الخطة — تطلع فقط لما يتوقف التنفيذ أو يفشل الدفع */
+.pban{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin:0 20px 8px;padding:9px 14px;font-size:.85rem;
+  color:var(--warn);background:var(--warn-wash);border:1px solid rgba(138,110,44,.35)}
+.pban .lnk{color:var(--ink)}
+.pban--bad{color:var(--bad);background:var(--bad-wash);border-color:rgba(163,53,44,.35)}
 
 .thread{flex:1;overflow-y:auto;padding:24px 20px 0}
 .col{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:26px;padding-block-end:24px}
@@ -122,7 +130,8 @@ button{cursor:pointer}
 .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:100%;max-width:640px}
 .cardq{background:var(--paper);border:1px solid var(--hair);padding:14px 16px;text-align:start;font-size:.875rem;line-height:1.55;transition:.2s;border-radius:2px}
 .cardq:hover{border-color:var(--ink)}
-.cardq small{display:block;font-family:var(--f-display);font-size:.7rem;color:var(--ash-2);margin-block-end:4px}
+.cardq small{display:flex;align-items:center;gap:6px;font-family:var(--f-display);font-size:.7rem;color:var(--ash-2);margin-block-end:4px}
+.cardq .ic{width:12px;height:12px;color:var(--ash-2)}
 
 /* الرسائل — نمط ChatGPT: المستخدم في فقاعة، سيادة بدون فقاعة */
 .m{display:flex;gap:14px;animation:in .35s var(--ease)}
@@ -134,11 +143,13 @@ button{cursor:pointer}
 .m__av .drop{width:11px}
 .m__b p{margin:0 0 10px}.m__b p:last-child{margin:0}
 .m__b b{font-weight:500}
+.m__b small{display:block;color:var(--ash);font-size:.8rem}
 .m__t{display:block;font-family:var(--f-display);font-size:.7rem;color:var(--ash-2);margin-block-start:6px}
 .act{display:flex;gap:4px;margin-block-start:8px;opacity:0;transition:.2s}
-.m:hover .act{opacity:1}
-.act button{background:none;border:0;padding:4px 7px;font-family:var(--f-display);font-size:.7rem;color:var(--ash-2);border-radius:2px}
+.m:hover .act,.m:focus-within .act{opacity:1}
+.act button{display:inline-flex;align-items:center;gap:5px;background:none;border:0;padding:4px 7px;font-family:var(--f-display);font-size:.7rem;color:var(--ash-2);border-radius:2px}
 .act button:hover{background:var(--wash);color:var(--ink)}
+.act .ic{width:12px;height:12px}
 
 /* بطاقة الخطة داخل رد سيادة */
 .plan{border:1px solid var(--hair);margin:14px 0}
@@ -154,73 +165,41 @@ button{cursor:pointer}
 .bt--line{background:transparent;color:var(--ink)}.bt--line:hover{background:var(--ink);color:var(--paper)}
 .approve small{color:var(--ash);font-size:.8rem}
 
-/* تبويبات الموظف في الشريط العلوي */
-.tabs{display:none;gap:2px;border:1px solid var(--hair);padding:2px;margin-inline-start:6px}
-.tabs.on{display:inline-flex}
-.tabs button{background:none;border:0;padding:5px 14px;font-family:var(--f-display);font-size:.8rem;color:var(--ash);transition:.2s}
+/* مفتاح التشغيل */
+.sw{width:40px;height:22px;border-radius:11px;background:var(--hair);position:relative;border:0;padding:0;transition:.25s;flex:none}
+.sw::after{content:"";position:absolute;inset-block-start:3px;inset-inline-start:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .25s var(--ease)}
+.sw[aria-checked="true"]{background:var(--accent)}
+[dir="rtl"] .sw[aria-checked="true"]::after{transform:translateX(-18px)}
 
-/* لوحة الموظف */
-.dash{max-width:900px;margin:0 auto;padding:6px 0 30px;animation:in .35s var(--ease)}
-.dh{display:flex;align-items:flex-start;gap:18px;margin-block-end:22px}
-.dh .av{width:56px;height:56px;font-size:1.4rem}
-.dh__n{font-family:var(--f-display);font-weight:300;font-size:1.9rem;line-height:1.2;margin:0}
-.dh__r{color:var(--ash);margin:3px 0 0;font-size:.875rem}
-.dh__c{margin-inline-start:auto;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
-.swx{display:inline-flex;align-items:center;gap:12px;border:1px solid var(--hair);padding:7px 7px 7px 14px;font-family:var(--f-display);font-size:.875rem}
-.swx .sw{width:44px;height:24px;border-radius:12px;background:var(--hair);position:relative;border:0;padding:0;transition:.25s}
-.swx .sw::after{content:"";position:absolute;inset-block-start:3px;inset-inline-start:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .25s var(--ease)}
-.swx .sw[aria-checked="true"]{background:var(--accent)}
-[dir="rtl"] .swx .sw[aria-checked="true"]::after{transform:translateX(-20px)}
-.dh__m{font-size:.75rem;color:var(--ash)}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--hair);border:1px solid var(--hair);margin-block-end:16px}
-.kpi{background:var(--paper);padding:16px 18px}
-.kpi__v{font-family:var(--f-display);font-weight:300;font-size:1.9rem;line-height:1;letter-spacing:-.02em}
-.kpi__v small{font-size:.45em;color:var(--ash);margin-inline-start:2px}
-.kpi__l{font-size:.8rem;color:var(--ash);margin-block-start:7px}
-.kpi__d{font-family:var(--f-display);font-size:.7rem;margin-block-start:5px;color:var(--ok)}
-.kpi__d.dn{color:var(--warn)}
-.card{border:1px solid var(--hair);margin-block-end:16px}
-.card--warn{border-color:rgba(138,110,44,.45)}
+/* بطاقة الموظف — مثبتة فوق محادثته */
+.pin{position:sticky;inset-block-start:0;z-index:2;background:var(--paper);display:grid;grid-template-columns:40px 1fr auto;gap:14px;align-items:center;
+  padding:10px 0 12px;border-block-end:1px solid var(--hair)}
+.pin .av{width:40px;height:40px;font-size:1.05rem}
+.pin__t{min-width:0}
+.pin__n{font-family:var(--f-display);font-size:1.05rem;line-height:1.3;margin:0}
+.pin__n span{color:var(--ash);font-size:.875rem}
+.pin__s{font-size:.8rem;color:var(--ash);margin-block-start:2px}
+.pin__c{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+.link{background:none;border:0;padding:0;color:var(--accent);font-size:.85rem;text-decoration:underline;text-underline-offset:4px}
+.link:hover{color:var(--ink)}
+
+/* بطاقات */
+.card{border:1px solid var(--hair)}
 .card__h{display:flex;align-items:center;gap:10px;padding:12px 18px;border-block-end:1px solid var(--hair);font-family:var(--f-display);font-size:.8rem;color:var(--ash)}
 .card__h b{font-weight:400;color:var(--ink);font-size:.95rem}
 .card__h .cnt{margin-inline-start:auto;font-size:.75rem}
+.card__h .ic{color:var(--ash)}
 .card__b{padding:14px 18px}
-.two{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
-.two .card{margin:0}
-.wait{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;padding:12px 0;border-block-end:1px solid var(--hair)}
-.wait:last-child{border-block-end:0;padding-block-end:0}.wait:first-child{padding-block-start:0}
-.wait__t{font-size:.875rem;line-height:1.6}.wait__t small{display:block;color:var(--ash);font-size:.8rem}
-.wait__a{display:flex;gap:8px}
-.bts{padding:7px 13px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font-family:var(--f-display);font-size:.8rem;transition:.2s}
+.card__b p{margin:0 0 8px;font-size:.9rem}.card__b p:last-child{margin:0}
+.wait__a{display:flex;gap:8px;flex-wrap:wrap;margin-block-start:10px}
+.bts{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font-family:var(--f-display);font-size:.8rem;transition:.2s}
 .bts:hover{background:var(--paper);color:var(--ink)}
 .bts--line{background:transparent;color:var(--ink)}.bts--line:hover{background:var(--ink);color:var(--paper)}
-.log{list-style:none;margin:0;padding:0}
-.log li{display:grid;grid-template-columns:54px 1fr;gap:12px;padding:8px 0;border-block-end:1px solid var(--hair);font-size:.875rem}
-.log li:last-child{border-block-end:0}
-.log time{font-family:var(--f-display);font-size:.8rem;color:var(--ash-2);direction:ltr;text-align:end}
-.week{display:flex;align-items:flex-end;gap:7px;height:64px;padding-block-start:4px}
-.week i{flex:1;background:var(--ink);opacity:.14;min-height:3px}
-.week i:last-child{opacity:1;background:var(--accent)}
-.week__l{display:flex;gap:7px;margin-block-start:7px}
-.week__l span{flex:1;text-align:center;font-family:var(--f-display);font-size:.7rem;color:var(--ash-2)}
-.ctl{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--hair)}
-.ctl > div{background:var(--paper);padding:14px 18px}
-.ctl__l{font-family:var(--f-display);font-size:.75rem;color:var(--ash);margin-block-end:8px}
-.seg{display:flex;border:1px solid var(--hair);width:fit-content;flex-wrap:wrap}
-.seg button{background:none;border:0;padding:6px 12px;font-size:.8rem;color:var(--ash);border-inline-end:1px solid var(--hair);transition:.2s}
-.seg button:last-child{border-inline-end:0}
-.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
-.rule{font-size:.875rem;display:flex;align-items:center;gap:10px;padding-block:5px}
-.rule .chk{width:15px;height:15px;border:1px solid var(--ink);display:grid;place-items:center;flex:none}
-.rule .chk::after{content:"";width:7px;height:7px;background:var(--ink)}
-.rule.off{color:var(--ash)}.rule.off .chk{border-color:var(--hair)}.rule.off .chk::after{display:none}
-.tools{display:flex;flex-wrap:wrap;gap:7px}
-.tool{display:inline-flex;align-items:center;gap:7px;font-family:var(--f-display);font-size:.8rem;border:1px solid var(--hair);padding:5px 10px;color:var(--ash)}
-.tool i{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.bts .ic,.bt .ic{width:13px;height:13px}
 /* تعليمات الموظف */
 .instr{width:100%;border:1px solid var(--hair);padding:12px 14px;font-size:.95rem;line-height:1.75;resize:vertical;min-height:96px;background:var(--paper)}
 .instr:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-wash)}
-.instr__f{display:flex;align-items:center;gap:12px;margin-block-start:10px;font-size:.8rem;color:var(--ash)}
+.instr__f{display:flex;align-items:center;gap:12px;margin-block-start:10px;font-size:.8rem;color:var(--ash);flex-wrap:wrap}
 .instr__f .bts{margin-inline-start:auto}
 .how{list-style:none;margin:0;padding:0}
 .how li{display:grid;grid-template-columns:22px 1fr;gap:8px;padding:6px 0;font-size:.875rem;border-block-end:1px solid var(--hair)}
@@ -229,45 +208,26 @@ button{cursor:pointer}
 .adv{border-block-start:1px solid var(--hair)}
 .adv summary{list-style:none;cursor:pointer;padding:12px 18px;font-family:var(--f-display);font-size:.8rem;color:var(--ash);display:flex;align-items:center;gap:10px}
 .adv summary::-webkit-details-marker{display:none}
-
 .adv summary:hover{color:var(--ink)}
+.adv summary .ic{width:13px;height:13px}
 .prompt{background:var(--wash);border:1px solid var(--hair);padding:14px 16px;font-family:ui-monospace,Menlo,monospace;font-size:.8rem;line-height:1.75;white-space:pre-wrap;direction:rtl;color:#2A2A2A;max-height:320px;overflow:auto}
 .prompt .k{color:var(--accent)}
-.vers{display:flex;flex-wrap:wrap;gap:8px;margin-block-start:12px}
-.ver{font-family:var(--f-display);font-size:.75rem;border:1px solid var(--hair);padding:4px 10px;color:var(--ash);background:none;transition:.2s}
-.ver:hover{border-color:var(--ink);color:var(--ink)}
-.ver--cur{border-color:var(--accent);color:var(--accent)}
+.vers{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-block-start:12px;font-size:.8rem;color:var(--ash)}
 .warn{font-size:.8rem;color:var(--warn);background:var(--warn-wash);border:1px solid rgba(138,110,44,.3);padding:8px 12px;margin-block-start:10px}
-.askbar{display:flex;align-items:center;gap:12px;border:1px solid var(--hair);background:var(--wash);padding:12px 16px;font-size:.875rem;color:var(--ash);margin-block-start:4px}
-.askbar b{color:var(--ink);font-weight:500}
-.askbar button{margin-inline-start:auto;background:none;border:1px solid var(--ink);padding:6px 14px;font-family:var(--f-display);font-size:.8rem}
-@media (max-width:900px){ .kpis{grid-template-columns:repeat(2,1fr)} .two,.ctl{grid-template-columns:1fr} .dh{flex-wrap:wrap} .dh__c{align-items:flex-start;margin-inline-start:0} }
 
 /* أيقونات خطية — نفس سُمك خطوط الشعار */
 .ic{width:15px;height:15px;flex:none;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
-.card__h .ic{color:var(--ash)}
-.ctl__l{display:flex;align-items:center;gap:7px}
-.ctl__l .ic{width:13px;height:13px}
-.act button{display:inline-flex;align-items:center;gap:5px}
-.act .ic{width:12px;height:12px}
-.bts{display:inline-flex;align-items:center;gap:7px}
-.bts .ic,.bt .ic{width:13px;height:13px}
-.adv summary .ic{width:13px;height:13px}
-.empty .cardq small{display:flex;align-items:center;gap:6px}
-.empty .cardq .ic{width:12px;height:12px;color:var(--ash-2)}
 
 /* قائمة الحساب — تطلع من الاسم تحت */
-.side__foot{position:relative}
 .pop{position:absolute;inset-block-end:calc(100% - 4px);inset-inline-start:12px;inset-inline-end:12px;background:var(--paper);border:1px solid var(--hair);
   box-shadow:0 18px 40px -22px rgba(10,10,10,.35);padding:6px;display:none;z-index:60}
 .pop.on{display:block;animation:in .2s var(--ease)}
 .pop button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;background:none;border:0;text-align:start;font-size:.875rem;border-radius:2px;transition:.15s}
 .pop button:hover{background:var(--wash)}
 .pop button .ic{color:var(--ash)}
-.pop button small{margin-inline-start:auto;font-family:var(--f-display);font-size:.7rem;color:var(--ash-2)}
 .pop .sep{height:1px;background:var(--hair);margin:6px 4px}
 
-/* لوحة الإعدادات/الأدوات — تنزل فوق كل شيء بدون ما تنقلك */
+/* لوحة الإعدادات — تنزل فوق كل شيء بدون ما تنقلك */
 .sheet{position:fixed;inset:0;background:rgba(10,10,10,.35);display:none;z-index:80;justify-content:center;align-items:flex-start;padding:5vh 16px}
 .sheet.on{display:flex}
 .sheet__in{background:var(--paper);width:min(100%,820px);max-height:90vh;display:flex;flex-direction:column;border:1px solid var(--ink);animation:in .3s var(--ease)}
@@ -278,50 +238,47 @@ button{cursor:pointer}
 .sheet__b{overflow-y:auto;padding:22px 26px 30px}
 .sheet .pane{display:none}.sheet .pane.on{display:block}
 
-/* الأدوات — مضغوطة */
+/* الأدوات — البحث */
 .tsearch{display:flex;align-items:center;gap:10px;border:1px solid var(--ink);padding:0 14px;margin-block-end:14px}
 .tsearch input{flex:1;border:0;background:none;padding:11px 0;font-size:.95rem}
 .tsearch:focus-within{outline:1.5px solid var(--accent);outline-offset:2px}.tsearch input:focus{outline:none}
-.tsec{font-family:var(--f-display);font-size:.75rem;color:var(--ash);margin:18px 0 8px;display:flex;align-items:center;gap:12px}
-.tsec::after{content:"";height:1px;background:var(--hair);flex:1}
-.trow{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;padding:9px 0;border-block-end:1px solid var(--hair);font-size:.875rem}
-.trow:last-child{border-block-end:0}
-.trow .tv{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--hair);background:var(--wash);font-family:var(--f-display);font-size:.8rem}
-.trow small{display:block;color:var(--ash);font-size:.75rem}
-.trow .st{font-family:var(--f-display);font-size:.7rem;color:var(--accent);display:inline-flex;align-items:center;gap:6px}
-.trow .st i{width:6px;height:6px;border-radius:50%;background:var(--accent)}
-.trow .who{font-size:.7rem;color:var(--ash-2);border:0;padding:0;font-family:var(--f-body)}
 .lnk{background:none;border:1px solid var(--ink);padding:6px 12px;font-family:var(--f-display);font-size:.8rem;transition:.2s}
 .lnk:hover{background:var(--ink);color:var(--paper)}
+.lnk--fill{background:var(--ink);color:var(--paper)}
+.lnk--fill:hover{background:var(--paper);color:var(--ink)}
 
-/* الإعدادات — مضغوطة */
+/* الإعدادات والخطة — صفوف */
 .srow{display:grid;grid-template-columns:170px 1fr;gap:16px;padding:13px 0;border-block-end:1px solid var(--hair);align-items:center;font-size:.875rem}
 .srow:last-child{border-block-end:0}
 .srow small{display:block;color:var(--ash);font-size:.8rem}
 .srow .ctrl{width:100%;max-width:360px;padding:9px 11px;border:1px solid #8A8A88;background:var(--paper);font-size:.875rem}
 .srow .ctrl:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-wash)}
-.srow .seg{display:flex;border:1px solid var(--hair);width:fit-content}
-.srow .seg button{background:none;border:0;padding:6px 12px;font-size:.8rem;color:var(--ash);border-inline-end:1px solid var(--hair)}
-.srow .seg button:last-child{border-inline-end:0}
-.srow .seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
-.swm{width:40px;height:22px;border-radius:11px;background:var(--hair);position:relative;border:0;padding:0;transition:.25s;vertical-align:middle;margin-inline-end:10px}
+.srow .ctrl + .ctrl{margin-block-start:8px}
+.acts{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-block-start:8px}
+.acts small{display:inline}
+.swl{display:inline-flex;align-items:center;gap:10px}
+.swm{width:40px;height:22px;border-radius:11px;background:var(--hair);position:relative;border:0;padding:0;transition:.25s;vertical-align:middle;flex:none}
 .swm::after{content:"";position:absolute;inset-block-start:3px;inset-inline-start:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .25s var(--ease)}
 .swm[aria-checked="true"]{background:var(--accent)}
 [dir="rtl"] .swm[aria-checked="true"]::after{transform:translateX(-18px)}
-.plan{font-family:var(--f-display);font-weight:300;font-size:1.6rem;line-height:1}
-.plan s{color:var(--ash-2);font-size:.6em;margin-inline-start:8px}
-.tag{font-family:var(--f-display);font-size:.7rem;border:1px solid var(--accent);color:var(--accent);padding:2px 8px;margin-inline-start:10px;vertical-align:middle}
-@media (max-width:640px){ .srow{grid-template-columns:1fr;gap:6px} .wait{grid-template-columns:1fr} .wait__a{flex-wrap:wrap} }
+.price{font-family:var(--f-display);font-weight:300;font-size:1.35rem;line-height:1.2}
+.price s{color:var(--ash-2);font-size:.65em;margin-inline-start:8px}
+.tag{font-family:var(--f-display);font-size:.7rem;border:1px solid var(--accent);color:var(--accent);padding:2px 8px;margin-inline-start:10px;vertical-align:middle;white-space:nowrap}
+.use{height:6px;background:var(--hair);max-width:360px;margin-block-end:6px}
+.use i{display:block;height:100%;background:var(--accent);transition:width .4s var(--ease)}
+.use--warn i{background:var(--warn)}
+.use--bad i{background:var(--bad)}
+.inv{list-style:none;margin:0;padding:0;max-width:420px}
+.inv li{display:flex;align-items:center;gap:12px;padding:6px 0;border-block-end:1px solid var(--hair)}
+.inv li:last-child{border-block-end:0}
+.inv li a{margin-inline-start:auto;color:var(--accent);font-family:var(--f-display);font-size:.8rem}
+.inv li small{display:inline;color:var(--ash)}
+@media (max-width:640px){ .srow{grid-template-columns:1fr;gap:6px} }
 
 /* صفحة الأدوات — كاملة ومرتبة داخل عمود المحادثة */
 .tools{max-width:900px;margin:0 auto;padding:6px 0 40px;animation:in .35s var(--ease)}
 .tools h1{font-family:var(--f-display);font-weight:300;font-size:1.9rem;margin:0 0 6px}
 .tools .sub{color:var(--ash);font-size:.875rem;margin:0 0 20px}
-.tsearch kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash-2);border:1px solid var(--hair);padding:1px 6px}
-.cats{display:flex;flex-wrap:wrap;gap:7px;margin-block-end:8px}
-.cat{background:none;border:1px solid var(--hair);padding:6px 12px;font-size:.8rem;color:var(--ash);transition:.2s}
-.cat[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.cat:hover{border-color:var(--ink)}
 .tsec{font-family:var(--f-display);font-size:.8rem;color:var(--ash);margin:24px 0 10px;display:flex;align-items:center;gap:12px}
 .tsec b{font-weight:400;color:var(--ink);font-size:.95rem}
 .tsec::after{content:"";height:1px;background:var(--hair);flex:1}
@@ -329,36 +286,29 @@ button{cursor:pointer}
 .tl{border:1px solid var(--hair);padding:14px;display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;transition:border-color .2s;background:var(--paper)}
 .tl:hover{border-color:var(--ink)}
 .tl--on{border-color:rgba(11,132,75,.3)}
-.tl__i{width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--hair);background:#fff;font-family:var(--f-display);font-size:.875rem;overflow:hidden}
+.tl__i{width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--hair);background:#fff;font-family:var(--f-display);font-size:.875rem;overflow:hidden;flex:none}
 .tl__i img{width:26px;height:26px;object-fit:contain}
-.tl__d{text-align:start;unicode-bidi:isolate}
-.soon{border:1px dashed var(--hair);padding:14px 16px;margin-block-start:26px;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;font-size:.875rem;color:var(--ash)}
-.soon b{display:block;color:var(--ink);font-family:var(--f-display);font-weight:400;font-size:.95rem;margin-block-end:2px}
-.soon .chips{display:flex;flex-wrap:wrap;gap:6px;margin-block-start:8px}
-.soon .chips span{font-family:var(--f-display);font-size:.75rem;border:1px solid var(--hair);padding:2px 8px}
 .tl__n{font-family:var(--f-display);font-size:.95rem;line-height:1.3}
-.tl__d{font-size:.8rem;color:var(--ash);line-height:1.5;margin-block-start:2px;min-height:2.3em}
+.tl__d{font-size:.8rem;color:var(--ash);line-height:1.5;margin-block-start:2px;min-height:2.3em;text-align:start;unicode-bidi:isolate}
 .tl__f{display:flex;align-items:center;gap:10px;margin-block-start:10px}
 .tl .st{font-family:var(--f-display);font-size:.7rem;display:inline-flex;align-items:center;gap:6px;color:var(--accent)}
 .tl .st i{width:6px;height:6px;border-radius:50%;background:var(--accent)}
 .tl .st--w{color:var(--warn)}
 .tl .who{font-size:.7rem;color:var(--ash-2);border:0;padding:0;font-family:var(--f-body)}
-.lnk{background:none;border:1px solid var(--ink);padding:6px 12px;font-family:var(--f-display);font-size:.8rem;transition:.2s}
-.lnk:hover{background:var(--ink);color:var(--paper)}
-.lnk--fill{background:var(--ink);color:var(--paper)}
-.lnk--fill:hover{background:var(--paper);color:var(--ink)}
+.soon{border:1px dashed var(--hair);padding:14px 16px;margin-block-start:26px;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;font-size:.875rem;color:var(--ash)}
+.soon b{display:block;color:var(--ink);font-family:var(--f-display);font-weight:400;font-size:.95rem;margin-block-end:2px}
+.soon .chips{display:flex;flex-wrap:wrap;gap:6px;margin-block-start:8px}
+.soon .chips span{font-family:var(--f-display);font-size:.75rem;border:1px solid var(--hair);padding:2px 8px}
 .more{margin:20px auto 0;display:block;background:none;border:1px solid var(--hair);padding:11px 22px;font-family:var(--f-display);font-size:.875rem;color:var(--ash);transition:.2s}
 .more:hover{border-color:var(--ink);color:var(--ink)}
 .tempty{color:var(--ash);padding:26px;border:1px dashed var(--hair);text-align:center;font-size:.875rem}
 /* نافذة الربط */
 .modal{position:fixed;inset:0;background:rgba(10,10,10,.45);display:none;place-items:center;z-index:90;padding:20px}
 .modal.on{display:grid}
-.mbox{background:var(--paper);width:min(100%,440px);border:1px solid var(--ink);padding:26px;animation:in .3s var(--ease)}
-.mbox h2{font-family:var(--f-display);font-weight:300;font-size:1.25rem;margin:0 0 6px;display:flex;align-items:center;gap:12px}
+.mbox{background:var(--paper);width:min(100%,440px);border:1px solid var(--ink);padding:22px 26px 26px;animation:in .3s var(--ease);position:relative}
+.mbox .ico{position:absolute;inset-block-start:10px;inset-inline-end:10px}
+.mbox h2{font-family:var(--f-display);font-weight:300;font-size:1.25rem;margin:0 0 6px;display:flex;align-items:center;gap:12px;padding-inline-end:36px}
 .mbox p{color:var(--ash);font-size:.875rem;margin:0 0 18px}
-.mbox ol{margin:0 0 20px;padding:0;list-style:none;counter-reset:s}
-.mbox li{display:grid;grid-template-columns:24px 1fr;gap:8px;padding:8px 0;border-block-start:1px solid var(--hair);font-size:.875rem}
-.mbox li::before{counter-increment:s;content:counter(s);font-family:var(--f-display);font-size:.8rem;color:var(--ash-2)}
 .mbox__a{display:flex;gap:10px}
 
 /* المحرر */
@@ -372,18 +322,6 @@ button{cursor:pointer}
 .send{width:38px;height:38px;background:var(--ink);border:0;display:grid;place-items:center;flex:none}
 .send .drop{color:var(--accent-lt);width:13px}
 .comp__f{text-align:center;font-size:.75rem;color:var(--ash-2);margin-block-start:8px}
-.chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-block-end:10px}
-.chip{background:none;border:1px solid var(--hair);padding:6px 12px;font-size:.8rem;color:var(--ash);border-radius:2px;transition:.2s}
-.chip:hover{border-color:var(--ink);color:var(--ink)}
-
-/* قائمة اختيار المتحدث */
-.menu{position:absolute;inset-block-start:52px;inset-inline-start:14px;background:var(--paper);border:1px solid var(--hair);min-width:240px;
-  box-shadow:0 16px 40px -20px rgba(10,10,10,.35);display:none;z-index:30;padding:6px}
-.menu.on{display:block}
-.menu button{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:center;width:100%;padding:8px 10px;background:none;border:0;text-align:start;font-size:.875rem;border-radius:2px}
-.menu button:hover{background:var(--wash)}
-.menu small{display:block;color:var(--ash);font-size:.75rem}
-.menu .sep{height:1px;background:var(--hair);margin:6px 4px}
 
 @media (max-width:820px){
   .app,.app.closed{grid-template-columns:1fr}
@@ -395,7 +333,11 @@ button{cursor:pointer}
   .cards{grid-template-columns:1fr}
   .m--me .m__b{max-width:92%}
   .prow{grid-template-columns:1fr;gap:4px}
+  .pin{grid-template-columns:40px 1fr}
+  .pin__c{grid-column:1/-1;justify-content:flex-start}
+  .soon{grid-template-columns:1fr}
 }
+@media (prefers-reduced-motion:reduce){ *{animation:none !important;transition:none !important} }
 </style>
 </head>
 <body>
@@ -411,27 +353,36 @@ button{cursor:pointer}
     <button type="button" class="newc" id="newChat"><span class="plus">+</span> محادثة جديدة</button>
 
     <div class="side__scroll">
-      <div class="lbl"><span>فريقك</span><span title="قريبًا">إدارة · قريبًا</span></div>
+      <div class="lbl"><span>فريقك</span></div>
       <div id="emps"></div>
       <button type="button" class="hist" id="toolsLink" style="color:var(--ash);font-size:.82rem;margin-block-start:4px">الأدوات <small id="toolsCnt">4 مربوطة</small></button>
 
-      <div class="lbl"><span>اليوم</span></div>
-      <div id="histToday"></div>
-      <div class="lbl"><span>أمس</span></div>
-      <div id="histYest"></div>
-      <div class="lbl"><span>الأسبوع الماضي</span></div>
-      <div id="histWeek"></div>
+      <input class="hq" id="hq" type="search" placeholder="ابحث في المحادثات" aria-label="ابحث في المحادثات" autocomplete="off">
+      <div id="hgToday"><div class="lbl"><span>اليوم</span></div><div id="histToday"></div></div>
+      <div id="hgYest"><div class="lbl"><span>أمس</span></div><div id="histYest"></div></div>
+      <div id="hgWeek"><div class="lbl"><span>الأسبوع الماضي</span></div><div id="histWeek"></div></div>
+      <div class="hq__none" id="hqNone" hidden>ما فيه محادثة بهذا الاسم.</div>
     </div>
 
     <div class="side__foot">
       <div class="pop" id="pop">
-        <button type="button" data-open="tools"><svg class="ic" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 01-12 0V8zM12 17v4"/></svg>الأدوات<small>4 مربوطة</small></button>
         <button type="button" data-open="settings"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>الإعدادات</button>
+        <button type="button" data-open="plan"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/></svg>الخطة</button>
         <div class="sep"></div>
-        <button type="button" data-open="settings"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/></svg>نسخة الوصول المبكر<small>499 ر.س</small></button>
         <button type="button" style="color:var(--ash)"><svg class="ic" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M21 4v16"/></svg>تسجيل الخروج</button>
       </div>
-      <button type="button" class="me" id="meBtn"><span class="av">أ</span><span class="me__n">أنس<small>شركة الأفق · نسخة الوصول المبكر</small></span></button>
+      <div class="keys" id="keys" hidden>
+        <ul>
+          <li><span>ابحث في المحادثات</span><kbd>⌘ K</kbd></li>
+          <li><span>محادثة جديدة</span><kbd>⌘ ⇧ O</kbd></li>
+          <li><span>الأدوات</span><kbd>/</kbd></li>
+          <li><span>إغلاق</span><kbd>Esc</kbd></li>
+        </ul>
+      </div>
+      <div class="foot__r">
+        <button type="button" class="me" id="meBtn"><span class="av">أ</span><span class="me__n">أنس<small>شركة الأفق · نسخة الوصول المبكر</small><span class="pill" id="mePill" hidden></span></span></button>
+        <button type="button" class="ico keys__b" id="keysBtn" aria-expanded="false" aria-controls="keys" aria-label="اختصارات لوحة المفاتيح">?</button>
+      </div>
     </div>
   </div></aside>
 
@@ -440,18 +391,16 @@ button{cursor:pointer}
     <div class="bar">
       <button type="button" class="ico" id="openSide" aria-label="إظهار القائمة" aria-expanded="false" aria-controls="side"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M9 4v16"/></svg></button>
       <span class="who" id="whoBtn"><span class="av" id="whoAv"><span class="drop"></span></span><span id="whoN">سيادة</span></span>
-
     </div>
 
-    <div class="strip" id="strip"></div>
+    <div class="pban" id="pban" hidden></div>
 
     <div class="thread" id="thread"></div>
 
     <div class="comp"><div class="comp__in">
-      <div class="chips" id="chips"></div>
       <div class="box">
         <button type="button" class="ico" aria-label="إرفاق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12l-8.5 8.5a5 5 0 01-7-7L14 5a3.5 3.5 0 015 5l-8.5 8.5a2 2 0 01-3-3L15 8"/></svg></button>
-        <textarea id="input" rows="1" placeholder="اكتب لسيادة…"></textarea>
+        <textarea id="input" rows="1" placeholder="اكتب لسيادة…" aria-label="اكتب رسالة"></textarea>
         <button type="button" class="send" id="send" aria-label="إرسال"><span class="drop"></span></button>
       </div>
       <div class="comp__f">ما يتحرك شيء بدون موافقتك.</div>
@@ -460,40 +409,37 @@ button{cursor:pointer}
 </div>
 
 <div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="ربط أداة"><div class="mbox">
+  <button type="button" class="ico" id="mX" aria-label="إغلاق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   <h2><span class="tl__i" id="mI">W</span><span id="mN"></span></h2>
   <p id="mD"></p>
-  <ol><li>اضغط «اربط» وسجّل دخولك في نافذة الأداة</li><li>وافق على الصلاحيات — ما نطلب أكثر من اللازم</li><li>اختر أي موظف يقدر يستخدمها</li></ol>
-  <div class="mbox__a"><button type="button" class="lnk lnk--fill" id="mGo">اربط الآن</button><button type="button" class="lnk" id="mX">إلغاء</button></div>
+  <div class="mbox__a"><button type="button" class="lnk lnk--fill" id="mGo">اربط</button></div>
 </div></div>
 
-<!-- ==================== الإعدادات — لوحة منزلقة ==================== -->
+<!-- ==================== الإعدادات + الخطة — لوحة منزلقة ==================== -->
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="الإعدادات">
   <div class="sheet__in">
     <div class="sheet__h">
       <button type="button" class="tab" data-pane="settings" aria-current="true">الإعدادات</button>
+      <button type="button" class="tab" data-pane="plan" aria-current="false">الخطة والاستخدام</button>
       <button type="button" class="ico" id="sheetX" aria-label="إغلاق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="sheet__b">
 
       <div class="pane on" id="pane-settings">
-        <div class="srow"><div>الشركة<small>موظفوك يعرّفون أنفسهم بهذا</small></div><input class="ctrl" type="text" value="شركة الأفق"></div>
-        <div class="srow"><div>وش تقدمون<small>سطر واحد</small></div><input class="ctrl" type="text" value="حلول توصيل للمطاعم في الرياض وجدة"></div>
-        <div class="srow"><div>النبرة<small>لكل الموظفين</small></div><div class="seg"><button type="button" aria-pressed="true">رسمي</button><button type="button">ودّي</button><button type="button">مختصر</button></div></div>
-        <div class="srow"><div>ساعات العمل</div><div style="display:flex;gap:8px;align-items:center"><input class="ctrl" type="text" style="width:90px" value="9:00"><span style="color:var(--ash)">إلى</span><input class="ctrl" type="text" style="width:90px" value="18:00"></div></div>
-        <div class="srow"><div>اللغة</div><div class="seg"><button type="button" aria-pressed="true">عربي</button><button type="button">English</button><button type="button">حسب العميل</button></div></div>
+        <div class="srow"><div>الشركة<small>موظفوك يعرّفون أنفسهم بهذا</small></div><div><input class="ctrl" type="text" value="شركة الأفق" aria-label="اسم الشركة"><input class="ctrl" type="text" value="حلول توصيل للمطاعم في الرياض وجدة" aria-label="وش تقدمون — سطر واحد"></div></div>
         <div class="srow"><div>قاعدة المعرفة<small>من هنا يجاوب فهد</small></div><div style="font-size:.85rem;color:var(--ash)">3 ملفات · رابطان &nbsp;<button type="button" class="lnk">إدارة</button></div></div>
-        <div class="srow"><div>ينتظر قرارك<small>ما ينطفي</small></div><div><button type="button" class="swm" role="switch" aria-checked="true" aria-label="ينتظر قرارك"></button>واتساب + بريد</div></div>
-        <div class="srow"><div>ملخص يومي</div><div><button type="button" class="swm" role="switch" aria-checked="true" aria-label="ملخص يومي"></button>8:00 صباحًا على واتساب</div></div>
-        <div class="srow"><div>كل إجراء</div><div><button type="button" class="swm" role="switch" aria-checked="false" aria-label="كل إجراء"></button><span style="color:var(--ash)">مطفأ — يزعج</span></div></div>
-        <div class="srow"><div>الخطة</div><div><span class="plan">499 ر.س<s>998</s></span><span class="tag">السعر المبكر · مدى الحياة</span></div></div>
-        <div class="srow"><div>بياناتك<small>ما تدرّب أي نموذج</small></div><div style="font-size:.85rem"><button type="button" class="lnk">نزّل نسخة كاملة</button></div></div>
+        <div class="srow"><div>الإشعارات<small>واتساب + بريد</small></div><div class="swl"><button type="button" class="swm" role="switch" aria-checked="true" aria-label="الإشعارات"></button>ملخص يومي + تنبيه عند «ينتظر قرارك»</div></div>
+        <div class="srow"><div>الخطة والاستخدام</div><div style="font-size:.85rem;color:var(--ash)"><span id="setPlanSum"></span> &nbsp;<button type="button" class="lnk" data-open="plan">عرض</button></div></div>
+        <div class="srow"><div>البيانات<small>ما تدرّب أي نموذج</small></div><div class="acts" style="margin:0"><button type="button" class="lnk">تصدير</button><button type="button" class="lnk" style="color:var(--bad);border-color:var(--bad)">حذف الحساب</button></div></div>
       </div>
+
+      <div class="pane" id="pane-plan"></div>
 
     </div>
   </div>
 </div>
 
-<script src="../pieces.js?v=1.6.0" defer></script>
+<script src="../pieces.js?v=1.7.0" defer></script>
 <script src="chat.js" defer></script>
 </body>
 </html>

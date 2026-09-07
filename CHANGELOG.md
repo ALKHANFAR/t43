@@ -1,6 +1,16 @@
 # Changelog
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/), versioning: [SemVer](https://semver.org/).
 
+## [1.7.0] — 2026-09-07
+### Changed
+- Site simplified to six sections: hero, how it works, four AI employees (one line each), pricing, reserve, four questions. Removed the stats strip, the "cost of doing it yourself" section, the department tabs, the perks cards, the seat meter and countdown, the sticky bar, and the role/country selects (form is now name, WhatsApp, email, optional company)
+- New pricing section (EN/AR) in the ChatGPT pattern: Business plan (499 SAR early / 998 list, 50% for life), Enterprise on request, monthly/annual toggle (2 months free), one usage line (chat unlimited, executed actions metered, prepaid credits, no surprise bills), VAT/ZATCA/Mada footnote. Numbers live in `CONFIG.pricing` in site.js; a Starter plan renders only when configured
+- App: employee page is a chat with the employee (pinned compact card, composer, today's log as messages); plan card appears inline in the reply; history search with ⌘K, ⌘⇧O new chat, shortcuts list; settings reduced to 5 rows; account menu to 3 items; tools view without category chips and a one-button connect dialog; 7-day chart, KPI tiles, segmented controls and version buttons removed
+- New "Plan & usage" pane driven by a PLAN object (trial / active / near limit / over limit / past due states, usage bar, invoices, payment, VAT/CR)
+- Onboarding collapsed to four moments: your site, your sentence, the plan, go live; tools connect just-in-time from the chat
+### Fixed
+- Arabic tool descriptions no longer flip to LTR when they start with a Latin word; duplicate descriptions differentiated; demo poster hints spaced; country lists identical in EN/AR
+
 ## [1.6.0] — 2026-09-07
 ### Added
 - English demo film (`demo-en.html` + `demo-en.js`): same scenes, timings and audio as the Arabic film, LTR with Jost/Inter; the English hero links to it
