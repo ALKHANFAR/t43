@@ -20,12 +20,13 @@
 <meta property="og:description" content="الفريق اللي ما تقدر توظفه، داخل محادثة واحدة. بيتا خاصة لـ 500 شركة.">
 <meta property="og:url" content="https://siyadah-ai.com/ar.html">
 <meta property="og:image" content="https://siyadah-ai.com/og-ar.jpg">
-<meta property="og:locale" content="ar_AR">
+<meta property="og:locale" content="ar_SA">
+<meta property="og:locale:alternate" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 
 <link rel="preload" href="fonts/readex-pro-arabic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/ibm-plex-sans-arabic-400-arabic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="assets/wordmark.png" as="image">
+<link rel="preload" href="assets/wordmark.png" as="image" crossorigin>
 <link rel="stylesheet" href="fonts.css">
 
 <style>
@@ -349,6 +350,23 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
   *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
   .rv > *{transform:none}.fade{opacity:1}
 }
+
+.nav__menu{display:none;width:40px;height:40px;flex:none;border:1px solid var(--hair);background:var(--paper);padding:0;place-items:center;align-content:center;gap:5px;cursor:pointer}
+.nav__menu span{display:block;width:16px;height:1.5px;background:var(--ink);transition:transform .25s,opacity .25s}
+.nav.open .nav__menu span:nth-child(1){transform:translateY(6.5px) rotate(45deg)}
+.nav.open .nav__menu span:nth-child(2){opacity:0}
+.nav.open .nav__menu span:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
+@media (max-width:1000px){
+  .nav__in{gap:14px}
+  .nav .logo{width:112px}
+  .nav__menu{display:grid}
+  .nav__links{position:fixed;inset-block-start:76px;inset-inline:0;flex-direction:column;gap:0;margin:0;padding:6px 24px 18px;background:var(--paper);border-block-end:1px solid var(--hair);font-size:1rem;opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity .25s,transform .25s}
+  .nav.open .nav__links{opacity:1;transform:none;pointer-events:auto}
+  .nav__links a{display:block !important;padding:13px 0;border-block-end:1px solid var(--hair);color:var(--ink)}
+  .nav__links a:last-child{border-block-end:0}
+  .nav.open{background:var(--paper);border-bottom-color:var(--hair)}
+}
+@media (max-width:480px){ .nav .btn{padding:9px 12px;font-size:.8rem} }
 </style>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
@@ -368,7 +386,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
 <header class="nav" id="nav">
   <div class="wrap nav__in">
     <a href="#top" aria-label="سيادة، الصفحة الرئيسية"><span class="logo" role="img" aria-label="Siyadah AI"></span></a>
-    <nav class="nav__links" aria-label="الرئيسية">
+    <nav class="nav__links" id="nav-links" aria-label="الرئيسية">
       <a href="#how">كيف تشتغل</a>
       <a href="#dept">الأقسام</a>
       <a href="#founders">البيتا الخاصة</a>
@@ -377,6 +395,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
       <a href="index.html" class="nav__lang">EN</a>
     </nav>
     <a href="#join" class="btn">احجز مقعدك</a>
+    <button type="button" class="nav__menu" aria-label="القائمة" aria-expanded="false" aria-controls="nav-links"><span></span><span></span><span></span></button>
   </div>
 </header>
 
@@ -392,7 +411,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
 
     <div class="hero__row">
       <div>
-        <p class="lead">سيادة هي الفريق اللي ما تقدر توظفه، شغّال داخل محادثة واحدة. يتابع كل عميل محتمل خلال دقائق، يطارد الفواتير اللي محد يبي يطاردها، يرد على عملائك في ثوانٍ، ويخلي تسويقك ما يسكت — وأنت نايم.</p>
+        <p class="lead">سيادة تعطيك موظفين بالذكاء الاصطناعي يشتغلون داخل أدواتك نفسها. واحد يتابع كل عميل محتمل خلال دقائق، ووحدة تطارد الفواتير اللي محد يبي يطاردها، وواحد يرد على عملائك على مدار الساعة. وأنت تديرهم كلهم من محادثة وحدة.</p>
         <div class="hero__cta">
           <a href="#join" class="btn">احجز مقعدك <span class="drop" aria-hidden="true"></span></a>
           <a href="demo.html" class="btn btn--line">شوف الديمو · 2:00</a>
@@ -439,7 +458,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
   <div class="wrap">
     <p class="idx">01 — كم تكلفك إنك تسويها بنفسك</p>
     <h2 class="d2 cost__head rv"><span>ما بدأت شركتك عشان تصير موظفها.</span></h2>
-    <p class="lead" style="max-width:56ch;margin-block-end:clamp(44px,6vw,72px)">كل مستشار يقول لك نفس الكلام: «وظّف». نصيحة ممتازة — لو عندك ميزانية الرواتب أصلًا. لكن محد يسعّر لك المسافة بين اليوم واليوم اللي تقدر فيه توظّف. وهذي المسافة تكلفك أكثر من الرواتب نفسها.</p>
+    <p class="lead" style="max-width:56ch;margin-block-end:clamp(44px,6vw,72px)">كل مستشار يقول لك نفس الكلام: «وظّف». نصيحة ممتازة، لو عندك ميزانية الرواتب أصلًا. لكن محد يسعّر لك المسافة بين اليوم واليوم اللي تقدر فيه توظّف. وهذي المسافة تكلفك أكثر من الرواتب نفسها.</p>
 
     <div class="cost__item">
       <div class="cost__n">01</div>
@@ -496,7 +515,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
         <div class="step__n">الخطوة 02</div>
         <div>
           <h3 class="d3 step__h">سيادة تقرأ شركتك، تبني الفريق، وتوريك الخطة</h3>
-          <p class="step__p">أعطها موقعك أو إنستغرامك. تقرأه كامل — خدماتك، أسعارك، سياساتك، أسئلة عملائك، وحتى نبرتك — وتحوّله لمعرفة يشتغل بها موظفوك من أول يوم. ثم تنشئ وكيلًا لكل قسم، تربطه بأدواتك، وتعرض عليك بالضبط وش تنوي تسوي قبل ما تسوي أي شيء. أنت توافق، أو تعدّل بجملة وحدة.</p>
+          <p class="step__p">أعطها موقعك أو إنستغرامك. تقرأه كامل: خدماتك، أسعارك، سياساتك، أسئلة عملائك، وحتى نبرتك، وتحوّله لمعرفة يشتغل بها موظفوك من أول يوم. بعدها توظّف لك موظفًا لكل قسم، تربطه بأدواتك، وتعرض عليك بالضبط وش تنوي تسوي قبل ما تسوي أي شيء. أنت توافق، أو تعدّل بجملة وحدة.</p>
         </div>
       </div>
 
@@ -528,7 +547,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
 
       <div>
         <div class="panel on" id="p1" role="tabpanel" aria-labelledby="t1">
-          <h3 class="d3 panel__h">كل عميل محتمل يُرد عليه خلال دقائق، لا أيام</h3>
+          <h3 class="d3 panel__h">كل عميل محتمل ياخذ رده خلال دقائق، مو أيام</h3>
           <p class="panel__p">أسرع رد يفوز غالبًا. سيادة تخليك أنت الأسرع دائمًا، حتى لو وصلك الليد الساعة ثلاثة الفجر.</p>
           <ul class="chain">
             <li>يوصل ليد جديد من نموذجك أو إعلانك أو واتساب</li>
@@ -547,7 +566,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
           <ul class="chain">
             <li>يتابع كل فاتورة مستحقة ويعرف بالضبط كم تأخرت</li>
             <li>يرسل تذكيرًا مهذبًا تتصاعد نبرته مع كل مرحلة تأخير</li>
-            <li>يتوقف لحظة وصول السداد — بدون متابعات محرجة</li>
+            <li>يتوقف لحظة وصول السداد. بدون متابعات محرجة</li>
             <li>يسجّل كل دفعة ويحدّث جدولك أو نظامك المحاسبي</li>
             <li>يعطيك صورة أسبوعية: الداخل، الخارج، والمتوقع</li>
             <li>ينبّهك على ضغط السيولة قبل ما يصير مشكلة الشهر الجاي</li>
@@ -556,7 +575,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
         </div>
 
         <div class="panel" id="p3" role="tabpanel" aria-labelledby="t3">
-          <h3 class="d3 panel__h">عملاؤك يُجابون في ثوانٍ، على مدار الساعة</h3>
+          <h3 class="d3 panel__h">عملاؤك ياخذون جوابهم في ثوانٍ، على مدار الساعة</h3>
           <p class="panel__p">أغلب أسئلة الدعم مكررة. سيادة تحلها فورًا، وترفع لك فقط اللي يستاهل وقتك فعلًا.</p>
           <ul class="chain">
             <li>يجمع الرسائل من واتساب والبريد وموقعك في مكان واحد</li>
@@ -597,11 +616,11 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
       <div class="perk">
         <span class="perk__n">السعر</span>
         <h3 class="perk__h">خصم 50% مدى الحياة</h3>
-        <p class="perk__p">السعر العام راح يكون أعلى بوضوح. والسعر المبكر ما يرتفع أبدًا — حتى ونحن نضيف أقسامًا وتكاملات وقدرات جديدة.</p>
+        <p class="perk__p">السعر العام راح يكون أعلى بوضوح. والسعر المبكر ما يرتفع أبدًا، حتى ونحن نضيف أقسامًا وتكاملات وقدرات جديدة.</p>
       </div>
       <div class="perk">
         <span class="perk__n">التفعيل</span>
-        <h3 class="perk__h">جلسة إعداد تُدار معك</h3>
+        <h3 class="perk__h">جلسة إعداد نسويها معك</h3>
         <p class="perk__p">شخص من الفريق يجهّز معك أول أقسامك مباشرة. تطلع من الجلسة وعندك فريق شغّال فعليًا.</p>
       </div>
       <div class="perk">
@@ -622,7 +641,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
         </span>
       </div>
       <div class="bar"><i id="barfill"></i></div>
-      <p class="meter__f"><span id="left">—</span> مقعد باقي. لما تخلص، هذي المرحلة تُقفل نهائيًا.</p>
+      <p class="meter__f"><span id="left">—</span> مقعد باقي. لما تخلص، هذي المرحلة تنقفل نهائيًا.</p>
     </div>
   </div>
 </section>
@@ -636,9 +655,9 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
       <p class="lead" style="margin-block-start:24px">الحجز مجاني بالكامل. تدخل القائمة، ونتواصل معك أول ما تفتح دفعتك، تجرّب، وبعدين تقرر.</p>
       <ul class="assure">
         <li><span class="drop" aria-hidden="true"></span> بدون بطاقة، بدون التزام، وما فيه شيء تلغيه</li>
-        <li><span class="drop" aria-hidden="true"></span> يُرسل عبر HTTPS ويُحفظ بشكل خاص ويُحذف بطلبك. ولا نستخدم بياناتك لتدريب أي نموذج</li>
+        <li><span class="drop" aria-hidden="true"></span> نرسلها عبر HTTPS، ونحفظها عندنا فقط، ونحذفها لحظة ما تطلب. وما ندرّب عليها أي نموذج</li>
         <li><span class="drop" aria-hidden="true"></span> رسالة واحدة فقط: لما يجي دورك</li>
-        <li><span class="drop" aria-hidden="true"></span> السعر المبكر يُقفل باسمك لحظة تسجيلك</li>
+        <li><span class="drop" aria-hidden="true"></span> السعر المبكر ينقفل باسمك لحظة تسجيلك</li>
       </ul>
     </div>
 
@@ -711,7 +730,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
       <div class="done" id="done" role="status" aria-live="polite">
         <span class="drop" aria-hidden="true"></span>
         <h3 class="d3">تم حجز مقعدك</h3>
-        <p>وصلنا طلبك. بتسمع منا مرة وحدة بالضبط — لما تفتح دفعتك.</p>
+        <p>وصلنا طلبك. بتسمع منا مرة وحدة بالضبط، لما تفتح دفعتك.</p>
         <div class="done__no">ترتيبك في القائمة <span id="rank">—</span></div>
       </div>
     </div>
@@ -739,7 +758,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
       </div>
       <div class="q">
         <button class="q__b" type="button" aria-expanded="false">وين المصيدة؟ دايمًا فيه مصيدة.<span class="sign"></span></button>
-        <div class="q__a"><p>بصراحة: النسخة المبكرة ما راح تكون مثالية. راح تلقى حالات ما توقعناها، وتبي مزايا ما بنيناها بعد. عشان كذا حصرناها في 500 شركة — نشتغل معكم عن قرب قبل ما نفتح للعامة. أنت تاخذ خصمًا حقيقيًا مقابل ملاحظاتك.</p></div>
+        <div class="q__a"><p>بصراحة: النسخة المبكرة ما راح تكون مثالية. راح تلقى حالات ما توقعناها، وتبي مزايا ما بنيناها بعد. عشان كذا حصرناها في 500 شركة، نشتغل معكم عن قرب قبل ما نفتح للعامة. أنت تاخذ خصمًا حقيقيًا مقابل ملاحظاتك.</p></div>
       </div>
       <div class="q">
         <button class="q__b" type="button" aria-expanded="false">هل بيانات شركتي بأمان؟<span class="sign"></span></button>
@@ -762,7 +781,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
   <div class="wrap">
     <div class="foot__top">
       <span class="logo" role="img" aria-label="Siyadah AI"></span>
-      <p class="foot__note">فريق التشغيل اللي ما قدرت توظفه، داخل محادثة واحدة.</p>
+      <p class="foot__note">جملة وحدة. فريق يشتغل داخل أدواتك.</p>
       <a href="#join" class="btn btn--line">احجز مقعدك <span class="drop" aria-hidden="true"></span></a>
     </div>
     <div class="foot__bot">

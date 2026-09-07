@@ -11,7 +11,7 @@ Please do not open public issues for security reports.
 
 ## What we already do
 - Static site, no server-side code, no secrets in this repository
-- No inline scripts or handlers, no third-party requests while browsing (fonts self-hosted), no secrets in the repo
+- No inline scripts or handlers; fonts and logo self-hosted; the only third-party requests while browsing are integration logos from cdn.activepieces.com, fetched without cookies or referrer
 - Security headers (strict CSP with `script-src 'self'`, HSTS preload, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP) are defined in `.htaccess` and apply on Apache hosting only; GitHub Pages does not send them
 - Honeypot + client validation on the form; server-side validation in the automation flow
 - No third-party trackers or analytics cookies (PDPL / GDPR)

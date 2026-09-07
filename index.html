@@ -18,6 +18,8 @@
 <link rel="canonical" href="https://siyadah-ai.com/">
 <link rel="icon" href="assets/icon.png">
 
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="ar_SA">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Siyadah AI — One sentence. A team that works inside your tools.">
 <meta property="og:description" content="The team you can't afford to hire, inside a single chat. Private beta, 500 companies.">
@@ -27,7 +29,7 @@
 
 <link rel="preload" href="fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="assets/wordmark.png" as="image">
+<link rel="preload" href="assets/wordmark.png" as="image" crossorigin>
 <link rel="stylesheet" href="fonts.css">
 
 <style>
@@ -355,6 +357,23 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
   *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
   .rv > *{transform:none}.fade{opacity:1}
 }
+
+.nav__menu{display:none;width:40px;height:40px;flex:none;border:1px solid var(--hair);background:var(--paper);padding:0;place-items:center;align-content:center;gap:5px;cursor:pointer}
+.nav__menu span{display:block;width:16px;height:1.5px;background:var(--ink);transition:transform .25s,opacity .25s}
+.nav.open .nav__menu span:nth-child(1){transform:translateY(6.5px) rotate(45deg)}
+.nav.open .nav__menu span:nth-child(2){opacity:0}
+.nav.open .nav__menu span:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
+@media (max-width:1000px){
+  .nav__in{gap:14px}
+  .nav .logo{width:112px}
+  .nav__menu{display:grid}
+  .nav__links{position:fixed;inset-block-start:76px;inset-inline:0;flex-direction:column;gap:0;margin:0;padding:6px 24px 18px;background:var(--paper);border-block-end:1px solid var(--hair);font-size:1rem;opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity .25s,transform .25s}
+  .nav.open .nav__links{opacity:1;transform:none;pointer-events:auto}
+  .nav__links a{display:block !important;padding:13px 0;border-block-end:1px solid var(--hair);color:var(--ink)}
+  .nav__links a:last-child{border-block-end:0}
+  .nav.open{background:var(--paper);border-bottom-color:var(--hair)}
+}
+@media (max-width:480px){ .nav .btn{padding:9px 12px;font-size:.8rem} }
 </style>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
@@ -374,7 +393,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
 <header class="nav" id="nav">
   <div class="wrap nav__in">
     <a href="#top" aria-label="Siyadah AI, home"><span class="logo" role="img" aria-label="Siyadah AI"></span></a>
-    <nav class="nav__links" aria-label="Primary">
+    <nav class="nav__links" id="nav-links" aria-label="Primary">
       <a href="#how">How it works</a>
       <a href="#dept">Departments</a>
       <a href="#founders">Private beta</a>
@@ -383,6 +402,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
       <a href="ar.html" class="nav__lang">AR</a>
     </nav>
     <a href="#join" class="btn">Reserve your seat</a>
+    <button type="button" class="nav__menu" aria-label="Menu" aria-expanded="false" aria-controls="nav-links"><span></span><span></span><span></span></button>
   </div>
 </header>
 
@@ -400,7 +420,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
 
       <div class="hero__row">
         <div>
-          <p class="lead">Siyadah AI is the team you can't afford to hire, working inside a single chat. It follows up with every lead in minutes, chases the invoices nobody wants to chase, answers your customers in seconds, and keeps your marketing moving while you sleep.</p>
+          <p class="lead">Siyadah AI gives you AI employees that work inside the tools you already use. One follows up every lead within minutes. One chases the invoices nobody wants to chase. One answers your customers around the clock. You run all of them from a single chat.</p>
           <div class="hero__cta">
             <a href="#join" class="btn">Reserve your seat <span class="drop" aria-hidden="true"></span></a>
             <a href="demo.html" class="btn btn--line">Watch the demo · 2:00</a>
@@ -472,7 +492,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
     <div class="cost__item">
       <div class="cost__n">03</div>
       <div>
-        <h3 class="cost__h">Fourteen-hour days spent on twenty-dollar-an-hour work.</h3>
+        <h3 class="cost__h">Fourteen-hour days spent on twenty-riyal-an-hour work.</h3>
         <p class="cost__p">Copying data. Answering the same question for the fortieth time. Following up by hand. The company stops growing because the owner is busy doing what should have been automated.</p>
       </div>
       <div class="cost__tag">Growth, stalled<span>And burnout wins</span></div>
@@ -506,7 +526,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
         <div class="step__n">Step 02</div>
         <div>
           <h3 class="d3 step__h">Siyadah reads your company, builds the team, and shows you the plan</h3>
-          <p class="step__p">Give it your website or Instagram. It reads everything: services, prices, policies, the questions customers ask, even your tone. Then it turns that into what your employees know from day one. Then it creates a dedicated agent per department, connects to the tools you already use, and shows you exactly what it intends to do before it does any of it. You approve, or you adjust it with a sentence.</p>
+          <p class="step__p">Give it your website or Instagram. It reads everything: services, prices, policies, the questions customers ask, even your tone, and turns it into what your employees know from day one. It then builds one AI employee per department, connects it to the tools you already use, and shows you exactly what it intends to do before it does any of it. You approve, or you adjust it with a sentence.</p>
         </div>
       </div>
 
@@ -525,7 +545,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
 <section class="sect" id="dept" style="padding-top:0">
   <div class="wrap">
     <p class="idx">03 — Departments</p>
-    <h2 class="d2 rv" style="max-width:16ch"><span>One chat. Four departments. Zero employees.</span></h2>
+    <h2 class="d2 rv" style="max-width:16ch"><span>One chat. Four AI employees. Nobody on payroll.</span></h2>
     <p class="lead" style="margin-top:24px">Pick a department. This is the work Siyadah does inside it, step by step.</p>
 
     <div class="dept">

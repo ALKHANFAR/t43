@@ -16,7 +16,7 @@
 <meta property="og:image" content="https://siyadah-ai.com/og.jpg">
 <link rel="preload" href="fonts/jost-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="assets/wordmark.png" as="image">
+<link rel="preload" href="assets/wordmark.png" as="image" crossorigin>
 <link rel="stylesheet" href="fonts.css">
 <style>
 :root{
@@ -40,18 +40,18 @@ button,input{font:inherit;color:inherit}button{cursor:pointer}
 .nav__in{display:flex;align-items:center;gap:32px;height:72px}
 .nav .logo{width:132px}
 .nav__r{margin-inline-start:auto;display:flex;align-items:center;gap:14px}
-.lang{background:none;border:1px solid var(--hair);padding:7px 12px;font-family:var(--f-display);font-size:.78rem;color:var(--ash)}
-.btn{display:inline-flex;align-items:center;gap:10px;padding:11px 22px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font-family:var(--f-display);font-weight:400;font-size:.9rem;transition:.25s}
+.lang{background:none;border:1px solid var(--hair);padding:7px 12px;font-family:var(--f-display);font-size:.8rem;color:var(--ash)}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:11px 22px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font-family:var(--f-display);font-weight:400;font-size:.875rem;transition:.25s}
 .btn:hover{background:var(--paper);color:var(--ink)}
 .btn .drop{color:var(--accent-lt)}.btn:hover .drop{color:var(--accent)}
 
 .hero{padding:clamp(56px,8vw,96px) 0 clamp(28px,4vw,44px)}
-.idx{font-family:var(--f-display);font-size:.72rem;letter-spacing:.3em;text-transform:uppercase;color:var(--ash);display:flex;align-items:center;gap:14px;margin-bottom:26px}
+.idx{font-family:var(--f-display);font-size:.75rem;letter-spacing:.3em;text-transform:uppercase;color:var(--ash);display:flex;align-items:center;gap:14px;margin-bottom:26px}
 .idx::after{content:"";height:1px;width:110px;background:var(--hair)}
 html[dir="rtl"] .idx{letter-spacing:.06em;text-transform:none}
-h1{font-family:var(--f-display);font-weight:200;font-size:clamp(2.2rem,5.6vw,4.4rem);letter-spacing:-.02em;line-height:1.08;margin:0 0 18px;max-width:16ch}
+h1{font-family:var(--f-display);font-weight:300;font-size:clamp(2.2rem,5.6vw,4.4rem);letter-spacing:-.02em;line-height:1.08;margin:0 0 18px;max-width:16ch}
 html[dir="rtl"] h1{letter-spacing:0;line-height:1.25}
-h1 b{font-weight:200;color:var(--accent)}
+h1 b{font-weight:300;color:var(--accent)}
 .lead{color:var(--ash);max-width:56ch;margin:0 0 30px;font-size:1.08rem}
 .search{display:flex;align-items:center;gap:12px;border:1px solid var(--ink);padding:0 18px;max-width:620px}
 .search input{flex:1;border:0;background:none;padding:15px 0;font-size:1.02rem}
@@ -62,36 +62,36 @@ h1 b{font-weight:200;color:var(--accent)}
 
 .lay{display:grid;grid-template-columns:230px 1fr;gap:clamp(24px,4vw,56px);padding:34px 0 90px}
 .side{position:sticky;top:96px;align-self:start;background:var(--paper)}
-.side h2{font-family:var(--f-display);font-weight:400;font-size:.78rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ash);margin:0 0 12px}
+.side h2{font-family:var(--f-display);font-weight:400;font-size:.8rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ash);margin:0 0 12px}
 html[dir="rtl"] .side h2{letter-spacing:.04em;text-transform:none}
-.cat{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;background:none;border:0;border-inline-start:2px solid transparent;text-align:start;font-size:.9rem;color:var(--ash);transition:.2s}
+.cat{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;background:none;border:0;border-inline-start:2px solid transparent;text-align:start;font-size:.875rem;color:var(--ash);transition:.2s}
 .cat:hover{color:var(--ink)}
 .cat[aria-pressed="true"]{color:var(--ink);border-inline-start-color:var(--ink);background:var(--wash)}
 .cat[aria-pressed="true"] small{color:var(--ink)}
-.cat small{margin-inline-start:auto;font-family:var(--f-display);font-size:.72rem;color:var(--ash-2)}
+.cat small{margin-inline-start:auto;font-family:var(--f-display);font-size:.75rem;color:var(--ash-2)}
 
-.top{display:flex;align-items:baseline;gap:14px;margin-bottom:18px;font-size:.88rem;color:var(--ash)}
+.top{display:flex;align-items:baseline;gap:14px;margin-bottom:18px;font-size:.875rem;color:var(--ash)}
 .top b{font-family:var(--f-display);font-weight:300;font-size:1.2rem;color:var(--ink)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;min-height:70vh}
 .card{border:1px solid var(--hair);padding:18px;display:grid;grid-template-columns:44px 1fr;gap:14px;align-items:start;transition:border-color .2s;background:var(--paper)}
 .card:hover{border-color:var(--ink)}
-.card__i{width:44px;height:44px;border:1px solid var(--hair);display:grid;place-items:center;background:#fff;overflow:hidden;font-family:var(--f-display);font-size:.9rem}
+.card__i{width:44px;height:44px;border:1px solid var(--hair);display:grid;place-items:center;background:#fff;overflow:hidden;font-family:var(--f-display);font-size:.875rem}
 .card__i img{width:28px;height:28px;object-fit:contain}
 .card__n{font-family:var(--f-display);font-weight:400;font-size:1rem;line-height:1.3}
 .card__d{font-size:.8rem;color:var(--ash);line-height:1.5;margin-top:3px;direction:ltr;text-align:start;unicode-bidi:plaintext;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.card__c{font-family:var(--f-display);font-size:.68rem;color:var(--ash-2);margin-top:8px}
-.more{margin:26px auto 0;display:block;background:none;border:1px solid var(--hair);padding:13px 26px;font-family:var(--f-display);font-size:.9rem;color:var(--ash);transition:.2s}
+.card__c{font-family:var(--f-display);font-size:.7rem;color:var(--ash-2);margin-top:8px}
+.more{margin:26px auto 0;display:block;background:none;border:1px solid var(--hair);padding:13px 26px;font-family:var(--f-display);font-size:.875rem;color:var(--ash);transition:.2s}
 .more:hover{border-color:var(--ink);color:var(--ink)}
 .empty{color:var(--ash);padding:40px;border:1px dashed var(--hair);text-align:center}
 
 .soon{border:1px solid var(--hair);padding:22px 24px;margin-top:40px;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center}
 .soon b{display:block;font-family:var(--f-display);font-weight:300;font-size:1.15rem;margin-bottom:4px}
-.soon p{margin:0;color:var(--ash);font-size:.9rem}
+.soon p{margin:0;color:var(--ash);font-size:.875rem}
 .soon .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.soon .chips span{font-family:var(--f-display);font-size:.74rem;border:1px solid var(--hair);padding:3px 9px}
+.soon .chips span{font-family:var(--f-display);font-size:.75rem;border:1px solid var(--hair);padding:3px 9px}
 
 .cta{background:var(--ink);color:var(--paper);padding:clamp(56px,8vw,90px) 0}
-.cta h2{font-family:var(--f-display);font-weight:200;font-size:clamp(1.8rem,4vw,3rem);margin:0 0 12px;letter-spacing:-.02em}
+.cta h2{font-family:var(--f-display);font-weight:300;font-size:clamp(1.8rem,4vw,3rem);margin:0 0 12px;letter-spacing:-.02em}
 html[dir="rtl"] .cta h2{letter-spacing:0}
 .cta p{color:#A5A5A2;margin:0 0 26px;max-width:50ch}
 .cta .btn{background:var(--paper);color:var(--ink);border-color:var(--paper)}
@@ -103,13 +103,14 @@ html[dir="rtl"] .cta h2{letter-spacing:0}
   .lay{grid-template-columns:1fr}
   .side{position:static;display:flex;flex-wrap:wrap;gap:4px}
   .side h3{width:100%}
-  .cat{width:auto;border:1px solid var(--hair);padding:6px 12px;font-size:.82rem}
+  .cat{width:auto;border:1px solid var(--hair);padding:6px 12px;font-size:.8rem}
   .cat[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
   .cat small{margin-inline-start:6px}
   .soon{grid-template-columns:1fr}
 }
 .nav .btn{white-space:nowrap}
-@media (max-width:640px){.nav .btn{padding:9px 14px;font-size:.82rem}}
+@media (max-width:640px){.nav .btn{padding:9px 14px;font-size:.8rem}}
+@media (max-width:480px){.nav__in{gap:12px}.nav .logo{width:104px}.nav .btn{padding:9px 12px;font-size:.8rem}.nav .btn .drop{display:none}}
 </style>
 </head>
 <body>
@@ -125,8 +126,8 @@ html[dir="rtl"] .cta h2{letter-spacing:0}
 <section class="hero"><div class="wrap">
   <p class="idx" data-en="Integrations" data-ar="التكاملات">Integrations</p>
   <h1><span data-en="Your employees work inside the tools you already use." data-ar="موظفوك يشتغلون داخل الأدوات اللي تستخدمها أصلًا.">Your employees work inside the tools you already use.</span></h1>
-  <p class="lead" data-en="WhatsApp, Gmail, Google Sheets, HubSpot, Zoho, Shopify — and hundreds more. You connect a tool once; the right employee uses it. Nothing is reached without your permission."
-     data-ar="واتساب، Gmail، Google Sheets، HubSpot، Zoho، Shopify — ومئات غيرها. تربط الأداة مرة واحدة، والموظف المناسب يستخدمها. ولا يوصل موظف لأداة ما ربطتها أنت.">WhatsApp, Gmail, Google Sheets, HubSpot, Zoho, Shopify — and hundreds more. You connect a tool once; the right employee uses it. Nothing is reached without your permission.</p>
+  <p class="lead" data-en="WhatsApp, Gmail, Google Sheets, HubSpot, Zoho, Shopify — and hundreds more. You connect a tool once; the right employee uses it. No employee touches a tool you haven't connected."
+     data-ar="واتساب، Gmail، Google Sheets، HubSpot، Zoho، Shopify — ومئات غيرها. تربط الأداة مرة واحدة، والموظف المناسب يستخدمها. ولا يوصل موظف لأداة ما ربطتها أنت.">WhatsApp, Gmail, Google Sheets, HubSpot, Zoho, Shopify — and hundreds more. You connect a tool once; the right employee uses it. No employee touches a tool you haven't connected.</p>
   <div class="search"><span class="drop" aria-hidden="true"></span><label for="q" class="sr">Search tools</label><input id="q" type="search" data-ph-en="Search a tool… WhatsApp, Zoho, Shopify" data-ph-ar="ابحث… واتساب، Zoho، Shopify"><kbd>/</kbd></div>
 </div></section>
 
@@ -147,7 +148,7 @@ html[dir="rtl"] .cta h2{letter-spacing:0}
 </section>
 
 <section class="cta"><div class="wrap">
-  <h2 data-en="One sentence. A team that runs inside your tools." data-ar="جملة وحدة. فريق يشتغل داخل أدواتك.">One sentence. A team that runs inside your tools.</h2>
+  <h2 data-en="One sentence. A team that works inside your tools." data-ar="جملة وحدة. فريق يشتغل داخل أدواتك.">One sentence. A team that works inside your tools.</h2>
   <p data-en="Private beta — 500 companies. Free to reserve, no card." data-ar="بيتا خاصة — 500 شركة. الحجز مجاني وبدون بطاقة.">Private beta — 500 companies. Free to reserve, no card.</p>
   <a href="index.html#join" class="btn"><span data-en="Reserve your seat" data-ar="احجز مقعدك">Reserve your seat</span> <span class="drop" aria-hidden="true"></span></a>
 </div></section>

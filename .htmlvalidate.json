@@ -1,1 +1,1 @@
-{"extends":["html-validate:recommended"],"rules":{"no-inline-style":"off","no-trailing-whitespace":"off","long-title":"off","attribute-boolean-style":"off","void-style":"off","no-raw-characters":"off","attr-quotes":"off","prefer-native-element":"off","require-sri":"off","prefer-button":"off"}}
+{"extends":["html-validate:recommended"],"rules":{"no-inline-style":"off","no-trailing-whitespace":"off","long-title":"off","attribute-boolean-style":"off","void-style":"off","no-raw-characters":"off","attr-quotes":"off","require-sri":"off","prefer-button":"off"}}

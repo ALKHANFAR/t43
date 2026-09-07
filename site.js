@@ -42,6 +42,17 @@ var CONFIG = {
 
   /* header + sticky bar */
   var nav = $("#nav"), sticky = $("#sticky");
+
+  /* mobile menu */
+  var menuBtn = $(".nav__menu"), links = $("#nav-links");
+  function setMenu(open) { nav.classList.toggle("open", open); if (menuBtn) menuBtn.setAttribute("aria-expanded", open ? "true" : "false"); }
+  if (menuBtn) {
+    menuBtn.addEventListener("click", function () { var open = !nav.classList.contains("open"); setMenu(open); if (open) { var first = $("a", links); if (first) first.focus(); } });
+    links.addEventListener("click", function (e) { if (e.target.closest("a")) setMenu(false); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && nav.classList.contains("open")) { setMenu(false); menuBtn.focus(); } });
+    document.addEventListener("click", function (e) { if (nav.classList.contains("open") && !e.target.closest(".nav")) setMenu(false); });
+  }
+
   function onScroll() {
     var y = window.scrollY;
     nav.classList.toggle("stuck", y > 20);

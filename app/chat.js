@@ -282,10 +282,13 @@ var I = {
   $("#newChat").addEventListener("click",function(){ chatId=null; who="siyadah"; live={}; renderSide(); renderBar(); renderThread(); $("#input").focus(); });
 
   /* القائمة الجانبية */
-  $("#closeSide").addEventListener("click",function(){ $("#app").classList.add("closed"); $("#app").classList.remove("open"); });
-  $("#openSide").addEventListener("click",function(){ $("#app").classList.remove("closed"); $("#app").classList.toggle("open"); });
+  $("#closeSide").addEventListener("click",function(){ $("#app").classList.add("closed"); $("#app").classList.remove("open"); $("#openSide").setAttribute("aria-expanded","false"); if(mobile()) $("#openSide").focus(); });
+  var mobile=function(){ return window.matchMedia("(max-width:820px)").matches; };
+  function setDrawer(open){ $("#app").classList.toggle("open",open); $("#openSide").setAttribute("aria-expanded",open?"true":"false"); if(open&&mobile()){ var first=$(".side button,.side a"); if(first) first.focus(); } }
+  $("#openSide").addEventListener("click",function(){ $("#app").classList.remove("closed"); setDrawer(!$("#app").classList.contains("open")); });
+  $("#scrim").addEventListener("click",function(){ setDrawer(false); $("#openSide").focus(); });
   /* mobile drawer: picking anything in the sidebar closes it */
-  $(".side").addEventListener("click",function(e){ if(e.target.closest("button,a")&&window.matchMedia("(max-width:820px)").matches) setTimeout(function(){ $("#app").classList.remove("open"); },0); });
+  $(".side").addEventListener("click",function(e){ if(e.target.closest("button,a")&&mobile()) setTimeout(function(){ setDrawer(false); },0); });
 
   /* ---------- الأدوات — الكتالوج الكامل (الحقيقي يجي من Activepieces /v1/pieces) ---------- */
   /* الكتالوج الحقيقي من pieces.js: [slug, name, description, category, logo] */
@@ -341,7 +344,9 @@ var I = {
   function closeModal(){ $("#modal").classList.remove("on"); var back=(modalOpener&&document.contains(modalOpener))?modalOpener:$("#tq"); if(back&&back.focus) back.focus(); modalOpener=null; }
   $("#mX").addEventListener("click",closeModal);
   $("#modal").addEventListener("click",function(e){ if(e.target===this) closeModal(); });
-  $("#modal").addEventListener("keydown",function(e){ if(e.key!=="Tab") return; var f=$$("button,[href],input,textarea,[tabindex]:not([tabindex=\"-1\"])",this).filter(function(x){return !x.disabled&&x.offsetParent!==null}); if(!f.length) return; var a=f[0],z=f[f.length-1]; if(e.shiftKey&&document.activeElement===a){ e.preventDefault(); z.focus(); } else if(!e.shiftKey&&document.activeElement===z){ e.preventDefault(); a.focus(); } });
+  /* shared Tab trap for dialogs */
+  function trapTab(e,root){ if(e.key!=="Tab") return; var f=$$("button,[href],input,textarea,select,[tabindex]:not([tabindex=\"-1\"])",root).filter(function(x){return !x.disabled&&x.offsetParent!==null}); if(!f.length) return; var a=f[0],z=f[f.length-1]; if(e.shiftKey&&document.activeElement===a){ e.preventDefault(); z.focus(); } else if(!e.shiftKey&&document.activeElement===z){ e.preventDefault(); a.focus(); } }
+  $("#modal").addEventListener("keydown",function(e){ trapTab(e,$("#modal")); });
   $("#mGo").addEventListener("click",function(){ if(picked){picked.on=true;picked.by="بانتظار تعيين موظف";} closeModal(); $("#toolsCnt").textContent=TOOLS.filter(function(t){return t.on}).length+" مربوطة"; renderThread(); });
   function openTools(){ who="tools"; chatId=null; renderSide(); renderBar(); renderThread(); }
   $("#toolsLink").addEventListener("click",openTools);
@@ -354,16 +359,19 @@ var I = {
   pop.addEventListener("click",function(e){ var b=e.target.closest("[data-open]"); if(!b) return; if(b.dataset.open==="tools") openTools(); else openSheet(b.dataset.open); pop.classList.remove("on"); });
 
   /* ---------- اللوحة ---------- */
-  var sheet=$("#sheet");
+  var sheet=$("#sheet"), sheetOpener=null;
   function openSheet(pane){
-    $$(".sheet__h .tab").forEach(function(t){ t.setAttribute("aria-selected", t.dataset.pane===pane); });
+    $$(".sheet__h .tab").forEach(function(t){ t.setAttribute("aria-current", t.dataset.pane===pane ? "true" : "false"); });
     $$(".sheet .pane").forEach(function(p){ p.classList.toggle("on", p.id==="pane-"+pane); });
-    sheet.classList.add("on");
+    if(!sheet.classList.contains("on")) sheetOpener=document.activeElement;
+    sheet.classList.add("on"); $("#sheetX").focus();
   }
+  function closeSheet(){ if(!sheet.classList.contains("on")) return; sheet.classList.remove("on"); if(sheetOpener&&document.contains(sheetOpener)) sheetOpener.focus(); sheetOpener=null; }
   $(".sheet__h").addEventListener("click",function(e){ var t=e.target.closest(".tab"); if(t) openSheet(t.dataset.pane); });
-  $("#sheetX").addEventListener("click",function(){ sheet.classList.remove("on"); });
-  sheet.addEventListener("click",function(e){ if(e.target===sheet) sheet.classList.remove("on"); });
-  document.addEventListener("keydown",function(e){ if(e.key==="Escape"){ sheet.classList.remove("on"); pop.classList.remove("on"); if($("#modal").classList.contains("on")) closeModal(); } });
+  $("#sheetX").addEventListener("click",closeSheet);
+  sheet.addEventListener("click",function(e){ if(e.target===sheet) closeSheet(); });
+  sheet.addEventListener("keydown",function(e){ trapTab(e,sheet); });
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape"){ closeSheet(); pop.classList.remove("on"); if($("#modal").classList.contains("on")) closeModal(); if($("#app").classList.contains("open")&&window.matchMedia("(max-width:820px)").matches){ $("#app").classList.remove("open"); $("#openSide").setAttribute("aria-expanded","false"); $("#openSide").focus(); } } });
   $$(".swm").forEach(function(b){ b.addEventListener("click",function(){ this.setAttribute("aria-checked", this.getAttribute("aria-checked")!=="true"); }); });
   $$(".srow .seg").forEach(function(seg){ $$("button",seg).forEach(function(b){ b.addEventListener("click",function(){ $$("button",seg).forEach(function(x){x.setAttribute("aria-pressed","false")}); b.setAttribute("aria-pressed","true"); }); }); });
 

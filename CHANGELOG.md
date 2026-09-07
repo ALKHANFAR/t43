@@ -1,6 +1,19 @@
 # Changelog
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/), versioning: [SemVer](https://semver.org/).
 
+## [1.4.0] — 2026-09-07
+### Added
+- Mobile navigation on the marketing pages: hamburger button opening a sheet with all links and the language switch (keyboard, Escape, aria-expanded)
+- Settings sheet in the app now manages focus like the tool dialog (focus in, Tab trap, Escape, focus return); mobile drawer has a real scrim button, aria-expanded, Escape and focus handling
+### Changed
+- Hero lede (EN/AR) now says what the product is: AI employees working inside your tools, run from one chat; section 03 heading no longer contradicts the console ("Four AI employees. Nobody on payroll.")
+- Arabic: passive-voice headings and bullets rewritten in dialect, em-dashes in prose removed, demo employee grammar matches gender, one shared brief sentence across site/demo/app
+- One tagline everywhere ("works inside your tools"); integrations lede "No employee touches a tool you haven't connected"; 404 fully bilingual; twenty-riyal (not dollar)
+- Type: same 4-step small-size scale in the app, demo and integrations; weight 300 everywhere (no 200 left)
+- Demo uses a native <main>; settings tab no longer carries aria-selected; duplicate CSS removed; og:locale ar_SA/en_US with alternates; sitemap lastmod
+- Wordmark preload now matches the CORS request of mask-image (was fetched twice)
+- STANDARDS.md and SECURITY.md state the one third-party request while browsing (integration logos from Activepieces CDN, no cookies, no referrer)
+
 ## [1.3.0] — 2026-09-06
 ### Changed
 - One `site.js` for both languages (strings picked by `<html lang>`); `index.js` and `ar.js` removed
