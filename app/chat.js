@@ -1,3 +1,19 @@
+/* ORCHESTRATOR CONTRACT — the real backend will emit these over SSE from POST /message.
+   The simulator below plays the same events with realistic delays; wiring the backend = replacing playEvents' source.
+
+   {t:"say", text, why?}                          رسالة من سيادة — تنكشف كلمة كلمة مثل باقي الردود
+   {t:"step", emp, tool, label, why?, ms}         صف خطوة في التتبع: شعار الأداة (أو حرف الموظف) + مؤشر حي → ✓ بعد ms
+   {t:"handoff", from, to, text}                  تسليم بين موظفين: حرفاهما وسهم ← بينهما ثم النص (مثل: سعد ← نورة)
+   {t:"await", card:{title, context, recommend,
+                     options:[{label, events}]}}  يوقف التشغيل — بطاقة قرار؛ الاختيار يرسل رسالة منك ويكمل بأحداث الخيار
+   {t:"preview", to, channel, text, editHint?}    يوقف التشغيل — معاينة الرسالة الصادرة حرفيًا مع [أرسل] و[عدّل]
+   {t:"result", emp, tool, summary, before?,
+                after?, reversible?, hold?}       صف نتيجة ✓ — hold: مهلة 7 ث مع «تراجع» قبل ما ترسل فعليًا؛
+                                                  reversible: رابط «تراجع» 7 ث بعد التنفيذ؛ و«الأثر» يفتح الإيصال
+   {t:"done", text?}                              سطر الختام — يطفي «يشتغل الآن…»
+   للمحاكي فقط (مو من عقد الشبكة): options[].fx دالة محلية تُنفَّذ عند الاختيار،
+   وresult.sent أحداث تُشغَّل بعد ما يرسل الـ hold فعليًا. */
+
 /* ==========================================================================
    التسعير — مصدر واحد لكل الأرقام (الخطة، الرصيد المسبق، اللافتات)
    ========================================================================== */
@@ -12,6 +28,12 @@ var PLAN={ name:PRICING.name, price:PRICING.price, list:PRICING.list, period:"ش
            due:"573.85",
            invoices:[{m:"سبتمبر 2026", total:"573.85", url:"#"},{m:"أغسطس 2026", total:"573.85", url:"#"}],
            payment:"مدى •• 4321", vat:"3001•••••••03", cr:"10•••••••4" };
+
+/* ==========================================================================
+   ACTIONS — مصدر الحقيقة الوحيد: كل نتيجة نُفّذت (ما أُلغيت) تدخل هنا،
+   ومنها يقرأ إيصال «الأثر» ويزيد عدّاد الخطة إجراءً لكل نتيجة
+   ========================================================================== */
+var ACTIONS=[];
 
 /* ==========================================================================
    بيانات تجريبية
@@ -78,6 +100,15 @@ var EMPS = [
 var TN={ "whatsapp":"واتساب", "hubspot":"HubSpot", "google-calendar":"التقويم", "wafeq":"قيود/Wafeq", "google-sheets":"Google Sheets",
          "gmail":"Gmail", "linkedin":"لينكدإن", "instagram-business":"إنستغرام", "google-docs":"Google Docs", "site-chat":"شات الموقع" };
 
+/* ==========================================================================
+   الذاكرة الحيّة — كل سطر له مصدر: من وين تعلّمته سيادة
+   القواعد الجديدة من محادثات التعديل تنضاف هنا، والحذف من الإعدادات › الذاكرة
+   ========================================================================== */
+var MEM=[{k:"العمولة",v:"12%",src:"من محادثة 3 سبتمبر"},
+         {k:"وقت التواصل",v:"ما نراسل العملاء بعد 8 مساءً",src:"قاعدة منك"},
+         {k:"صوت العلامة",v:"مباشر وبدون مبالغة",src:"من الإعداد الأول"},
+         {k:"لغة الرد",v:"بلغة العميل: عربي أو إنجليزي",src:"قاعدة لفهد"}];
+
 var CHATS = {
   "c1": { with:"siyadah", t:"بناء فريق المتابعة والتحصيل", when:"today", msgs:[
     { me:true,  t:"أبي أحد يتابع كل عميل جديد خلال خمس دقائق، ويطالب بالفواتير اللي تأخرت أكثر من سبعة أيام، ويرد على أسئلة الدعم المتكررة على طول.", at:"14:28" },
@@ -143,11 +174,15 @@ var I = {
   var $=function(s,c){return (c||document).querySelector(s)};
   var $$=function(s,c){return Array.prototype.slice.call((c||document).querySelectorAll(s))};
   var who="siyadah", chatId=null, live={}, eth={}, pendAns=null;
+  var PRES={}, pendEdit=null; /* PRES: مين يشتغل الآن · pendEdit: معاينة قيد التعديل في المحرر */
+  var PULSE={}, kpiOpen=null, proFired=false; /* PULSE: نبضة شارة المبادرة · kpiOpen: مين أرقامه مفتوحة · proFired: نورة بادرت */
   var AUTON=["ينفّذ ويبلغك","يستأذنك أولًا","يقترح فقط"], TONE=["رسمي","ودّي"];
   var reduced=function(){ return window.matchMedia("(prefers-reduced-motion: reduce)").matches; };
 
   function emp(id){ return EMPS.filter(function(e){return e.id===id})[0]; }
   function isEmp(){ return who!=="siyadah"&&who!=="tools"; }
+  /* قائمة الرسائل المعروضة حاليًا — يقارنها المحاكي قبل ما يعيد الرسم */
+  function curList(){ if(who==="tools") return null; if(isEmp()) return empThread(who); return chatId?CHATS[chatId].msgs:(live.siyadah||null); }
   function avHtml(id){ return (id==="siyadah"||!emp(id)) ? '<span class="drop"></span>' : emp(id).ini; }
   function name(id){ return (id==="siyadah"||!emp(id)) ? "سيادة" : emp(id).n; }
   function fmt(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,","); }
@@ -158,10 +193,12 @@ var I = {
 
   /* --- الجانب --- */
   function renderSide(){
+    /* حالة الصف: يشتغل الآن → نقطة نابضة · فيه شارة → الشارة فقط · شغّال → نقطة · متوقف → لا شيء والاسم باهت */
     $("#emps").innerHTML = EMPS.map(function(e){
-      return '<button type="button" class="emp" data-emp="'+e.id+'" aria-current="'+(who===e.id)+'"><span class="av">'+e.ini+'</span>'+
+      var st = PRES[e.id] ? '<span class="dot dot--live" title="يشتغل الآن"></span>' : (e.wait ? '' : (e.on ? '<span class="dot"></span>' : ''));
+      return '<button type="button" class="emp'+(e.on?'':' emp--dim')+'" data-emp="'+e.id+'" aria-current="'+(who===e.id)+'"><span class="av">'+e.ini+'</span>'+
         '<span class="emp__n">'+e.n+'<small>'+e.r+'</small></span>'+
-        '<span style="display:flex;align-items:center;gap:6px">'+(e.wait?'<span class="badge">'+e.wait+'</span>':'')+'<span class="dot'+(e.on?'':' dot--off')+'"></span></span></button>';
+        '<span style="display:flex;align-items:center;gap:6px">'+(e.wait?'<span class="badge'+(PULSE[e.id]?' badge--new':'')+'">'+e.wait+'</span>':'')+st+'</span></button>';
     }).join("");
     var g={today:"",yesterday:"",week:""};
     Object.keys(CHATS).forEach(function(id){ var c=CHATS[id];
@@ -184,6 +221,7 @@ var I = {
     $("#whoN").textContent = who==="tools" ? "الأدوات" : (isEmp() ? name(who)+" · "+emp(who).r : "سيادة");
     $(".comp").style.display = who==="tools" ? "none" : "";
     $("#input").placeholder = isEmp() ? "اكتب ل"+name(who)+"…" : "اكتب لسيادة…";
+    var lv=$("#whoLive"); if(lv) lv.hidden=!(isEmp()&&PRES[who]);
   }
 
   /* --- الرسائل --- */
@@ -217,11 +255,40 @@ var I = {
   function msgHtml(m, w, i){
     if(m.me) return '<div class="m m--me" data-mi="'+i+'"><div class="m__b">'+esc(m.t)+'<span class="m__t">'+m.at+'</span></div></div>';
     if(m.typing) return '<div class="m m--ai" data-mi="'+i+'"><span class="m__av">'+avHtml(w)+'</span><div class="m__b"><span class="typing" aria-label="يكتب…"><i></i><i></i><i></i></span></div></div>';
+    if(m.trace) return '<div class="m m--ai" data-mi="'+i+'"><span class="m__av">'+avHtml(w)+'</span><div class="m__b"><div class="tr">'+
+      m.trace.map(function(r,ri){return trHtml(r,ri)}).join("")+'</div><span class="m__t">'+name(w)+' · '+m.at+'</span></div></div>';
     var body = m.wait ? waitHtml(m) : ((m.t||"").indexOf("<p>")===0? m.t : '<p>'+m.t+'</p>') + (m.plan? planHtml(m):'') + (m.diff? diffHtml(m):'');
     return '<div class="m m--ai'+(m.reveal?' m--rev':'')+'" data-mi="'+i+'"><span class="m__av">'+avHtml(w)+'</span><div class="m__b"><div class="m__c">'+body+'</div>'+
       '<span class="m__t">'+name(w)+' · '+m.at+'</span>'+
       '<div class="act"><button type="button" data-copy="1">'+I.copy+'نسخ</button><button type="button" data-why="1" aria-expanded="false">'+I.why+'ليش؟</button></div>'+
       '<p class="whyl" hidden>'+whyOf(m,w)+'</p></div></div>';
+  }
+  /* ---------- افتتاحية «اليوم» — ثلاثة أسطر من البيانات + رقاقتا اقتراح ---------- */
+  function cw(n){ return {1:"واحد",2:"اثنان",3:"ثلاثة",4:"أربعة",5:"خمسة"}[n]||('<span class="num">'+n+'</span>'); }
+  function openerHtml(){
+    var h=new Date().getHours(), greet=(h>=5&&h<12)?"صباح الخير.":"مساء الخير.";
+    var n=EMPS.reduce(function(a,e){return a+e.log.length;},0)+ACTIONS.length;
+    var X=EMPS.reduce(function(a,e){return a+e.wait;},0);
+    var parts=EMPS.filter(function(e){return e.wait>0;}).sort(function(a,b){return b.wait-a.wait;})
+                  .map(function(e){return cw(e.wait)+" عند "+e.n;}).join(" و");
+    var wline=!X ? "وما فيه شيء ينتظرك."
+      : X===1 ? "وينتظرك قرار "+parts+"."
+      : X===2 ? "وينتظرك قراران: "+parts+"."
+      : "وينتظرك <span class=\"num\">"+X+"</span> قرارات: "+parts+".";
+    var fe=EMPS.filter(function(e){return e.waits.length;})[0];
+    var l3=fe ? "أقربها لك: "+fe.waits[0].t.replace(/\.$/,"")+" — عند "+fe.n+". تبدأ فيها؟" : "تبي ملخص أمس؟";
+    return '<div class="m m--ai"><span class="m__av"><span class="drop"></span></span><div class="m__b"><div class="m__c">'+
+      '<p>'+greet+'</p>'+
+      '<p>فريقك سوّى <span class="num">'+n+'</span> إجراء من أمس لليوم، '+wline+'</p>'+
+      '<p>'+l3+'</p></div>'+
+      '<span class="m__t">سيادة · '+now()+'</span></div></div>'+
+      '<div class="opchips"><button type="button" class="opch" data-op="waits">شوف اللي ينتظرني</button>'+
+      '<button type="button" class="opch" data-op="yest">وش صار أمس؟</button></div>';
+  }
+  function yestText(){
+    var tot=EMPS.reduce(function(a,e){return a+e.log.length;},0);
+    return 'باختصار — <span class="num">'+tot+'</span> حركة مسجّلة من أمس لليوم، وآخر سطر من كل واحد:<br>'+
+      EMPS.map(function(e){return '<b>'+e.n+':</b> '+e.log[0][1];}).join('<br>');
   }
   function renderThread(){
     var t=$("#thread"); t.classList.toggle("thread--emp",isEmp());
@@ -231,10 +298,8 @@ var I = {
       t.innerHTML='<div class="col">'+pinHtml(e)+'<div id="instrWrap" hidden>'+instrHtml(e)+'</div>'+list.map(function(m,i){return msgHtml(m,who,i)}).join("")+'</div>';
     } else {
       list = chatId ? CHATS[chatId].msgs : (live.siyadah||[]); w = chatId? CHATS[chatId].with : who;
-      if(!list.length){
-        t.innerHTML='<div class="empty"><span class="drop"></span><h1>وش تبي فريقك يسوي؟</h1>'+
-          '<p>قول اللي تبيه. سيادة تبني الفريق، وتوريك الخطة قبل ما يتحرك شيء.</p>'+
-          '<div class="cards">'+SUGG.siyadah.map(function(s){return '<button type="button" class="cardq"><small>'+I[s[0]]+s[1]+'</small>'+s[2]+'</button>'}).join("")+'</div></div>';
+      if(!list.length){ /* افتتاحية «اليوم»: سيادة تبدأ الكلام — كل أرقامها محسوبة من البيانات لحظتها */
+        t.innerHTML='<div class="col">'+openerHtml()+'</div>';
         return;
       }
       t.innerHTML='<div class="col">'+list.map(function(m,i){return msgHtml(m, w, i)}).join("")+'</div>';
@@ -280,7 +345,10 @@ var I = {
     return '<div class="pin"><div class="pin__r1"><span class="av">'+e.ini+'</span><div class="pin__t"><p class="pin__n">'+e.n+' <span>· '+e.r+'</span></p><div class="pin__s">'+e.since+'</div></div>'+
       '<div class="pin__c">'+(e.wait?'<span class="pill">ينتظر قرارك '+e.wait+'</span>':'')+
       '<span class="swl" style="font-size:.8rem;color:var(--ash)"><span id="onLbl">'+(e.on?(f?'شغّالة':'شغّال'):(f?'متوقفة':'متوقف'))+'</span><button type="button" class="sw" id="onSw" role="switch" aria-checked="'+e.on+'" aria-label="تشغيل '+e.n+'"></button></span></div></div>'+
-      '<div class="kpis">'+e.kpi.map(function(k){ return '<div class="kpi"><span class="kpi__v num">'+k.v+'</span><span class="kpi__l">'+k.l+'<span class="kpi__t'+(k.ok?' kpi__t--ok':'')+'" title="عن الأسبوع الماضي">'+k.t+'</span></span></div>'; }).join("")+'</div>'+
+      /* الأرقام مطوية افتراضيًا: سطر ملخص من قيم الـ kpi + «التفاصيل» يفتح المربعات الأربعة */
+      '<div class="kline"><span>اليوم: '+e.kpi.map(function(k){ return k.l.replace(/اليوم/,"").trim()+' <b class="num">'+k.v+'</b>'; }).join(' · ')+'</span>'+
+      '<button type="button" class="link" id="kpiTgl" aria-expanded="'+(kpiOpen===e.id)+'" aria-controls="kpiWrap">التفاصيل</button></div>'+
+      '<div class="kpis" id="kpiWrap"'+(kpiOpen===e.id?'':' hidden')+'>'+e.kpi.map(function(k){ return '<div class="kpi"><span class="kpi__v num">'+k.v+'</span><span class="kpi__l">'+k.l+'<span class="kpi__t'+(k.ok?' kpi__t--ok':'')+'" title="عن الأسبوع الماضي">'+k.t+'</span></span></div>'; }).join("")+'</div>'+
       '<div class="pin__r3"><span class="pin__k">'+(f?'أدواتها':'أدواته')+'</span>'+e.tools.map(chipHtml).join("")+
       '<span class="pin__meta">ساعات العمل: '+e.hours+' · '+(f?'تستأذنك':'يستأذنك')+' في القرارات الحساسة</span>'+
       '<button type="button" class="link" id="instrTgl" aria-expanded="false" aria-controls="instrWrap">التعليمات</button></div></div>';
@@ -344,6 +412,22 @@ var I = {
     return { t:'<p>'+subj+' — '+W.act+'. آخر سطر في سجلي: «<span class="num">'+log[0]+'</span> '+log[1].replace(/\.$/,"")+'». قاعدتك: «'+rule+'»، '+W.extra+'.</p><p>'+W.retry+'</p>',
              why:"قاعدتك: «"+rule+"» — من تعليماتك، وسجلي فيه الوقت." };
   }
+  /* فهد يستشهد: الجواب من قاعدة المعرفة يجي بذيل «من: … · ثقة …» — والذيل يظهر فقط لما يكون الجواب فعلًا من المعرفة */
+  function refundReply(){
+    return { t:'<p>سياستنا: استرجاع كامل خلال 14 يوم إذا المنتج بحالته — بعدها استبدال أو رصيد.</p>'+
+               '<p class="cite nr">من: سياسة الاسترجاع · ثقة <span class="num">96%</span></p>',
+             why:"الجواب حرفيًا من ملف سياسة الاسترجاع في قاعدة المعرفة — ما غيّرت فيه." };
+  }
+  /* ثقة منخفضة: ما يخمّن — يرفعها لك بطاقة «ينتظر قرارك» بنفس آلية الانتظارات والشارة */
+  function shipReply(e){
+    var w={t:"سؤال عن الشحن ما عندي جوابه.",s:"رفعته لك بدل ما أخمّن.",a:["اكتب الجواب","أضفها للمعرفة"],
+           r:["تم. رديت على العميل بجوابك، وأضفته لقاعدة المعرفة عشان ما يرجع لك.","تم. أضفتها لقائمة «ناقص في المعرفة» — يوصلك تذكير تكتب جوابها."]};
+    e.waits.push(w); e.wait++;
+    empThread(e.id).push({me:false,wait:w,at:"ينتظر قرارك"});
+    renderSide();
+    return { t:'<p>ما عندي جواب موثوق عن الشحن (ثقة <span class="num">41%</span>) — رفعتها لك بدل ما أخمّن.</p>',
+             why:"قاعدتي: أجاوب من قاعدة المعرفة فقط — والشحن ما له صفحة فيها، فالتخمين مو خيار." };
+  }
   function adjustReply(e,text){
     var add=text.replace(/[.!؟?]+$/,"").trim(), del="", hours=null;
     var tm=text.match(/بعد\s*(?:الساعة\s*)?(\d{1,2})\s*(مساءً|مساء|م\b|صباحًا|صباحا|ص\b)?/);
@@ -373,6 +457,8 @@ var I = {
     if(short&&/(^|\s)(وقف|توقف|توقّف|وقّف|أوقف|اوقف)(\s|$)/.test(t)) return pauseReply(e,false);
     if(short&&/(^|\s)(كمّل|كمل|رجّع|رجع|شغّل|شغل|اشتغل|ارجع)(\s|$)/.test(t)) return pauseReply(e,true);
     if(/ليش|ليه|وش السبب|لماذا/.test(t)) return whyReply(e,t);
+    if(e.id==="fahad"&&/استرجاع|الاسترجاع|سياسة|refund/i.test(t)) return refundReply();
+    if(e.id==="fahad"&&/شحن|الشحن|توصيل/.test(t)) return shipReply(e);
     if(/خلّ|خلي|خلّي|غيّر|غير |لا ترسل|ما ترسل|أوقف|اوقف|زد |زيد|قلّل|قلل|بعد الساعة|بعد \d|نبرة/.test(t)) return adjustReply(e,t);
     if(/وش تحتاج|محتاج|ناقصك|تحتاج/.test(t)) return needReply(e);
     if(/وش صار|اليوم|وين وصلنا|تقرير|وش سوّيت|وش سويت|ملخص|الوضع/.test(t)) return statusReply(e);
@@ -388,7 +474,15 @@ var I = {
   /* ---------- الإرسال ---------- */
   function isBuild(t){ return /أبي|أبغى|ابن|وظّف|وظف|موظف|يتابع|يطارد|يطالب|يرد على/.test(t); }
   function send(text){
-    text=(text||"").trim(); if(!text||who==="tools") return;
+    text=(text||"").trim(); if(!text) return;
+    /* معاينة قيد التعديل: إرسال النص من المحرر = إعادة اعتماد وتكملة التشغيل */
+    if(pendEdit){ var pe=pendEdit; pendEdit=null; var pl=pe.ctx.list;
+      pe.row.text=text; pe.row.state="approved"; pe.row.at=now();
+      pl.push({me:true,t:text,at:now()});
+      $("#input").value=""; $("#input").style.height="auto";
+      if(curList()===pl) renderThread();
+      pe.ctx.next(); return; }
+    if(who==="tools") return;
     var list, w=who;
     if(isEmp()){ var e=emp(who); list=empThread(who); list.push({me:true,t:text,at:now()});
       $("#input").value=""; $("#input").style.height="auto"; renderThread();
@@ -402,19 +496,215 @@ var I = {
     renderSide();
     $("#input").value=""; $("#input").style.height="auto"; renderThread();
     setTimeout(function(){
-      if(w==="siyadah"&&isBuild(text)) list.push({me:false,plan:true,at:now(),t:"جهّزت ثلاثة. هذي خطتهم — ما يتحرك شيء قبل موافقتك:"});
+      if(w==="siyadah"&&/وش تعرف|ايش تعرف|تعرف عنا|الذاكرة/.test(text)) list.push({me:false,at:now(),t:memHtml(),why:"كل سطر في الذاكرة له مصدر — محادثة أو قاعدة كتبتها أنت."});
+      else if(w==="siyadah"&&isBuild(text)) list.push({me:false,plan:true,at:now(),t:"جهّزت ثلاثة. هذي خطتهم — ما يتحرك شيء قبل موافقتك:"});
       else list.push({me:false,at:now(),t:"<p>وصل. أجهّز لك الخطة، وما يتحرك شيء قبل موافقتك.</p>"});
       if(who===w) renderThread();
     },650);
   }
+  /* الذاكرة الحيّة: سيادة تسرد اللي تحفظه — سطر لكل معلومة مع مصدرها */
+  function memHtml(){
+    if(!MEM.length) return "<p>الذاكرة فاضية للحين — أي قاعدة تحفظها من المحادثات تنحفظ هنا.</p>";
+    return '<p>هذا اللي أحفظه عنكم:</p><p>'+MEM.map(function(m){
+      return '<b>'+esc(m.k)+':</b> '+esc(m.v)+' <span class="msrc">· '+esc(m.src)+'</span>';
+    }).join('<br>')+'</p><p>تعدّلها من الإعدادات › الذاكرة.</p>';
+  }
   function reply(list,html){ list.push({me:false,at:now(),t:html}); renderThread(); }
   /* قرار على بطاقة «ينتظر قرارك» */
-  function resolveWait(e,list,mi,label,conf,skipMe){
+  function resolveWait(e,list,mi,label,conf,skipMe,evs){
     var m=list[mi]; if(!m||m.done) return;
     m.done={a:label,at:now()}; e.wait=Math.max(0,e.wait-1); e.log.unshift([now(),conf]);
     if(!skipMe) list.push({me:true,t:label,at:now()});
     renderSide(); renderThread();
+    if(evs){ playEvents(list,evs); return; } /* قرار حساس: معاينة ثم مهلة تراجع بدل التأكيد المباشر */
     typeReply(e,list,{t:'<p>'+conf+'</p>', why:"قرارك أنت — نفّذته حرفيًا وسجّلته في سجلي بالوقت."});
+  }
+
+  /* ==========================================================================
+     محرك التنفيذ — محاكي عقد الأوركسترا (شوف العقد أعلى الملف)
+     playEvents يشغّل مصفوفة أحداث داخل قائمة رسائل: يبني رسالة تتبّع واحدة
+     تتكدس فيها الخطوات، ويوقف عند await/preview لين تقرر أنت.
+     ========================================================================== */
+  function pres(id){ PRES={}; if(id) PRES[id]=1; renderSide(); renderBar(); }
+  function toolMeta(s){ return TOOLS.filter(function(x){return x.s===s})[0]; }
+  function trIco(toolS,empId){
+    var t=toolS?toolMeta(toolS):null;
+    if(t&&t.logo) return '<span class="tr-i"><img src="'+t.logo+'" alt="" crossorigin="anonymous" referrerpolicy="no-referrer" data-fb="1"></span>';
+    var e=emp(empId); return '<span class="tr-i">'+(e?e.ini:"•")+'</span>';
+  }
+  /* صف واحد من التتبع: خطوة / تسليم / قرار / معاينة / نتيجة */
+  function trHtml(r,ri){
+    var at=r.at?'<span class="tr-t num">'+r.at+'</span>':'';
+    if(r.k==="step")
+      return '<div class="tr-s" data-ri="'+ri+'">'+trIco(r.tool,r.emp)+'<span class="tr-l">'+esc(r.label)+'</span>'+
+        (r.state==="run"?'<span class="tr-spin" role="img" aria-label="جارٍ التنفيذ"></span>':'<span class="tr-ok" role="img" aria-label="تمت">'+I.check+'</span>'+at)+
+        (r.why?'<button type="button" class="tr-xb" data-trwhy="1" aria-expanded="'+String(!!r.whyOpen)+'">ليش؟</button>':'')+
+        (r.why&&r.whyOpen?'<span class="tr-whyl">'+esc(r.why)+'</span>':'')+'</div>';
+    if(r.k==="handoff"){
+      var fe=emp(r.from), te=emp(r.to);
+      return '<div class="tr-h" data-ri="'+ri+'" aria-label="تسليم من '+(fe?fe.n:'')+' إلى '+(te?te.n:'')+'">'+
+        '<span class="tr-av" title="'+(fe?fe.n:'')+'">'+(fe?fe.ini:'؟')+'</span><span class="tr-arr" aria-hidden="true">←</span>'+
+        '<span class="tr-av" title="'+(te?te.n:'')+'">'+(te?te.ini:'؟')+'</span><span class="tr-l">'+esc(r.text)+'</span></div>';
+    }
+    if(r.k==="await"){
+      if(r.chosen) return '<div class="tr-res" data-ri="'+ri+'">'+I.check+'<span>'+esc(r.chosen.label)+'</span><small class="num">'+r.chosen.at+'</small></div>';
+      var c=r.card;
+      return '<div class="tr-aw" data-ri="'+ri+'"><b class="tr-awt">'+esc(c.title)+'</b><p>'+esc(c.context)+'</p><p class="tr-rec">'+esc(c.recommend)+'</p>'+
+        '<div class="wait__a">'+c.options.map(function(o,j){ return '<button type="button" class="bts'+(j?' bts--line':'')+'" data-opt="'+j+'">'+esc(o.label)+'</button>'; }).join("")+'</div></div>';
+    }
+    if(r.k==="preview"){
+      var f;
+      if(r.state==="pend") f='<div class="wait__a"><button type="button" class="bts" data-pv="send">'+I.check+'أرسل</button><button type="button" class="bts bts--line" data-pv="edit">عدّل</button></div>';
+      else if(r.state==="edit") f='<div class="pv-f">'+esc(r.editHint||"عدّل النص في المحرر تحت وأرسله — التشغيل واقف لين تعتمده.")+'</div>';
+      else f='<div class="tr-res">'+I.check+'<span>اعتمدت الإرسال</span><small class="num">'+r.at+'</small></div>';
+      return '<div class="pv" data-ri="'+ri+'"><div class="pv-h">'+trIco(r.channel,null)+'<span>إلى: '+esc(r.to)+'</span></div><blockquote class="pv-q">'+esc(r.text)+'</blockquote>'+f+'</div>';
+    }
+    if(r.k==="result"){
+      if(r.state==="cancelled") return '<div class="tr-res" data-ri="'+ri+'"><span aria-hidden="true">↩</span><span>تراجعت — ما انرسل شيء.</span><small class="num">'+r.at+'</small></div>';
+      if(r.state==="hold"){
+        var el=Math.min(6900,Date.now()-r.holdStart);
+        return '<div class="tr-r" data-ri="'+ri+'">'+trIco(r.tool,r.emp)+'<span class="tr-l">'+esc(r.summary)+'</span>'+
+          '<span class="tr-hnote">تُرسل خلال 7 ث</span><button type="button" class="link" data-hcancel="1">تراجع</button>'+
+          '<div class="tr-hold" aria-hidden="true"><i style="animation-delay:-'+el+'ms"></i></div></div>';
+      }
+      var undo='';
+      if(r.undone) undo='<span class="tr-und">↩ تراجعت</span>';
+      else if(r.undoable&&Date.now()<r.undoUntil) undo='<button type="button" class="link" data-undo="1">تراجع</button>';
+      var rc='';
+      if(r.rcOpen){
+        var e3=emp(r.emp), a=ACTIONS.filter(function(x){return x.id===r.actionId})[0]||r;
+        rc='<div class="rc"><div class="rc-r"><b>الأداة</b><span>'+esc(TN[r.tool]||r.tool||"داخلي")+'</span></div>'+
+           '<div class="rc-r"><b>الوقت</b><span class="num">'+(a.at||"")+'</span></div>'+
+           '<div class="rc-r"><b>من نفّذ</b><span>'+(e3?e3.n:"سيادة")+'</span></div>'+
+           (a.before?'<div class="rc-r"><b>قبل</b><span class="rc-bef">'+esc(a.before)+'</span></div>':'')+
+           (a.after?'<div class="rc-r"><b>بعد</b><span>'+esc(a.after)+'</span></div>':'')+'</div>';
+      }
+      return '<div class="tr-r" data-ri="'+ri+'"><span class="tr-ok" role="img" aria-label="نُفّذ">'+I.check+'</span><span class="tr-l">'+esc(r.summary)+'</span>'+at+undo+
+        '<button type="button" class="tr-xb" data-rc="1" aria-expanded="'+String(!!r.rcOpen)+'">الأثر</button>'+rc+'</div>';
+    }
+    return '';
+  }
+  /* المشغّل نفسه — استبدال المحاكي بالباك إند = تغذية next() من SSE بدل المصفوفة */
+  function playEvents(list,evs,onEnd){
+    var ctx={list:list,evs:evs.slice(),i:0,trace:null};
+    function vis(){ return curList()===list; }
+    function draw(){ if(vis()) renderThread(); }
+    function delay(ms,fn){ setTimeout(fn,reduced()?0:ms); }
+    function row(r){ if(!ctx.trace){ ctx.trace={me:false,trace:[],at:now()}; list.push(ctx.trace); } ctx.trace.trace.push(r); }
+    /* النتيجة صارت فعلية: تدخل ACTIONS ويزيد عدّاد الخطة */
+    function land(r){
+      r.state="sent"; r.at=now(); r.actionId="a"+(ACTIONS.length+1);
+      ACTIONS.push({id:r.actionId,emp:r.emp,tool:r.tool,summary:r.summary,before:r.before||"",after:r.after||"",at:r.at,reversible:!!r.reversible,undone:false});
+      PLAN.actions.used++; renderPlan();
+      if(r.undoable){ r.undoUntil=Date.now()+7000; setTimeout(function(){ if(!r.undone&&r.undoable){ r.undoable=false; draw(); } },7000); }
+    }
+    function next(){
+      if(ctx.i>=ctx.evs.length){ pres(null); if(onEnd) onEnd(); return; }
+      var e=ctx.evs[ctx.i++];
+      if(e.t==="say"){ ctx.trace=null;
+        list.push({me:false,t:"<p>"+e.text+"</p>",at:now(),reveal:true,why:e.why}); draw();
+        delay(500+e.text.split(/\s+/).length*25,next); return; }
+      if(e.t==="step"){ pres(e.emp);
+        var s={k:"step",emp:e.emp,tool:e.tool,label:e.label,why:e.why,state:"run"}; row(s); draw();
+        delay(e.ms||1000,function(){ s.state="done"; s.at=now(); draw(); delay(250,next); }); return; }
+      if(e.t==="handoff"){ row({k:"handoff",from:e.from,to:e.to,text:e.text}); draw(); delay(700,next); return; }
+      if(e.t==="await"){ row({k:"await",card:e.card,_ctx:ctx}); draw(); return; } /* يوقف — الاختيار يكمل */
+      if(e.t==="preview"){ row({k:"preview",to:e.to,channel:e.channel,text:e.text,editHint:e.editHint,state:"pend",_ctx:ctx}); draw(); return; } /* يوقف */
+      if(e.t==="result"){ pres(e.emp);
+        var r={k:"result",emp:e.emp,tool:e.tool,summary:e.summary,before:e.before,after:e.after,reversible:!!e.reversible,undoable:!!e.reversible,_ctx:ctx};
+        row(r);
+        if(e.hold&&!reduced()){ /* مهلة التراجع: الشريط ينزف 7 ث ثم يرسل فعليًا */
+          r.state="hold"; r.holdStart=Date.now(); draw();
+          r._tm=setTimeout(function(){ if(r.state!=="hold") return; land(r); draw();
+            if(e.sent&&e.sent.length) playEvents(list,e.sent); },7000);
+          delay(300,next); return;
+        }
+        if(e.hold) r.undoable=true; /* حركة مخفّضة: يرسل فورًا مع رابط تراجع فقط */
+        land(r); draw();
+        if(e.sent&&e.sent.length) Array.prototype.splice.apply(ctx.evs,[ctx.i,0].concat(e.sent));
+        delay(450,next); return; }
+      if(e.t==="done"){ ctx.trace=null; pres(null);
+        if(e.text) list.push({me:false,t:"<p>"+e.text+"</p>",at:now(),reveal:true});
+        draw(); delay(300,next); return; }
+      next();
+    }
+    ctx.next=next;
+    delay(350,next);
+    return ctx;
+  }
+  /* السيناريو الرئيسي: الموافقة على الخطة تشغّل الفريق الثلاثة قدّامك */
+  function buildEvents(){
+    return [
+      {t:"say",text:"أشغّلهم الحين — وتشوف كل خطوة قدامك:"},
+      {t:"step",emp:"saad",tool:"hubspot",label:"يقرأ الليدات الجدد من HubSpot",ms:1200,why:"أول سطر في تعليماته: «تابع كل عميل جديد خلال خمس دقائق»."},
+      {t:"result",emp:"saad",tool:"hubspot",summary:"3 ليدات دخلوا جدول المتابعة",before:"بدون متابعة",after:"متابعة خلال 5 دقائق",reversible:true},
+      {t:"step",emp:"noura",tool:"wafeq",label:"تراجع الفواتير المتأخرة في قيود",ms:1400,why:"قاعدتها: «أرفع لك أي فاتورة تجاوزت 30 يومًا» — تفحص قبل ما تتصرف."},
+      {t:"await",card:{ title:"فاتورة النخبة — 18,500 ر.س عمرها 31 يوم",
+        context:"تجاوزت قاعدة الـ 30 يوم، فما أتصرف بدون إذنك.",
+        recommend:"التوصية: اتصال شخصي من نورة أفضل من بريد رابع.",
+        options:[
+          {label:"خلها تتصل",events:[
+            {t:"preview",to:"شركة النخبة",channel:"whatsapp",text:"مرحبًا، معك نورة من [شركتك]. بخصوص فاتورة 4302 بمبلغ 18,500 ر.س — نبي نتفق على موعد سداد يناسبكم هالأسبوع."},
+            {t:"result",emp:"noura",tool:"whatsapp",summary:"أُرسلت رسالة السداد للنخبة",hold:true}]},
+          {label:"بريد أخير",events:[
+            {t:"result",emp:"noura",tool:"gmail",summary:"أُرسل التذكير الأخير بالبريد",hold:true}]},
+          {label:"أجّلها لي",fx:function(){ var n=emp("noura"); n.wait++; renderSide(); },events:[
+            {t:"say",text:"تمام، حطيتها في «ينتظر قرارك» عند نورة."}]}
+        ]}},
+      {t:"handoff",from:"saad",to:"noura",text:"حجزت موعد أحمد الغامدي الثلاثاء — جهّزي له عرض السعر قبلها."},
+      {t:"result",emp:"noura",tool:"google-sheets",summary:"عرض السعر انجدول قبل الموعد",reversible:true},
+      {t:"step",emp:"fahad",tool:"whatsapp",label:"يربط قنوات الدعم ويحمّل قاعدة المعرفة",ms:1200,why:"من خطته: يجاوب من قاعدة المعرفة فقط — فيحمّلها قبل ما يفتح القنوات."},
+      {t:"result",emp:"fahad",tool:"site-chat",summary:"جاهز يرد على الموقع وواتساب"},
+      {t:"done",text:"الثلاثة شغّالون. أول تقرير يوصلك الساعة 6، وأي قرار حساس يوقف عندك مثل ما شفت."}
+    ];
+  }
+  /* رابط العرض #run=collect: خطوتا نورة (المراجعة ثم بطاقة القرار) في محادثتها */
+  function collectEvents(){ var b=buildEvents(); return [b[3],b[4]]; }
+
+  /* ==========================================================================
+     نورة تبادر — مرة واحدة لكل تحميل: شارة +1 بنبضة، سجل جديد تحت «اليوم»،
+     ورسالة منها في محادثتها مع بطاقة قرار بثلاثة خيارات (نفس آلية await)
+     ========================================================================== */
+  var PRO_INV=[["4295","مجموعة البناء الأولى","18,900","34 يوم"],
+               ["4301","مؤسسة المدار التجارية","12,300","32 يوم"],
+               ["4307","شركة الرواد للتموين","10,500","31 يوم"]];
+  function clearNouraBadge(){ var n=emp("noura"); n.wait=Math.max(0,n.wait-1); renderSide(); }
+  /* مسار «ابدئي»: سحب الفواتير → معاينة أول تذكير جاد → إرسال بمهلة تراجع → الختام */
+  function proStartEvents(){
+    return [
+      {t:"step",emp:"noura",tool:"wafeq",label:"تسحب الفواتير الثلاث من قيود",ms:1300,why:"قاعدتك: أرفع لك أي فاتورة تجاوزت 30 يومًا — والثلاث تجاوزتها."},
+      {t:"preview",to:"مجموعة البناء الأولى",channel:"gmail",
+       text:"مساء الخير، معكم نورة من شركة الأفق. فاتورتكم 4295 بمبلغ 18,900 ر.س تعدّت 30 يومًا رغم تذكيرين سابقين. نحتاج موعد سداد محدد خلال ثلاثة أيام عمل — وإذا عندكم ملاحظة على الفاتورة علّموني اليوم وأحلها معكم."},
+      {t:"result",emp:"noura",tool:"gmail",summary:"أُرسل أول تذكير جاد (1 من 3)",hold:true,
+       sent:[{t:"say",text:"الباقيتان على نفس النمط خلال ساعة — وأوقف أي وحدة تسدد فورًا."},{t:"done"}]}
+    ];
+  }
+  function proactiveEvents(){
+    var startOpt=function(){ return {label:"ابدئي",fx:clearNouraBadge,events:proStartEvents()}; };
+    return [
+      {t:"say",text:"صباح الخير. 3 فواتير تعدّت 30 يوم — مجموعها 41,700 ر.س. أبدأ التذكير الجاد اليوم، ولا تشوفها الأول؟",
+       why:"قاعدتك عندي: أرفع لك أي فاتورة تجاوزت 30 يومًا — الثلاث وصلت حدّها اليوم."},
+      {t:"await",card:{ title:"3 فواتير تعدّت 30 يوم",
+        context:"مجموعها 41,700 ر.س — والتذكيرات اللطيفة خلصت كلها.",
+        recommend:"التوصية: أبدأ التذكير الجاد اليوم، وأوقف عن أي وحدة تسدد فورًا.",
+        options:[ startOpt(),
+          {label:"وريني إياها",events:[
+            {t:"say",text:PRO_INV.map(function(i){ return 'فاتورة <span class="num">'+i[0]+'</span> — '+i[1]+' — <span class="num">'+i[2]+'</span> ر.س — عمرها '+i[3]; }).join('<br>')+'<br>أبدأ؟'},
+            {t:"await",card:{ title:"أبدأ التذكير الجاد؟", context:"نفس الثلاث فوق — أبدأ بالأكبر مبلغًا.", recommend:"التوصية: نبدأ اليوم قبل ما تكبر الأعمار.",
+              options:[ startOpt() ]}}]},
+          {label:"أجّليه",fx:clearNouraBadge,events:[
+            {t:"say",text:"تمام، أجّلته لبكرة الصباح — وما راح أزعجك فيه اليوم."},{t:"done"}]}
+        ]}}
+    ];
+  }
+  function triggerProactive(openThread){
+    if(proFired) return; proFired=true;
+    var n=emp("noura"); n.wait++; PULSE.noura=1;
+    CHATS["pn1"]={with:"noura",emp:"noura",t:"3 فواتير تعدّت 30 يوم",when:"today",msgs:[]};
+    renderSide();
+    setTimeout(function(){ PULSE={}; renderSide(); },3800); /* النبضة مرة واحدة ثم تهدأ */
+    playEvents(empThread("noura"),proactiveEvents());
+    if(openThread) go("noura");
   }
 
   /* --- الأحداث --- */
@@ -422,10 +712,12 @@ var I = {
   $("#input").addEventListener("keydown",function(e){ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(this.value);} });
   $("#input").addEventListener("input",function(){ this.style.height="auto"; this.style.height=Math.min(this.scrollHeight,160)+"px"; });
 
-  function go(w,c){ who=w; chatId=c||null; renderSide(); renderBar(); renderThread(); }
+  function go(w,c){ who=w; chatId=c||null; kpiOpen=null; renderSide(); renderBar(); renderThread(); }
   function newChat(){ live={}; go("siyadah"); $("#input").focus(); }
   $("#emps").addEventListener("click",function(e){ var b=e.target.closest(".emp"); if(!b) return; go(b.dataset.emp); $("#input").focus(); });
-  $(".side__scroll").addEventListener("click",function(e){ var b=e.target.closest(".hist"); if(!b||!b.dataset.chat) return; go("siyadah",b.dataset.chat); });
+  $(".side__scroll").addEventListener("click",function(e){ var b=e.target.closest(".hist"); if(!b||!b.dataset.chat) return;
+    var c=CHATS[b.dataset.chat]; if(c&&c.emp){ go(c.emp); $("#input").focus(); return; } /* مبادرة موظف: سجلّها يفتح محادثته */
+    go("siyadah",b.dataset.chat); });
   $("#newChat").addEventListener("click",newChat);
   $("#hq").addEventListener("input",function(){ filterHist(); if(palOpen) renderPal(); });
 
@@ -433,10 +725,39 @@ var I = {
   $("#thread").addEventListener("click",function(e){
     var t=e.target, list, mEl=t.closest(".m"), mi=mEl?+mEl.dataset.mi:-1;
     var c=t.closest(".cardq"); if(c){ send(c.lastChild.textContent); return; }
+    /* رقاقتا الافتتاحية: «شوف اللي ينتظرني» تفتح صاحب أكثر الانتظارات · «وش صار أمس؟» رد قصير من السجلات */
+    var opb=t.closest(".opch");
+    if(opb){
+      if(opb.dataset.op==="waits"){ var best=EMPS.reduce(function(a,e){return e.wait>a.wait?e:a;},EMPS[0]); go(best.id); $("#input").focus(); }
+      else{ var L0=live.siyadah=live.siyadah||[]; L0.push({me:true,t:"وش صار أمس؟",at:now()}); renderThread();
+            playEvents(L0,[{t:"say",text:yestText(),why:"الملخص من سجل كل موظف — كل سطر له وقت."}]); }
+      return; }
     if(t.closest("[data-approve]")){ var ab=t.closest("[data-approve]"); if(ab.disabled) return; list = chatId ? CHATS[chatId].msgs : live.siyadah; if(!list||!list[mi]) return;
       list[mi].approved=true; list[mi].approvedAt=now(); ab.disabled=true;
-      list.push({me:true,t:"وافق وشغّل",at:now()}); reply(list,"<p>شغّلتهم. سعد ونورة وفهد يشتغلون من الحين — وأول شيء يحتاج قرارك يوصلك هنا.</p>"); return; }
+      list.push({me:true,t:"وافق وشغّل",at:now()}); renderThread();
+      playEvents(list,buildEvents()); return; } /* الموافقة تشغّل الفريق — تتبّع حي خطوة خطوة */
     if(t.closest("[data-editplan]")){ if(t.closest("[data-editplan]").disabled) return; $("#input").placeholder="وش تعدّل في الخطة؟"; $("#input").focus(); return; }
+    /* صفوف التتبع الحي: ليش الخطوة / خيار القرار / المعاينة / مهلة التراجع / التراجع / الأثر */
+    var trBtn=t.closest("[data-trwhy],[data-opt],[data-pv],[data-hcancel],[data-undo],[data-rc]");
+    if(trBtn&&mEl){
+      var Lc=curList(), tmsg=Lc&&Lc[mi]; if(!tmsg||!tmsg.trace) return;
+      var riEl=trBtn.closest("[data-ri]"), rr=riEl&&tmsg.trace[+riEl.dataset.ri]; if(!rr) return;
+      if(trBtn.hasAttribute("data-trwhy")){ rr.whyOpen=!rr.whyOpen; renderThread(); return; }
+      if(trBtn.hasAttribute("data-rc")){ rr.rcOpen=!rr.rcOpen; renderThread(); return; }
+      if(trBtn.hasAttribute("data-opt")){ if(rr.chosen) return; var oj=+trBtn.dataset.opt, op=rr.card.options[oj]; if(!op) return;
+        $$("button",trBtn.parentNode).forEach(function(b){ b.disabled=true; });
+        rr.chosen={label:op.label,at:now()};
+        rr._ctx.list.push({me:true,t:op.label,at:now()});
+        if(op.fx) op.fx();
+        Array.prototype.splice.apply(rr._ctx.evs,[rr._ctx.i,0].concat(op.events||[]));
+        renderThread(); rr._ctx.next(); return; }
+      if(trBtn.dataset.pv==="send"){ if(rr.state!=="pend") return; rr.state="approved"; rr.at=now(); renderThread(); rr._ctx.next(); return; }
+      if(trBtn.dataset.pv==="edit"){ if(rr.state!=="pend") return; rr.state="edit"; pendEdit={row:rr,ctx:rr._ctx};
+        renderThread(); var inp2=$("#input"); inp2.value=rr.text; inp2.style.height="auto"; inp2.style.height=Math.min(inp2.scrollHeight,160)+"px"; inp2.focus(); return; }
+      if(trBtn.hasAttribute("data-hcancel")){ if(rr.state!=="hold") return; rr.state="cancelled"; rr.at=now(); if(rr._tm) clearTimeout(rr._tm); renderThread(); return; }
+      if(trBtn.hasAttribute("data-undo")){ if(rr.undone||rr.state!=="sent") return; rr.undone=true;
+        ACTIONS.forEach(function(x){ if(x.id===rr.actionId) x.undone=true; }); renderThread(); return; }
+      return; }
     /* إجراءات الرسالة: نسخ / ليش؟ */
     if(t.closest("[data-copy]")){ var cb=t.closest("[data-copy]"), txt=$(".m__c",mEl).textContent.replace(/\s+/g," ").trim();
       try{ if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).catch(function(){}); }catch(err){}
@@ -446,6 +767,13 @@ var I = {
     var d=t.closest("[data-decide]"); if(d){ if(d.disabled||!isEmp()) return; var en=emp(who); list=empThread(who); var wm=list[mi], j=+d.dataset.decide, a=wm.wait.a[j], conf=wm.wait.r[j];
       if(/^اربط/.test(a)){ var slug=a.indexOf("لينكدإن")>-1?"linkedin":a.indexOf("إنستغرام")>-1?"instagram-business":null; if(slug){ openConnect(slug); } return; }
       $$("button",d.parentNode).forEach(function(b){ b.disabled=true; });
+      /* خصم سعد: يمر على معاينة الرسالة ثم مهلة تراجع 7 ث قبل ما يوصل العميل */
+      if(a==="وافق على الخصم"&&who==="saad"){
+        resolveWait(en,list,mi,a,conf,false,[
+          {t:"preview",to:"محمد العتيبي",channel:"whatsapp",text:"أبشر أستاذ محمد — تم اعتماد خصم 15% على فاتورتك الحالية. المبلغ بعد الخصم: 15,725 ر.س."},
+          {t:"result",emp:"saad",tool:"whatsapp",summary:"أُرسل اعتماد الخصم لمحمد العتيبي",hold:true,
+           sent:[{t:"say",text:conf,why:"قرارك أنت — نفّذته حرفيًا وسجّلته في سجلي بالوقت."}]}
+        ]); return; }
       if(a==="اكتب الجواب"){ pendAns={who:who,mi:mi}; var inp=$("#input"); inp.value="الجواب: "; inp.focus(); inp.setSelectionRange(inp.value.length,inp.value.length); return; }
       if(a==="شوف التقويم"){ list.push({me:true,t:a,at:now()}); renderThread(); typeReply(en,list,{t:'<p>'+conf+'</p><p>أرسله لك في Google Docs؟</p>', why:"التقويم من تعليماتك: خدماتكم وأسئلة عملائكم."}); return; }
       resolveWait(en,list,mi,a,conf); return; }
@@ -453,7 +781,10 @@ var I = {
     if(t.closest("[data-save]")){ if(!isEmp()) return; var es=emp(who); list=empThread(who); var dm=list[mi]; if(!dm||!dm.diff||dm.saved) return;
       es.instr=(es.instr.replace(/\s+$/,"")+" "+dm.diff.add).trim(); if(dm.diff.hours) es.hours=dm.diff.hours; if(/النبرة: رسمية/.test(dm.diff.add)) es.tone=0; else if(/النبرة: ودّية/.test(dm.diff.add)) es.tone=1;
       es.ver++; dm.saved=es.ver; es.log.unshift([now(),"حدّثت تعليماتي (النسخة "+es.ver+"): "+dm.diff.add]);
-      renderThread(); typeReply(es,list,{t:'<p>حفظت. تسري من الرسالة الجاية.</p>', why:"النسخة "+es.ver+" من تعليماتي — تقدر ترجع للي قبلها من «التعليمات»."}); return; }
+      MEM.push({k:"قاعدة ل"+es.n,v:dm.diff.add,src:"من محادثة اليوم"}); renderMem(); /* القاعدة الجديدة تدخل الذاكرة الحيّة */
+      renderThread(); typeReply(es,list,{t:'<p>حفظت. تسري من الرسالة الجاية — وحفظتها في الذاكرة.</p>', why:"النسخة "+es.ver+" من تعليماتي — تقدر ترجع للي قبلها من «التعليمات»، والقاعدة صارت في الإعدادات › الذاكرة."}); return; }
+    /* «التفاصيل»: يفتح مربعات الأرقام الأربعة بدون إعادة رسم — ويرجع مطويًا مع كل زيارة */
+    if(t.closest("#kpiTgl")){ var kw=$("#kpiWrap"), kb=$("#kpiTgl"); kw.hidden=!kw.hidden; kb.setAttribute("aria-expanded",String(!kw.hidden)); kpiOpen=kw.hidden?null:who; return; }
     if(t.closest("#instrTgl")){ var w=$("#instrWrap"), b=$("#instrTgl"); w.hidden=!w.hidden; b.setAttribute("aria-expanded",String(!w.hidden)); if(!w.hidden){ $("#thread").scrollTop=0; $("#instr").focus(); } return; }
     if(t.closest("#onSw")){ var sw=$("#onSw"), eo=emp(who), v=sw.getAttribute("aria-checked")==="true"; sw.setAttribute("aria-checked",String(!v)); eo.on=!v; $("#onLbl").textContent=eo.on?(eo.f?"شغّالة":"شغّال"):(eo.f?"متوقفة":"متوقف"); renderSide(); return; }
     if(t.closest("#instrSave")){ var e2=emp(who), nv=$("#instr").value.trim(); if(!nv||nv===e2.instr){ $("#instrF").firstChild.textContent="ما تغيّر شيء."; return; }
@@ -464,6 +795,7 @@ var I = {
       renderThread(); typeReply(e2,list,{t:'<p>حفظت. تسري من الرسالة الجاية.</p>', why:"النسخة "+e2.ver+" من تعليماتي."}); return; }
     if(t.closest("#instrPrev")){ var e3=emp(who); if(e3.ver>1){ e3.ver--; } var v2=$(".vers"); v2.innerHTML='<span style="color:var(--ok)">رجعت النسخة '+e3.ver+' · قبل 4 أيام. النسخة '+(e3.ver+1)+' محفوظة لو غيّرت رأيك.</span>'; return; }
     var m=t.closest("#more"); if(m){ tshown+=24; renderThread(); return; }
+    if(t.closest("#allTgl")){ allOpen=true; renderThread(); return; } /* «اعرض الكل» — قسم الكل مطوي افتراضيًا */
     var cc=t.closest("[data-c]"); if(cc){ openConnect(cc.dataset.c); }
   });
 
@@ -483,7 +815,7 @@ var I = {
   var SUG={"linkedin":"تحتاجه ريم","hubspot":"يحتاجه سعد","wafeq":"تحتاجه نورة","cal-com":"يحتاجه سعد","instagram-business":"تحتاجه ريم","google-docs":"تحتاجه ريم"};
   var TOOLS=(window.PIECES||[]).map(function(p){ return {s:p[0],n:p[1],d:p[5]||p[2],en:p[2],c:p[3],logo:p[4],on:!!ON[p[0]],by:ON[p[0]]||"",sug:SUG[p[0]]||""}; });
   var SOON=["سلة","زد","فودكس","ميسر","Unifonic","تابي","دفترة"];
-  var tq="", tshown=24, picked=null;
+  var tq="", tshown=24, picked=null, allOpen=false; /* allOpen: قسم «الكل» مطوي افتراضيًا */
   /* مين يستخدم الأداة: من أدوات الموظفين، وإلا من الاقتراحات */
   function usersOf(s){ var u=EMPS.filter(function(e){return e.tools.indexOf(s)>-1}).map(function(e){return e.n}); if(u.length) return u.join(" · "); var g=SUG[s]; return g?g.replace(/^(يحتاجه|تحتاجه)\s+/,""):"بانتظار تعيين موظف"; }
   function tcard(t){
@@ -501,8 +833,10 @@ var I = {
       var on=f.filter(function(t){return t.on}),sug=f.filter(function(t){return t.sug&&!t.on}),rest=f.filter(function(t){return !t.on&&!t.sug});
       h+='<div class="tsec"><b>المربوطة</b>'+on.length+'</div>'+tgrid(on,"ما ربطت شيئًا بعد");
       h+='<div class="tsec"><b>مقترحة لك</b>حسب موظفيك</div>'+tgrid(sug,"—");
-      h+='<div class="tsec"><b>الكل</b>'+TOOLS.length+'</div>'+tgrid(rest.slice(0,tshown),"—");
-      if(rest.length>tshown) h+='<button type="button" class="more" id="more">اعرض المزيد — باقي '+(rest.length-tshown)+'</button>';
+      h+='<div class="tsec"><b>الكل</b>'+TOOLS.length+'</div>';
+      if(allOpen){ h+=tgrid(rest.slice(0,tshown),"—");
+        if(rest.length>tshown) h+='<button type="button" class="more" id="more">اعرض المزيد — باقي '+(rest.length-tshown)+'</button>'; }
+      else h+='<button type="button" class="more" id="allTgl">اعرض الكل (<span class="num">'+TOOLS.length+'</span>)</button>';
       h+='<div class="soon"><div><b>أدوات سعودية نبنيها لك</b>مو في الكتالوج بعد — نضيفها لك على الطلب.<div class="chips">'+SOON.map(function(x){return '<span>'+x+'</span>'}).join("")+'</div></div><button type="button" class="lnk">اطلب أداة</button></div>';
     } else {
       h+='<div class="tsec"><b>نتائج «'+tq+'»</b>'+f.length+'</div>'+tgrid(f.slice(0,tshown),"ما لقيناها في الكتالوج — اطلبها ونبنيها لك.");
@@ -532,7 +866,7 @@ var I = {
         if(i>-1){ e.on=true; e.since="شغّالة منذ الحين"; resolveWait(e,list,i,"اربط لينكدإن",list[i].wait.r[0]); } }
     }
     closeModal(); $("#toolsCnt").textContent=TOOLS.filter(function(t){return t.on}).length+" مربوطة"; renderThread(); });
-  function openTools(){ go("tools"); }
+  function openTools(){ allOpen=false; tshown=24; go("tools"); }
   $("#toolsLink").addEventListener("click",openTools);
 
   /* ---------- قائمة الحساب ---------- */
@@ -549,7 +883,7 @@ var I = {
     var base=[{l:"محادثة جديدة",s:"⌘ ⇧ O",run:newChat}]
       .concat(EMPS.map(function(e){ return {l:e.n,s:e.r,run:function(){ go(e.id); $("#input").focus(); }}; }))
       .concat([{l:"الأدوات",s:"/",run:openTools},{l:"الإعدادات",s:"",run:function(){ openSheet("settings"); }},{l:"الخطة",s:"الاستخدام والفواتير",run:function(){ openSheet("plan"); }}]);
-    var hist=Object.keys(CHATS).map(function(id){ var c=CHATS[id]; return {l:c.t,s:"محادثة",run:function(){ go("siyadah",id); }}; });
+    var hist=Object.keys(CHATS).map(function(id){ var c=CHATS[id]; return {l:c.t,s:"محادثة",run:function(){ if(c.emp){ go(c.emp); } else go("siyadah",id); }}; });
     var hit=function(x){ return !q||(x.l+" "+x.s).toLowerCase().indexOf(q)>-1; };
     return base.filter(hit).concat(hist.filter(hit)).slice(0,10);
   }
@@ -587,6 +921,21 @@ var I = {
   sheet.addEventListener("click",function(e){ if(e.target===sheet) closeSheet(); });
   sheet.addEventListener("keydown",function(e){ trapTab(e,sheet); });
   sheet.addEventListener("click",function(e){ var b=e.target.closest(".swm"); if(!b) return; var v=b.getAttribute("aria-checked")!=="true"; b.setAttribute("aria-checked",String(v)); if(b.id==="autoSw") PLAN.autoReload=v; });
+
+  /* الذاكرة في الإعدادات: «إدارة» تفتح القائمة داخل الصف نفسه، وكل سطر يُحذف بـ × */
+  function renderMem(){
+    var el=$("#memList"); if(!el) return;
+    el.innerHTML=MEM.length?'<ul class="mem">'+MEM.map(function(m,i){
+      return '<li><b>'+esc(m.k)+':</b><span class="v">'+esc(m.v)+'</span><span class="msrc">'+esc(m.src)+'</span>'+
+        '<button type="button" class="mx" data-mdel="'+i+'" aria-label="احذف: '+esc(m.k)+'">×</button></li>';
+    }).join("")+'</ul>':'<p style="font-size:.85rem;color:var(--ash);margin:10px 0 0">الذاكرة فاضية.</p>';
+  }
+  sheet.addEventListener("click",function(e){
+    var tg=e.target.closest("#memTgl");
+    if(tg){ var L=$("#memList"); L.hidden=!L.hidden; tg.setAttribute("aria-expanded",String(!L.hidden)); if(!L.hidden) renderMem(); return; }
+    var dx=e.target.closest("[data-mdel]");
+    if(dx){ MEM.splice(+dx.dataset.mdel,1); renderMem(); }
+  });
 
   /* الخطة والاستخدام — كل شيء من PLAN + PRICING */
   function srow(l,body){ return '<div class="srow"><div>'+l+'</div><div>'+body+'</div></div>'; }
@@ -632,13 +981,24 @@ var I = {
 
   renderSide(); renderBar(); renderThread(); renderPlan();
 
-  /* روابط مباشرة (للنموذج والعروض): #e=saad · #say=وش صار اليوم؟ · #plan=trial|near|over|pastdue · #pal=1 · #tools=1 */
+  /* روابط مباشرة (للنموذج والعروض): #e=saad · #say=وش صار اليوم؟ · #plan=trial|near|over|pastdue · #pal=1 · #tools=1
+     وللعروض الحية: #run=build (يوافق على خطة c1 ويشغّل الفريق) · #run=collect (خطوتا نورة عند نورة) · #run=proactive (نورة تبادر فورًا) */
+  var ranDemo={};
   function route(){ var h=location.hash.slice(1); if(!h) return; var q=new URLSearchParams(h);
     if(q.get("plan")){ PLAN.state=q.get("plan"); renderPlan(); openSheet("plan"); }
     if(q.get("tools")) openTools();
     if(q.get("e")&&emp(q.get("e"))) go(q.get("e"));
     if(q.get("say")) setTimeout(function(){ send(q.get("say")); },200);
     if(q.get("pal")){ $("#hq").value=q.get("pal")==="1"?"":q.get("pal"); $("#hq").focus(); openPal(); }
+    if(q.get("run")==="build"&&!ranDemo.build){ ranDemo.build=true;
+      go("siyadah","c1");
+      var L=CHATS.c1.msgs, pm=L.filter(function(m){return m.plan})[0];
+      if(pm&&!pm.approved){ pm.approved=true; pm.approvedAt=now(); L.push({me:true,t:"وافق وشغّل",at:now()}); renderThread(); playEvents(L,buildEvents()); } }
+    if(q.get("run")==="collect"&&!ranDemo.collect){ ranDemo.collect=true;
+      go("noura"); playEvents(empThread("noura"),collectEvents()); }
+    if(q.get("run")==="proactive"&&!ranDemo.proactive){ ranDemo.proactive=true; triggerProactive(true); } /* للعروض: نورة تبادر فورًا وتنفتح محادثتها */
   }
   route(); window.addEventListener("hashchange",route);
+  /* نورة تبادر مرة لكل تحميل: بعد ~6 ث — وفورًا لمن يفضّل تقليل الحركة (الرابط #run=proactive شغّلها فوق لو وُجد) */
+  setTimeout(function(){ triggerProactive(false); }, reduced()?0:6000);
 })();

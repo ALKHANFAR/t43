@@ -388,7 +388,88 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
   .pin__meta{white-space:normal}
   .soon{grid-template-columns:1fr}
 }
+/* ==========================  محرك التنفيذ الحي  ==========================
+   .tr- التتبع (خطوات، تسليم، قرار، نتيجة) · .pv- معاينة الرسالة الصادرة · .rc- إيصال الأثر */
+.tr{border:1px solid var(--hair);border-radius:2px;margin:12px 0 4px;font-size:.875rem;background:var(--paper)}
+.tr>div{border-block-end:1px solid var(--hair)}
+.tr>div:last-child{border-block-end:0}
+.tr-s,.tr-r{display:flex;align-items:center;gap:10px;padding:9px 12px;flex-wrap:wrap;min-width:0}
+.tr-i{width:22px;height:22px;flex:none;display:grid;place-items:center;border:1px solid var(--hair);border-radius:2px;background:#fff;font-family:var(--f-display);font-size:.7rem;color:var(--ash);overflow:hidden}
+.tr-i img{width:14px;height:14px;object-fit:contain}
+.tr-l{flex:1;min-width:12ch;line-height:1.55;overflow-wrap:anywhere}
+.tr-t{font-family:var(--f-display);font-size:.7rem;color:var(--ash-2)}
+.tr-spin{width:12px;height:12px;flex:none;border:1.5px solid var(--accent-wash);border-block-start-color:var(--accent);border-radius:50%;animation:trRot .8s linear infinite}
+@keyframes trRot{to{transform:rotate(360deg)}}
+.tr-ok{color:var(--ok);display:inline-flex;flex:none}
+.tr-ok .ic{width:13px;height:13px}
+.tr-xb{background:none;border:0;padding:2px 6px;font-family:var(--f-display);font-size:.7rem;color:var(--ash-2);border-radius:2px}
+.tr-xb:hover{background:var(--wash);color:var(--ink)}
+.tr-whyl{flex-basis:100%;font-size:.8rem;color:var(--ash);border-inline-start:2px solid var(--hair);padding-inline-start:10px}
+.tr-h{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--wash);color:var(--ash);font-size:.8rem;flex-wrap:wrap}
+.tr-av{width:18px;height:18px;flex:none;display:grid;place-items:center;border:1px solid var(--hair);background:var(--paper);font-family:var(--f-display);font-size:.65rem;color:var(--ink)}
+.tr-arr{color:var(--ash-2);flex:none}
+.tr-aw{padding:12px 14px}
+.tr-awt{display:block;font-family:var(--f-display);font-weight:400;font-size:.95rem;margin:0 0 4px}
+.tr-aw p{margin:0 0 8px;color:var(--ash);font-size:.85rem;line-height:1.6}
+.tr-rec{border-inline-start:2px solid var(--accent);padding-inline-start:10px;color:var(--ink) !important}
+.tr-res{display:flex;align-items:center;gap:8px;padding:9px 12px;color:var(--ash);flex-wrap:wrap}
+.tr-res .ic{color:var(--ok)}
+.tr-res small{font-family:var(--f-display);font-size:.7rem;color:var(--ash-2)}
+.pv{padding:12px 14px}
+.pv-h{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--ash);margin-block-end:8px}
+.pv-h .tr-i{width:20px;height:20px}
+.pv-q{margin:0 0 10px;border:1px solid var(--hair);border-inline-start:2px solid var(--ink);background:var(--wash);padding:10px 12px;font-size:.875rem;line-height:1.7;overflow-wrap:anywhere}
+.pv-f{font-size:.8rem;color:var(--warn)}
+.pv .tr-res{padding:0}
+.tr-hnote{font-family:var(--f-display);font-size:.7rem;color:var(--ash);white-space:nowrap}
+.tr-hold{flex-basis:100%;height:3px;background:var(--hair);overflow:hidden}
+.tr-hold i{display:block;height:100%;background:var(--accent);width:100%;animation:trHold 7s linear forwards}
+@keyframes trHold{from{width:100%}to{width:0}}
+.tr-und{color:var(--ash);font-size:.8rem;white-space:nowrap}
+.rc{flex-basis:100%;border:1px solid var(--hair);background:var(--wash);padding:8px 12px;margin-block-start:4px;font-size:.8rem}
+.rc-r{display:grid;grid-template-columns:64px 1fr;gap:10px;padding:3px 0}
+.rc-r b{font-family:var(--f-display);font-weight:400;font-size:.72rem;color:var(--ash)}
+.rc-bef{text-decoration:line-through;text-decoration-color:var(--ash-2);color:var(--ash)}
+.dot--live{animation:trPulse 1.2s ease-in-out infinite}
+@keyframes trPulse{0%,100%{opacity:1}50%{opacity:.3}}
+.tr-live{display:inline-flex;align-items:center;gap:7px;font-family:var(--f-display);font-size:.75rem;color:var(--accent)}
+.tr-live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);animation:trPulse 1.2s ease-in-out infinite}
+@media (max-width:640px){ .rc-r{grid-template-columns:56px 1fr} }
+
 @media (prefers-reduced-motion:reduce){ *{animation:none !important;transition:none !important} }
+
+/* ==========================  المرحلة الثانية: طبقة الحياة  ==========================
+   افتتاحية اليوم · نبض شارة المبادرة · ملخص الأرقام المطوي · الاستشهاد · الذاكرة */
+/* افتتاحية «اليوم»: رقاقتا اقتراح هادئتان تحت رسالة سيادة */
+.opchips{display:flex;gap:8px;flex-wrap:wrap;margin-inline-start:42px}
+.opch{border:1px solid var(--hair);background:var(--paper);padding:5px 12px;font-size:.8rem;color:var(--ink);border-radius:2px;transition:.2s;text-align:start}
+.opch:hover{border-color:var(--ink)}
+/* شارة نورة لما تبادر — نبضة واحدة خفيفة */
+.badge--new{animation:trPulse 1.2s ease-in-out 3}
+/* بطاقة الموظف: سطر ملخص الأرقام + «التفاصيل» */
+.kline{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;font-size:.78rem;color:var(--ash);margin-block-start:8px;line-height:1.6}
+.kline b{font-weight:400;color:var(--ink)}
+.kline .link{font-size:.75rem;margin-inline-start:auto;flex:none}
+.kpis{margin-block-start:8px}
+/* ذيل الاستشهاد: من وين جا الجواب وكم الثقة */
+.cite{border-block-start:1px solid var(--hair);padding-block-start:8px;margin-block-start:12px !important;color:var(--ash);font-size:.78rem}
+.msrc{color:var(--ash-2);font-size:.78rem}
+/* قائمة الذاكرة داخل الإعدادات */
+.mem{list-style:none;margin:10px 0 0;padding:0;max-width:480px}
+.mem li{display:flex;align-items:baseline;gap:8px;padding:7px 0;border-block-end:1px solid var(--hair);font-size:.85rem;color:var(--ink)}
+.mem li:last-child{border-block-end:0}
+.mem b{font-weight:500;flex:none}
+.mem .v{flex:1;min-width:12ch}
+.mem .msrc{flex:none;white-space:nowrap}
+.mem .mx{background:none;border:0;padding:2px 7px;color:var(--ash-2);font-size:.95rem;line-height:1;border-radius:2px;flex:none}
+.mem .mx:hover{background:var(--wash);color:var(--bad)}
+/* الجانب: الموظف المتوقف اسمه باهت (بدون نقطة) */
+.emp--dim .emp__n{color:var(--ash)}
+.emp--dim .emp__n small{color:var(--ash-2)}
+.emp[aria-current="true"].emp--dim .emp__n{color:rgba(255,255,255,.75)}
+/* إجراءات الرسالة: تظهر دائمًا على اللمس، وعند المرور فقط على الأجهزة ذات المؤشر */
+.act{opacity:1}
+@media (hover:hover){ .m .act{opacity:0;transition:opacity .2s} .m:hover .act,.m:focus-within .act{opacity:1} }
 </style>
 </head>
 <body>
@@ -443,6 +524,7 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
     <div class="bar">
       <button type="button" class="ico" id="openSide" aria-label="إظهار القائمة" aria-expanded="false" aria-controls="side"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M9 4v16"/></svg></button>
       <span class="who" id="whoBtn"><span class="av" id="whoAv"><span class="drop"></span></span><span id="whoN">سيادة</span></span>
+      <span class="tr-live" id="whoLive" hidden>يشتغل الآن…</span>
     </div>
 
     <div class="pban" id="pban" hidden></div>
@@ -479,7 +561,7 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 
       <div class="pane on" id="pane-settings">
         <div class="srow"><div>الشركة<small>موظفوك يعرّفون أنفسهم بهذا</small></div><div><input class="ctrl" type="text" value="شركة الأفق" aria-label="اسم الشركة"><input class="ctrl" type="text" value="حلول توصيل للمطاعم في الرياض وجدة" aria-label="وش تقدمون — سطر واحد"></div></div>
-        <div class="srow"><div>قاعدة المعرفة<small>من هنا يجاوب فهد</small></div><div style="font-size:.85rem;color:var(--ash)">3 ملفات · رابطان &nbsp;<button type="button" class="lnk">إدارة</button></div></div>
+        <div class="srow"><div>الذاكرة وقاعدة المعرفة<small>من هنا يجاوب فهد — والقواعد اللي حفظتها من محادثاتك</small></div><div style="font-size:.85rem;color:var(--ash)">3 ملفات · رابطان &nbsp;<button type="button" class="lnk" id="memTgl" aria-expanded="false" aria-controls="memList">إدارة</button><div id="memList" hidden></div></div></div>
         <div class="srow"><div>الإشعارات<small>واتساب + بريد</small></div><div class="swl"><button type="button" class="swm" role="switch" aria-checked="true" aria-label="الإشعارات"></button>ملخص يومي + تنبيه عند «ينتظر قرارك»</div></div>
         <div class="srow"><div>الخطة والاستخدام</div><div style="font-size:.85rem;color:var(--ash)"><span id="setPlanSum"></span> &nbsp;<button type="button" class="lnk" data-open="plan">عرض</button></div></div>
         <div class="srow"><div>البيانات<small>ما تدرّب أي نموذج</small></div><div class="acts" style="margin:0"><button type="button" class="lnk">تصدير</button><button type="button" class="lnk" style="color:var(--bad);border-color:var(--bad)">حذف الحساب</button></div></div>
@@ -491,7 +573,7 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
   </div>
 </div>
 
-<script src="../pieces.js?v=1.8.1" defer></script>
-<script src="chat.js" defer></script>
+<script src="../pieces.js?v=1.9.0" defer></script>
+<script src="chat.js?v=1.9.0" defer></script>
 </body>
 </html>

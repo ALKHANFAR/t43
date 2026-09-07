@@ -1,6 +1,22 @@
 # Changelog
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/), versioning: [SemVer](https://semver.org/).
 
+## [1.9.0] — 2026-09-07
+### Added
+- Event runtime mirroring the orchestrator contract (say/step/handoff/await/preview/result/done over a future SSE): wiring the backend later replaces the event source, not the UI
+- Live execution trace: approving the plan runs the team step by step with tool logos, spinners becoming checks, and a per-step "why"
+- Approval-in-flow: a red line pauses execution with a decision card (context + recommendation); the choice resolves inline and is logged
+- Preview before send for outward messages, then a 7-second hold with a cancel bar; internal writes get a quiet undo that reverts with a receipt mark
+- Openable receipt on every result: tool, time, actor, before/after from a single ACTIONS store that also ticks the plan usage live
+- Visible handoffs between employees; live presence (pulsing dot + "يشتغل الآن") while an employee works
+- Today opener: Siyadah greets with a brief computed live from the data (actions, waiting decisions, suggested next step) and two quiet chips
+- Proactive employee: Noura messages first about three 30-day invoices with a decision card; accepting runs a real trace with preview and hold
+- Living memory: "وش تعرف عنا؟" lists it, settings manage it with delete, and saved rules join it automatically
+- Citations with confidence on knowledge answers; low-confidence questions are escalated instead of guessed
+- Demo deep links: #run=build, #run=collect, #run=proactive
+### Changed
+- Employee card KPIs collapse to one line with a details toggle; message actions show on hover; sidebar status unified (badge or dot or dimmed); the full tools list sits behind one button
+
 ## [1.8.1] — 2026-09-07
 ### Changed
 - Kept the disciplined monochrome + single green accent (no new colours); depth now comes from execution, not decoration
