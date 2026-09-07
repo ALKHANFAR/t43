@@ -82,6 +82,13 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 .hq:focus{outline:none;border-color:var(--accent)}
 .hq::placeholder{color:#757575}
 .hq__none{font-size:.8rem;color:var(--ash);padding:10px}
+/* ⌘K — لوحة أوامر تحت حقل البحث */
+.pal{border:1px solid var(--hair);background:var(--paper);margin:4px 0 6px;padding:4px;box-shadow:0 14px 30px -20px rgba(10,10,10,.35);animation:in .15s var(--ease)}
+.pal .pal__o{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:7px 10px;background:none;border:0;text-align:start;font-size:.85rem;border-radius:2px}
+.pal .pal__o small{color:var(--ash-2);font-size:.7rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pal .pal__o[aria-current="true"]{background:var(--ink);color:var(--paper)}
+.pal .pal__o[aria-current="true"] small{color:rgba(255,255,255,.6)}
+.pal__none{font-size:.8rem;color:var(--ash);padding:8px 10px}
 
 .hist{display:block;width:100%;padding:8px 10px;background:none;border:0;border-radius:2px;text-align:start;font-size:.875rem;color:var(--ink);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:.2s}
@@ -171,17 +178,60 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 .sw[aria-checked="true"]{background:var(--accent)}
 [dir="rtl"] .sw[aria-checked="true"]::after{transform:translateX(-18px)}
 
-/* بطاقة الموظف — مثبتة فوق محادثته */
-.pin{position:sticky;inset-block-start:0;z-index:2;background:var(--paper);display:grid;grid-template-columns:40px 1fr auto;gap:14px;align-items:center;
-  padding:10px 0 12px;border-block-end:1px solid var(--hair)}
-.pin .av{width:40px;height:40px;font-size:1.05rem}
-.pin__t{min-width:0}
-.pin__n{font-family:var(--f-display);font-size:1.05rem;line-height:1.3;margin:0}
-.pin__n span{color:var(--ash);font-size:.875rem}
-.pin__s{font-size:.8rem;color:var(--ash);margin-block-start:2px}
-.pin__c{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+/* بطاقة الموظف — مثبتة فوق محادثته: صف الهوية، أربعة أرقام، أدواته */
+.thread--emp{padding-block-start:0} /* حشوة الأعلى تروح للبطاقة المثبتة عشان ما يطل شيء من خلفها */
+.pin{position:sticky;inset-block-start:0;z-index:2;background:var(--paper);padding:24px 0 6px;border-block-end:1px solid var(--hair)}
+.pin__r1{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pin .av{width:32px;height:32px;font-size:.95rem;flex:none}
+.pin__t{min-width:0;flex:1;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.pin__n{font-family:var(--f-display);font-size:1rem;line-height:1.3;margin:0;white-space:nowrap}
+.pin__n span{color:var(--ash);font-size:.85rem}
+.pin__s{font-size:.75rem;color:var(--ash-2);white-space:nowrap}
+.pin__c{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end;margin-inline-start:auto}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-block-start:6px}
+.kpi{border:1px solid var(--hair);padding:3px 9px 2px;line-height:1.25;min-width:0;border-radius:2px}
+.kpi__v{display:block;font-family:var(--f-display);font-size:.98rem;color:var(--ink);text-align:start}
+.kpi__l{display:block;font-size:.68rem;color:var(--ash);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi__t{font-family:var(--f-display);color:var(--ash-2);margin-inline-start:8px;direction:ltr;unicode-bidi:isolate;display:inline-block}
+.kpi__t--ok{color:var(--accent)}
+.pin__r3{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-block-start:6px;font-size:.72rem;color:var(--ash);line-height:1.5}
+.pin__k{font-family:var(--f-display);color:var(--ash-2);margin-inline-end:2px}
+.pin__meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.pin__meta::before{content:"·";margin-inline-end:6px;color:var(--ash-2)}
+.pin__r3 #instrTgl{margin-inline-start:auto;font-size:.78rem}
+.chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--hair);padding:0 7px;line-height:1.7;font-size:.72rem;color:var(--ink);border-radius:2px;background:var(--paper)}
+.chip img{width:12px;height:12px;object-fit:contain}
+.chip i{width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.chip--off{color:var(--ash);border-style:dashed}
+.chip .link{font-size:.72rem;text-underline-offset:3px}
 .link{background:none;border:0;padding:0;color:var(--accent);font-size:.85rem;text-decoration:underline;text-underline-offset:4px}
 .link:hover{color:var(--ink)}
+
+/* الرد: يكتب… ثم كلمة كلمة */
+.typing{display:inline-flex;gap:4px;padding:8px 2px;vertical-align:middle}
+.typing i{width:5px;height:5px;border-radius:50%;background:var(--ash-2);animation:blink 1s infinite}
+.typing i:nth-child(2){animation-delay:.18s}.typing i:nth-child(3){animation-delay:.36s}
+@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.m--rev .w{visibility:hidden}.m--rev .w.on{visibility:visible}
+.m--rev .nr{opacity:0}.m--rev .nr.on{opacity:1;transition:opacity .3s}
+.m__c .link{font-size:inherit}
+/* قرار محسوم */
+.done{display:flex;align-items:center;gap:8px;color:var(--ash);font-size:.875rem;margin-block-start:6px}
+.done .ic{color:var(--ok)}
+.done small{display:inline;font-family:var(--f-display);font-size:.7rem;color:var(--ash-2)}
+.bt[disabled],.bts[disabled]{opacity:.45;cursor:default}
+.bt[disabled]:hover{background:var(--ink);color:var(--paper)}.bt--line[disabled]:hover{background:transparent;color:var(--ink)}
+.bts[disabled]:hover{background:var(--ink);color:var(--paper)}.bts--line[disabled]:hover{background:transparent;color:var(--ink)}
+/* فرق التعليمات */
+.diff{border:1px solid var(--hair);margin-block-start:10px;font-size:.875rem}
+.diff__r{display:grid;grid-template-columns:64px 1fr;gap:10px;padding:9px 14px;border-block-end:1px solid var(--hair)}
+.diff__r b{font-family:var(--f-display);font-weight:400;font-size:.75rem;color:var(--ash)}
+.diff__r--add b{color:var(--ok)}
+.diff__r--del span{color:var(--ash);text-decoration:line-through;text-decoration-color:var(--ash-2)}
+.diff__f{display:flex;align-items:center;gap:12px;padding:9px 14px;font-size:.78rem;color:var(--ash)}
+.diff__f .ic{color:var(--ok)}
+/* «ليش؟» */
+.whyl{font-size:.8rem;color:var(--ash);border-inline-start:2px solid var(--hair);padding-inline-start:10px;margin:8px 0 0 !important}
 
 /* بطاقات */
 .card{border:1px solid var(--hair)}
@@ -333,8 +383,9 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
   .cards{grid-template-columns:1fr}
   .m--me .m__b{max-width:92%}
   .prow{grid-template-columns:1fr;gap:4px}
-  .pin{grid-template-columns:40px 1fr}
-  .pin__c{grid-column:1/-1;justify-content:flex-start}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .pin__c{margin-inline-start:0;width:100%;justify-content:flex-start}
+  .pin__meta{white-space:normal}
   .soon{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){ *{animation:none !important;transition:none !important} }
@@ -357,7 +408,8 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
       <div id="emps"></div>
       <button type="button" class="hist" id="toolsLink" style="color:var(--ash);font-size:.82rem;margin-block-start:4px">الأدوات <small id="toolsCnt">4 مربوطة</small></button>
 
-      <input class="hq" id="hq" type="search" placeholder="ابحث في المحادثات" aria-label="ابحث في المحادثات" autocomplete="off">
+      <input class="hq" id="hq" type="search" placeholder="ابحث أو اكتب أمرًا" aria-label="ابحث في المحادثات أو اكتب أمرًا" autocomplete="off" aria-controls="pal">
+      <div class="pal" id="pal" hidden></div>
       <div id="hgToday"><div class="lbl"><span>اليوم</span></div><div id="histToday"></div></div>
       <div id="hgYest"><div class="lbl"><span>أمس</span></div><div id="histYest"></div></div>
       <div id="hgWeek"><div class="lbl"><span>الأسبوع الماضي</span></div><div id="histWeek"></div></div>
@@ -373,7 +425,7 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
       </div>
       <div class="keys" id="keys" hidden>
         <ul>
-          <li><span>ابحث في المحادثات</span><kbd>⌘ K</kbd></li>
+          <li><span>الأوامر والبحث</span><kbd>⌘ K</kbd></li>
           <li><span>محادثة جديدة</span><kbd>⌘ ⇧ O</kbd></li>
           <li><span>الأدوات</span><kbd>/</kbd></li>
           <li><span>إغلاق</span><kbd>Esc</kbd></li>
@@ -439,7 +491,7 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
   </div>
 </div>
 
-<script src="../pieces.js?v=1.7.0" defer></script>
+<script src="../pieces.js?v=1.8.0" defer></script>
 <script src="chat.js" defer></script>
 </body>
 </html>

@@ -326,6 +326,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
 }
 @media (max-width:760px){ .plans,.plans[data-cols="3"]{grid-template-columns:1fr} .bill{display:flex} .bill__b{flex:1;justify-content:center} }
 @media (max-width:480px){ .nav .btn{padding:9px 12px;font-size:.8rem} }
+.plan__was{margin-inline-start:10px}
 </style>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
@@ -335,7 +336,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
   {"@type":"Question","name":"وش الفرق بينها وبين ChatGPT أو Claude؟","acceptedAnswer":{"@type":"Answer","text":"أدوات المحادثة تعطيك جوابًا. سيادة تنفّذ داخل أدواتك: ترسل الرسالة، تحدّث سجل العميل، تشغّل سلسلة المتابعة، وتلاحق الفاتورة."}},
   {"@type":"Question","name":"هل أحتاج خلفية تقنية؟","acceptedAnswer":{"@type":"Answer","text":"لا. لو تقدر تشرح مهمة لموظف جديد، تقدر تشغّل سيادة. تكتب طلبك بلغة عادية، وهي تبني الموظفين وتربط الأدوات وتعرض عليك الخطة قبل التنفيذ."}},
   {"@type":"Question","name":"هل بيانات شركتي بأمان؟","acceptedAnswer":{"@type":"Answer","text":"تشفير أثناء النقل والتخزين. الاستضافة داخل المملكة على خارطة طريق البيتا، ونقول لك بالضبط وين بياناتك قبل ما تربط أي أداة. ولا نستخدم بياناتك في تدريب أي نموذج."}},
-  {"@type":"Question","name":"أقدر ألغي؟ ووش يصير بعد البيتا؟","acceptedAnswer":{"@type":"Answer","text":"الحجز ما يكلف شيئًا وما فيه شيء تلغيه. الخطط المدفوعة تُدفع شهريًا وتقدر تلغي في أي وقت. السعر المبكر خصم 50% على سعر الخطة ويبقى لك ما دام اشتراكك مستمرًا، حتى بعد انتهاء البيتا."}}
+  {"@type":"Question","name":"أقدر ألغي؟ ووش يصير بعد البيتا؟","acceptedAnswer":{"@type":"Answer","text":"الحجز ما يكلف شيئًا وما فيه شيء تلغيه. الخطط المدفوعة تُدفع شهريًا أو سنويًا وتقدر تلغي في أي وقت. السعر المبكر خصم 50% على سعر الخطة ويبقى لك ما دام اشتراكك مستمرًا، حتى بعد انتهاء البيتا."}}
  ]}
 ]}
 </script>
@@ -387,7 +388,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
             <span class="brief__l">أنت</span>
             <span id="typed"></span><span class="caret" id="caret"></span>
           </p>
-          <div class="status" id="status"><span class="drop" aria-hidden="true"></span> سيادة تجهّز الأقسام</div>
+          <div class="status" id="status"><span class="drop" aria-hidden="true"></span> سيادة تجهّز فريقك</div>
           <ul class="units" id="units">
             <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">متابعة المبيعات</span><span class="unit__s">شغّال</span></li>
             <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">تحصيل الفواتير</span><span class="unit__s">شغّال</span></li>
@@ -504,7 +505,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
           <li>جلسة إعداد مع الفريق</li>
           <li>دعم بأولوية</li>
         </ul>
-        <a href="#join" class="btn btn--wide">احجز مقعدك <span class="drop" aria-hidden="true"></span></a>
+        <a href="#join" class="btn btn--wide">ابدأ بالسعر المبكر <span class="drop" aria-hidden="true"></span></a>
       </div>
 
       <div class="plan" id="plan-enterprise">
@@ -517,7 +518,6 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
           <li>تسجيل دخول موحّد (SSO)</li>
           <li>استضافة داخل المملكة</li>
           <li>اتفاقية مستوى خدمة (SLA)</li>
-          <li>فوترة بالفاتورة</li>
         </ul>
         <a href="mailto:info@siyadah-ai.com" class="btn btn--line btn--wide">كلّم المبيعات</a>
       </div>
@@ -542,7 +542,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
       </div>
     </template>
 
-    <p class="plans__use">الدردشة بلا حدود. الإجراءات التي ينفّذها موظفوك داخل أدواتك تُحسب من رصيدك الشهري. تضيف رصيدًا مسبق الدفع متى شئت، ولا فاتورة مفاجئة.</p>
+    <p class="plans__use">الدردشة بلا حدود. الإجراء هو شيء واحد يسويه موظفك داخل أدواتك: رسالة مرسلة، أو سجل محدَّث، أو موعد محجوز. كل خطة تشمل رصيدًا شهريًا. تضيف رصيدًا مسبق الدفع متى شئت (<span data-credits="ar">100 ر.س = 500 إجراء</span>)، ولا فاتورة مفاجئة.</p>
     <p class="plans__foot" id="vatNote">الأسعار بالريال السعودي ولا تشمل ضريبة القيمة المضافة 15%. فواتير ضريبية متوافقة مع هيئة الزكاة والضريبة والجمارك. مدى وفيزا وماستركارد. إلغاء في أي وقت.</p>
   </div>
 </section>
@@ -631,7 +631,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
       </div>
       <div class="q">
         <button class="q__b" type="button" aria-expanded="false">أقدر ألغي؟ ووش يصير بعد البيتا؟<span class="sign"></span></button>
-        <div class="q__a"><p>الحجز ما يكلف شيئًا وما فيه شيء تلغيه. لما تفتح دفعتك تجرّب وتقرر وقتها. الخطط المدفوعة تُدفع شهريًا، وتقدر تلغي من حسابك في أي وقت. السعر المبكر خصم 50% على سعر الخطة، ويبقى لك ما دام اشتراكك مستمرًا، حتى بعد ما تنتهي البيتا. وبالمقابل توقّع نسخة مبكرة: راح تلقى حالات ما توقعناها، وتبي مزايا ما بنيناها بعد. عشان كذا حصرنا البيتا في 500 شركة ونشتغل مع كل وحدة عن قرب.</p></div>
+        <div class="q__a"><p>الحجز ما يكلف شيئًا وما فيه شيء تلغيه. لما تفتح دفعتك تجرّب وتقرر وقتها. الخطط المدفوعة تُدفع شهريًا أو سنويًا، وتقدر تلغي من حسابك في أي وقت. السعر المبكر خصم 50% على سعر الخطة، ويبقى لك ما دام اشتراكك مستمرًا، حتى بعد ما تنتهي البيتا. وبالمقابل توقّع نسخة مبكرة: راح تلقى حالات ما توقعناها، وتبي مزايا ما بنيناها بعد. عشان كذا حصرنا البيتا في 500 شركة ونشتغل مع كل وحدة عن قرب.</p></div>
       </div>
     </div>
   </div>

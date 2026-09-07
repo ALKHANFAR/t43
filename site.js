@@ -24,7 +24,8 @@ var CONFIG = {
     currency: "SAR",
     vatNote: true,
     starter: null,
-    business: { price: 998, early: 499, employees: 4, actions: null },
+    business: { price: 998, early: 499, employees: 4, actions: 3000 },
+    credits: { price: 100, actions: 500 },   // prepaid pack: price in SAR → actions
     enterprise: true,
     earlyDiscount: 50
   }
@@ -41,7 +42,7 @@ var CONFIG = {
     mailBody: ["طلب حجز مقعد", "الاسم", "البريد", "الجوال", "الشركة"],
     notifySubject: "تسجيل جديد - ",
     billMonth: "تُدفع شهريًا",
-    billYear: "تُدفع سنويًا، شهران مجانًا",
+    billYear: function (total) { return "تُدفع سنويًا: " + total + " ر.س (شهران مجانًا)"; },
     early: function (pct) { return "الوصول المبكر: خصم " + pct + "% على سعر الخطة، مدى الحياة"; },
     employees: function (n) { return n + " موظفين بالذكاء الاصطناعي"; },
     actions: function (n) { return n + " إجراء / شهر"; },
@@ -54,7 +55,7 @@ var CONFIG = {
     mailBody: ["Seat request", "Name", "Email", "Phone", "Company"],
     notifySubject: "New seat request - ",
     billMonth: "Billed monthly",
-    billYear: "Billed yearly, 2 months free",
+    billYear: function (total) { return "Billed yearly: " + total + " SAR (2 months free)"; },
     early: function (pct) { return "Private beta: " + pct + "% off the plan price, for life"; },
     employees: function (n) { return n + " AI employees"; },
     actions: function (n) { return n + " actions / month"; },
@@ -137,6 +138,7 @@ var CONFIG = {
   /* pricing — numbers from CONFIG.pricing, labels from markup */
   var P = CONFIG.pricing, plans = $("#plans");
   var annual = false;
+  $$("[data-credits]").forEach(function (el) { if (P.credits) el.textContent = money(P.credits.price) + (el.dataset.credits === "ar" ? " ر.س = " : " SAR = ") + money(P.credits.actions) + (el.dataset.credits === "ar" ? " إجراء" : " actions"); });
   function money(n) { return Number(n).toLocaleString("en-US"); }          // Western digits in both languages
   function perMonth(n) { return annual ? Math.round(n * 10 / 12) : n; }   // annual = 10 months for 12
   function fillPlan(key, plan, card) {
@@ -145,7 +147,7 @@ var CONFIG = {
     var was = $('[data-was="' + key + '"]', card);
     if (was) { was.hidden = !(typeof plan.early === "number"); was.textContent = money(perMonth(plan.price)); }
     var bill = $("[data-bill]", card);
-    if (bill) bill.textContent = annual ? L.billYear : L.billMonth;
+    if (bill) bill.textContent = annual ? L.billYear(money(v * 10)) : L.billMonth;
     var early = $("[data-early]", card);
     if (early) { early.hidden = !(typeof plan.early === "number"); early.textContent = L.early(P.earlyDiscount); }
     var emp = $("[data-employees]", card);

@@ -1,6 +1,17 @@
 # Changelog
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/), versioning: [SemVer](https://semver.org/).
 
+## [1.8.0] — 2026-09-07
+### Added
+- Employee profile card: identity, tenure, on/off, four role-specific KPIs with week-over-week trend, the employee's tools with logos and connect state, working hours, instructions expander
+- Employee replies with a persona voice and an intent router: status, why (cites the log and your rule), adjust (diff card + save updates the instructions and version), needs (lists unconnected tools), pause/resume, and a clarifying fallback; typing indicator and progressive reveal (skipped under reduced motion)
+- Decision buttons resolve the card, post the decision, decrement the badge and add a log line; "why?" and "copy" actions work; ⌘K command palette (new chat, employees, tools, settings, plan, history matches); hash deep links for demos (#e=saad, #say=…, #plan=trial)
+- Site: action defined and numbered (3,000 / month), prepaid credit pack (100 SAR = 500 actions) rendered from CONFIG.pricing, annual total shown (4,990 SAR), plan CTA "Start at the early price"
+### Changed
+- Plan & usage: one PRICING source, Arabic plan name, prepaid balance line, single "Manage subscription" button, coherent trial / over / past-due states, masked tax and CR numbers
+### Fixed
+- FAQ said "billed monthly" next to an annual toggle; duplicate "Invoice billing" line; console status still said "departments"; history titles cut mid-word; Qoyod listed as "coming soon" while Noura uses it
+
 ## [1.7.0] — 2026-09-07
 ### Changed
 - Site simplified to six sections: hero, how it works, four AI employees (one line each), pricing, reserve, four questions. Removed the stats strip, the "cost of doing it yourself" section, the department tabs, the perks cards, the seat meter and countdown, the sticky bar, and the role/country selects (form is now name, WhatsApp, email, optional company)

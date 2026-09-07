@@ -334,6 +334,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
 }
 @media (max-width:760px){ .plans,.plans[data-cols="3"]{grid-template-columns:1fr} .bill{display:flex} .bill__b{flex:1;justify-content:center} }
 @media (max-width:480px){ .nav .btn{padding:9px 12px;font-size:.8rem} }
+.plan__was{margin-inline-start:10px}
 </style>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
@@ -343,7 +344,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
   {"@type":"Question","name":"How is this different from ChatGPT or Claude?","acceptedAnswer":{"@type":"Answer","text":"Chat tools give you an answer. Siyadah takes action inside your tools: it sends the message, updates the customer record, triggers the follow-up sequence, and pursues the invoice."}},
   {"@type":"Question","name":"Do I need to be technical?","acceptedAnswer":{"@type":"Answer","text":"No. If you can explain a task to a new hire, you can run Siyadah. You describe what you want in plain language; it builds the AI employees, connects the tools, and shows you the plan before executing."}},
   {"@type":"Question","name":"Is my business data safe?","acceptedAnswer":{"@type":"Answer","text":"Encrypted in transit and at rest. Hosting inside the Kingdom is on the beta roadmap, and we tell you exactly where your data sits before you connect a single tool. Your data is never used to train models."}},
-  {"@type":"Question","name":"Can I cancel? And what happens after the beta?","acceptedAnswer":{"@type":"Answer","text":"Reserving costs nothing and there is nothing to cancel. Paid plans are billed monthly and you can cancel at any time. The early rate is 50% off the plan price and stays yours for as long as you keep the subscription, including after the beta ends."}}
+  {"@type":"Question","name":"Can I cancel? And what happens after the beta?","acceptedAnswer":{"@type":"Answer","text":"Reserving costs nothing and there is nothing to cancel. Paid plans are billed monthly or yearly and you can cancel at any time. The early rate is 50% off the plan price and stays yours for as long as you keep the subscription, including after the beta ends."}}
  ]}
 ]}
 </script>
@@ -398,7 +399,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
               <span class="brief__l">You</span>
               <span id="typed"></span><span class="caret" id="caret"></span>
             </p>
-            <div class="status" id="status"><span class="drop" aria-hidden="true"></span> Assembling departments</div>
+            <div class="status" id="status"><span class="drop" aria-hidden="true"></span> Assembling your team</div>
             <ul class="units" id="units">
               <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">Sales follow-up</span><span class="unit__s">Live</span></li>
               <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">Invoice collection</span><span class="unit__s">Live</span></li>
@@ -516,7 +517,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
           <li>Setup session with the team</li>
           <li>Priority support</li>
         </ul>
-        <a href="#join" class="btn btn--wide">Reserve your seat <span class="drop" aria-hidden="true"></span></a>
+        <a href="#join" class="btn btn--wide">Start at the early price <span class="drop" aria-hidden="true"></span></a>
       </div>
 
       <div class="plan" id="plan-enterprise">
@@ -529,7 +530,6 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
           <li>SSO</li>
           <li>Hosting inside the Kingdom</li>
           <li>SLA</li>
-          <li>Invoice billing</li>
         </ul>
         <a href="mailto:info@siyadah-ai.com" class="btn btn--line btn--wide">Talk to sales</a>
       </div>
@@ -554,7 +554,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
       </div>
     </template>
 
-    <p class="plans__use">Chatting is unlimited. Actions your employees execute inside your tools count toward your monthly allowance. Add prepaid credits any time. Never a surprise bill.</p>
+    <p class="plans__use">Chatting is unlimited. An action is one thing your employee does inside your tools: a message sent, a record updated, an appointment booked. Each plan includes a monthly allowance. Add prepaid credits any time (<span data-credits="en">100 SAR = 500 actions</span>). Never a surprise bill.</p>
     <p class="plans__foot" id="vatNote">Prices in Saudi riyals, excluding 15% VAT. ZATCA-compliant tax invoices. Mada, Visa and Mastercard. Cancel any time.</p>
   </div>
 </section>
@@ -643,7 +643,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
       </div>
       <div class="q">
         <button class="q__b" type="button" aria-expanded="false">Can I cancel? And what happens after the beta?<span class="sign"></span></button>
-        <div class="q__a"><p>Reserving costs nothing and there is nothing to cancel. When your wave opens you try it and decide then. Paid plans are billed monthly, and you can cancel from your account at any time. The early rate is 50% off the plan price and stays yours for as long as you keep the subscription, including after the beta ends. In return, expect an early version: you will find edge cases we missed and want features we have not built yet, which is why we cap the beta at 500 companies and work closely with each one.</p></div>
+        <div class="q__a"><p>Reserving costs nothing and there is nothing to cancel. When your wave opens you try it and decide then. Paid plans are billed monthly or yearly, and you can cancel from your account at any time. The early rate is 50% off the plan price and stays yours for as long as you keep the subscription, including after the beta ends. In return, expect an early version: you will find edge cases we missed and want features we have not built yet, which is why we cap the beta at 500 companies and work closely with each one.</p></div>
       </div>
     </div>
   </div>
