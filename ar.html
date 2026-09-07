@@ -280,6 +280,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
 .field.bad .err{display:block}
 .hp{position:absolute;inset-inline-start:-9999px;opacity:0;height:0}
 .form__fine{margin:16px 0 0;font-size:.8rem;color:var(--ash);line-height:1.7}
+.form__fine a{text-decoration:underline;text-underline-offset:2px}
 .done{display:none}
 .done.on{display:block;animation:in .6s var(--ease)}
 .done .drop{width:26px;margin-block-end:24px}
@@ -360,8 +361,8 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
   .nav__in{gap:14px}
   .nav .logo{width:112px}
   .nav__menu{display:grid}
-  .nav__links{position:fixed;inset-block-start:76px;inset-inline:0;flex-direction:column;gap:0;margin:0;padding:6px 24px 18px;background:var(--paper);border-block-end:1px solid var(--hair);font-size:1rem;opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity .25s,transform .25s}
-  .nav.open .nav__links{opacity:1;transform:none;pointer-events:auto}
+  .nav__links{position:fixed;inset-block-start:76px;inset-inline:0;flex-direction:column;gap:0;margin:0;padding:6px 24px 18px;background:var(--paper);border-block-end:1px solid var(--hair);font-size:1rem;opacity:0;transform:translateY(-6px);pointer-events:none;visibility:hidden;transition:opacity .25s,transform .25s,visibility 0s .25s}
+  .nav.open .nav__links{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition:opacity .25s,transform .25s}
   .nav__links a{display:block !important;padding:13px 0;border-block-end:1px solid var(--hair);color:var(--ink)}
   .nav__links a:last-child{border-block-end:0}
   .nav.open{background:var(--paper);border-bottom-color:var(--hair)}
@@ -411,7 +412,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
 
     <div class="hero__row">
       <div>
-        <p class="lead">سيادة تعطيك موظفين بالذكاء الاصطناعي يشتغلون داخل أدواتك نفسها. واحد يتابع كل عميل محتمل خلال دقائق، ووحدة تطارد الفواتير اللي محد يبي يطاردها، وواحد يرد على عملائك على مدار الساعة. وأنت تديرهم كلهم من محادثة وحدة.</p>
+        <p class="lead">سيادة تعطيك موظفين بالذكاء الاصطناعي يشتغلون داخل أدواتك نفسها. واحد يتابع كل عميل محتمل خلال دقائق، وموظفة تطارد الفواتير اللي محد يبي يطاردها، وواحد يرد على عملائك على مدار الساعة. وأنت تديرهم كلهم من محادثة وحدة.</p>
         <div class="hero__cta">
           <a href="#join" class="btn">احجز مقعدك <span class="drop" aria-hidden="true"></span></a>
           <a href="demo.html" class="btn btn--line">شوف الديمو · 2:00</a>
@@ -446,8 +447,8 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
 
     <div class="metrics">
       <div class="metric"><div class="metric__v"><span class="num" data-count="3">0</span> دقائق</div><div class="metric__l">من أول جملة إلى فريق شغّال</div></div>
-      <div class="metric"><div class="metric__v"><span class="num" data-count="4">0</span> موظفين</div><div class="metric__l">يشتغلون بالتوازي في نفس الوقت</div></div>
-      <div class="metric"><div class="metric__v"><span dir="ltr"><span class="num" data-count="24">0</span>/<span class="num" data-count="7">0</span></span></div><div class="metric__l">شغّال وأنت نايم أو مسافر</div></div>
+      <div class="metric"><div class="metric__v"><span class="num" data-count="4">0</span> موظفين</div><div class="metric__l">يشتغلون في نفس الوقت</div></div>
+      <div class="metric"><div class="metric__v"><span dir="ltr"><span class="num" data-count="24">0</span>/<span class="num">7</span></span></div><div class="metric__l">شغّال وأنت نايم أو مسافر</div></div>
       <div class="metric"><div class="metric__v">صفر</div><div class="metric__l">أسماء جديدة على كشف رواتبك</div></div>
     </div>
   </div>
@@ -621,7 +622,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
       <div class="perk">
         <span class="perk__n">التفعيل</span>
         <h3 class="perk__h">جلسة إعداد نسويها معك</h3>
-        <p class="perk__p">شخص من الفريق يجهّز معك أول أقسامك مباشرة. تطلع من الجلسة وعندك فريق شغّال فعليًا.</p>
+        <p class="perk__p">شخص من الفريق يجهّز معك أول موظفيك مباشرة. تطلع من الجلسة وعندك فريق شغّال فعليًا.</p>
       </div>
       <div class="perk">
         <span class="perk__n">التأثير</span>
@@ -754,7 +755,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
       </div>
       <div class="q">
         <button class="q__b" type="button" aria-expanded="false">هل أحتاج خلفية تقنية؟<span class="sign"></span></button>
-        <div class="q__a"><p>لا. لو تقدر تشرح مهمة لموظف جديد، تقدر تشغّل سيادة. تكتب طلبك بلغة عادية، وهي تبني الموظفين وتربط الأدوات وتعرض عليك الخطة قبل التنفيذ. وفي البيتا، فريقنا يجهّز معك أول أقسامك بنفسه.</p></div>
+        <div class="q__a"><p>لا. لو تقدر تشرح مهمة لموظف جديد، تقدر تشغّل سيادة. تكتب طلبك بلغة عادية، وهي تبني الموظفين وتربط الأدوات وتعرض عليك الخطة قبل التنفيذ. وفي البيتا، فريقنا يجهّز معك أول موظفيك بنفسه.</p></div>
       </div>
       <div class="q">
         <button class="q__b" type="button" aria-expanded="false">وين المصيدة؟ دايمًا فيه مصيدة.<span class="sign"></span></button>
@@ -785,7 +786,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
       <a href="#join" class="btn btn--line">احجز مقعدك <span class="drop" aria-hidden="true"></span></a>
     </div>
     <div class="foot__bot">
-      <a href="mailto:info@siyadah-ai.com" class="mail">info@siyadah-ai.com</a> · <a href="privacy.html#ar">الخصوصية</a>
+      <span><a href="mailto:info@siyadah-ai.com" class="mail">info@siyadah-ai.com</a> · <a href="privacy.html#ar">الخصوصية</a></span>
       <span>© <span id="yr">2026</span> سيادة. جميع الحقوق محفوظة.</span>
     </div>
   </div>

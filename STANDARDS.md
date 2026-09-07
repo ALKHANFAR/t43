@@ -1,4 +1,4 @@
-# سيادة — تقرير الامتثال للمعايير (7 سبتمبر 2026 · v1.5.0)
+# سيادة — تقرير الامتثال للمعايير (7 سبتمبر 2026 · v1.5.1)
 
 كل رقم هنا مُنتَج بأداة قابلة لإعادة التشغيل (`npm test`)، وكل حدّ للأداة مذكور صراحة. ما لا تقيسه الأدوات مكتوب على أنه غير مقيس.
 
@@ -46,7 +46,7 @@
 
 `html-validate:recommended` على الصفحات الثماني: **0 أخطاء**.
 القواعد المُطفأة في `.htmlvalidate.json` هي قواعد أسلوب فقط، وليست قواعد صحة أو وصولية:
-`no-inline-style`, `no-trailing-whitespace`, `long-title`, `attribute-boolean-style`, `void-style`, `no-raw-characters`, `attr-quotes`, `prefer-native-element`, `require-sri` (لا سكربتات أو أنماط خارجية), `prefer-button`.
+`no-inline-style`, `no-trailing-whitespace`, `long-title`, `attribute-boolean-style`, `void-style`, `no-raw-characters`, `attr-quotes`, `require-sri` (لا سكربتات أو أنماط خارجية), `prefer-button`.
 كل `<button>` في HTML الثابت يحمل `type` صريحًا (الأزرار المولّدة بـ JS خارج أي `<form>`)، ولا أدوار ARIA زائدة.
 
 ## 4) الأمان
@@ -64,7 +64,7 @@
 
 ## 6) SEO
 
-title · description بطول مناسب · canonical واحد لكل صفحة · hreflang متبادل (en/ar/x-default) على الصفحتين الرئيسيتين · Open Graph + Twitter Card بصورتين 1200×630 · h1 واحد · lang+dir · JSON-LD صالح (Organization, SoftwareApplication, FAQPage) · sitemap.xml · robots.txt · 404 مخصصة · manifest + أيقونات.
+title · description بطول مناسب · canonical واحد لكل صفحة · hreflang متبادل (en/ar/x-default) على الصفحتين الرئيسيتين · Open Graph + Twitter Card بصورتين 1200×630 · h1 واحد لكل صفحة مفهرسة (privacy فيها h1 لكل لغة، والديمو h1 لكل مشهد) · lang+dir · JSON-LD صالح (Organization, SoftwareApplication, FAQPage) · sitemap.xml · robots.txt · 404 مخصصة · manifest + أيقونات.
 صفحات التطبيق (`app/*`) موسومة `noindex`. لا صفحات مكررة (أُزيلت نسخ `app/demo.*` و `app/pieces.js`).
 
 ## 7) الأداء — ميزانية النقل (gzip)
@@ -73,7 +73,7 @@ title · description بطول مناسب · canonical واحد لكل صفحة �
 |---|---|---|---|
 | index.html | 13 KB | 5 KB (site.js) | الشعار 30 KB + Jost/Inter |
 | ar.html | 14 KB | 5 KB (site.js) | الشعار + Readex Pro/IBM Plex Sans Arabic |
-| integrations.html | 4 KB | 2 + 27 KB (كتالوج 721 أداة) | الشعار + Jost/Inter |
+| integrations.html | 4 KB | 2 + 27 KB (كتالوج 712 أداة) | الشعار + Jost/Inter |
 | demo.html | 8 KB | 4 KB | الشعار + Readex Pro |
 | app/chat.html | 9 KB | 12 + 27 KB (الكتالوج) | الشعار + Readex Pro/IBM Plex |
 | app/onboard.html | 6 KB | 4 KB | الشعار + Readex Pro/IBM Plex |
@@ -92,7 +92,7 @@ title · description بطول مناسب · canonical واحد لكل صفحة �
 | app/chat.html | 95 | 100 | 100 | — (noindex) |
 | app/onboard.html | 99 | 100 | 100 | — (noindex) |
 
-CLS = 0 على كل الصفحات، TBT = 0 ms. صفحات التطبيق و404 موسومة `noindex` عمدًا، لذلك لا تنطبق عليها درجة SEO.
+CLS = 0 على كل الصفحات (ar.html: 0.01)، TBT = 0 ms. صفحات التطبيق و404 موسومة `noindex` عمدًا، لذلك لا تنطبق عليها درجة SEO.
 
 ## 8) التدويل — i18n
 
@@ -102,7 +102,7 @@ CLS = 0 على كل الصفحات، TBT = 0 ms. صفحات التطبيق و404
 
 LICENSE · SECURITY.md · CHANGELOG.md (Keep a Changelog + SemVer) · .editorconfig · .nvmrc · `.nojekyll` · قالب Issues · `package-lock.json` متتبَّع.
 **CI (GitHub Actions):** `npm ci` من ملف القفل + cache، ثم `npm test` = فحص JS + سلامة الكتالوج + صحة HTML + axe (jsdom) + Lighthouse في Chrome. يفشل البناء عند أي مخالفة.
-لا PHP، لا أسرار، لا كلمات مرور في المستودع. كتالوج الأدوات (`pieces.js`) ملف واحد بـ 721 أداة، لكل منها شعار ووصف من سطر واحد، ويتحقق منه `npm run catalog` في CI (لا وصف فارغ أو مبتور، والشعارات من مصدر واحد).
+لا PHP، لا أسرار، لا كلمات مرور في المستودع. كتالوج الأدوات (`pieces.js`) ملف واحد بـ 712 أداة، لكل منها شعار ووصف من سطر واحد، ويتحقق منه `npm run catalog` في CI (لا وصف فارغ أو مبتور، والشعارات من مصدر واحد).
 
 ## إعادة التشغيل
 ```bash

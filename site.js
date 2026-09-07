@@ -3,7 +3,7 @@
    ========================================================================== */
 var CONFIG = {
   // 1) Google Sheet — الحل الأبسط والموصى به.
-  //    الصق رابط Apps Script من ملف google-sheet.gs. يحفظ في الجدول ويرسل لك إشعارًا.
+  //    رابط Apps Script إن أردت الحفظ في Google Sheet مباشرة.
   sheetUrl: "",   // Apps Script — غير مستخدم الآن
 
   // 2) ✅ المسار الفعّال: ويب هوك Activepieces — يكتب مباشرة في جدولك.
@@ -12,7 +12,7 @@ var CONFIG = {
   // 3) اختياري: إشعار بريد إضافي عبر web3forms.com/#start
   web3formsKey: "",
 
-  fallbackEmail: "anis@sondos-ai.com",
+  fallbackEmail: "info@siyadah-ai.com",
   seatsTotal: 500,
   seatsClaimed: null,                      // real number from the backend; null hides the seat meter and queue position
   deadline: null                           // real closing date from the backend; null hides the countdown

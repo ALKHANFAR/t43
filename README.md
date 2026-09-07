@@ -5,7 +5,7 @@
 | المسار | المحتوى |
 |---|---|
 | `/` | الموقع: `index.html` (EN) · `ar.html` (AR) · `integrations.html` · `demo.html` · `privacy.html` |
-| `/app` | نموذج المنصة: `onboard.html` (الإعداد الأول) · `chat.html` (التطبيق) · `README.md` مواصفة المطوّر |
+| `/app` | نموذج المنصة: `onboard.html` (الإعداد الأول) · `chat.html` (التطبيق) |
 | `STANDARDS.md` | تقرير المعايير: WCAG AA، HTML صالح، رؤوس الأمان، PDPL/GDPR، SEO |
 
 ## النشر
@@ -17,6 +17,6 @@
 الرابط والإعدادات في بلوك `CONFIG` أول `site.js` (ملف واحد للصفحتين، النصوص تُختار حسب `<html lang>`). لا يحتاج أي ملف على الخادم.
 
 ## ملاحظات
-- `pieces.js` في الجذر هو كتالوج الأدوات (721 أداة، شعار + وصف لكل أداة) وتستخدمه `integrations.html` و `app/chat.html`.
+- `pieces.js` في الجذر هو كتالوج الأدوات (712 أداة، شعار + وصف لكل أداة) وتستخدمه `integrations.html` و `app/chat.html`.
 - الخطوط مستضافة محليًا في `fonts/` (لا طلبات لـ Google Fonts).
 - `.htaccess` يعمل على Apache فقط (cPanel). على GitHub Pages يُتجاهل بلا ضرر.

@@ -49,7 +49,7 @@ var EMPS = [
 
 var CHATS = {
   "c1": { with:"siyadah", t:"بناء فريق المتابعة والتحصيل", when:"today", msgs:[
-    { me:true,  t:"أبي أحد يتابع كل عميل جديد خلال خمس دقائق، ويطالب بالفواتير اللي تأخرت أكثر من سبعة أيام، ويرد على أسئلة الدعم المتكررة.", at:"14:28" },
+    { me:true,  t:"أبي أحد يتابع كل عميل جديد خلال خمس دقائق، ويطالب بالفواتير اللي تأخرت أكثر من سبعة أيام، ويرد على أسئلة الدعم المتكررة على طول.", at:"14:28" },
     { me:false, plan:true, t:"جهّزت ثلاثة. هذي خطتهم — ما يتحرك شيء قبل موافقتك:", at:"14:29" },
     { me:true,  t:"ممتاز، بس خلّ سعد ما يعطي خصومات بدون ما يرجع لي.", at:"14:31" },
     { me:false, t:"<p>صار. خط أحمر لسعد: <b>«ما أعطي خصمًا بدون موافقتك»</b>. أي طلب خصم يوصلك أنت.</p><p>الثلاثة جاهزون. أشغّلهم؟</p>", at:"14:31" }
@@ -85,7 +85,7 @@ var SUGG = {
   ]
 };
 var CHIPS = {
-  siyadah:["وش صار اليوم؟","وظّف موظف تسويق","وش ينتظرني؟"],
+  siyadah:["وش صار اليوم؟","وظّف موظف جديد","وش ينتظرني؟"],
   saad:["كم ليد بارد عندنا؟","أوقف المتابعة مع خالد","غيّر نبرتك لأكثر رسمية"],
   noura:["وش الفواتير الأخطر؟","أرسلي لي تقرير السيولة","خفّفي النبرة مع النخبة"],
   fahad:["وش صعّدت لي؟","أضف جوابًا للمعرفة","كم عميل غاضب اليوم؟"],
@@ -330,6 +330,7 @@ var I = {
     var t=$("#thread");
     var q=$("#tq",t); q.addEventListener("input",function(){ tq=this.value.trim().toLowerCase(); var pos=this.selectionStart; renderThread(); var nq=$("#tq"); nq.focus(); nq.setSelectionRange(pos,pos); });
     $(".cats",t).addEventListener("click",function(e){ var b=e.target.closest(".cat"); if(!b) return; tcat=b.textContent; tshown=24; renderThread(); });
+    if(t.dataset.toolsBound) return; t.dataset.toolsBound="1";
     t.addEventListener("click",function(e){
       var m=e.target.closest("#more"); if(m){ tshown+=24; renderThread(); return; }
       var c=e.target.closest("[data-c]"); if(!c) return;
@@ -366,7 +367,7 @@ var I = {
     if(!sheet.classList.contains("on")) sheetOpener=document.activeElement;
     sheet.classList.add("on"); $("#sheetX").focus();
   }
-  function closeSheet(){ if(!sheet.classList.contains("on")) return; sheet.classList.remove("on"); if(sheetOpener&&document.contains(sheetOpener)) sheetOpener.focus(); sheetOpener=null; }
+  function closeSheet(){ if(!sheet.classList.contains("on")) return; sheet.classList.remove("on"); var back=(sheetOpener&&document.contains(sheetOpener)&&sheetOpener.offsetParent!==null)?sheetOpener:$("#meBtn"); if(back) back.focus(); sheetOpener=null; }
   $(".sheet__h").addEventListener("click",function(e){ var t=e.target.closest(".tab"); if(t) openSheet(t.dataset.pane); });
   $("#sheetX").addEventListener("click",closeSheet);
   sheet.addEventListener("click",function(e){ if(e.target===sheet) closeSheet(); });

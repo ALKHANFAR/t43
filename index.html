@@ -144,7 +144,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
 .nav__links{display:flex;gap:32px;margin-left:auto;font-size:.875rem;color:var(--ash)}
 .nav__links a{transition:color .25s}
 .nav__links a:hover{color:var(--accent)}
-.nav__lang{font-family:var(--f-display);letter-spacing:.06em;font-size:.75rem}
+.nav__lang{font-family:var(--f-display);letter-spacing:.06em;font-size:.875rem}
 .nav .btn{padding:11px 22px;font-size:.875rem;white-space:nowrap}
 @media (max-width:640px){.nav .btn{padding:9px 14px;font-size:.8rem}}
 
@@ -287,6 +287,8 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
 .field.bad .err{display:block}
 .hp{position:absolute;left:-9999px;opacity:0;height:0}
 .form__fine{margin:16px 0 0;font-size:.8rem;color:var(--ash);line-height:1.6}
+.form__fine a{text-decoration:underline;text-underline-offset:2px}
+.form__fine a{text-decoration:underline;text-underline-offset:2px}
 .done{display:none}
 .done.on{display:block;animation:in .6s var(--ease)}
 .done .drop{width:26px;margin-bottom:24px}
@@ -367,8 +369,8 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
   .nav__in{gap:14px}
   .nav .logo{width:112px}
   .nav__menu{display:grid}
-  .nav__links{position:fixed;inset-block-start:76px;inset-inline:0;flex-direction:column;gap:0;margin:0;padding:6px 24px 18px;background:var(--paper);border-block-end:1px solid var(--hair);font-size:1rem;opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity .25s,transform .25s}
-  .nav.open .nav__links{opacity:1;transform:none;pointer-events:auto}
+  .nav__links{position:fixed;inset-block-start:76px;inset-inline:0;flex-direction:column;gap:0;margin:0;padding:6px 24px 18px;background:var(--paper);border-block-end:1px solid var(--hair);font-size:1rem;opacity:0;transform:translateY(-6px);pointer-events:none;visibility:hidden;transition:opacity .25s,transform .25s,visibility 0s .25s}
+  .nav.open .nav__links{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition:opacity .25s,transform .25s}
   .nav__links a{display:block !important;padding:13px 0;border-block-end:1px solid var(--hair);color:var(--ink)}
   .nav__links a:last-child{border-block-end:0}
   .nav.open{background:var(--paper);border-bottom-color:var(--hair)}
@@ -423,7 +425,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
           <p class="lead">Siyadah AI gives you AI employees that work inside the tools you already use. One follows up every lead within minutes. One chases the invoices nobody wants to chase. One answers your customers around the clock. You run all of them from a single chat.</p>
           <div class="hero__cta">
             <a href="#join" class="btn">Reserve your seat <span class="drop" aria-hidden="true"></span></a>
-            <a href="demo.html" class="btn btn--line">Watch the demo · 2:00</a>
+            <a href="demo.html" class="btn btn--line">Watch the demo (Arabic) · 2:00</a>
           </div>
           <p class="hero__fine"><span>Free to reserve.</span><span>No card required.</span><span>Early pricing locked for life.</span></p>
         </div>
@@ -447,7 +449,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
               <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">Marketing</span><span class="unit__s">Live</span></li>
             </ul>
             <div class="console__foot" id="cfoot">
-              Four AI employees. No one on payroll.
+              Four AI employees. Nobody on payroll.
               <button class="replay" id="replay" type="button">Replay</button>
             </div>
           </div>
@@ -457,7 +459,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
       <div class="metrics">
         <div class="metric"><div class="metric__v"><span data-count="3">0</span> min</div><div class="metric__l">From first sentence to a working team</div></div>
         <div class="metric"><div class="metric__v"><span data-count="4">0</span></div><div class="metric__l">AI employees running in parallel</div></div>
-        <div class="metric"><div class="metric__v"><span data-count="24">0</span>/<span data-count="7">0</span></div><div class="metric__l">Running while you sleep or travel</div></div>
+        <div class="metric"><div class="metric__v"><span data-count="24">0</span>/<span>7</span></div><div class="metric__l">Running while you sleep or travel</div></div>
         <div class="metric"><div class="metric__v">Zero</div><div class="metric__l">New names on your payroll</div></div>
       </div>
     </div>
@@ -517,7 +519,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
           <p class="step__p">In plain language. No technical vocabulary, no explaining how your systems are wired together.</p>
           <blockquote class="said">
             <cite>One sentence is enough</cite>
-            "Follow up with every new lead within five minutes, chase invoices more than seven days late, and answer the support questions we get over and over."
+            “Follow up with every new lead within five minutes, chase invoices more than seven days late, and answer the support questions we get over and over.”
           </blockquote>
         </div>
       </div>
@@ -632,7 +634,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
       <div class="perk">
         <span class="perk__n">Onboarding</span>
         <h3 class="perk__h">A setup session, run with you</h3>
-        <p class="perk__p">Someone from the team configures your first departments live, with you. You leave with a team that is already running.</p>
+        <p class="perk__p">Someone from the team configures your first AI employees live, with you. You leave with a team that is already running.</p>
       </div>
       <div class="perk">
         <span class="perk__n">Influence</span>
@@ -766,7 +768,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
       </div>
       <div class="q">
         <button class="q__b" type="button" aria-expanded="false">Do I need to be technical?<span class="sign"></span></button>
-        <div class="q__a"><p>No. If you can explain a task to a new hire, you can run Siyadah. You describe what you want in ordinary language; it builds the AI employees, connects the tools, and shows you the plan before executing. During the beta, our team also sets up your first departments with you directly.</p></div>
+        <div class="q__a"><p>No. If you can explain a task to a new hire, you can run Siyadah. You describe what you want in ordinary language; it builds the AI employees, connects the tools, and shows you the plan before executing. During the beta, our team also sets up your first AI employees with you directly.</p></div>
       </div>
       <div class="q">
         <button class="q__b" type="button" aria-expanded="false">What's the catch? There's always a catch.<span class="sign"></span></button>
@@ -797,7 +799,7 @@ select.ctrl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmln
       <a href="#join" class="btn btn--line">Reserve your seat <span class="drop" aria-hidden="true"></span></a>
     </div>
     <div class="foot__bot">
-      <a href="mailto:info@siyadah-ai.com" class="mail">info@siyadah-ai.com</a> · <a href="privacy.html">Privacy</a>
+      <span><a href="mailto:info@siyadah-ai.com" class="mail">info@siyadah-ai.com</a> · <a href="privacy.html">Privacy</a></span>
       <span>© <span id="yr">2026</span> Siyadah AI. All rights reserved.</span>
     </div>
   </div>

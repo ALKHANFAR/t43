@@ -47,6 +47,6 @@ window.addEventListener("DOMContentLoaded",function(){
   $("#more").addEventListener("click",function(){ shown+=36; render(); });
   $("#langBtn").addEventListener("click",function(){ lang=lang==="ar"?"en":"ar"; paint(); });
   document.addEventListener("keydown",function(e){ if(e.key==="/"&&document.activeElement!==$("#q")){ e.preventDefault(); $("#q").focus(); } });
-  if(/[\u0600-\u06FF]/.test(navigator.language)||new URLSearchParams(location.search).get("lang")==="ar"||location.hash==="#ar") lang="ar";
+  if(/^ar\b/i.test(navigator.language||"")||new URLSearchParams(location.search).get("lang")==="ar"||location.hash==="#ar") lang="ar";
   paint();
 });

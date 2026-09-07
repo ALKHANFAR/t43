@@ -72,7 +72,7 @@ html[dir="rtl"] .side h2{letter-spacing:.04em;text-transform:none}
 
 .top{display:flex;align-items:baseline;gap:14px;margin-bottom:18px;font-size:.875rem;color:var(--ash)}
 .top b{font-family:var(--f-display);font-weight:300;font-size:1.2rem;color:var(--ink)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;min-height:70vh}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;min-height:70vh;align-content:start}
 .card{border:1px solid var(--hair);padding:18px;display:grid;grid-template-columns:44px 1fr;gap:14px;align-items:start;transition:border-color .2s;background:var(--paper)}
 .card:hover{border-color:var(--ink)}
 .card__i{width:44px;height:44px;border:1px solid var(--hair);display:grid;place-items:center;background:#fff;overflow:hidden;font-family:var(--f-display);font-size:.875rem}
@@ -154,9 +154,9 @@ html[dir="rtl"] .cta h2{letter-spacing:0}
 </div></section>
 </main>
 
-<footer class="wrap foot"><span>© 2026 Siyadah AI</span><span data-en="Catalog updates automatically." data-ar="الكتالوج يتحدّث تلقائيًا.">Catalog updates automatically.</span></footer>
+<footer class="wrap foot"><span dir="ltr">© 2026 Siyadah AI</span><span data-en="Catalog updates automatically." data-ar="الكتالوج يُحدَّث تلقائيًا.">Catalog updates automatically.</span></footer>
 
-<script src="pieces.js" defer></script>
+<script src="pieces.js?v=1.5.1" defer></script>
 <script src="integrations.js" defer></script>
 </body>
 </html>

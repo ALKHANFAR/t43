@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/), versioning: [SemVer](https://semver.org/).
 
+## [1.5.1] — 2026-09-07
+### Fixed
+- Chat: tool dialog focus return after re-renders (listener bound once); settings sheet returns focus to the account button; dead "team" link replaced by a "soon" label; chip no longer hires a role that already exists
+- Mobile nav sheet is not tabbable while closed; language switch sized like the other links
+- Catalog: 712 tools after removing crypto/EV/entertainment pieces and a duplicate; truncated names fixed; 21 more recategorized; `pieces.js` cache-busted with a version query
+- Copy: no orphan "·" in footers; 404 Arabic in RTL paragraphs; "first AI employees" (not departments); "Nobody on payroll" everywhere; curly quotes; static "/7"; Arabic privacy effective date; demo button labelled (Arabic); demo recording hint removed
+- Integrations: footer © in LTR, "يُحدَّث تلقائيًا", grid rows no longer stretch on small result sets; browser language detection fixed
+- Mail fallback uses the brand domain; docs corrected (h1 note, CLS note, removed non-existent app README reference)
+
 ## [1.5.0] — 2026-09-07
 ### Changed
 - Catalog matched against the official Activepieces pieces list: 10 customer-connectable tools added (SMTP, FTP/SFTP, Form.io, Loops, Clay, Blackbaud, Bloomerang, Salsa, AnyHook GraphQL/WebSocket), 6 non-business no-auth pieces removed (crypto prices, chess, Hacker News, ...); 721 tools, all with logo, description and category; 126 tools moved out of "Other" into the right category (WhatsApp → Communication, QuickBooks → Accounting, ...)
