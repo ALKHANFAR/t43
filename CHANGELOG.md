@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/), versioning: [SemVer](https://semver.org/).
 
+## [1.5.0] — 2026-09-07
+### Changed
+- Catalog matched against the official Activepieces pieces list: 10 customer-connectable tools added (SMTP, FTP/SFTP, Form.io, Loops, Clay, Blackbaud, Bloomerang, Salsa, AnyHook GraphQL/WebSocket), 6 non-business no-auth pieces removed (crypto prices, chess, Hacker News, ...); 721 tools, all with logo, description and category; 126 tools moved out of "Other" into the right category (WhatsApp → Communication, QuickBooks → Accounting, ...)
+- Integrations page: 54 featured tools for the Saudi SMB market shown first; "AI models" renamed "AI tools"
+- Shared mini header (wordmark + home/language) on privacy and 404; wordmark link on the demo
+
 ## [1.4.0] — 2026-09-07
 ### Added
 - Mobile navigation on the marketing pages: hamburger button opening a sheet with all links and the language switch (keyboard, Escape, aria-expanded)
