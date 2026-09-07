@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/), versioning: [SemVer](https://semver.org/).
 
+## [1.8.1] — 2026-09-07
+### Changed
+- Kept the disciplined monochrome + single green accent (no new colours); depth now comes from execution, not decoration
+- Tool logos sit in clean white rounded tiles with a faint shadow across the catalog, employee cards and the connect dialog; cards lift slightly on hover
+- The built-in "site chat" tool shows a chat-bubble icon instead of the green leaf placeholder
+
 ## [1.8.0] — 2026-09-07
 ### Added
 - Employee profile card: identity, tenure, on/off, four role-specific KPIs with week-over-week trend, the employee's tools with logos and connect state, working hours, instructions expander

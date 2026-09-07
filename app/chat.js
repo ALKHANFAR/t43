@@ -272,7 +272,7 @@ var I = {
   function toolOf(s){ if(s==="site-chat") return {s:s,n:TN[s],on:true,builtin:true}; return TOOLS.filter(function(t){return t.s===s})[0]||{s:s,n:TN[s]||s,on:false}; }
   function chipHtml(s){
     var t=toolOf(s), n=TN[s]||t.n;
-    return '<span class="chip'+(t.on?'':' chip--off')+'">'+(t.builtin?'<span class="drop" style="width:9px"></span>':'<img src="'+t.logo+'" alt="" crossorigin="anonymous" referrerpolicy="no-referrer" data-fb="1">')+
+    return '<span class="chip'+(t.on?'':' chip--off')+'">'+(t.builtin?'<svg class="gi" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.5-.7L3 21l1.3-4.5A8.4 8.4 0 0 1 3.6 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>':'<img src="'+t.logo+'" alt="" crossorigin="anonymous" referrerpolicy="no-referrer" data-fb="1">')+
       '<span class="chip__n">'+n+'</span>'+(t.on?'<i></i>':'<button type="button" class="link" data-c="'+s+'" aria-label="اربط '+n+'">اربط</button>')+'</span>';
   }
   function pinHtml(e){

@@ -200,7 +200,7 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 .pin__meta::before{content:"·";margin-inline-end:6px;color:var(--ash-2)}
 .pin__r3 #instrTgl{margin-inline-start:auto;font-size:.78rem}
 .chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--hair);padding:0 7px;line-height:1.7;font-size:.72rem;color:var(--ink);border-radius:2px;background:var(--paper)}
-.chip img{width:12px;height:12px;object-fit:contain}
+.chip img,.chip .gi{width:12px;height:12px;object-fit:contain;flex:none}
 .chip i{width:5px;height:5px;border-radius:50%;background:var(--accent)}
 .chip--off{color:var(--ash);border-style:dashed}
 .chip .link{font-size:.72rem;text-underline-offset:3px}
@@ -333,10 +333,10 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 .tsec b{font-weight:400;color:var(--ink);font-size:.95rem}
 .tsec::after{content:"";height:1px;background:var(--hair);flex:1}
 .tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
-.tl{border:1px solid var(--hair);padding:14px;display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;transition:border-color .2s;background:var(--paper)}
-.tl:hover{border-color:var(--ink)}
+.tl{border:1px solid var(--hair);border-radius:2px;padding:14px;transition:border-color .25s,box-shadow .25s,transform .25s;display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;transition:border-color .2s;background:var(--paper)}
+.tl:hover{border-color:var(--ink);box-shadow:0 12px 26px -20px rgba(10,10,10,.22);transform:translateY(-2px)}
 .tl--on{border-color:rgba(11,132,75,.3)}
-.tl__i{width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--hair);background:#fff;font-family:var(--f-display);font-size:.875rem;overflow:hidden;flex:none}
+.tl__i{width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--hair);border-radius:8px;background:#fff;font-family:var(--f-display);font-size:.875rem;overflow:hidden;flex:none;color:var(--ash);box-shadow:0 1px 2px rgba(10,10,10,.05)}
 .tl__i img{width:26px;height:26px;object-fit:contain}
 .tl__n{font-family:var(--f-display);font-size:.95rem;line-height:1.3}
 .tl__d{font-size:.8rem;color:var(--ash);line-height:1.5;margin-block-start:2px;min-height:2.3em;text-align:start;unicode-bidi:isolate}
@@ -491,7 +491,7 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
   </div>
 </div>
 
-<script src="../pieces.js?v=1.8.0" defer></script>
+<script src="../pieces.js?v=1.8.1" defer></script>
 <script src="chat.js" defer></script>
 </body>
 </html>

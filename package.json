@@ -1,6 +1,6 @@
 {
   "name": "siyadah-site",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "private": true,
   "description": "Siyadah AI — public site and product prototype",
   "scripts": {
