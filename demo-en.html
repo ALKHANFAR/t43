@@ -212,6 +212,7 @@ body{background:#0A0A0A;font-family:var(--f-body);color:var(--ink);display:flex;
 #home{position:fixed;top:16px;inset-inline-start:20px;z-index:80;color:#A5A5A2;text-decoration:none}
 #home .logo{width:96px}
 #home:hover{color:var(--paper)}
+#poster small span{margin:0 10px}
 </style>
 </head>
 <body>
@@ -380,7 +381,7 @@ body{background:#0A0A0A;font-family:var(--f-body);color:var(--ink);display:flex;
   <div id="wipe"><div class="p a"></div><div class="p b"></div></div>
   <div id="grain"></div>
 
-  <div id="poster"><span class="logo"></span><p>Demo · Two minutes</p><span class="go"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg></span><small>SPACE · play   F · full screen   ← → · ±5 s</small></div>
+  <div id="poster"><span class="logo"></span><p>Demo · Two minutes</p><span class="go"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg></span><small><span>SPACE · play</span><span>F · full screen</span><span>← → · ±5 s</span></small></div>
 
   <div id="player">
     <button class="pb" id="play" type="button" aria-label="Play / pause"><svg id="icP" viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg><svg id="icQ" viewBox="0 0 24 24" style="display:none"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg></button>

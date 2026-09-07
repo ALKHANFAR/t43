@@ -291,7 +291,7 @@ var I = {
   $(".side").addEventListener("click",function(e){ if(e.target.closest("button,a")&&mobile()) setTimeout(function(){ setDrawer(false); },0); });
 
   /* ---------- الأدوات — الكتالوج الكامل (الحقيقي يجي من Activepieces /v1/pieces) ---------- */
-  /* الكتالوج الحقيقي من pieces.js: [slug, name, description, category, logo] */
+  /* الكتالوج الحقيقي من pieces.js: [slug, name, description EN, category, logo, description AR] */
   var ON ={"gmail":"سعد · نورة · فهد","google-sheets":"نورة","google-calendar":"سعد","whatsapp":"سعد · فهد"};
   var SUG={"linkedin":"تحتاجه ريم","hubspot":"يحتاجه سعد","wafeq":"تحتاجه نورة","cal-com":"يحتاجه سعد","instagram-business":"تحتاجه ريم"};
   var TOOLS=(window.PIECES||[]).map(function(p){ return {s:p[0],n:p[1],d:p[5]||p[2],en:p[2],c:p[3],logo:p[4],on:!!ON[p[0]],by:ON[p[0]]||"",sug:SUG[p[0]]||""}; });
@@ -303,7 +303,7 @@ var I = {
     var st=t.on?'<span class="st"><i></i>مربوطة</span>':(t.sug?'<span class="st st--w">'+t.sug+'</span>':'');
     var ini=t.n.replace(/[^A-Za-z\u0600-\u06FF0-9]/g,"").slice(0,2)||"•";
     return '<div class="tl'+(t.on?' tl--on':'')+'"><span class="tl__i"><img src="'+t.logo+'" alt="" loading="lazy" crossorigin="anonymous" referrerpolicy="no-referrer" data-fb="1"></span><div><div class="tl__n">'+t.n+'</div>'+
-      '<div class="tl__d">'+(t.d||t.c)+(t.on?'<br><span class="who" style="direction:rtl">يستخدمها: '+t.by+'</span>':'')+'</div>'+
+      '<div class="tl__d">'+(t.d||t.c)+(t.on?'<br><span class="who">يستخدمها: '+t.by+'</span>':'')+'</div>'+
       '<div class="tl__f">'+(t.on?'<button class="lnk">إدارة</button>':'<button class="lnk lnk--fill" data-c="'+t.s+'">اربط</button>')+st+'</div></div></div>';
   }
   function tgrid(a,e){ return a.length?'<div class="tgrid">'+a.map(tcard).join("")+'</div>':'<div class="tempty">'+e+'</div>'; }
