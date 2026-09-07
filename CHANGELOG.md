@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project. Format: [Keep a Changelog](https://keepachangelog.com/), versioning: [SemVer](https://semver.org/).
 
+## [1.6.0] — 2026-09-07
+### Added
+- English demo film (`demo-en.html` + `demo-en.js`): same scenes, timings and audio as the Arabic film, LTR with Jost/Inter; the English hero links to it
+- Arabic description for all 712 catalog tools (`pieces.js` sixth field); the integrations page and the app's tools panel show Arabic descriptions in Arabic mode and search both languages; the catalog check verifies the Arabic text
+### Fixed
+- Wordmark: the stray "I" before the H removed (reads SIYADAH AI); aspect ratio updated everywhere
+
 ## [1.5.1] — 2026-09-07
 ### Fixed
 - Chat: tool dialog focus return after re-renders (listener bound once); settings sheet returns focus to the account button; dead "team" link replaced by a "soon" label; chip no longer hires a role that already exists

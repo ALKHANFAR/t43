@@ -294,7 +294,7 @@ var I = {
   /* الكتالوج الحقيقي من pieces.js: [slug, name, description, category, logo] */
   var ON ={"gmail":"سعد · نورة · فهد","google-sheets":"نورة","google-calendar":"سعد","whatsapp":"سعد · فهد"};
   var SUG={"linkedin":"تحتاجه ريم","hubspot":"يحتاجه سعد","wafeq":"تحتاجه نورة","cal-com":"يحتاجه سعد","instagram-business":"تحتاجه ريم"};
-  var TOOLS=(window.PIECES||[]).map(function(p){ return {s:p[0],n:p[1],d:p[2],c:p[3],logo:p[4],on:!!ON[p[0]],by:ON[p[0]]||"",sug:SUG[p[0]]||""}; });
+  var TOOLS=(window.PIECES||[]).map(function(p){ return {s:p[0],n:p[1],d:p[5]||p[2],en:p[2],c:p[3],logo:p[4],on:!!ON[p[0]],by:ON[p[0]]||"",sug:SUG[p[0]]||""}; });
   var CATS=["الكل","المربوطة","مقترحة لك"].concat(
     ["التواصل","المبيعات والعملاء","المحاسبة","المدفوعات","التجارة الإلكترونية","دعم العملاء","التسويق","النماذج","المحتوى والملفات","الإنتاجية","البيانات والتقارير","الموارد البشرية","الذكاء الاصطناعي","أدوات المطوّرين","أخرى"]);
   var SOON=["قيود","سلة","زد","فودكس","ميسر","Unifonic","تابي","دفترة"];
@@ -308,7 +308,7 @@ var I = {
   }
   function tgrid(a,e){ return a.length?'<div class="tgrid">'+a.map(tcard).join("")+'</div>':'<div class="tempty">'+e+'</div>'; }
   function toolsHtml(){
-    var f=TOOLS.filter(function(t){return !tq||(t.n+" "+t.d+" "+t.s+" "+t.c).toLowerCase().indexOf(tq)>-1});
+    var f=TOOLS.filter(function(t){return !tq||(t.n+" "+t.d+" "+t.en+" "+t.s+" "+t.c).toLowerCase().indexOf(tq)>-1});
     var h='<div class="tools"><h1>الأدوات</h1><p class="sub">'+TOOLS.length+' أداة. اربط اللي تستخدمه، وموظفوك يشتغلون فيه — ولا يوصل موظف لأداة ما ربطتها أنت.</p>'+
       '<div class="tsearch"><span class="drop"></span><input id="tq" placeholder="ابحث… واتساب، قيود، HubSpot" value="'+tq+'"><kbd>/</kbd></div>'+
       '<div class="cats">'+CATS.map(function(c){return '<button class="cat" aria-pressed="'+(c===tcat)+'">'+c+'</button>'}).join("")+'</div>';
