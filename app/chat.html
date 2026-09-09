@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head>
+<head><script>try{if(!localStorage.getItem("siyadah_token")){location.replace("../auth.html");}}catch(e){}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>سيادة</title>
@@ -198,6 +198,15 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 .pin__k{font-family:var(--f-display);color:var(--ash-2);margin-inline-end:2px}
 .pin__meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .pin__meta::before{content:"·";margin-inline-end:6px;color:var(--ash-2)}
+/* لمسات دقيقة: زر أيقوني + رقاقة معلومة + تلميح ناعم */
+.pinbtn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;margin-inline-start:5px;border:0;background:none;color:var(--ash-2);border-radius:7px;cursor:pointer;vertical-align:-5px;transition:color .2s var(--ease),background .2s var(--ease)}
+.pinbtn:hover{color:var(--ink);background:var(--wash)}
+.mchip{display:inline-flex;align-items:center;gap:5px;color:var(--ash)}
+.mchip svg{opacity:.7;flex:none}
+.tip{position:relative}
+.tip::after{content:attr(data-tip);position:absolute;inset-block-end:calc(100% + 7px);inset-inline-start:50%;transform:translateX(-50%) translateY(3px);background:var(--ink);color:var(--paper);font-family:var(--f-display);font-size:.7rem;font-weight:500;padding:5px 9px;border-radius:8px;white-space:nowrap;pointer-events:none;opacity:0;box-shadow:0 8px 22px -12px rgba(10,10,10,.5);transition:opacity .18s var(--ease),transform .18s var(--ease);z-index:40}
+.tip:hover::after,.tip:focus-visible::after{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (hover:none){.tip::after{display:none}}
 .pin__r3 #instrTgl{margin-inline-start:auto;font-size:.78rem}
 .chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--hair);padding:0 7px;line-height:1.7;font-size:.72rem;color:var(--ink);border-radius:2px;background:var(--paper)}
 .chip img,.chip .gi{width:12px;height:12px;object-fit:contain;flex:none}
@@ -502,7 +511,7 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
         <button type="button" data-open="settings"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>الإعدادات</button>
         <button type="button" data-open="plan"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/></svg>الخطة</button>
         <div class="sep"></div>
-        <button type="button" style="color:var(--ash)"><svg class="ic" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M21 4v16"/></svg>تسجيل الخروج</button>
+        <button type="button" id="logoutBtn" style="color:var(--ash)"><svg class="ic" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M21 4v16"/></svg>تسجيل الخروج</button>
       </div>
       <div class="keys" id="keys" hidden>
         <ul>

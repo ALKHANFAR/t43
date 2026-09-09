@@ -342,7 +342,7 @@ var I = {
   }
   function pinHtml(e){
     var f=e.f;
-    return '<div class="pin"><div class="pin__r1"><span class="av">'+e.ini+'</span><div class="pin__t"><p class="pin__n">'+e.n+' <span>· '+e.r+'</span></p><div class="pin__s">'+e.since+'</div></div>'+
+    return '<div class="pin"><div class="pin__r1"><span class="av">'+e.ini+'</span><div class="pin__t"><p class="pin__n">'+e.n+' <span>· '+e.r+'</span> <button type="button" class="pinbtn tip" id="renameBtn" data-tip="إعادة تسمية" aria-label="إعادة تسمية '+e.n+'"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1L18 7l-3-3L5 15l-1 5z"/><path d="M13 6l3 3"/></svg></button></p><div class="pin__s">'+e.since+'</div></div>'+
       '<div class="pin__c">'+(e.wait?'<span class="pill">ينتظر قرارك '+e.wait+'</span>':'')+
       '<span class="swl" style="font-size:.8rem;color:var(--ash)"><span id="onLbl">'+(e.on?(f?'شغّالة':'شغّال'):(f?'متوقفة':'متوقف'))+'</span><button type="button" class="sw" id="onSw" role="switch" aria-checked="'+e.on+'" aria-label="تشغيل '+e.n+'"></button></span></div></div>'+
       /* الأرقام مطوية افتراضيًا: سطر ملخص من قيم الـ kpi + «التفاصيل» يفتح المربعات الأربعة */
@@ -350,7 +350,8 @@ var I = {
       '<button type="button" class="link" id="kpiTgl" aria-expanded="'+(kpiOpen===e.id)+'" aria-controls="kpiWrap">التفاصيل</button></div>'+
       '<div class="kpis" id="kpiWrap"'+(kpiOpen===e.id?'':' hidden')+'>'+e.kpi.map(function(k){ return '<div class="kpi"><span class="kpi__v num">'+k.v+'</span><span class="kpi__l">'+k.l+'<span class="kpi__t'+(k.ok?' kpi__t--ok':'')+'" title="عن الأسبوع الماضي">'+k.t+'</span></span></div>'; }).join("")+'</div>'+
       '<div class="pin__r3"><span class="pin__k">'+(f?'أدواتها':'أدواته')+'</span>'+e.tools.map(chipHtml).join("")+
-      '<span class="pin__meta">ساعات العمل: '+e.hours+' · '+(f?'تستأذنك':'يستأذنك')+' في القرارات الحساسة</span>'+
+      '<span class="mchip tip" data-tip="ساعات العمل'+(e.hours&&e.hours!=="—"?": "+e.hours:"")+'"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l3 2"/></svg>'+(e.hours&&e.hours!=="—"?'<span>'+e.hours+'</span>':'')+'</span>'+
+      '<span class="mchip tip" data-tip="'+(f?'تستأذنك':'يستأذنك')+' في القرارات الحساسة"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span>'+
       '<button type="button" class="link" id="instrTgl" aria-expanded="false" aria-controls="instrWrap">التعليمات</button></div></div>';
   }
   function toolNames(e){ return e.tools.map(function(s){return TN[s]||s}).join("، "); }
@@ -445,7 +446,7 @@ var I = {
              why:"ما أوصل لأي أداة ما ربطتها أنت." };
   }
   function pauseReply(e,on){
-    e.on=on; renderSide();
+    e.on=on; renderSide(); siyPatch(e.n,"status",on?"نشط":"متوقف");
     return { t:'<p>'+(on?e.v.resume:e.v.pause)+'</p>', why:on?"شغّلتني من المحادثة — نفس مفتاح التشغيل فوق.":"وقّفتني من المحادثة — نفس مفتاح التشغيل فوق." };
   }
   function fallbackReply(e,text){
@@ -487,6 +488,7 @@ var I = {
     if(isEmp()){ var e=emp(who); list=empThread(who); list.push({me:true,t:text,at:now()});
       $("#input").value=""; $("#input").style.height="auto"; renderThread();
       if(pendAns&&pendAns.who===who){ var p=pendAns; pendAns=null; resolveWait(e,list,p.mi,"كتبت الجواب",list[p.mi].wait.r[0],true); return; }
+      if(window.__SIY_REAL__){ siyChatReal(e,text,list); return; } /* رد فعلي من الخلفية */
       typeReply(e,list,function(){ return empReply(e,text); }); return; }
     list = chatId ? CHATS[chatId].msgs : (live.siyadah=live.siyadah||[]);
     if(!chatId && !list.length){ // أول رسالة تنشئ محادثة في السجل
@@ -496,8 +498,10 @@ var I = {
     renderSide();
     $("#input").value=""; $("#input").style.height="auto"; renderThread();
     setTimeout(function(){
-      if(w==="siyadah"&&/وش تعرف|ايش تعرف|تعرف عنا|الذاكرة/.test(text)) list.push({me:false,at:now(),t:memHtml(),why:"كل سطر في الذاكرة له مصدر — محادثة أو قاعدة كتبتها أنت."});
-      else if(w==="siyadah"&&isBuild(text)) list.push({me:false,plan:true,at:now(),t:"جهّزت ثلاثة. هذي خطتهم — ما يتحرك شيء قبل موافقتك:"});
+      if(w==="siyadah"&&window.__SIY_REAL__&&/وش صار|وش سوّى|وش سوى|اليوم|تقرير|الوضع|ملخص|سجل العمل|شنو صار/.test(text)) list.push({me:false,at:now(),t:siyWorkHtml(),why:"من سجل العمل الفعلي (جدول الإثبات) لشركتك — كل سطر بإثباته."});
+      else if(w==="siyadah"&&/وش تعرف|ايش تعرف|تعرف عنا|الذاكرة/.test(text)) list.push({me:false,at:now(),t:memHtml(),why:"كل سطر في الذاكرة له مصدر — محادثة أو قاعدة كتبتها أنت."});
+      else if(w==="siyadah"&&!window.__SIY_REAL__&&isBuild(text)) list.push({me:false,plan:true,at:now(),t:"جهّزت ثلاثة. هذي خطتهم — ما يتحرك شيء قبل موافقتك:"});
+      else if(w==="siyadah"&&window.__SIY_REAL__) list.push({me:false,at:now(),t:"<p>وصل. تقدر تسألني «وش صار اليوم؟» لسجل العمل الفعلي، أو تكلّم أي موظف مباشرة من القائمة.</p>",why:"سيادة هنا منسّق — العمل الفعلي يصير عند الموظفين، وكل نتيجة تنكتب في سجل الإثبات."});
       else list.push({me:false,at:now(),t:"<p>وصل. أجهّز لك الخطة، وما يتحرك شيء قبل موافقتك.</p>"});
       if(who===w) renderThread();
     },650);
@@ -698,8 +702,9 @@ var I = {
     ];
   }
   function triggerProactive(openThread){
+    if(window.__SIY_REAL__) return; /* الحساب الحقيقي: لا مبادرات وهمية */
     if(proFired) return; proFired=true;
-    var n=emp("noura"); n.wait++; PULSE.noura=1;
+    var n=emp("noura"); if(!n) return; n.wait++; PULSE.noura=1;
     CHATS["pn1"]={with:"noura",emp:"noura",t:"3 فواتير تعدّت 30 يوم",when:"today",msgs:[]};
     renderSide();
     setTimeout(function(){ PULSE={}; renderSide(); },3800); /* النبضة مرة واحدة ثم تهدأ */
@@ -724,6 +729,7 @@ var I = {
   /* كل نقرة داخل المحادثة — مستمع واحد */
   $("#thread").addEventListener("click",function(e){
     var t=e.target, list, mEl=t.closest(".m"), mi=mEl?+mEl.dataset.mi:-1;
+    if(t.closest("#renameBtn")){ renameEmp(); return; }
     var c=t.closest(".cardq"); if(c){ send(c.lastChild.textContent); return; }
     /* رقاقتا الافتتاحية: «شوف اللي ينتظرني» تفتح صاحب أكثر الانتظارات · «وش صار أمس؟» رد قصير من السجلات */
     var opb=t.closest(".opch");
@@ -781,15 +787,16 @@ var I = {
     if(t.closest("[data-save]")){ if(!isEmp()) return; var es=emp(who); list=empThread(who); var dm=list[mi]; if(!dm||!dm.diff||dm.saved) return;
       es.instr=(es.instr.replace(/\s+$/,"")+" "+dm.diff.add).trim(); if(dm.diff.hours) es.hours=dm.diff.hours; if(/النبرة: رسمية/.test(dm.diff.add)) es.tone=0; else if(/النبرة: ودّية/.test(dm.diff.add)) es.tone=1;
       es.ver++; dm.saved=es.ver; es.log.unshift([now(),"حدّثت تعليماتي (النسخة "+es.ver+"): "+dm.diff.add]);
+      siyPatch(es.n,"instructions",es.instr); if(es.tone!=null) siyPatch(es.n,"tone",es.tone===0?"رسمي":"ودّي");
       MEM.push({k:"قاعدة ل"+es.n,v:dm.diff.add,src:"من محادثة اليوم"}); renderMem(); /* القاعدة الجديدة تدخل الذاكرة الحيّة */
       renderThread(); typeReply(es,list,{t:'<p>حفظت. تسري من الرسالة الجاية — وحفظتها في الذاكرة.</p>', why:"النسخة "+es.ver+" من تعليماتي — تقدر ترجع للي قبلها من «التعليمات»، والقاعدة صارت في الإعدادات › الذاكرة."}); return; }
     /* «التفاصيل»: يفتح مربعات الأرقام الأربعة بدون إعادة رسم — ويرجع مطويًا مع كل زيارة */
     if(t.closest("#kpiTgl")){ var kw=$("#kpiWrap"), kb=$("#kpiTgl"); kw.hidden=!kw.hidden; kb.setAttribute("aria-expanded",String(!kw.hidden)); kpiOpen=kw.hidden?null:who; return; }
     if(t.closest("#instrTgl")){ var w=$("#instrWrap"), b=$("#instrTgl"); w.hidden=!w.hidden; b.setAttribute("aria-expanded",String(!w.hidden)); if(!w.hidden){ $("#thread").scrollTop=0; $("#instr").focus(); } return; }
-    if(t.closest("#onSw")){ var sw=$("#onSw"), eo=emp(who), v=sw.getAttribute("aria-checked")==="true"; sw.setAttribute("aria-checked",String(!v)); eo.on=!v; $("#onLbl").textContent=eo.on?(eo.f?"شغّالة":"شغّال"):(eo.f?"متوقفة":"متوقف"); renderSide(); return; }
+    if(t.closest("#onSw")){ var sw=$("#onSw"), eo=emp(who), v=sw.getAttribute("aria-checked")==="true"; sw.setAttribute("aria-checked",String(!v)); eo.on=!v; $("#onLbl").textContent=eo.on?(eo.f?"شغّالة":"شغّال"):(eo.f?"متوقفة":"متوقف"); renderSide(); siyPatch(eo.n,"status",eo.on?"نشط":"متوقف"); return; }
     if(t.closest("#instrSave")){ var e2=emp(who), nv=$("#instr").value.trim(); if(!nv||nv===e2.instr){ $("#instrF").firstChild.textContent="ما تغيّر شيء."; return; }
       var os=e2.instr.split(/(?<=[.؟!])\s+/), ns=nv.split(/(?<=[.؟!])\s+/), add=ns.filter(function(s){return os.indexOf(s)<0}).join(" "), del=os.filter(function(s){return ns.indexOf(s)<0}).join(" ");
-      e2.instr=nv; e2.ver++;
+      e2.instr=nv; e2.ver++; siyPatch(e2.n,"instructions",nv);
       list=empThread(who); list.push({me:true,t:"حدّث تعليماتك: «"+(nv.length>90?nv.slice(0,90).replace(/\s\S*$/,"")+"…":nv)+"»",at:now()});
       list.push({me:false,at:now(),t:"<p>قرأته. هذا اللي تغيّر عندي — والخطوط الحمراء كما هي:</p>",diff:{add:add||"—",del:del},saved:e2.ver,why:"النسخة "+e2.ver+" — الفرق سطرًا بسطر مع النسخة "+(e2.ver-1)+"."});
       renderThread(); typeReply(e2,list,{t:'<p>حفظت. تسري من الرسالة الجاية.</p>', why:"النسخة "+e2.ver+" من تعليماتي."}); return; }
@@ -872,6 +879,10 @@ var I = {
   /* ---------- قائمة الحساب ---------- */
   var pop=$("#pop");
   $("#meBtn").addEventListener("click",function(e){ e.stopPropagation(); pop.classList.toggle("on"); });
+  var lo=$("#logoutBtn"); if(lo) lo.addEventListener("click",function(){
+    try{ localStorage.removeItem("siyadah_token"); localStorage.removeItem("siyadah_company"); }catch(e){}
+    location.replace("../auth.html");
+  });
   document.addEventListener("click",function(e){ pop.classList.remove("on");
     if(palOpen&&!e.target.closest("#hq,#pal")) closePal();
     var b=e.target.closest("[data-open]"); if(!b) return; if(b.dataset.open==="tools") openTools(); else openSheet(b.dataset.open); });
@@ -934,7 +945,10 @@ var I = {
     var tg=e.target.closest("#memTgl");
     if(tg){ var L=$("#memList"); L.hidden=!L.hidden; tg.setAttribute("aria-expanded",String(!L.hidden)); if(!L.hidden) renderMem(); return; }
     var dx=e.target.closest("[data-mdel]");
-    if(dx){ MEM.splice(+dx.dataset.mdel,1); renderMem(); }
+    if(dx){ MEM.splice(+dx.dataset.mdel,1); renderMem(); return; }
+    var sb=e.target.closest("[data-sub]");
+    if(sb){ sb.textContent="قريبًا — الاشتراك المبكر"; sb.disabled=true;
+      var note=sb.parentNode.querySelector(".sub-note"); if(!note){ note=document.createElement("small"); note.className="sub-note"; note.style.cssText="display:block;margin-top:6px;color:var(--ash)"; note.textContent="الدفع (مدى/فيزا) قيد التفعيل — تواصل معنا للترقية في الوصول المبكر."; sb.parentNode.appendChild(note); } }
   });
 
   /* الخطة والاستخدام — كل شيء من PLAN + PRICING */
@@ -943,7 +957,7 @@ var I = {
     var p=PLAN, st=p.state, C=PRICING.credits, usedN=st==="over"?Math.max(p.actions.used,p.actions.limit):p.actions.used, pct=Math.min(100,Math.round(usedN/p.actions.limit*100));
     var used='<span class="num">'+fmt(usedN)+' / '+fmt(p.actions.limit)+'</span> إجراء';
     var h='';
-    if(st==="trial") h+=srow('الخطة','<div>تجربة · تنتهي خلال <span class="num">'+p.days+'</span> أيام · '+used+'</div><div class="acts"><button type="button" class="lnk lnk--fill">اختر خطتك</button></div>');
+    if(st==="trial") h+=srow('الخطة','<div>تجربة · تنتهي خلال <span class="num">'+p.days+'</span> أيام · '+used+'</div><div class="acts"><button type="button" class="lnk lnk--fill" data-sub="1">اختر خطتك</button></div>');
     else h+=srow('الخطة','<div><span class="price">'+p.name+' · <span class="num">'+p.price+'</span> ر.س / شهر <s class="num">'+p.list+'</s></span><span class="tag">الوصول المبكر</span></div>'+
       '<div class="acts"><button type="button" class="lnk">إدارة الاشتراك</button>'+
       (st==="pastdue"?'<small>المستحق <span class="num">'+p.due+'</span> ر.س</small><button type="button" class="lnk lnk--fill">أعد المحاولة</button>':'<small>يتجدد '+p.renews+'</small>')+'</div>');
@@ -979,7 +993,112 @@ var I = {
     if(e.key==="/"&&!typing&&!mod){ e.preventDefault(); openTools(); setTimeout(function(){ var q=$("#tq"); if(q) q.focus(); },30); }
   });
 
-  renderSide(); renderBar(); renderThread(); renderPlan();
+  /* ============ ربط البيانات الحقيقية من الخلفية (Dashboard API) ============
+     يقرأ الشركة من localStorage (وُضعت عند الدخول) ويطلب لوحة تلك الشركة:
+     الفريق الحقيقي، الذاكرة، ودماغ الشركة. عند الفشل يبقى العرض التجريبي كما هو. */
+  var SIY_API="https://activepieces-p8l1-455.up.railway.app/api/v1/webhooks/", SIY_DASH="92xa9nzXmRmK0x9gCwLVJ", SIY_CHAT="lH7b85a6a7aePEzc1Usrn", SIY_STATS="cYuBWThtjToSiiBLpeNk4", SIY_RENAME="n35k5AU24lwXMWWbfXH0S", SIY_PATCH="OoKtksTtH5bupaV2grwUh";
+  /* حفظ تعديل حقل موظف بالخلفية (تشغيل/إيقاف، التعليمات…) — صامت وأطلق-وانسَ، ما يعطّل الواجهة */
+  function siyPatch(empName, field, value){
+    if(!window.__SIY_REAL__) return; /* الحساب التجريبي: محلي فقط */
+    var company=""; try{ company=localStorage.getItem("siyadah_company")||""; }catch(x){}
+    if(!company||!empName) return;
+    fetch(SIY_API+SIY_PATCH+"/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({company_name:company,emp_name:empName,field:field,value:value})}).catch(function(){});
+  }
+  /* إعادة تسمية موظف — تُحفظ في جدول الفريق بالخلفية */
+  function renameEmp(){ var e=emp(who); if(!e) return;
+    var nn=(window.prompt("الاسم الجديد للموظف:", e.n)||"").trim(); if(!nn||nn===e.n) return;
+    var old=e.n;
+    function applyLocal(){ e.n=nn; e.ini=nn.slice(0,1)||e.ini; renderSide(); renderBar(); renderThread(); }
+    if(!window.__SIY_REAL__){ applyLocal(); return; }
+    var company=""; try{ company=localStorage.getItem("siyadah_company")||""; }catch(x){}
+    fetch(SIY_API+SIY_RENAME+"/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({company_name:company,old_name:old,new_name:nn})})
+      .then(function(r){return r.json();}).then(function(d){ if(d&&(d.ok===true||d.ok==="true")){ applyLocal(); } else { window.alert((d&&d.message)||"تعذّر تغيير الاسم"); } })
+      .catch(function(){ window.alert("تعذّر الاتصال — حاول مرة ثانية"); });
+  }
+  /* بطاقات أداء فعلية من جدول المحادثات — أرقام حقيقية لكل موظف بدل "—" */
+  function kpiFrom(s){ var t=(s.last_at||"").slice(11,16)||"—";
+    return [ {v:String(s.messages||0),l:"رسائل",t:"—"}, {v:String(s.client_msgs||0),l:"من العملاء",t:"—"},
+             {v:String(s.replies||0),l:"ردود",t:"—"}, {v:t,l:"آخر نشاط",t:"—"} ]; }
+  /* رد فعلي من الموظف عبر webhook المحادثة — يبني على دوره وقواعده ودماغ الشركة، ويُحفظ في جدول المحادثات */
+  function siyInject(e,list,ty,r){ r.me=false; r.at=now(); r.reveal=true; var i=list.indexOf(ty); if(i>-1) list.splice(i,1,r); else list.push(r); if(who===e.id) renderThread(); }
+  function siyChatReal(e,text,list){
+    var ty={me:false,typing:true,at:""}; list.push(ty); if(who===e.id) renderThread();
+    var company=""; try{ company=localStorage.getItem("siyadah_company")||""; }catch(x){}
+    fetch(SIY_API+SIY_CHAT+"/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({company_name:company,employee:e.n,message:text})})
+      .then(function(r){return r.json();})
+      .then(function(d){ siyInject(e,list,ty,{ t:'<p>'+esc((d&&d.reply)||"—")+'</p>',
+        why:"رد فعلي من "+e.n+" — مبني على دوره وقواعده ودماغ شركتك، ومحفوظ في سجل المحادثات." }); })
+      .catch(function(){ siyInject(e,list,ty,{t:'<p>تعذّر الاتصال بالخادم — حاول مرة ثانية.</p>'}); });
+  }
+  /* سجل العمل الفعلي من جدول الإثبات (recent_work في رد الـDashboard) */
+  function siyWorkHtml(){ var d=window.__SIY_DASH__, w=(d&&d.recent_work)||[];
+    if(!w.length) return "<p>ما فيه عمل مسجّل بعد — أول ما يشتغل فريقك، كل نتيجة تنكتب هنا بإثباتها.</p>";
+    return '<p>آخر عمل فعلي للفريق (<span class="num">'+(d.work_count||w.length)+'</span>):</p>'+w.map(function(x){
+      return '<div style="margin:8px 0;padding-inline-start:10px;border-inline-start:2px solid var(--hair)"><b>'+esc(x.subject||"مهمة")+'</b>'+
+        (x.priority?' <span class="msrc">· '+esc(x.priority)+'</span>':'')+
+        (x.message?'<div>'+esc(x.message)+'</div>':'')+
+        (x.proof?'<div class="msrc">✓ '+esc(x.proof)+'</div>':'')+'</div>';
+    }).join("");
+  }
+  var TOOL_SLUG={ "واتساب بزنس":"whatsapp","واتساب":"whatsapp","التقويم":"google-calendar","Wafeq":"wafeq","قيود/Wafeq":"wafeq",
+    "شات الموقع":"site-chat","Gmail":"gmail","لينكدإن":"linkedin","إنستغرام":"instagram-business",
+    "Google Sheets":"google-sheets","Google Docs":"google-docs","HubSpot":"hubspot" };
+  function siyTone(t){ return /رسمي/.test(t||"")?0:1; }
+  function siyAuto(a){ return /يستأذن/.test(a||"")?0:1; }
+  function mapEmployee(m,i){
+    var rules=(m.rules||[]).map(function(r){return [String(r),true];}); if(!rules.length) rules=[["يشتغل ضمن تعليماتك",true]];
+    var role=m.role||"موظف";
+    return { id:"e"+i, n:m.name||("موظف "+(i+1)), r:role, ini:m.initial||(m.name||"•").slice(0,1),
+      f:i%2===1, on:/نشط|active/.test(m.status||""), wait:0, waits:[],
+      since:(/نشط|active/.test(m.status||"")?"شغّال الآن":"متوقف"), ver:1,
+      kpi:[{v:"—",l:"مهام اليوم",t:"—"},{v:"—",l:"قيد التنفيذ",t:"—"},{v:"—",l:"مكتملة",t:"—"},{v:"—",l:"بانتظارك",t:"—"}],
+      log:[["—","جاهز — ينتظر أول مهمة"]], auto:siyAuto(m.autonomy), tone:siyTone(m.tone), hours:"—",
+      rules:rules, tools:(m.tools||[]).map(function(t){return TOOL_SLUG[t]||String(t);}),
+      instr:m.instructions||"", how:(m.how||[]),
+      v:{ hi:"أبشر.", q:"أكمّل على نفس النهج؟", ack:"وصلني. أتأكد قبل ما أطبّق:", ackq:"قاعدة دائمة، ولا لهالمرة بس؟",
+          why:{ subj:role, act:"اشتغلت حسب تعليماتك وقواعدك", log:0, rule:0, extra:"وكل حركة راجعة لسطر كتبته أنت", retry:"أعيد المحاولة الحين؟" },
+          pause:"وقفت. ما أتحرك لين ترجعني.", resume:"رجعت أشتغل." } };
+  }
+  function siyIdentity(co,brain){
+    try{ var sm=document.querySelector("#meBtn .me__n small"); if(sm) sm.textContent=co+" · نسخة الوصول المبكر";
+      var av=document.querySelector("#meBtn .av"); if(av) av.textContent=co.slice(0,1);
+      var ni=document.querySelector('input[aria-label="اسم الشركة"]'); if(ni) ni.value=co;
+      var di=document.querySelector('input[aria-label="وش تقدمون — سطر واحد"]'); if(di&&brain&&brain.description) di.value=brain.description;
+    }catch(e){}
+  }
+  function siyHydrate(done){
+    var company=""; try{ company=localStorage.getItem("siyadah_company")||""; }catch(e){}
+    if(!company){ done(); return; }
+    var finished=false, ctrl=setTimeout(function(){ finish(null); }, 6000);
+    function finish(data){ if(finished) return; finished=true; clearTimeout(ctrl);
+      /* أي مستخدم مسجّل دخوله يدخل الوضع الحقيقي دائمًا — لا بيانات تجريبية أبدًا،
+         حتى لو فريقه فاضٍ (حساب جديد، حيث الداشبورد ترجع ok:false بلا دماغ).
+         العرض التجريبي ما يظهر إلا لو فشل الاتصال فعليًا (data=null). */
+      if(data && (data.ok || data.company)){
+        var team=data.team||[];
+        EMPS.length=0; team.forEach(function(m,i){ EMPS.push(mapEmployee(m,i)); });
+        MEM.length=0; (data.memory||[]).forEach(function(x){ MEM.push({k:x.topic,v:x.fact,src:x.source||("مضافة "+(x.added_at||""))}); });
+        Object.keys(CHATS).forEach(function(k){ delete CHATS[k]; }); /* الحساب الحقيقي يبدأ نظيفًا */
+        window.__SIY_REAL__=true; window.__SIY_BRAIN__=data.brain||null; window.__SIY_DASH__=data; window.__SIY_EMPTY__=!team.length;
+        try{ PLAN.state="trial"; PLAN.employees.used=(data.team_count!=null?data.team_count:EMPS.length);
+          PLAN.actions.used=data.work_count||0; PLAN.credit={sar:0,actions:0}; PLAN.invoices=[]; }catch(e){}
+        siyIdentity(data.company||company, data.brain);
+        if(!team.length){ done(); return; } /* حساب جديد بلا فريق — لا إحصاءات */
+        fetch(SIY_API+SIY_STATS+"/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({company_name:company})})
+          .then(function(r){return r.json();}).then(function(st){
+            if(st&&st.ok&&st.stats){ window.__SIY_STATS__=st;
+              EMPS.forEach(function(e){ var s=st.stats[e.n]; if(s){ e.kpi=kpiFrom(s);
+                if(s.last_at){ e.since="آخر نشاط "+s.last_at.slice(0,10); e.log=[[s.last_at.slice(11,16),"آخر رسالة في محادثات "+e.n+" ("+(s.messages||0)+" رسالة)"]]; } } });
+              try{ PLAN.actions.used=st.total_messages||PLAN.actions.used; }catch(e){} }
+            done();
+          }).catch(function(){ done(); });
+        return;
+      }
+      done();
+    }
+    fetch(SIY_API+SIY_DASH+"/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({company_name:company})})
+      .then(function(r){return r.json();}).then(finish).catch(function(){ finish(null); });
+  }
 
   /* روابط مباشرة (للنموذج والعروض): #e=saad · #say=وش صار اليوم؟ · #plan=trial|near|over|pastdue · #pal=1 · #tools=1
      وللعروض الحية: #run=build (يوافق على خطة c1 ويشغّل الفريق) · #run=collect (خطوتا نورة عند نورة) · #run=proactive (نورة تبادر فورًا) */
@@ -998,7 +1117,18 @@ var I = {
       go("noura"); playEvents(empThread("noura"),collectEvents()); }
     if(q.get("run")==="proactive"&&!ranDemo.proactive){ ranDemo.proactive=true; triggerProactive(true); } /* للعروض: نورة تبادر فورًا وتنفتح محادثتها */
   }
-  route(); window.addEventListener("hashchange",route);
-  /* نورة تبادر مرة لكل تحميل: بعد ~6 ث — وفورًا لمن يفضّل تقليل الحركة (الرابط #run=proactive شغّلها فوق لو وُجد) */
-  setTimeout(function(){ triggerProactive(false); }, reduced()?0:6000);
+  function siyBoot(){
+    /* حساب جديد بلا فريق: رسالة ترحيب واضحة تدعوه لبناء فريقه — بدل أي بيانات تجريبية */
+    if(window.__SIY_REAL__ && window.__SIY_EMPTY__){
+      var co=""; try{ co=localStorage.getItem("siyadah_company")||""; }catch(e){}
+      live.siyadah=[{me:false,at:now(),reveal:true,
+        t:"<p>أهلًا بك في <b>"+esc(co||"سيادة")+"</b> 👋</p><p>فريقك لسه فاضٍ. عطني موقع شركتك أو وصف قصير لخدماتكم، وأبني لك موظفين يعرفون شركتك ويشتغلون داخل أدواتك.</p><p>اكتب مثلًا: «موقعنا example.com، نبي موظف متابعة مبيعات وموظف دعم».</p>",
+        why:"ما فيه بيانات وهمية — كل شي تشوفه يُبنى من معلومات شركتك أنت."}];
+    }
+    renderSide(); renderBar(); renderThread(); renderPlan();
+    route(); window.addEventListener("hashchange",route);
+    /* المبادرة التلقائية للعرض التجريبي فقط — الحساب الحقيقي لا يُظهر مبادرات وهمية */
+    if(!window.__SIY_REAL__) setTimeout(function(){ triggerProactive(false); }, reduced()?0:6000);
+  }
+  siyHydrate(siyBoot);
 })();

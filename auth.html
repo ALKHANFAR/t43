@@ -1,0 +1,134 @@
+<!doctype html><html lang="ar" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>سيادة — الدخول</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root{
+  --paper:#FFFFFF; --wash:#F7F7FB; --ink:#0A0A0A; --ash:#6E6E6C; --hair:#E0E1E8;
+  --accent:#0B844B; --accent-lt:#40E799; --accent-wash:#F2FAF6; --ok:#12784F;
+  --f-display:"Readex Pro", system-ui, sans-serif; --f-body:"IBM Plex Sans Arabic", system-ui, sans-serif;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--wash);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:32px 20px}
+.card{width:100%;max-width:420px;background:var(--paper);border:1px solid var(--hair);border-radius:22px;box-shadow:0 1px 2px rgba(10,10,10,.04),0 18px 50px -28px rgba(10,10,10,.22);padding:40px 34px 34px}
+/* الشعار */
+.mark{display:flex;flex-direction:column;align-items:center;gap:12px;margin-block-end:26px}
+.emblem{width:46px;height:46px;border-radius:14px;background:var(--ink);color:var(--accent-lt);display:grid;place-items:center;box-shadow:0 8px 22px -10px rgba(11,132,75,.55)}
+.emblem svg{width:24px;height:24px}
+.wordmark{font-family:var(--f-display);font-weight:600;font-size:1.15rem;letter-spacing:.01em;line-height:1}
+.wordmark small{display:block;font-size:.62rem;letter-spacing:.22em;color:var(--ash);margin-block-start:5px;text-align:center}
+.eyebrow{font-family:var(--f-display);font-size:.72rem;letter-spacing:.06em;color:var(--accent);text-align:center;margin:0}
+h1{font-family:var(--f-display);font-weight:600;font-size:1.55rem;line-height:1.3;text-align:center;margin:.35em 0 .15em}
+.sub{color:var(--ash);text-align:center;font-size:.94rem;margin-block-end:28px}
+.field{margin-block-end:16px}
+.field label{display:block;font-family:var(--f-display);font-size:.8rem;color:var(--ash);margin-block-end:8px}
+.ip{position:relative}
+.ip svg{position:absolute;inset-block-start:50%;inset-inline-start:14px;transform:translateY(-50%);width:17px;height:17px;color:var(--ash);pointer-events:none;transition:color .2s var(--ease)}
+.field input{width:100%;padding:13px 15px;padding-inline-start:42px;border:1px solid var(--hair);border-radius:12px;background:var(--paper);font:inherit;color:inherit;transition:border-color .2s var(--ease),box-shadow .2s var(--ease)}
+.field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-wash)}
+.field input:focus ~ svg{color:var(--accent)}
+.btn{display:inline-flex;width:100%;align-items:center;justify-content:center;gap:10px;padding:14px 26px;margin-block-start:10px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font-family:var(--f-display);font-size:.98rem;font-weight:500;border-radius:12px;cursor:pointer;transition:all .25s var(--ease)}
+.btn:hover{background:var(--paper);color:var(--ink)}
+.btn:disabled{opacity:.55;cursor:default}
+.toggle{text-align:center;margin-block-start:20px;font-size:.92rem;color:var(--ash)}
+.toggle a{color:var(--accent);cursor:pointer;font-weight:500}
+.msg{margin-block-start:16px;padding:11px 14px;border-radius:10px;font-size:.9rem;display:none}
+.msg.err{background:#FCEEEE;color:#B42318;display:block}
+.msg.ok{background:var(--accent-wash);color:var(--ok);display:block}
+.hide{display:none}
+.orbar{display:flex;align-items:center;gap:12px;color:var(--ash);font-size:.8rem;font-family:var(--f-display);margin:22px 0 16px}
+.orbar::before,.orbar::after{content:"";flex:1;height:1px;background:var(--hair)}
+#gbtn{display:flex;justify-content:center}
+/* شريط الأدوات كإثبات */
+.trust{width:100%;max-width:420px;text-align:center}
+.trust p{font-family:var(--f-display);font-size:.72rem;letter-spacing:.04em;color:var(--ash);margin:0 0 12px}
+.logos{display:flex;align-items:center;justify-content:center;gap:22px;flex-wrap:wrap}
+.logos img{width:24px;height:24px;object-fit:contain;filter:grayscale(1);opacity:.6;transition:filter .25s var(--ease),opacity .25s var(--ease)}
+.logos img:hover{filter:none;opacity:1}
+.foot{font-size:.8rem;color:var(--ash);text-align:center}
+.foot a{color:var(--ash)}
+</style></head><body>
+<div class="card">
+  <div class="mark">
+    <span class="emblem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span>
+    <span class="wordmark">سيادة<small>SIYADAH AI</small></span>
+  </div>
+  <p class="eyebrow" id="eyebrow">بيتا خاصة — 500 شركة فقط</p>
+  <h1 id="ttl">تسجيل الدخول</h1>
+  <p class="sub" id="sub">ادخل لحسابك، وشوف فريقك يشتغل.</p>
+  <div class="field hide" id="coRow"><label>اسم الشركة</label><div class="ip"><input id="company" placeholder="شركتك"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M6 21V7l6-4 6 4v14M10 9h.01M14 9h.01M10 13h.01M14 13h.01M10 17h4"/></svg></div></div>
+  <div class="field"><label>البريد الإلكتروني</label><div class="ip"><input id="email" type="email" placeholder="you@company.com" autocomplete="email"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></div></div>
+  <div class="field"><label>كلمة المرور</label><div class="ip"><input id="password" type="password" placeholder="••••••••" autocomplete="current-password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></div></div>
+  <button class="btn" id="go">دخول</button>
+  <div id="msg" class="msg"></div>
+  <div id="gwrap" hidden><div class="orbar">أو المتابعة عبر</div><div id="gbtn"></div></div>
+  <div class="toggle" id="tg">ما عندك حساب؟ <a id="sw">أنشئ حسابًا</a></div>
+</div>
+<div class="trust">
+  <p>يعمل داخل أدواتك التي تستخدمها أصلًا</p>
+  <div class="logos">
+    <img src="https://cdn.activepieces.com/pieces/whatsapp.png" alt="WhatsApp" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <img src="https://cdn.activepieces.com/pieces/gmail.png" alt="Gmail" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <img src="https://cdn.activepieces.com/pieces/google-sheets.png" alt="Google Sheets" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <img src="https://cdn.activepieces.com/pieces/hubspot.png" alt="HubSpot" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <img src="https://cdn.activepieces.com/pieces/slack.png" alt="Slack" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <img src="https://cdn.activepieces.com/pieces/stripe.png" alt="Stripe" crossorigin="anonymous" referrerpolicy="no-referrer">
+  </div>
+</div>
+<p class="foot"><a href="ar.html">← رجوع للصفحة الرئيسية</a></p>
+<script>
+var API="https://activepieces-p8l1-455.up.railway.app/api/v1/webhooks/";
+var SIGNUP="CL4d7eDq5yk0x3OEFqj6m", LOGIN="23ZWl3GlUCrEUFBCUl4LT", mode="login";
+var $=function(id){return document.getElementById(id)};
+function setMode(m){ mode=m;
+  $("ttl").textContent = m==="login"?"تسجيل الدخول":"إنشاء حساب جديد";
+  $("sub").textContent = m==="login"?"ادخل لحسابك، وشوف فريقك يشتغل.":"دقيقة واحدة — ونبدأ نبني فريقك.";
+  $("go").textContent = m==="login"?"دخول":"إنشاء حساب";
+  $("coRow").className = m==="login"?"field hide":"field";
+  $("password").setAttribute("autocomplete", m==="login"?"current-password":"new-password");
+  $("tg").innerHTML = m==="login"?'ما عندك حساب؟ <a id="sw">أنشئ حسابًا</a>':'عندك حساب؟ <a id="sw">سجّل دخولك</a>';
+  $("sw").onclick=function(){ setMode(mode==="login"?"signup":"login"); $("msg").className="msg"; };
+}
+$("sw").onclick=function(){ setMode("signup"); };
+$("go").onclick=function(){
+  var email=$("email").value.trim(), pw=$("password").value, co=$("company").value.trim();
+  if(!email||!pw){ show("err","اكتب الإيميل وكلمة المرور"); return; }
+  $("go").disabled=true; $("go").textContent="لحظة…";
+  var body = mode==="login"?{email:email,password:pw}:{email:email,password:pw,company_name:co};
+  fetch(API+(mode==="login"?LOGIN:SIGNUP)+"/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+  .then(function(r){return r.json()}).then(function(d){
+    $("go").disabled=false; $("go").textContent = mode==="login"?"دخول":"إنشاء حساب";
+    if(d && (d.ok===true||d.ok==="true")){
+      try{ localStorage.setItem("siyadah_token", d.token); localStorage.setItem("siyadah_company", d.company||""); }catch(e){}
+      show("ok", d.message||"تم"); setTimeout(function(){ location.href="app/chat.html"; }, 600);
+    } else { show("err", (d&&d.message)||"تعذّر — تأكد من بياناتك"); }
+  }).catch(function(){ $("go").disabled=false; $("go").textContent="دخول"; show("err","خطأ اتصال، حاول مرة ثانية"); });
+};
+function show(t,m){ var e=$("msg"); e.className="msg "+t; e.textContent=m; }
+$("password").addEventListener("keydown",function(e){ if(e.key==="Enter") $("go").click(); });
+
+/* ===== الدخول بجوجل (Google Sign-In) ===== */
+/* الصق Google OAuth Client ID هنا لتفعيل الزر (ينشأ من Google Cloud Console، وأضف https://frontend-455-455.up.railway.app في Authorized JavaScript origins). حتى ذلك الحين الزر مخفي. */
+var GOOGLE_CLIENT_ID="";
+var GOOGLE="xnkTa9SXTFBGJAsDu7k5D";
+function onGoogle(resp){
+  var co=$("company").value.trim();
+  show("ok","لحظة… نتحقق من جوجل");
+  fetch(API+GOOGLE+"/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id_token:resp.credential, company_name:co})})
+  .then(function(r){return r.json();}).then(function(d){
+    if(d&&(d.ok===true||d.ok==="true")){ try{ localStorage.setItem("siyadah_token",d.token); localStorage.setItem("siyadah_company",d.company||""); }catch(e){}
+      show("ok", d.message||"تم"); setTimeout(function(){ location.href="app/chat.html"; }, 600); }
+    else show("err",(d&&d.message)||"تعذّر الدخول عبر جوجل");
+  }).catch(function(){ show("err","خطأ اتصال، حاول مرة ثانية"); });
+}
+if(GOOGLE_CLIENT_ID){
+  var gs=document.createElement("script"); gs.src="https://accounts.google.com/gsi/client"; gs.async=true; gs.defer=true;
+  gs.onload=function(){ try{
+    google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID, callback:onGoogle});
+    google.accounts.id.renderButton($("gbtn"),{theme:"outline",size:"large",width:320,text:"continue_with",shape:"pill",locale:"ar"});
+    $("gwrap").hidden=false;
+  }catch(e){} };
+  document.head.appendChild(gs);
+}
+</script></body></html>
