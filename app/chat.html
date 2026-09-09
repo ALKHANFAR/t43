@@ -463,6 +463,14 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 /* ذيل الاستشهاد: من وين جا الجواب وكم الثقة */
 .cite{border-block-start:1px solid var(--hair);padding-block-start:8px;margin-block-start:12px !important;color:var(--ash);font-size:.78rem}
 .msrc{color:var(--ash-2);font-size:.78rem}
+.siyrefs{margin-top:6px;color:var(--ash-2);font-size:.72rem}
+.siyrefs summary{display:inline-flex;align-items:center;gap:4px;cursor:pointer;list-style:none}
+.siyrefs summary::-webkit-details-marker{display:none}
+.siyrefs summary:before{content:"+";font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.siyrefs[open] summary:before{content:"−"}
+.siyrefs__list{display:flex;flex-wrap:wrap;gap:5px 12px;margin-top:5px}
+.siyrefs__list span{display:inline-flex;gap:4px;align-items:baseline}
+.siyrefs code{direction:ltr;unicode-bidi:isolate;font-size:.7rem;color:var(--ink);background:var(--paper-2);padding:1px 4px;border-radius:4px}
 /* قائمة الذاكرة داخل الإعدادات */
 .mem{list-style:none;margin:10px 0 0;padding:0;max-width:480px}
 .mem li{display:flex;align-items:baseline;gap:8px;padding:7px 0;border-block-end:1px solid var(--hair);font-size:.85rem;color:var(--ink)}
@@ -542,7 +550,7 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 
     <div class="comp"><div class="comp__in">
       <div class="box">
-        <button type="button" class="ico" aria-label="إرفاق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12l-8.5 8.5a5 5 0 01-7-7L14 5a3.5 3.5 0 015 5l-8.5 8.5a2 2 0 01-3-3L15 8"/></svg></button>
+        <button type="button" class="ico" id="attachBtn" aria-label="إرفاق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12l-8.5 8.5a5 5 0 01-7-7L14 5a3.5 3.5 0 015 5l-8.5 8.5a2 2 0 01-3-3L15 8"/></svg></button>
         <textarea id="input" rows="1" placeholder="اكتب لسيادة…" aria-label="اكتب رسالة"></textarea>
         <button type="button" class="send" id="send" aria-label="إرسال"><span class="drop"></span></button>
       </div>
@@ -571,9 +579,9 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
       <div class="pane on" id="pane-settings">
         <div class="srow"><div>الشركة<small>موظفوك يعرّفون أنفسهم بهذا</small></div><div><input class="ctrl" type="text" value="شركة الأفق" aria-label="اسم الشركة"><input class="ctrl" type="text" value="حلول توصيل للمطاعم في الرياض وجدة" aria-label="وش تقدمون — سطر واحد"></div></div>
         <div class="srow"><div>الذاكرة وقاعدة المعرفة<small>من هنا يجاوب فهد — والقواعد اللي حفظتها من محادثاتك</small></div><div style="font-size:.85rem;color:var(--ash)">3 ملفات · رابطان &nbsp;<button type="button" class="lnk" id="memTgl" aria-expanded="false" aria-controls="memList">إدارة</button><div id="memList" hidden></div></div></div>
-        <div class="srow"><div>الإشعارات<small>واتساب + بريد</small></div><div class="swl"><button type="button" class="swm" role="switch" aria-checked="true" aria-label="الإشعارات"></button>ملخص يومي + تنبيه عند «ينتظر قرارك»</div></div>
+        <div class="srow"><div>الإشعارات<small>واتساب + بريد</small></div><div class="swl"><button type="button" class="swm" id="notificationSwitch" role="switch" aria-checked="true" aria-label="الإشعارات"></button>ملخص يومي + تنبيه عند «ينتظر قرارك»</div></div>
         <div class="srow"><div>الخطة والاستخدام</div><div style="font-size:.85rem;color:var(--ash)"><span id="setPlanSum"></span> &nbsp;<button type="button" class="lnk" data-open="plan">عرض</button></div></div>
-        <div class="srow"><div>البيانات<small>ما تدرّب أي نموذج</small></div><div class="acts" style="margin:0"><button type="button" class="lnk">تصدير</button><button type="button" class="lnk" style="color:var(--bad);border-color:var(--bad)">حذف الحساب</button></div></div>
+        <div class="srow"><div>البيانات<small id="dataDescription">ما تدرّب أي نموذج</small></div><div class="acts" style="margin:0"><button type="button" class="lnk" id="exportBtn">تصدير</button><button type="button" class="lnk" id="deleteAccountBtn" style="color:var(--bad);border-color:var(--bad)">حذف الحساب</button></div></div>
       </div>
 
       <div class="pane" id="pane-plan"></div>

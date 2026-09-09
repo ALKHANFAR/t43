@@ -7,9 +7,10 @@
     "validate": "html-validate index.html ar.html integrations.html demo.html demo-en.html privacy.html 404.html app/chat.html app/onboard.html",
     "a11y": "node scripts/a11y.js index.html ar.html integrations.html privacy.html app/chat.html app/onboard.html",
     "lint:js": "node --check site.js && node --check integrations.js && node --check demo.js && node --check demo-en.js && node --check app/chat.js && node --check app/onboard.js",
-    "test": "npm run lint:js && npm run catalog && npm run validate && npm run a11y && npm run a11y:chrome",
+    "test": "npm run test:runtime && npm run lint:js && npm run catalog && npm run validate && npm run a11y && npm run a11y:chrome",
     "a11y:chrome": "node scripts/a11y-lh.mjs index.html ar.html integrations.html demo.html demo-en.html privacy.html 404.html app/chat.html app/onboard.html",
-    "catalog": "node scripts/check-pieces.js"
+    "catalog": "node scripts/check-pieces.js",
+    "test:runtime": "node --test scripts/chat-runtime.test.mjs"
   },
   "devDependencies": {
     "axe-core": "^4.10.0",
