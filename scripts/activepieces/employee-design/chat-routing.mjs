@@ -18,7 +18,7 @@ export function designWorkView455(row){
   if(!row.data.built?.structureVerified||row.data.built.status!=='DISABLED'||!row.data.built.flowId)throw Error('design_ready_without_build_proof');
   return {status:'succeeded',reply:'بُنيت مسودة «'+row.data.plan.name+'» وتم التحقق من خطواتها. افتح الموظفون والربط لمراجعتها وإعداد الحسابات.'};
  }
- if(row.state==='needs_configuration')return {status:'awaiting_input',reply:'راجعت هدفك، وهذه نقاط لم يثبت اكتمالها بعد: '+JSON.stringify(row.data.plan.missing?.length?row.data.plan.missing:row.data.plan.issues)};
+ if(row.state==='needs_configuration')return {status:'awaiting_input',reply:'راجعت هدفك، وهذه نقاط لم يثبت اكتمالها بعد: '+(row.data.plan.missing?.length?row.data.plan.missing:row.data.plan.issues||[]).map(x=>typeof x==='string'?x:x.reason||'تحتاج إحدى خطوات الموظف إلى مراجعة؛ التفاصيل في بطاقة الموظف.').join('\n')};
  if(row.state==='failed')return {status:'failed',reply:'تعذر إكمال الطلب. حفظت حالة التعثر للمراجعة.'};
  return {status:'running',reply:row.state==='routing'?'أراجع رسالتك وسياق شركتك.':'أحلل الهدف وأتحقق من عمليات الأدوات المناسبة.'};
 }

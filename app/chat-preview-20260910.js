@@ -1072,6 +1072,7 @@ var I = {
       var data=await response.json();
       if(!data||data.ok!==true) throw new Error("تعذّر إتمام الطلب. لم يتم تأكيد نجاحه.");
       if(body.op==="work"&&!(data.request_status==="not_observed"&&data.work_status==="unknown")&&!["queued","running","succeeded","failed","awaiting_input","cancelled"].includes(data.work_status)) throw new Error("وصلت حالة عمل غير مكتملة؛ لم نتأكد من النتيجة.");
+      if(window.SIYADAH_DESIGN_RESPONSE)data=await window.SIYADAH_DESIGN_RESPONSE(body,data);
       return data;
     }catch(e){ if(e.name==="AbortError") throw new Error("تأخر الرد. أعد المحاولة بنفس الطلب للتحقق من حالته."); throw e; }
     finally{clearTimeout(timer);}

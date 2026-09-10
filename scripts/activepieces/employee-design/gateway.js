@@ -171,6 +171,7 @@ function validateDesign(plan,needs,contracts,goal,companyContext={}){
   selected.push({...s,pieceVersion:c.version,authRequired:c.authRequired});
  }
  for(const n of needs)if(n.required!==false&&!all.some(s=>s.covers.includes(n.id)))issues.push({type:'uncovered_need',need:n.id});
+ for(const n of needs.filter(n=>n.kind==='mapping'&&n.required!==false))if(!all.some(s=>s.kind==='action'&&s.covers.includes(n.id)&&/\{\{[\s\S]*?\}\}/.test(JSON.stringify(s.input))))issues.push({type:'mapping_not_implemented',need:n.id});
  for(const e of plan.evidence){if(!e.metric||!e.check||!all.some(s=>s.id===e.step))throw Error('evidence_contract_invalid');const step=all.find(s=>s.id===e.step);const c=contracts.find(c=>c.pieceName===step.pieceName&&c.kind===step.kind&&c.name===(step.actionName||step.triggerName));const paths=c.outputPaths||outputPaths(c.outputSchema);if(!e.output_path||!paths.includes(e.output_path))issues.push({type:'evidence_path_unverified',step:e.step,path:e.output_path||null});}
  return {...plan,selected,issues,status:issues.length||plan.missing.length?'needs_configuration':'awaiting_connections',runtimeVerified:false};
 }
@@ -241,8 +242,10 @@ async function designEmployee455({goal,companyContext,catalogRows,call,onPhase=a
  const menu=expandOperationMenu455(catalogIndex,[...unique.values()]);
  if(menu.length>400)throw Error('operation_menu_budget');if(!menu.length)throw Error('no_candidate_operations');
  await onPhase('selecting_operations');
- const selection=await ai('اختر العمليات الفعلية التي يحتاجها الموظف من هذه القائمة. نتيجة البحث الأولية ليست قائمة نهائية: راجع عمليات النظام المرتبطة لإكمال المسار مثل إنشاء الحملة ثم إرسالها ثم قراءة نتيجتها. لا تعتبر كتابة نص إعلان إنشاء إعلان مدفوع، ولا إنشاء حملة بريدية إرسالًا لها، ولا فتح البريد عملية بيع. لا تعتبر أي مخرجات دليلًا على إيراد دون ربطها بطلب مكتمل. افصل القدرات غير الموجودة في gaps، ولا تستبدلها بعملية متشابهة الاسم. اختر فقط مفاتيح موجودة، ومن 1 إلى 20 عملية ضرورية تشمل مصدر التشغيل والفعل والإثبات. لا تضف فعلًا خارج هدف العميل. القائمة تشمل أنواع trigger وaction.\n'+JSON.stringify({goal,companyContext,needs:query.needs,menu}),'selection',{menu,needs:query.needs});
+ const operationNeeds=query.needs.filter(n=>n.kind!=='mapping');
+ const selection=await ai('اختر العمليات الفعلية التي يحتاجها الموظف من هذه القائمة. نتيجة البحث الأولية ليست قائمة نهائية: راجع عمليات النظام المرتبطة لإكمال المسار مثل إنشاء الحملة ثم إرسالها ثم قراءة نتيجتها. لا تعتبر كتابة نص إعلان إنشاء إعلان مدفوع، ولا إنشاء حملة بريدية إرسالًا لها، ولا فتح البريد عملية بيع. لا تعتبر أي مخرجات دليلًا على إيراد دون ربطها بطلب مكتمل. افصل القدرات غير الموجودة في gaps، ولا تستبدلها بعملية متشابهة الاسم. اختر فقط مفاتيح موجودة، ومن 1 إلى 20 عملية ضرورية تشمل مصدر التشغيل والفعل والإثبات. لا تضف فعلًا خارج هدف العميل. القائمة تشمل أنواع trigger وaction. ربط الحقول مسؤولية المخطط اللاحق وليس أداة مستقلة؛ لا تضع غيابه في gaps.\n'+JSON.stringify({goal,companyContext,needs:operationNeeds,menu}),'selection',{menu,needs:operationNeeds});
  const selectedKeys=[...new Set(selection.selected.map(s=>s.key))];if(selectedKeys.length>20||selectedKeys.some(k=>!menu.some(m=>m.key===k)))throw Error('operation_selection_invalid');
+ if(selection.gaps.some(g=>!operationNeeds.some(n=>n.id===g.need_id))||selection.selected.some(x=>!Array.isArray(x.need_ids)||x.need_ids.some(id=>!operationNeeds.some(n=>n.id===id))))throw Error('operation_need_invalid');
  query.capability_gaps=selection.gaps;query.operation_selection=selection.selected;
  if(!selectedKeys.length)return{original_goal:goal,name:'قدرات غير متاحة',summary:'لا توجد عمليات موثقة كافية لبناء الهدف.',status:'needs_configuration',selected:[],steps:[],bindings:[],evidence:[],issues:[],missing:selection.gaps.map(g=>g.reason),needs:query.needs,discovery:discoveries,contracts:[],knowledge:companyContext,runtimeVerified:false};
  unique.clear();for(const key of selectedKeys){const d=catalogIndex.documents.find(d=>d.key===key);unique.set(key,{key,pieceName:d.pieceName,kind:d.kind,name:d.name,curated:{description_ar:d.row.desc_ar,roles:d.row.roles}});}
@@ -288,7 +291,7 @@ function designWorkView455(row){
   if(!row.data.built?.structureVerified||row.data.built.status!=='DISABLED'||!row.data.built.flowId)throw Error('design_ready_without_build_proof');
   return {status:'succeeded',reply:'بُنيت مسودة «'+row.data.plan.name+'» وتم التحقق من خطواتها. افتح الموظفون والربط لمراجعتها وإعداد الحسابات.'};
  }
- if(row.state==='needs_configuration')return {status:'awaiting_input',reply:'راجعت هدفك، وهذه نقاط لم يثبت اكتمالها بعد: '+JSON.stringify(row.data.plan.missing?.length?row.data.plan.missing:row.data.plan.issues)};
+ if(row.state==='needs_configuration')return {status:'awaiting_input',reply:'راجعت هدفك، وهذه نقاط لم يثبت اكتمالها بعد: '+(row.data.plan.missing?.length?row.data.plan.missing:row.data.plan.issues||[]).map(x=>typeof x==='string'?x:x.reason||'تحتاج إحدى خطوات الموظف إلى مراجعة؛ التفاصيل في بطاقة الموظف.').join('\n')};
  if(row.state==='failed')return {status:'failed',reply:'تعذر إكمال الطلب. حفظت حالة التعثر للمراجعة.'};
  return {status:'running',reply:row.state==='routing'?'أراجع رسالتك وسياق شركتك.':'أحلل الهدف وأتحقق من عمليات الأدوات المناسبة.'};
 }
@@ -1192,7 +1195,7 @@ async function gateway455(inputs) {
  const view=designWorkView455(row);const workStatus=view.status,reply=view.reply;
  return respond({ok:true,work_id:'design_'+row.id,work_status:workStatus,conversation_id:row.data.conversation_id||null,reply,design_id:row.id});
  }
- if(op==='design_list'){const designs=await state.list('employee_design_preview');return respond({ok:true,employees:designs.filter(r=>!r.data.from_chat||r.data.intent==='build_employee').map(r=>({id:r.id,status:r.state,...r.data}))});}
+ if(op==='design_list'){const designs=await state.list('employee_design_preview');return respond({ok:true,employees:designs.filter(r=>!r.data.from_chat||r.data.intent==='build_employee').map(r=>({id:r.id,status:r.state,...r.data})),pending_work:designs.filter(r=>r.data.from_chat&&!['answered','awaiting_connections','needs_configuration','failed'].includes(r.state)).map(r=>({work_id:'design_'+r.id,work_status:'running',conversation_id:r.data.conversation_id,reply:'أتابع طلبك المحفوظ وأتحقق من حالته.'}))});}
  if(op==='design_start'){
   if(typeof body.goal!=='string'||body.goal.trim().length<2||body.goal.length>3000||!/^[A-Za-z0-9_-]{8,80}$/.test(body.request_id||''))return respond({ok:false,error:'goal_invalid'},400);
   const old=await state.list('employee_design_preview',body.request_id);if(old.length>1)throw Error('design_request_ambiguous');if(old.length&&old[0].data.goal!==body.goal.trim())return respond({ok:false,error:'request_id_conflict'},409);if(old.length)return respond({ok:true,id:old[0].id,status:old[0].state,conversation_id:old[0].data.conversation_id||null});

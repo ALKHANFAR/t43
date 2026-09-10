@@ -7,6 +7,7 @@ const seed=()=>({original_goal:goal,name:'موظف',summary:'حفظ',trigger:{pi
 const results=[];function test(name,fn){try{fn();results.push({name,status:'passed'});}catch(e){results.push({name,status:'failed',error:e.message});}}
 function blocked(edit){const p=seed();edit(p);let r;try{r=validateDesign(p,needs,contracts,goal);}catch{return;}assert.notEqual(r.status,'awaiting_connections');}
 test('Valid connection-deferred plan accepted without claiming runtime',()=>{const p=validateDesign(seed(),needs,contracts,goal);assert.equal(p.status,'awaiting_connections');assert.equal(p.runtimeVerified,false);});
+test('Mapping needs require actual previous-step references',()=>{const p=seed();p.steps[0].covers.push('mapping');const ns=[...needs,{id:'mapping',kind:'mapping',required:true}];assert.equal(validateDesign(p,ns,contracts,goal).status,'awaiting_connections');p.steps[0].input.email='fixed@example.com';assert.ok(validateDesign(p,ns,contracts,goal).issues.some(x=>x.type==='mapping_not_implemented'));});
 for(const [name,edit] of [
  ['Exact original goal retained',p=>p.original_goal='هدف آخر'],
  ['Unknown operation rejected',p=>p.steps[0].actionName='invented'],
