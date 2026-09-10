@@ -12,7 +12,7 @@ export async function routeChat455({message,companyContext,recentMessages=[],cal
  const r=await call('ap_run_action',{pieceName:'@activepieces/piece-ai',actionName:'extractStructuredData',input:protectDesignPrompt455({provider:'anthropic',model:'claude-sonnet-5',mode:'advanced',schema:{fields:schema},maxOutputTokens:1800,prompt:task,text:JSON.stringify({message,companyContext,recentMessages:recentMessages.slice(-8)})})});
  return validateChatRoute455(parseDesignJSON(readDesignAiResult455(r)),message);
 }
-export function designWorkView455(row){
+function designWorkCore455(row){
  if(row.state==='answered')return {status:'succeeded',reply:row.data.reply};
  if(row.state==='awaiting_connections'){
   if(!row.data.built?.structureVerified||row.data.built.status!=='DISABLED'||!row.data.built.flowId)throw Error('design_ready_without_build_proof');
@@ -22,3 +22,5 @@ export function designWorkView455(row){
  if(row.state==='failed')return {status:'failed',reply:'تعذر إكمال الطلب. حفظت حالة التعثر للمراجعة.'};
  return {status:'running',reply:row.state==='routing'?'أراجع رسالتك وسياق شركتك.':'أحلل الهدف وأتحقق من عمليات الأدوات المناسبة.'};
 }
+
+export function designWorkView455(row){const view=designWorkCore455(row);if(row.data.from_chat&&row.data.intent==='build_employee')return {...view,reply:'بخصوص «'+String(row.data.goal||'').slice(0,140)+'»:\n'+view.reply};return view;}

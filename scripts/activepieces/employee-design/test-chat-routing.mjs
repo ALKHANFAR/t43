@@ -13,6 +13,7 @@ test('Ready status without readback proof rejected',()=>assert.throws(()=>design
 test('Enabled draft cannot pass connection-deferred readiness',()=>assert.throws(()=>designWorkView455({state:'awaiting_connections',data:{built:{structureVerified:true,status:'ENABLED',flowId:'x'},plan:{name:'موظف'}}})));
 test('Verified disabled draft can report internal construction success',()=>assert.equal(designWorkView455({state:'awaiting_connections',data:{built:{structureVerified:true,status:'DISABLED',flowId:'x'},plan:{name:'موظف'}}}).status,'succeeded'));
 test('Missing capabilities remain awaiting input',()=>assert.equal(designWorkView455({state:'needs_configuration',data:{plan:{missing:['قدرة غير موجودة']}}}).status,'awaiting_input'));
+test('Concurrent chat results name their original goal',()=>assert.ok(designWorkView455({state:'planning',data:{from_chat:true,intent:'build_employee',goal:'زد مبيعاتي'}}).reply.startsWith('بخصوص «زد مبيعاتي»')));
 let count=0;const result=await routeChat455({message:'هلا',companyContext:{},call:async(name,args)=>{count++;assert.equal(name,'ap_run_action');assert.equal(args.actionName,'extractStructuredData');assert.ok(!JSON.stringify(args.input).includes('{{'));return{content:[{type:'text',text:'✅ Result\n\n'+JSON.stringify(route)}]};}});
 test('Routing uses one structured AI call and no build or send actions',()=>{assert.equal(count,1);assert.equal(result.intent,'conversation');});
 console.log(JSON.stringify({passed:cases.length,cases},null,2));

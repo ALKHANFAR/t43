@@ -1,3 +1,4 @@
+import {businessFitSchema455,businessFitPrompt455,validateBusinessFit455} from './business-fit.mjs';
 import {indexCatalog,retrieveCatalog,mergeCatalogCandidates} from '../catalog-contracts/catalog-selector.mjs';
 import {outputPaths} from '../catalog-contracts/catalog-contract.mjs';
 export function parseDesignJSON(value){
@@ -103,6 +104,10 @@ export function validateDesign(plan,needs,contracts,goal,companyContext={}){
  for(const e of plan.evidence){if(!e.metric||!e.check||!all.some(s=>s.id===e.step))throw Error('evidence_contract_invalid');const step=all.find(s=>s.id===e.step);const c=contracts.find(c=>c.pieceName===step.pieceName&&c.kind===step.kind&&c.name===(step.actionName||step.triggerName));const paths=c.outputPaths||outputPaths(c.outputSchema);if(!e.output_path||!paths.includes(e.output_path))issues.push({type:'evidence_path_unverified',step:e.step,path:e.output_path||null});}
  return {...plan,selected,issues,status:issues.length||plan.missing.length?'needs_configuration':'awaiting_connections',runtimeVerified:false};
 }
+export async function reviewBusinessFit455({goal,companyContext,selected,bindings=[],evidence=[],assumptions=[],call}){
+ const result=await call('ap_run_action',{pieceName:'@activepieces/piece-ai',actionName:'extractStructuredData',input:protectDesignPrompt455({provider:'anthropic',model:'claude-sonnet-5',mode:'advanced',schema:{fields:businessFitSchema455},maxOutputTokens:4500,prompt:businessFitPrompt455,text:JSON.stringify({goal,companyContext,selected,bindings,evidence,assumptions})})});
+ return validateBusinessFit455(parseDesignJSON(readDesignAiResult455(result)),selected);
+}
 export async function createDesignMcp455(inputs){
  const origin='https://activepieces-p8l1-455.up.railway.app';
  async function post(path,body,token){const r=await fetch(origin+path,{method:'POST',redirect:'error',headers:{'Content-Type':'application/json',Accept:'application/json, text/event-stream',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(body),signal:AbortSignal.timeout(145000)});if(!r.ok)throw Error('design_http_'+r.status);return r;}
@@ -198,5 +203,6 @@ export async function designEmployee455({goal,companyContext,catalogRows,call,on
   await onPhase('validating',{candidatePlan:plan,query,repairs});
  }
  for(const gap of query.capability_gaps||[])if(query.needs.some(n=>n.id===gap.need_id&&n.required!==false)){verified.issues.push({type:'unsupported_capability',need:gap.need_id,reason:gap.reason});verified.status='needs_configuration';}
+ if(verified.selected?.length){await onPhase('reviewing_business_fit');const businessIssues=await reviewBusinessFit455({goal,companyContext,selected:verified.selected,bindings:verified.bindings,evidence:verified.evidence,assumptions:verified.assumptions,call});verified.issues.push(...businessIssues);verified.businessReview={performed:true,issueCount:businessIssues.length,providerExecutionVerified:false};if(businessIssues.length)verified.status='needs_configuration';}
  return {...verified,catalogEvidence:{tableId:'TLds7DCVEHJ0CLRrJd6Gs',pieces:catalogRows.length,operations:catalogIndex.documents.length,excluded:catalogIndex.invalid},strategy:query.strategy,validationRepairs:repairs,needs:query.needs,successCriteria:query.success_criteria,discovery:discoveries,contracts,knowledge:companyContext};
 }
