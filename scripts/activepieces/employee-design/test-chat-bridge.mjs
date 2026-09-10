@@ -1,0 +1,8 @@
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
+const calls=[];let response={ok:true,id:'fixture_employee',conversation_id:'fixture_conversation'};let token='fixture_session';
+const sandbox={window:{},Set,JSON,AbortSignal,sessionStorage:{getItem:()=>null,setItem:()=>{}},localStorage:{getItem:()=>token},fetch:async(url,options)=>{calls.push(JSON.parse(options.body));return{ok:true,json:async()=>response};}};vm.createContext(sandbox);vm.runInContext(fs.readFileSync(new URL('chat-bridge.js',import.meta.url),'utf8'),sandbox);const send=sandbox.window.SIYADAH_DESIGN_REQUEST;
+assert.equal(await send({op:'hydrate'}),undefined);assert.equal(await send({op:'message',employee_id:'existing',message:'test'}),undefined);assert.equal(calls.length,0);
+const r=await send({op:'message',message:'هلا',request_id:'fixture_request'});assert.equal(calls[0].from_chat,true);assert.equal(calls[0].goal,'هلا');assert.equal(r.work_id,'design_fixture_employee');assert.ok(!r.reply.includes('بناء'));
+response={ok:true,work_status:'succeeded',reply:'هلا فيك'};assert.equal((await send({op:'work',work_id:r.work_id})).reply,'هلا فيك');assert.equal(calls[1].id,'fixture_employee');
+await send({op:'work',request_id:'fixture_request'});assert.equal(calls[2].request_id,'fixture_request');assert.equal(await send({op:'work',work_id:'ordinary_work'}),undefined);
+token='';await assert.rejects(()=>send({op:'message',message:'هلا',request_id:'fixture_noauth'}));console.log('PASS: existing routes preserved; central messages routed; polling/recovery mapped; unauthenticated request rejected.');
