@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {expandOperationMenu455} from './factory-design.mjs';
+import {indexCatalog,retrieveCatalog} from '../catalog-contracts/catalog-selector.mjs';
+const root=new URL('../catalog-contracts/',import.meta.url);
+const index=indexCatalog(JSON.parse(fs.readFileSync(new URL('catalog-enriched.json',root))),JSON.parse(fs.readFileSync(new URL('live-registry.json',root))));
+const needs=[{kind:'action',capability:'create campaign',search_terms:['marketing campaign']},{kind:'action',capability:'send campaign',search_terms:['send email']},{kind:'verification',capability:'campaign report',search_terms:['revenue report']},{kind:'trigger',capability:'schedule',search_terms:['every day']}];
+const grouped=new Map();for(const d of index.documents){if(!grouped.has(d.pieceName))grouped.set(d.pieceName,[]);grouped.get(d.pieceName).push(d);}
+const pieces=[...grouped.values()].filter(ds=>ds.length>25&&ds.length<=60).slice(0,25);
+const hits=pieces.map(ds=>ds[0]);
+assert.ok(pieces.flat().length>400,'reproduce previous expansion overflow');
+const menu=expandOperationMenu455(index,hits,{needs});
+assert.equal(menu.length,400);
+assert.equal(new Set(menu.map(m=>m.key)).size,400);
+for(const h of hits)assert.ok(menu.some(m=>m.key===h.key));
+for(const ds of pieces)assert.ok(menu.filter(m=>m.pieceName===ds[0].pieceName).length>=2);
+assert.ok(menu.every(m=>index.documents.some(d=>d.key===m.key)));
+assert.deepEqual(menu,expandOperationMenu455(index,hits,{needs}));
+const mail=retrieveCatalog(index,{kind:'action',explicitPiece:'@activepieces/piece-mailchimp',query:'create campaign',limit:1});
+const mailMenu=expandOperationMenu455(index,mail);
+assert.ok(mailMenu.some(m=>m.name==='send_campaign'));
+assert.ok(mailMenu.some(m=>m.name==='get_campaign_report'));
+assert.deepEqual(expandOperationMenu455(index,[{key:'invented',pieceName:'invented'}]),[]);
+assert.throws(()=>expandOperationMenu455(index,hits,{limit:1}),/seed_budget/);
+assert.throws(()=>expandOperationMenu455(index,hits,{limit:0}),/limit_invalid/);
+console.log(JSON.stringify({passed:true,oldExpandedCount:pieces.flat().length,newMenuCount:menu.length,pieces:pieces.length,allSearchHitsRetained:true,relatedSendAndReportRetained:true}));

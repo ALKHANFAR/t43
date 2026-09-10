@@ -88,10 +88,34 @@ function parseDesignJSON(value){
  const start=s.indexOf('{'),end=s.lastIndexOf('}');if(start>=0&&end>start)return JSON.parse(s.slice(start,end+1));
  throw Error('planner_json_invalid');
 }
-function expandOperationMenu455(catalogIndex,hits){
- const represented=new Set(hits.map(h=>h.pieceName));const menu=[];
- for(const pieceName of represented){const docs=catalogIndex.documents.filter(d=>d.pieceName===pieceName);const chosen=docs.length<=60?docs:docs.filter(d=>hits.some(h=>h.key===d.key));for(const d of chosen)menu.push({key:d.key,pieceName:d.pieceName,kind:d.kind,name:d.name,label:d.op.label,description:String(d.op.ai?.description||d.op.description||'').slice(0,550)});}
- return menu;
+function expandOperationMenu455(catalogIndex,hits,{limit=400,needs=[]}={}){
+ if(!Number.isInteger(limit)||limit<1)throw Error('operation_menu_limit_invalid');
+ const docs=new Map(catalogIndex.documents.map(d=>[d.key,d]));
+ const selected=new Map();
+ const add=d=>{if(d&&!selected.has(d.key)&&selected.size<limit)selected.set(d.key,d);};
+ // Retain every verified search hit before considering related operations.
+ const seeds=[...new Set(hits.map(h=>h.key))].map(k=>docs.get(k)).filter(Boolean);
+ if(seeds.length>limit)throw Error('operation_menu_seed_budget');
+ seeds.forEach(add);
+ const represented=[...new Set(seeds.map(d=>d.pieceName))];
+ // Rank related operations against each actual need, then distribute slots
+ // across needs and pieces. Registry ordering must not starve later needs.
+ const queues=[];
+ for(const need of needs.filter(n=>n.kind!=='mapping')){
+  const kind=need.kind==='trigger'?'trigger':'action';
+  queues.push(retrieveCatalog(catalogIndex,{kind,query:need.capability+' '+(need.search_terms||[]).join(' '),limit:catalogIndex.documents.length}).filter(h=>represented.includes(h.pieceName)).map(h=>docs.get(h.key)));
+ }
+ for(const piece of represented)queues.push(catalogIndex.documents.filter(d=>d.pieceName===piece));
+ const offsets=queues.map(()=>0);
+ let progress=true;
+ while(selected.size<limit&&progress){
+  progress=false;
+  for(let i=0;i<queues.length&&selected.size<limit;i++){
+   while(offsets[i]<queues[i].length&&selected.has(queues[i][offsets[i]].key))offsets[i]++;
+   if(offsets[i]<queues[i].length){add(queues[i][offsets[i]++]);progress=true;}
+  }
+ }
+ return [...selected.values()].map(d=>({key:d.key,pieceName:d.pieceName,kind:d.kind,name:d.name,label:d.op.label,description:String(d.op.ai?.description||d.op.description||'').slice(0,550)}));
 }
 function designGrounding455(goal,companyContext={},assumptions=[]){
  const sources=[{id:'user_goal',source:'user_goal',quote:goal}];
@@ -252,9 +276,10 @@ async function designEmployee455({goal,companyContext,catalogRows,call,onPhase=a
  if(unique.size>40)throw Error('contract_budget');
  // Search proposes pieces; inspect their related operations before choosing exact
  // contracts. This prevents create_campaign from hiding send_campaign, etc.
- const menu=expandOperationMenu455(catalogIndex,[...unique.values()]);
- if(menu.length>400)throw Error('operation_menu_budget');if(!menu.length)throw Error('no_candidate_operations');
- await onPhase('selecting_operations');
+ const menu=expandOperationMenu455(catalogIndex,[...unique.values()],{needs:query.needs});
+ if(!menu.length)throw Error('no_candidate_operations');
+ query.menu_scope={searchHits:unique.size,shown:menu.length,availableInCandidatePieces:catalogIndex.documents.filter(d=>[...unique.values()].some(h=>h.pieceName===d.pieceName)).length};
+ await onPhase('selecting_operations',{query});
  const operationNeeds=query.needs.filter(n=>n.kind!=='mapping');
  const selection=await ai('اختر العمليات الفعلية التي يحتاجها الموظف من هذه القائمة. نتيجة البحث الأولية ليست قائمة نهائية: راجع عمليات النظام المرتبطة لإكمال المسار مثل إنشاء الحملة ثم إرسالها ثم قراءة نتيجتها. لا تعتبر كتابة نص إعلان إنشاء إعلان مدفوع، ولا إنشاء حملة بريدية إرسالًا لها، ولا فتح البريد عملية بيع. لا تعتبر أي مخرجات دليلًا على إيراد دون ربطها بطلب مكتمل. افصل القدرات غير الموجودة في gaps، ولا تستبدلها بعملية متشابهة الاسم. اختر فقط مفاتيح موجودة، ومن 1 إلى 20 عملية ضرورية تشمل مصدر التشغيل والفعل والإثبات. لا تضف فعلًا خارج هدف العميل. القائمة تشمل أنواع trigger وaction. ربط الحقول مسؤولية المخطط اللاحق وليس أداة مستقلة؛ لا تضع غيابه في gaps.\n'+JSON.stringify({goal,companyContext,needs:operationNeeds,menu}),'selection',{menu,needs:operationNeeds});
  const selectedKeys=[...new Set(selection.selected.map(s=>s.key))];if(selectedKeys.length>20||selectedKeys.some(k=>!menu.some(m=>m.key===k)))throw Error('operation_selection_invalid');
