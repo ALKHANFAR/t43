@@ -1,4 +1,4 @@
-import {businessFitSchema455,businessFitPrompt455,validateBusinessFit455} from './business-fit.mjs';
+import {businessFitSchema455,businessFitPrompt455,selectionFitPrompt455,validateBusinessFit455} from './business-fit.mjs';
 import {indexCatalog,retrieveCatalog,mergeCatalogCandidates} from '../catalog-contracts/catalog-selector.mjs';
 import {outputPaths} from '../catalog-contracts/catalog-contract.mjs';
 export function parseDesignJSON(value){
@@ -128,6 +128,16 @@ export function validateDesign(plan,needs,contracts,goal,companyContext={}){
  for(const e of plan.evidence){if(!e.metric||!e.check||!all.some(s=>s.id===e.step))throw Error('evidence_contract_invalid');const step=all.find(s=>s.id===e.step);const c=contracts.find(c=>c.pieceName===step.pieceName&&c.kind===step.kind&&c.name===(step.actionName||step.triggerName));const paths=c.outputPaths||outputPaths(c.outputSchema);if(!e.output_path||!paths.includes(e.output_path))issues.push({type:'evidence_path_unverified',step:e.step,path:e.output_path||null});}
  return {...plan,selected,issues,status:issues.length||plan.missing.length?'needs_configuration':'awaiting_connections',runtimeVerified:false};
 }
+export async function reviewOperationSelection455({goal,companyContext,selection,menu,call}){
+ let actions=0,triggers=0;
+ const candidates=selection.selected.map(choice=>{
+  const operation=menu.find(m=>m.key===choice.key);if(!operation)throw Error('selection_review_unknown_operation');
+  const id=operation.kind==='trigger'?(++triggers===1?'trigger':'trigger_'+triggers):'step_'+(++actions);
+  return {...operation,id,reason:choice.reason,need_ids:choice.need_ids};
+ });
+ const result=await call('ap_run_action',{pieceName:'@activepieces/piece-ai',actionName:'extractStructuredData',input:protectDesignPrompt455({provider:'anthropic',model:'claude-sonnet-5',mode:'advanced',schema:{fields:businessFitSchema455},maxOutputTokens:4500,prompt:selectionFitPrompt455,text:JSON.stringify({goal,companyContext,candidates})})});
+ return {candidates,issues:validateBusinessFit455(parseDesignJSON(readDesignAiResult455(result)),candidates)};
+}
 export async function reviewBusinessFit455({goal,companyContext,selected,bindings=[],evidence=[],assumptions=[],call}){
  const result=await call('ap_run_action',{pieceName:'@activepieces/piece-ai',actionName:'extractStructuredData',input:protectDesignPrompt455({provider:'anthropic',model:'claude-sonnet-5',mode:'advanced',schema:{fields:businessFitSchema455},maxOutputTokens:4500,prompt:businessFitPrompt455,text:JSON.stringify({goal,companyContext,selected,bindings,evidence,assumptions})})});
  return validateBusinessFit455(parseDesignJSON(readDesignAiResult455(result)),selected);
@@ -206,6 +216,16 @@ export async function designEmployee455({goal,companyContext,catalogRows,call,on
  if(selection.gaps.some(g=>!operationNeeds.some(n=>n.id===g.need_id))||selection.selected.some(x=>!Array.isArray(x.need_ids)||x.need_ids.some(id=>!operationNeeds.some(n=>n.id===id))))throw Error('operation_need_invalid');
  query.capability_gaps=selection.gaps;query.operation_selection=selection.selected;
  if(!selectedKeys.length)return{original_goal:goal,name:'قدرات غير متاحة',summary:'لا توجد عمليات موثقة كافية لبناء الهدف.',status:'needs_configuration',selected:[],steps:[],bindings:[],evidence:[],issues:[],missing:selection.gaps.map(g=>g.reason),needs:query.needs,discovery:discoveries,contracts:[],knowledge:companyContext,runtimeVerified:false};
+ await onPhase('reviewing_business_fit',{query,reviewStage:'operation_selection'});
+ const selectionReview=await reviewOperationSelection455({goal,companyContext,selection,menu,call});
+ if(selectionReview.issues.length)return {
+  original_goal:goal,name:'اختيار الأدوات يحتاج تصحيحًا',summary:'رُفضت اختيارات غير مثبتة قبل تركيب الخطة.',status:'needs_configuration',
+  selected:[],steps:[],bindings:[],evidence:[],issues:selectionReview.issues,
+  missing:[...selectionReview.issues.map(i=>i.reason),...selection.gaps.map(g=>g.reason)],
+  rejectedCandidates:selectionReview.candidates.filter(c=>selectionReview.issues.some(i=>i.step===c.id)),
+  selectionReview:{performed:true,issueCount:selectionReview.issues.length,stage:'before_planning'},
+  strategy:query.strategy,needs:query.needs,successCriteria:query.success_criteria,discovery:discoveries,contracts:[],knowledge:companyContext,runtimeVerified:false
+ };
  unique.clear();for(const key of selectedKeys){const d=catalogIndex.documents.find(d=>d.key===key);unique.set(key,{key,pieceName:d.pieceName,kind:d.kind,name:d.name,curated:{description_ar:d.row.desc_ar,roles:d.row.roles}});}
  await onPhase('loading_contracts');
  const contracts=[];
