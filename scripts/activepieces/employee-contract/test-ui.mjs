@@ -1,0 +1,10 @@
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
+const s=fs.readFileSync(new URL('chat-preview-integrated.js',import.meta.url),'utf8');
+const esc=v=>String(v).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+const ctx={window:{__SIY_REAL__:true},TN:{gmail:'Gmail'},esc,TOOL_SLUG:{},siyTone:()=>0,siyAuto:()=>1};vm.createContext(ctx);
+vm.runInContext(s.slice(s.indexOf('  function mapEmployee('),s.indexOf('  function siyIdentity('))+s.slice(s.indexOf('  function siyContractHtml455('),s.indexOf('  function instrHtml(')),ctx);
+const e=ctx.mapEmployee({recordId:'e',status:'awaiting_connections',contractVersion:2,name:'موظف',tools:['gmail'],contract:{steps:[{pieceName:'@activepieces/piece-gmail',reason:'<script>bad()</script>'}],bindings:[{label:'حساب Gmail'}],evidence:[{metric:'مهمة',check:'قراءة المهمة'}]}});
+assert.equal(e.on,false);assert.ok(e.since.includes('بانتظار'));assert.equal(e.contractVersion,2);const h=ctx.siyContractHtml455(e);assert.ok(h.includes('&lt;script&gt;'));assert.ok(!h.includes('<script>'));assert.ok(h.includes('حساب Gmail'));assert.ok(h.includes('قراءة المهمة'));
+assert.equal(ctx.mapEmployee({recordId:'old',status:'active'}).on,true);
+assert.equal(ctx.siyContractHtml455({contractVersion:1}),'');
+console.log('PASS UI mapping, pending status, saved reasons/bindings/evidence, escaping, legacy mapping');
