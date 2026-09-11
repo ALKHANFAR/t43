@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {recoverOperationSelection455} from './business-fit.mjs';
+const menu=[{key:'bad'},{key:'good'},{key:'other'}],needs=[{id:'n',required:true}];
+const choose=key=>({selected:[{key,need_ids:['n'],reason:'fixture'}],gaps:[]});
+const review=async s=>({candidates:s.selected.map(c=>({...c,id:c.key})),issues:s.selected.filter(c=>c.key!=='good').map(c=>({type:'existing_system_unproven',step:c.key,reason:'Source not established'}))});
+let calls=0;
+let r=await recoverOperationSelection455({selection:choose('good'),menu,needs,review,reselect:()=>{throw Error('unexpected retry');}});assert.equal(r.attempts.length,1);
+r=await recoverOperationSelection455({selection:choose('bad'),menu,needs,review,reselect:async f=>{calls++;assert.ok(!f.menu.some(m=>m.key==='bad'));assert.equal(f.rejections[0].key,'bad');return choose('good');}});assert.equal(r.recovered,true);assert.equal(r.review.issues.length,0);assert.equal(calls,1);
+r=await recoverOperationSelection455({selection:choose('bad'),menu,needs,review,reselect:async()=>({selected:[],gaps:[{need_id:'n',reason:'No compatible source'}]})});assert.equal(r.selection.selected.length,0);assert.equal(r.selection.gaps.length,1);
+r=await recoverOperationSelection455({selection:choose('bad'),menu,needs,review,reselect:async()=>choose('other')});assert.equal(r.attempts.length,2);assert.equal(r.review.issues.length,1);assert.equal(r.recovered,false);
+for(const replacement of [choose('bad'),choose('invented'),{selected:[],gaps:[]},{selected:[{key:'good',need_ids:['invented']}],gaps:[]}])await assert.rejects(()=>recoverOperationSelection455({selection:choose('bad'),menu,needs,review,reselect:async()=>replacement}));
+console.log('PASS 8 recovery cases: valid unchanged, compatible alternative, explicit gap, second rejection, excluded replay, invented operation, dropped need, invented need');
