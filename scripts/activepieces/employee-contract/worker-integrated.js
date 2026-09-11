@@ -59,6 +59,7 @@ async function guardDesignedEmployeeRun455({state,employee,work}){
  const reply=pendingEmployeeReply455(employee);
  const result={ok:true,work_id:work.id,work_status:'awaiting_input',reply,employee_id:employee.id,execution_started:false};
  await state.update(work.id,'awaiting_input',{...work.data,phase:'employee_setup',reply,result455:result});
+ if(work.data.conversation_id&&!(await state.list('message','assistant_'+work.id)).length)await state.create('message','assistant_'+work.id,'saved',{conversation_id:work.data.conversation_id,role:'assistant',content:reply,at:new Date().toISOString()});
  return result;
 }
 
