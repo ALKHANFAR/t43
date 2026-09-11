@@ -1333,9 +1333,9 @@ async function gateway455(inputs) {
   built={flowId:f.id,versionId:f.version.id,status:f.status,stepCount:built.stepCount,structureVerified:true};
  }
  const compact={...plan,contracts:undefined,discovery:plan.discovery.map(d=>({need:d.need,modes:d.modes,hits:d.hits.map(h=>({pieceName:h.pieceName,name:h.name,kind:h.kind}))}))};
- row=await state.update(row.id,plan.status,{...row.data,plan:compact,built});
- const registered=await registerDesignedEmployee455({state,design:row,ownerId:body.payload.owner});
- row=await state.update(row.id,row.state,{...row.data,employeeId:registered.id});
+ row=await state.update(row.id,'registering',{...row.data,plan:compact,built});
+ const registered=await registerDesignedEmployee455({state,design:{...row,state:plan.status},ownerId:body.payload.owner});
+ row=await state.update(row.id,plan.status,{...row.data,employeeId:registered.id});
  if(row.data.conversation_id){const content=designWorkView455(row).reply;await state.create('message','design_assistant_'+row.id,'saved',{conversation_id:row.data.conversation_id,role:'assistant',content,at:new Date().toISOString()});}
  return respond({ok:true,id:row.id,status:row.state});
  }catch(e){await state.update(row.id,'failed',{...row.data,failedPhase:row.state,error:String(e.message).slice(0,180)});return respond({ok:false,error:'design_failed'});}
