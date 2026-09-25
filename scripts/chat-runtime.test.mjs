@@ -10,6 +10,11 @@ const empty={ok:true,company:'Server Company',brain:null,memory:[],team:[],recen
 const employee={recordId:'employee-record-1',flowId:'flow-1',name:'سارة',role:'تسجيل الفرص',status:'active',tools:['gmail']};
 const proof={recordId:'proof-record-1',employeeId:employee.recordId,flowId:employee.flowId,runId:'run-1',work_id:'work-1',subject:'فرصة أ',message:'سُجلت الفرصة',status:'succeeded',proof:'قراءة السجل مؤكدة'};
 
+test('chat UI never bypasses Siyadah with a direct Activepieces webhook',()=>{
+  assert.ok(!source.includes('activepieces-p8l1-455.up.railway.app/api/v1/webhooks'));
+  assert.match(source,/SIYADAH_CHAT_GATEWAY\|\|""/);
+});
+
 async function page({storage={siyadah_token:'customer-session',siyadah_company:'Untrusted Company'},hydrate=empty,message,work,employee_state,export:exportResponse,hash='#run=build&plan=over'}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
   const w=dom.window,requests=[],alerts=[],polls=[];let hydrateTimer;
@@ -76,6 +81,32 @@ test('central request mentioning report today reaches gateway and escapes consul
     for(const key of ['company_name','tenant_id','history','employees','flow_id'])assert.ok(!(key in req.body));
     assert.match(thread(p),/استشارة <img src=x>/);assert.equal(p.d.querySelectorAll('#thread img').length,0);
     assert.equal(p.d.querySelector('.hist[data-chat]').dataset.chat,'conversation-1');
+  }finally{p.close();}
+});
+test('acceptance card shows proven gates and never labels a partial draft 10/10',async()=>{
+  const acceptance={schema:'SiyadahFlowAcceptanceV2',score:'6/10',can_claim_10_of_10:false,claim:'Verified disabled draft; execution and commercial result remain unproved.',checks:[
+    {key:'draft_readback',label:'Disabled Activepieces draft',passed:true},
+    {key:'commercial_result',label:'Attributed commercial KPI result',passed:false},
+  ]};
+  const p=await page({message:{ok:true,conversation_id:'conversation-acceptance',reply:'جهزت المسودة.',acceptance}});try{
+    send(p,'ابن الموظف');await flush();
+    assert.match(thread(p),/إثبات التشغيل والأثر: 6\/10/);
+    assert.match(thread(p),/Disabled Activepieces draft/);
+    assert.match(thread(p),/Attributed commercial KPI result/);
+    assert.ok(!thread(p).includes('موظف مثبت 10/10'));
+  }finally{p.close();}
+});
+test('complete disconnected draft gets its own 10/10 without a production claim',async()=>{
+  const acceptance={schema:'SiyadahFlowAcceptanceV2',score:'6/10',can_claim_10_of_10:false,claim:'Execution is not proved.',checks:[
+    {key:'draft_readback',label:'Disabled Activepieces draft',passed:true},
+    {key:'commercial_result',label:'Commercial result',passed:false},
+  ],draft_readiness:{schema:'SiyadahDraftReadinessV1',score:'10/10',can_claim_draft_10_of_10:true,claim:'المسودة جاهزة 10/10 للربط؛ لم يتم اختبار التشغيل أو إثبات الأثر بعد.',checks:Array.from({length:10},(_,i)=>({key:'g'+i,label:'gate '+i,passed:true}))}};
+  const p=await page({message:{ok:true,conversation_id:'conversation-draft-ready',reply:'جهزت المسودة.',acceptance}});try{
+    send(p,'ابن المسودة');await flush();
+    assert.match(thread(p),/المسودة جاهزة 10\/10/);
+    assert.match(thread(p),/اربط الأدوات المطلوبة/);
+    assert.match(thread(p),/إثبات التشغيل والأثر: 6\/10/);
+    assert.ok(!thread(p).includes('نتيجة تشغيل مثبتة 10/10'));
   }finally{p.close();}
 });
 test('accepted work appears pending, then proof readback upserts stable employee without clearing chat',async()=>{

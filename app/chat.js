@@ -1053,15 +1053,15 @@ var I = {
     if(e.key==="/"&&!typing&&!mod){ e.preventDefault(); openTools(); setTimeout(function(){ var q=$("#tq"); if(q) q.focus(); },30); }
   });
 
-  /* بوابة AP المصادق عليها: هوية الشركة والسياق يُحلان خادميًا. */
-  var SIY_GATEWAY=window.SIYADAH_CHAT_GATEWAY||"https://activepieces-p8l1-455.up.railway.app/api/v1/webhooks/zursN5Q5OLjSzcorUOJLe/sync";
+  /* بوابة سيادة المصادق عليها: لا تتصل الواجهة بـ Activepieces مباشرة. */
+  var SIY_GATEWAY=window.SIYADAH_CHAT_GATEWAY||"";
   var siyPolls={}, siyGeneration=0, siyEmployeeStatePending={};
   function siyToken(){ try{return localStorage.getItem("siyadah_token")||"";}catch(e){return "";} }
   function siyStopPolling(){ siyGeneration++; Object.keys(siyPolls).forEach(function(k){ clearTimeout(siyPolls[k]); }); siyPolls={}; }
   function siyAccessError(text){var e=new Error(text);e.noRetry=true;return e;}
   async function siyRequest(body){
     var token=siyToken(); if(!token) throw siyAccessError("انتهت جلسة الحساب. سجّل الدخول مجددًا.");
-    if(!/^https:\/\//.test(SIY_GATEWAY)) throw siyAccessError("اتصال شات سيادة لم يُجهّز بعد.");
+    if(!/^(https:\/\/|\/)/.test(SIY_GATEWAY)) throw siyAccessError("اتصال شات سيادة لم يُجهّز بعد.");
     var abort=new AbortController(), timer=setTimeout(function(){abort.abort();},60000);
     try{
       var response=await fetch(SIY_GATEWAY,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(body),signal:abort.signal});
@@ -1162,12 +1162,35 @@ var I = {
     if(!employeeId&&curList()===list){chatId=id;live.siyadah=null;}
   }
   function siyDraw(){ renderSide(); renderBar(); renderThread(); renderPlan(); }
+  function siyDraftReadinessHtml(readiness){
+    if(!readiness||readiness.schema!=="SiyadahDraftReadinessV1"||!Array.isArray(readiness.checks)) return "";
+    var passed=readiness.checks.filter(function(row){return row&&row.passed===true;});
+    var blocked=readiness.checks.filter(function(row){return row&&row.passed!==true;});
+    var ready=readiness.can_claim_draft_10_of_10===true;
+    var title=ready?"المسودة جاهزة 10/10":"جاهزية المسودة: "+esc(readiness.score||passed.length+"/10");
+    return '<div style="margin-top:10px;padding:10px;border:1px solid var(--hair);border-radius:10px">'+
+      '<b>'+title+'</b><div class="msrc">'+esc(readiness.claim||"")+'</div>'+
+      (ready?'<div class="msrc">الخطوة التالية: اربط الأدوات المطلوبة، ثم نختبر التشغيل والنتيجة.</div>':'')+
+      (blocked.length?'<details><summary>وش باقي في المسودة؟</summary><div class="msrc">'+blocked.map(function(row){return '• '+esc(row.label||row.key);}).join('<br>')+'</div></details>':'')+
+      '</div>';
+  }
+  function siyAcceptanceHtml(acceptance){
+    if(!acceptance||!["SiyadahFlowAcceptanceV1","SiyadahFlowAcceptanceV2"].includes(acceptance.schema)||!Array.isArray(acceptance.checks)) return "";
+    var passed=acceptance.checks.filter(function(row){return row&&row.passed===true;});
+    var blocked=acceptance.checks.filter(function(row){return row&&row.passed!==true;});
+    var title=acceptance.can_claim_10_of_10===true?"نتيجة تشغيل مثبتة 10/10":"إثبات التشغيل والأثر: "+esc(acceptance.score||passed.length+"/10");
+    return siyDraftReadinessHtml(acceptance.draft_readiness)+'<div style="margin-top:10px;padding:10px;border:1px solid var(--hair);border-radius:10px">'+
+      '<b>'+title+'</b><div class="msrc">'+esc(acceptance.claim||"")+'</div>'+
+      (passed.length?'<div class="msrc">✓ '+passed.map(function(row){return esc(row.label||row.key);}).join(' · ')+'</div>':'')+
+      (blocked.length?'<details><summary>وش باقي؟</summary><div class="msrc">'+blocked.map(function(row){return '• '+esc(row.label||row.key);}).join('<br>')+'</div></details>':'')+
+      '</div>';
+  }
   function siyResultRow(data){
     var state=data.work_status, text=data.reply;
     if(!text) text=({queued:"تم استلام الطلب، بانتظار التنفيذ.",running:"العمل قيد التنفيذ.",succeeded:"اكتمل العمل حسب سجل التشغيل.",failed:"تعذّر إكمال العمل. راجع تفاصيل النتيجة.",awaiting_input:"العمل ينتظر معلومات إضافية منك.",cancelled:"أُلغي الطلب."})[state]||"وصل الرد دون تفاصيل إضافية.";
     var records=(Array.isArray(data.recent_work)?data.recent_work:[]).filter(function(r){return (!r.conversation_id||r.conversation_id===data.conversation_id)&&(!r.work_id||r.work_id===data.work_id);});
     var scoped=records.filter(function(r){return r.conversation_id;});
-    return {me:false,at:now(),t:siyReplyHtml(text)+(scoped.length?siyWorkHtml(scoped,'نتائج هذا الطلب'):'')+siyLegacyProofHtml(records),workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;})};
+    return {me:false,at:now(),t:siyReplyHtml(text)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,'نتائج هذا الطلب'):'')+siyLegacyProofHtml(records),workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;})};
   }
   function siyPoll(workId,list,row,attempt){
     var generation=siyGeneration, token=siyToken(); if(!token) return;
