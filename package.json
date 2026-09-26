@@ -10,7 +10,7 @@
     "test": "npm run test:runtime && npm run lint:js && npm run catalog && npm run validate && npm run a11y && npm run a11y:chrome",
     "a11y:chrome": "node scripts/a11y-lh.mjs index.html ar.html integrations.html demo.html demo-en.html privacy.html 404.html app/chat.html app/onboard.html",
     "catalog": "node scripts/check-pieces.js",
-    "test:runtime": "node --test scripts/chat-runtime.test.mjs"
+    "test:runtime": "node --test scripts/*-runtime.test.mjs"
   },
   "devDependencies": {
     "axe-core": "^4.10.0",
