@@ -16,9 +16,9 @@ test('chat UI never bypasses Siyadah with a direct Activepieces webhook',()=>{
   assert.ok(!source.includes('localStorage.getItem("siyadah_token")'));
 });
 
-async function page({storage={},hydrate=empty,message,work,employee_state,export:exportResponse,hash='#run=build&plan=over',real=true}={}){
+async function page({storage={},hydrate=empty,message,work,employee_state,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
-  const w=dom.window,requests=[],alerts=[],polls=[];let hydrateTimer;
+  const w=dom.window,requests=[],alerts=[],polls=[],navigations=[];let hydrateTimer;
   w.matchMedia=()=>({matches:true,addEventListener(){}});
   w.PIECES=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد']];
   w.SIYADAH_REAL_ACCOUNT=real;
@@ -30,7 +30,14 @@ async function page({storage={},hydrate=empty,message,work,employee_state,export
     if(ms===15000)hydrateTimer=cb;
     return realTimeout(cb,ms);
   };
-  w.fetch=async(url,options)=>{
+  w.fetch=async(url,options={})=>{
+    if(String(url).includes('/v1/integrations/activepieces/')){
+      requests.push({url,body:null,headers:options.headers,credentials:options.credentials,method:options.method||'GET'});
+      const response=String(url).endsWith('/status')?integrationStatus:integrationConnect;
+      if(response instanceof Error)throw response;
+      if(response?.httpStatus)return {ok:false,status:response.httpStatus,json:async()=>response};
+      return {ok:true,status:200,json:async()=>response};
+    }
     const body=JSON.parse(options.body);requests.push({url,body,headers:options.headers,credentials:options.credentials});
     const handler={hydrate,message,work,employee_state,export:exportResponse}[body.op];
     const response=typeof handler==='function'?await handler(body):handler;
@@ -38,8 +45,8 @@ async function page({storage={},hydrate=empty,message,work,employee_state,export
     if(response?.httpStatus)return {ok:false,status:response.httpStatus,json:async()=>response};
     return {ok:true,status:200,json:async()=>response};
   };
-  w.alert=text=>alerts.push(text);w.eval(source);await flush();await flush();
-  return {dom,w,d:w.document,requests,alerts,polls,timeout:()=>hydrateTimer(),close:()=>w.close()};
+  w.alert=text=>alerts.push(text);w.__SIY_NAVIGATE__=url=>navigations.push(url);w.eval(source);await flush();await flush();
+  return {dom,w,d:w.document,requests,alerts,polls,navigations,timeout:()=>hydrateTimer(),close:()=>w.close()};
 }
 function send(p,text){p.d.querySelector('#input').value=text;p.d.querySelector('#send').click();}
 function thread(p){return p.d.querySelector('#thread').textContent;}
@@ -57,6 +64,18 @@ test('cookie session uses authenticated gateway without browser-readable identit
     assert.equal(p.w.__SIY_LOAD_ERROR__,'');assert.deepEqual(p.requests[0].body,{op:'hydrate'});
     assert.equal(p.requests[0].credentials,'include');assert.equal(p.requests[0].headers.Authorization,undefined);
     assert.ok(p.d.querySelector('#meBtn').textContent.includes('Server Company'));
+  }finally{p.close();}
+});
+test('account menu shows server-verified builder connection and starts governed OAuth',async()=>{
+  const p=await page({integrationStatus:{ok:true,connected:false},integrationConnect:{ok:true,authorization_url:'https://cloud.activepieces.com/mcp-authorize?request=one',expires_in:600}});try{
+    p.d.querySelector('#meBtn').click();await flush();
+    assert.equal(p.d.querySelector('#builderConnectState').textContent,'اربط');
+    assert.equal(p.requests.find(x=>String(x.url).endsWith('/status')).credentials,'include');
+    p.d.querySelector('#builderConnectBtn').click();await flush();
+    const connect=p.requests.find(x=>String(x.url).endsWith('/connect'));
+    assert.equal(connect.method,'POST');assert.equal(connect.credentials,'include');
+    assert.deepEqual(p.navigations,['https://cloud.activepieces.com/mcp-authorize?request=one']);
+    assert.ok(!source.includes('ACTIVEPIECES_MCP_ACCESS_TOKEN'));
   }finally{p.close();}
 });
 test('browser storage cannot supply company identity or suppress server hydration',async()=>{

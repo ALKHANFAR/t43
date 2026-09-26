@@ -902,7 +902,9 @@ var I = {
 
   /* ---------- قائمة الحساب ---------- */
   var pop=$("#pop");
-  $("#meBtn").addEventListener("click",function(e){ e.stopPropagation(); pop.classList.toggle("on"); });
+  $("#meBtn").addEventListener("click",function(e){ e.stopPropagation(); pop.classList.toggle("on"); if(pop.classList.contains("on")) siyRefreshBuilderConnection(); });
+  var builderConnectBtn=$("#builderConnectBtn");
+  if(builderConnectBtn) builderConnectBtn.addEventListener("click",function(){ siyConnectBuilder(); });
   var lo=$("#logoutBtn"); if(lo) lo.addEventListener("click",function(){
     siyStopPolling();
     fetch((window.SIYADAH_AUTH_BASE||"/siyadah-api")+"/v1/auth/logout",{method:"POST",credentials:"include"})
@@ -1056,7 +1058,33 @@ var I = {
 
   /* بوابة سيادة المصادق عليها: لا تتصل الواجهة بـ Activepieces مباشرة. */
   var SIY_GATEWAY=window.SIYADAH_CHAT_GATEWAY||"/siyadah-api/v1/chat";
+  var SIY_INTEGRATIONS_BASE=(window.SIYADAH_AUTH_BASE||"/siyadah-api")+"/v1/integrations/activepieces";
   var siyPolls={}, siyGeneration=0, siyEmployeeStatePending={};
+  function siyBuilderState(text,connected){ var node=$("#builderConnectState"); if(!node) return; node.textContent=text; node.classList.toggle("apstate--ok",connected===true); }
+  async function siyRefreshBuilderConnection(){
+    if(!window.__SIY_REAL__) return;
+    siyBuilderState("يتحقق…",false);
+    try{
+      var response=await fetch(SIY_INTEGRATIONS_BASE+"/status",{credentials:"include",headers:{"Accept":"application/json"}});
+      if(response.status===401||response.status===403) throw siyAccessError("انتهت الجلسة");
+      var data=await response.json();
+      if(!response.ok||!data||data.ok!==true) throw new Error("status unavailable");
+      siyBuilderState(data.connected===true?"مربوط":"اربط",data.connected===true);
+    }catch(error){ siyBuilderState("تعذر التحقق",false); }
+  }
+  async function siyConnectBuilder(){
+    if(!window.__SIY_REAL__) return;
+    var button=$("#builderConnectBtn"); if(!button||button.disabled) return;
+    button.disabled=true; siyBuilderState("يفتح…",false);
+    try{
+      var response=await fetch(SIY_INTEGRATIONS_BASE+"/connect",{method:"POST",credentials:"include",headers:{"Accept":"application/json"}});
+      var data=await response.json();
+      if(response.status===401||response.status===403) throw siyAccessError("انتهت الجلسة");
+      if(!response.ok||!data||data.ok!==true||typeof data.authorization_url!=="string") throw new Error("connect unavailable");
+      if(typeof window.__SIY_NAVIGATE__==="function") window.__SIY_NAVIGATE__(data.authorization_url);
+      else location.assign(data.authorization_url);
+    }catch(error){ button.disabled=false; siyBuilderState(error.noRetry?"سجل دخولك":"أعد المحاولة",false); }
+  }
   function siyStopPolling(){ siyGeneration++; Object.keys(siyPolls).forEach(function(k){ clearTimeout(siyPolls[k]); }); siyPolls={}; }
   function siyAccessError(text){var e=new Error(text);e.noRetry=true;return e;}
   async function siyRequest(body){
