@@ -1215,9 +1215,17 @@ var I = {
   }
   function siyBuilderProposalHtml(data){
     if(!data||!data.approval||data.approval.required!==true||typeof data.approval.approval_id!=="string") return "";
+    var plan=data.flow_plan&&typeof data.flow_plan==="object"?data.flow_plan:{};
+    var trigger=plan.trigger&&typeof plan.trigger==="object"?plan.trigger:{};
+    var steps=Array.isArray(plan.steps)?plan.steps:[];
+    var triggerText=[trigger.piece_name,trigger.operation].filter(Boolean).join(" · ")||"تم التحقق منه في Activepieces";
+    var stepRows=steps.map(function(step,index){
+      var text=[step.display_name,step.piece_name,step.operation].filter(Boolean).join(" · ")||step.type||("الخطوة "+(index+1));
+      return '<div class="prow"><b>الخطوة '+(index+1)+'</b><span>'+esc(text)+'</span></div>';
+    }).join("");
     return '<div class="plan nr" style="margin-top:10px"><div class="plan__h"><span class="drop"></span>خطة بناء حقيقية</div>'+
-      '<div class="prow"><b>المشغّل</b><span>Webhook</span></div>'+
-      '<div class="prow"><b>الخطوة</b><span>Code يعيد <code>{ok:true}</code></span></div>'+
+      (plan.name?'<div class="prow"><b>الاسم</b><span>'+esc(plan.name)+'</span></div>':'')+
+      '<div class="prow"><b>المشغّل</b><span>'+esc(triggerText)+'</span></div>'+stepRows+
       '<div class="prow"><b>الحدود</b><span>مسودة معطلة فقط · بلا اختبار · بلا نشر</span></div></div>'+
       '<div class="approve nr"><button type="button" class="bt" data-siy-approval="approve">'+I.check+'وافق وأنشئ المسودة</button>'+
       '<button type="button" class="bt bt--line" data-siy-approval="reject">إلغاء</button></div>';
