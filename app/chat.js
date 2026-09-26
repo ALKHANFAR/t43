@@ -905,8 +905,9 @@ var I = {
   $("#meBtn").addEventListener("click",function(e){ e.stopPropagation(); pop.classList.toggle("on"); });
   var lo=$("#logoutBtn"); if(lo) lo.addEventListener("click",function(){
     siyStopPolling();
-    try{ localStorage.removeItem("siyadah_token"); localStorage.removeItem("siyadah_company"); }catch(e){}
-    location.replace("../auth.html");
+    fetch((window.SIYADAH_AUTH_BASE||"/siyadah-api")+"/v1/auth/logout",{method:"POST",credentials:"include"})
+      .catch(function(){})
+      .finally(function(){ location.replace("../auth.html"); });
   });
   document.addEventListener("click",function(e){ pop.classList.remove("on");
     if(palOpen&&!e.target.closest("#hq,#pal")) closePal();
@@ -1054,18 +1055,15 @@ var I = {
   });
 
   /* بوابة سيادة المصادق عليها: لا تتصل الواجهة بـ Activepieces مباشرة. */
-  var SIY_GATEWAY=window.SIYADAH_CHAT_GATEWAY||"";
+  var SIY_GATEWAY=window.SIYADAH_CHAT_GATEWAY||"/siyadah-api/v1/chat";
   var siyPolls={}, siyGeneration=0, siyEmployeeStatePending={};
-  function siyToken(){ try{return localStorage.getItem("siyadah_token")||"";}catch(e){return "";} }
   function siyStopPolling(){ siyGeneration++; Object.keys(siyPolls).forEach(function(k){ clearTimeout(siyPolls[k]); }); siyPolls={}; }
   function siyAccessError(text){var e=new Error(text);e.noRetry=true;return e;}
   async function siyRequest(body){
-    var token=siyToken(); if(!token) throw siyAccessError("انتهت جلسة الحساب. سجّل الدخول مجددًا.");
     if(!/^(https:\/\/|\/)/.test(SIY_GATEWAY)) throw siyAccessError("اتصال شات سيادة لم يُجهّز بعد.");
     var abort=new AbortController(), timer=setTimeout(function(){abort.abort();},60000);
     try{
-      var response=await fetch(SIY_GATEWAY,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(body),signal:abort.signal});
-      if(token!==siyToken()) throw siyAccessError("تغيّرت جلسة الحساب.");
+      var response=await fetch(SIY_GATEWAY,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:abort.signal});
       if(response.status===401||response.status===403) throw siyAccessError("تعذّر التحقق من صلاحية هذا الطلب لحسابك.");
       if(!response.ok) throw new Error("تعذّر الاتصال بالخادم. أعد المحاولة.");
       var data=await response.json();
@@ -1137,7 +1135,8 @@ var I = {
     });
     if(typeof data.work_count==="number") dash.work_count=data.work_count;
     if(data.brain!==undefined){dash.brain=data.brain; window.__SIY_BRAIN__=data.brain;}
-    if(typeof data.company==="string"){dash.company=data.company; siyIdentity(data.company,dash.brain);}
+    var companyName=typeof data.company==="string"?data.company:(data.company&&typeof data.company.name==="string"?data.company.name:"");
+    if(companyName){dash.company=companyName; siyIdentity(companyName,dash.brain);}
     window.__SIY_DASH__=dash; window.__SIY_EMPTY__=EMPS.length===0;
     if($("#memList")&&!$("#memList").hidden) renderMem();
     PLAN.employees.used=EMPS.length; PLAN.actions.used=typeof dash.work_count==="number"?dash.work_count:null;
@@ -1193,9 +1192,9 @@ var I = {
     return {me:false,at:now(),t:siyReplyHtml(text)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,'نتائج هذا الطلب'):'')+siyLegacyProofHtml(records),workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;})};
   }
   function siyPoll(workId,list,row,attempt){
-    var generation=siyGeneration, token=siyToken(); if(!token) return;
+    var generation=siyGeneration;
     siyPolls[workId]=setTimeout(async function(){
-      if(generation!==siyGeneration||token!==siyToken()) return;
+      if(generation!==siyGeneration) return;
       try{
         var data=await siyRequest({op:"work",work_id:workId});
         if(generation!==siyGeneration) return;
@@ -1320,11 +1319,9 @@ var I = {
     PLAN.credit={sar:0,actions:0}; PLAN.invoices=[]; PLAN.payment=""; PLAN.vat=""; PLAN.cr="";
   }
   function siyHydrate(done){
-    var company="",token=siyToken(); try{company=localStorage.getItem("siyadah_company")||"";}catch(e){}
-    if(!company&&!token){done();return;}
+    if(window.SIYADAH_REAL_ACCOUNT!==true){done();return;}
     siyClearDemo(); siyIdentity("حسابك",null);
     window.__SIY_LOAD_ERROR__="تعذّر تحميل بيانات حسابك. أعد تحميل الصفحة للمحاولة.";
-    if(!token){window.__SIY_LOAD_ERROR__="تعذّر التحقق من جلسة الحساب. سجّل الدخول مجددًا.";done();return;}
     var finished=false, timer=setTimeout(function(){finish(null);},15000);
     function finish(data){
       if(finished)return;finished=true;clearTimeout(timer);

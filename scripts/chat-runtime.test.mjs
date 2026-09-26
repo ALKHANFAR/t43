@@ -12,14 +12,16 @@ const proof={recordId:'proof-record-1',employeeId:employee.recordId,flowId:emplo
 
 test('chat UI never bypasses Siyadah with a direct Activepieces webhook',()=>{
   assert.ok(!source.includes('activepieces-p8l1-455.up.railway.app/api/v1/webhooks'));
-  assert.match(source,/SIYADAH_CHAT_GATEWAY\|\|""/);
+  assert.match(source,/SIYADAH_CHAT_GATEWAY\|\|"\/siyadah-api\/v1\/chat"/);
+  assert.ok(!source.includes('localStorage.getItem("siyadah_token")'));
 });
 
-async function page({storage={siyadah_token:'customer-session',siyadah_company:'Untrusted Company'},hydrate=empty,message,work,employee_state,export:exportResponse,hash='#run=build&plan=over'}={}){
+async function page({storage={},hydrate=empty,message,work,employee_state,export:exportResponse,hash='#run=build&plan=over',real=true}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
   const w=dom.window,requests=[],alerts=[],polls=[];let hydrateTimer;
   w.matchMedia=()=>({matches:true,addEventListener(){}});
   w.PIECES=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد']];
+  w.SIYADAH_REAL_ACCOUNT=real;
   w.SIYADAH_CHAT_GATEWAY='https://gateway.test/sync';
   Object.entries(storage).forEach(([k,v])=>w.localStorage.setItem(k,v));
   const realTimeout=w.setTimeout.bind(w);
@@ -29,7 +31,7 @@ async function page({storage={siyadah_token:'customer-session',siyadah_company:'
     return realTimeout(cb,ms);
   };
   w.fetch=async(url,options)=>{
-    const body=JSON.parse(options.body);requests.push({url,body,headers:options.headers});
+    const body=JSON.parse(options.body);requests.push({url,body,headers:options.headers,credentials:options.credentials});
     const handler={hydrate,message,work,employee_state,export:exportResponse}[body.op];
     const response=typeof handler==='function'?await handler(body):handler;
     if(response instanceof Error)throw response;
@@ -50,16 +52,17 @@ test('offline authenticated boot clears demo data, billing and fake connections'
     assert.ok(!p.d.querySelector('#meBtn').textContent.includes('أنس'));assert.ok(!p.d.querySelector('#toolsCnt').textContent.includes('4 مربوطة'));
   }finally{p.close();}
 });
-test('token-only identity uses authenticated gateway without requiring company cache',async()=>{
-  const p=await page({storage:{siyadah_token:'customer-session'}});try{
+test('cookie session uses authenticated gateway without browser-readable identity token',async()=>{
+  const p=await page();try{
     assert.equal(p.w.__SIY_LOAD_ERROR__,'');assert.deepEqual(p.requests[0].body,{op:'hydrate'});
-    assert.equal(p.requests[0].headers.Authorization,'Bearer customer-session');
+    assert.equal(p.requests[0].credentials,'include');assert.equal(p.requests[0].headers.Authorization,undefined);
     assert.ok(p.d.querySelector('#meBtn').textContent.includes('Server Company'));
   }finally{p.close();}
 });
-test('company cache without token stays real and does not send unauthenticated request',async()=>{
-  const p=await page({storage:{siyadah_company:'Untrusted'}});try{
-    assert.equal(p.w.__SIY_REAL__,true);assert.equal(p.w.EMPS.length,0);assert.equal(p.requests.length,0);assert.match(thread(p),/جلسة/);
+test('browser storage cannot supply company identity or suppress server hydration',async()=>{
+  const p=await page({storage:{siyadah_company:'Untrusted',siyadah_token:'attacker-token'}});try{
+    assert.equal(p.w.__SIY_REAL__,true);assert.equal(p.requests.length,1);assert.equal(p.requests[0].credentials,'include');
+    assert.ok(!p.d.querySelector('#meBtn').textContent.includes('Untrusted'));
   }finally{p.close();}
 });
 test('invalid/unauthorized hydration cannot restore demo or ready state',async()=>{
@@ -196,7 +199,7 @@ test('employee toggle waits for matching verified server readback before changin
   assert.equal(p.d.querySelector('#onSw').getAttribute('aria-checked'),'true');assert.equal(p.d.querySelector('#onSw').disabled,true);assert.match(p.d.querySelector('#onLbl').textContent,/جارٍ التحقق/);
   p.d.querySelector('#onSw').click();assert.equal(p.requests.filter(r=>r.body.op==='employee_state').length,1);
   assert.deepEqual(p.requests.at(-1).body,{op:'employee_state',employee_id:employee.recordId,status:'disabled'});
-  assert.equal(p.requests.at(-1).headers.Authorization,'Bearer customer-session');
+  assert.equal(p.requests.at(-1).credentials,'include');assert.equal(p.requests.at(-1).headers.Authorization,undefined);
   resolve({ok:true,state_verified:true,employee:{...employee,status:'disabled',flow_status_verified:false}});await flush();
   assert.equal(p.w.EMPS[0].on,false);assert.equal(p.d.querySelector('#onSw').getAttribute('aria-checked'),'false');assert.equal(p.d.querySelector('#onSw').disabled,false);
  }finally{p.close();}
@@ -267,7 +270,7 @@ test('customer export downloads only valid server bundle using authenticated req
   const blobs=[],revoked=[],links=[];p.w.URL.createObjectURL=blob=>{blobs.push(blob);return 'blob:test';};p.w.URL.revokeObjectURL=url=>revoked.push(url);
   p.w.HTMLAnchorElement.prototype.click=function(){links.push({href:this.href,download:this.download});};
   p.d.querySelector('#exportBtn').click();await flush();
-  const request=p.requests.find(r=>r.body.op==='export');assert.deepEqual(request.body,{op:'export'});assert.equal(request.headers.Authorization,'Bearer customer-session');
+  const request=p.requests.find(r=>r.body.op==='export');assert.deepEqual(request.body,{op:'export'});assert.equal(request.credentials,'include');assert.equal(request.headers.Authorization,undefined);
   assert.equal(blobs.length,1);assert.match(blobs[0].type,/application.json/);assert.deepEqual(links,[{href:'blob:test',download:'ملف-العميل.json'}]);assert.deepEqual(revoked,['blob:test']);
   const exported=await new Promise((resolve,reject)=>{const reader=new p.w.FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsText(blobs[0]);});assert.deepEqual(JSON.parse(exported),bundle);
   assert.equal(p.d.querySelector('#exportBtn').disabled,false);assert.equal(p.d.querySelector('a[download]'),null);
@@ -331,7 +334,7 @@ test('unavailable actions cannot mutate and hiring opens central composer withou
  }finally{p.close();}
 });
 test('historical demo keeps its original plan and controls separate from real account restrictions',async()=>{
- const p=await page({storage:{},hash:''});try{
+ const p=await page({storage:{},hash:'',real:false});try{
   assert.ok(!p.w.__SIY_REAL__);assert.equal(p.d.querySelector('#attachBtn').disabled,false);assert.equal(p.d.querySelector('#deleteAccountBtn').disabled,false);assert.ok(!p.d.querySelector('#pane-plan').textContent.includes('بيانات الاشتراك غير متاحة'));assert.equal(p.requests.length,0);
  }finally{p.close();}
 });
@@ -351,5 +354,5 @@ test('real notifications are unavailable without channel or scheduled delivery c
   for(const claim of ['واتساب + بريد','ملخص يومي','تنبيه عند'])assert.ok(!row.textContent.includes(claim));
   control.click();assert.equal(p.requests.length,1);assert.equal(control.getAttribute('aria-checked'),'false');
  }finally{p.close();}
- const demo=await page({storage:{},hash:''});try{assert.equal(demo.d.querySelector('#notificationSwitch').disabled,false);assert.equal(demo.d.querySelector('#notificationSwitch').getAttribute('aria-checked'),'true');}finally{demo.close();}
+ const demo=await page({storage:{},hash:'',real:false});try{assert.equal(demo.d.querySelector('#notificationSwitch').disabled,false);assert.equal(demo.d.querySelector('#notificationSwitch').getAttribute('aria-checked'),'true');}finally{demo.close();}
 });

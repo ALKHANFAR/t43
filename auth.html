@@ -78,8 +78,8 @@ h1{font-family:var(--f-display);font-weight:600;font-size:1.55rem;line-height:1.
 </div>
 <p class="foot"><a href="ar.html">← رجوع للصفحة الرئيسية</a></p>
 <script>
-var API="https://activepieces-p8l1-455.up.railway.app/api/v1/webhooks/";
-var SIGNUP="CL4d7eDq5yk0x3OEFqj6m", LOGIN="23ZWl3GlUCrEUFBCUl4LT", mode="login";
+var API=window.SIYADAH_AUTH_BASE||"/siyadah-api";
+var mode="login";
 var $=function(id){return document.getElementById(id)};
 function setMode(m){ mode=m;
   $("ttl").textContent = m==="login"?"تسجيل الدخول":"إنشاء حساب جديد";
@@ -96,11 +96,10 @@ $("go").onclick=function(){
   if(!email||!pw){ show("err","اكتب الإيميل وكلمة المرور"); return; }
   $("go").disabled=true; $("go").textContent="لحظة…";
   var body = mode==="login"?{email:email,password:pw}:{email:email,password:pw,company_name:co};
-  fetch(API+(mode==="login"?LOGIN:SIGNUP)+"/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+  fetch(API+(mode==="login"?"/v1/auth/login":"/v1/auth/signup"),{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
   .then(function(r){return r.json()}).then(function(d){
     $("go").disabled=false; $("go").textContent = mode==="login"?"دخول":"إنشاء حساب";
     if(d && (d.ok===true||d.ok==="true")){
-      try{ localStorage.setItem("siyadah_token", d.token); localStorage.setItem("siyadah_company", d.company||""); }catch(e){}
       show("ok", d.message||"تم"); setTimeout(function(){ location.href="app/chat.html"; }, 600);
     } else { show("err", (d&&d.message)||"تعذّر — تأكد من بياناتك"); }
   }).catch(function(){ $("go").disabled=false; $("go").textContent="دخول"; show("err","خطأ اتصال، حاول مرة ثانية"); });
@@ -108,27 +107,4 @@ $("go").onclick=function(){
 function show(t,m){ var e=$("msg"); e.className="msg "+t; e.textContent=m; }
 $("password").addEventListener("keydown",function(e){ if(e.key==="Enter") $("go").click(); });
 
-/* ===== الدخول بجوجل (Google Sign-In) ===== */
-/* الصق Google OAuth Client ID هنا لتفعيل الزر (ينشأ من Google Cloud Console، وأضف https://frontend-455-455.up.railway.app في Authorized JavaScript origins). حتى ذلك الحين الزر مخفي. */
-var GOOGLE_CLIENT_ID="";
-var GOOGLE="xnkTa9SXTFBGJAsDu7k5D";
-function onGoogle(resp){
-  var co=$("company").value.trim();
-  show("ok","لحظة… نتحقق من جوجل");
-  fetch(API+GOOGLE+"/sync",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id_token:resp.credential, company_name:co})})
-  .then(function(r){return r.json();}).then(function(d){
-    if(d&&(d.ok===true||d.ok==="true")){ try{ localStorage.setItem("siyadah_token",d.token); localStorage.setItem("siyadah_company",d.company||""); }catch(e){}
-      show("ok", d.message||"تم"); setTimeout(function(){ location.href="app/chat.html"; }, 600); }
-    else show("err",(d&&d.message)||"تعذّر الدخول عبر جوجل");
-  }).catch(function(){ show("err","خطأ اتصال، حاول مرة ثانية"); });
-}
-if(GOOGLE_CLIENT_ID){
-  var gs=document.createElement("script"); gs.src="https://accounts.google.com/gsi/client"; gs.async=true; gs.defer=true;
-  gs.onload=function(){ try{
-    google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID, callback:onGoogle});
-    google.accounts.id.renderButton($("gbtn"),{theme:"outline",size:"large",width:320,text:"continue_with",shape:"pill",locale:"ar"});
-    $("gwrap").hidden=false;
-  }catch(e){} };
-  document.head.appendChild(gs);
-}
 </script></body></html>
