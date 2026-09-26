@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const auth=readFileSync(new URL('../auth.html',import.meta.url),'utf8');
 const chat=readFileSync(new URL('../app/chat.js',import.meta.url),'utf8');
+const chatPage=readFileSync(new URL('../app/chat.html',import.meta.url),'utf8');
 const nginx=readFileSync(new URL('../nginx.conf',import.meta.url),'utf8');
 
 test('authentication uses Siyadah HttpOnly session endpoints through same-origin proxy',()=>{
@@ -17,6 +18,7 @@ test('authentication uses Siyadah HttpOnly session endpoints through same-origin
 test('chat sends cookies and never reads or sends a browser bearer token',()=>{
   assert.match(chat,/credentials:"include"/);
   assert.ok(!chat.includes('localStorage.getItem("siyadah_token")'));
+  assert.ok(!chatPage.includes('localStorage.getItem("siyadah_token")'));
   assert.ok(!chat.includes('"Authorization":"Bearer "+'));
 });
 
@@ -25,4 +27,3 @@ test('nginx proxies the same-origin Siyadah path to the governed core',()=>{
   assert.match(nginx,/proxy_pass https:\/\/siyadah-core-api-production\.up\.railway\.app\//);
   assert.match(nginx,/proxy_set_header Origin \$http_origin/);
 });
-
