@@ -16,7 +16,7 @@ test('chat UI never bypasses Siyadah with a direct Activepieces webhook',()=>{
   assert.ok(!source.includes('localStorage.getItem("siyadah_token")'));
 });
 
-async function page({storage={},hydrate=empty,message,work,employee_state,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true}={}){
+async function page({storage={},hydrate=empty,message,work,approve,employee_state,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
   const w=dom.window,requests=[],alerts=[],polls=[],navigations=[];let hydrateTimer;
   w.matchMedia=()=>({matches:true,addEventListener(){}});
@@ -39,7 +39,7 @@ async function page({storage={},hydrate=empty,message,work,employee_state,export
       return {ok:true,status:200,json:async()=>response};
     }
     const body=JSON.parse(options.body);requests.push({url,body,headers:options.headers,credentials:options.credentials});
-    const handler={hydrate,message,work,employee_state,export:exportResponse}[body.op];
+    const handler={hydrate,message,work,approve,employee_state,export:exportResponse}[body.op];
     const response=typeof handler==='function'?await handler(body):handler;
     if(response instanceof Error)throw response;
     if(response?.httpStatus)return {ok:false,status:response.httpStatus,json:async()=>response};
@@ -76,6 +76,16 @@ test('account menu shows server-verified builder connection and starts governed 
     assert.equal(connect.method,'POST');assert.equal(connect.credentials,'include');
     assert.deepEqual(p.navigations,['https://cloud.activepieces.com/mcp-authorize?request=one']);
     assert.ok(!source.includes('ACTIVEPIECES_MCP_ACCESS_TOKEN'));
+  }finally{p.close();}
+});
+test('builder proposal uses a governed approval operation and renders flow readback',async()=>{
+  const proposal={ok:true,conversation_id:'builder-conversation',work_id:'builder-work',interaction_state:'awaiting_approval',reply:'الخطة جاهزة.',approval:{required:true,approval_id:'approval-1'}};
+  const built={ok:true,conversation_id:'builder-conversation',work_id:'builder-work',work_status:'awaiting_input',interaction_state:'draft_ready',reply:'تم إنشاء مسودة معطلة وقراءتها من Activepieces. لم تُختبر أو تُنشر بعد.',flow_id:'flow-proof',draft:{published:false,tested:false,validation:{valid:true},readback:{id:'flow-proof',status:'DISABLED'}}};
+  const p=await page({message:proposal,approve:built});try{
+    send(p,'أنشئ Flow يبدأ Webhook ثم Code يعيد {ok:true}');await flush();
+    const button=p.d.querySelector('[data-siy-approval="approve"]');assert.ok(button);button.click();await flush();
+    const approval=p.requests.find(x=>x.body.op==='approve');assert.ok(approval.body.request_id);assert.equal(approval.body.conversation_id,'builder-conversation');assert.equal(approval.body.approval_id,'approval-1');assert.equal(approval.body.decision,'approve');
+    assert.match(thread(p),/مسودة معطلة/);assert.match(thread(p),/flow-proof/);assert.equal(p.d.querySelectorAll('[data-siy-approval]').length,0);
   }finally{p.close();}
 });
 test('browser storage cannot supply company identity or suppress server hydration',async()=>{
