@@ -284,6 +284,8 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 .pop button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;background:none;border:0;text-align:start;font-size:.875rem;border-radius:2px;transition:.15s}
 .pop button:hover{background:var(--wash)}
 .pop button .ic{color:var(--ash)}
+.pop button .apstate{margin-inline-start:auto;color:var(--ash);font-size:.72rem}
+.pop button .apstate--ok{color:var(--ok)}
 .pop .sep{height:1px;background:var(--hair);margin:6px 4px}
 
 /* لوحة الإعدادات — تنزل فوق كل شيء بدون ما تنقلك */
@@ -516,6 +518,7 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 
     <div class="side__foot">
       <div class="pop" id="pop">
+        <button type="button" id="builderConnectBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M8 12h8M12 8v8"/><circle cx="12" cy="12" r="9"/></svg><span>محرك البناء</span><small class="apstate" id="builderConnectState">تحقق</small></button>
         <button type="button" data-open="settings"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>الإعدادات</button>
         <button type="button" data-open="plan"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/></svg>الخطة</button>
         <div class="sep"></div>
@@ -592,6 +595,6 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 
 <script>window.SIYADAH_REAL_ACCOUNT=true;</script>
 <script src="../pieces.js?v=1.9.0" defer></script>
-<script src="chat.js?v=1.9.0" defer></script>
+<script src="chat.js?v=1.9.1" defer></script>
 </body>
 </html>
