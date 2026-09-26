@@ -751,6 +751,7 @@ var I = {
   $("#thread").addEventListener("click",function(e){
     var t=e.target, list, mEl=t.closest(".m"), mi=mEl?+mEl.dataset.mi:-1;
     if(t.closest("[data-siy-retry]")){ var retryList=curList(); if(retryList&&retryList[mi]&&retryList[mi].siyRetry) retryList[mi].siyRetry(); return; }
+    if(t.closest("[data-siy-approval]")){ var approvalList=curList(), approvalRow=approvalList&&approvalList[mi]; siyDecideBuilder(approvalRow,t.closest("[data-siy-approval]").dataset.siyApproval); return; }
     if(window.__SIY_REAL__ && t.closest("#instrSave,#instrPrev,[data-save],[data-approve],[data-decide],[data-opt],[data-pv],[data-hcancel],[data-undo]")){ siyUnsupported(); return; }
     if(t.closest("#renameBtn")){ renameEmp(); return; }
     var c=t.closest(".cardq"); if(c){ send(c.lastChild.textContent); return; }
@@ -1212,12 +1213,30 @@ var I = {
       (blocked.length?'<details><summary>وش باقي؟</summary><div class="msrc">'+blocked.map(function(row){return '• '+esc(row.label||row.key);}).join('<br>')+'</div></details>':'')+
       '</div>';
   }
+  function siyBuilderProposalHtml(data){
+    if(!data||!data.approval||data.approval.required!==true||typeof data.approval.approval_id!=="string") return "";
+    return '<div class="plan nr" style="margin-top:10px"><div class="plan__h"><span class="drop"></span>خطة بناء حقيقية</div>'+
+      '<div class="prow"><b>المشغّل</b><span>Webhook</span></div>'+
+      '<div class="prow"><b>الخطوة</b><span>Code يعيد <code>{ok:true}</code></span></div>'+
+      '<div class="prow"><b>الحدود</b><span>مسودة معطلة فقط · بلا اختبار · بلا نشر</span></div></div>'+
+      '<div class="approve nr"><button type="button" class="bt" data-siy-approval="approve">'+I.check+'وافق وأنشئ المسودة</button>'+
+      '<button type="button" class="bt bt--line" data-siy-approval="reject">إلغاء</button></div>';
+  }
   function siyResultRow(data){
     var state=data.work_status, text=data.reply;
     if(!text) text=({queued:"تم استلام الطلب، بانتظار التنفيذ.",running:"العمل قيد التنفيذ.",succeeded:"اكتمل العمل حسب سجل التشغيل.",failed:"تعذّر إكمال العمل. راجع تفاصيل النتيجة.",awaiting_input:"العمل ينتظر معلومات إضافية منك.",cancelled:"أُلغي الطلب."})[state]||"وصل الرد دون تفاصيل إضافية.";
     var records=(Array.isArray(data.recent_work)?data.recent_work:[]).filter(function(r){return (!r.conversation_id||r.conversation_id===data.conversation_id)&&(!r.work_id||r.work_id===data.work_id);});
     var scoped=records.filter(function(r){return r.conversation_id;});
-    return {me:false,at:now(),t:siyReplyHtml(text)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,'نتائج هذا الطلب'):'')+siyLegacyProofHtml(records),workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;})};
+    var draft=data.draft&&data.flow_id?siyRefsHtml([['الفلو',data.flow_id],['العمل',data.work_id]]):'';
+    return {me:false,at:now(),t:siyReplyHtml(text)+siyBuilderProposalHtml(data)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,'نتائج هذا الطلب'):'')+siyLegacyProofHtml(records)+draft,workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;}),builderApproval:data.approval&&data.approval.required===true?{id:data.approval.approval_id,conversationId:data.conversation_id}:null};
+  }
+  async function siyDecideBuilder(row,decision){
+    if(!row||!row.builderApproval||row.siyInFlight) return;
+    row.siyInFlight=true; row.t=siyReplyHtml(decision==='approve'?'جارٍ إنشاء المسودة المعطلة في Activepieces…':'جارٍ إلغاء الخطة…'); siyDraw();
+    try{
+      var data=await siyRequest({op:'approve',request_id:crypto.randomUUID(),conversation_id:row.builderApproval.conversationId,approval_id:row.builderApproval.id,decision:decision});
+      Object.assign(row,siyResultRow(data)); row.builderApproval=null; row.siyInFlight=false; siyDraw();
+    }catch(error){ row.siyInFlight=false; row.t=siyReplyHtml(error.message||'تعذر تنفيذ القرار.'); siyDraw(); }
   }
   function siyPoll(workId,list,row,attempt){
     var generation=siyGeneration;
