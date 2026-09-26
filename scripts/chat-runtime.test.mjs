@@ -79,10 +79,11 @@ test('account menu shows server-verified builder connection and starts governed 
   }finally{p.close();}
 });
 test('builder proposal uses a governed approval operation and renders flow readback',async()=>{
-  const proposal={ok:true,conversation_id:'builder-conversation',work_id:'builder-work',interaction_state:'awaiting_approval',reply:'الخطة جاهزة.',approval:{required:true,approval_id:'approval-1'}};
+  const proposal={ok:true,conversation_id:'builder-conversation',work_id:'builder-work',interaction_state:'awaiting_approval',reply:'الخطة جاهزة.',flow_plan:{name:'Daily greeting',trigger:{piece_name:'@activepieces/piece-schedule',operation:'cron_expression'},steps:[{type:'CODE',display_name:'Greeting'}]},approval:{required:true,approval_id:'approval-1'}};
   const built={ok:true,conversation_id:'builder-conversation',work_id:'builder-work',work_status:'awaiting_input',interaction_state:'draft_ready',reply:'تم إنشاء مسودة معطلة وقراءتها من Activepieces. لم تُختبر أو تُنشر بعد.',flow_id:'flow-proof',draft:{published:false,tested:false,validation:{valid:true},readback:{id:'flow-proof',status:'DISABLED'}}};
   const p=await page({message:proposal,approve:built});try{
     send(p,'أنشئ Flow يبدأ Webhook ثم Code يعيد {ok:true}');await flush();
+    assert.match(thread(p),/Daily greeting/);assert.match(thread(p),/cron_expression/);assert.match(thread(p),/Greeting/);
     const button=p.d.querySelector('[data-siy-approval="approve"]');assert.ok(button);button.click();await flush();
     const approval=p.requests.find(x=>x.body.op==='approve');assert.ok(approval.body.request_id);assert.equal(approval.body.conversation_id,'builder-conversation');assert.equal(approval.body.approval_id,'approval-1');assert.equal(approval.body.decision,'approve');
     assert.match(thread(p),/مسودة معطلة/);assert.match(thread(p),/flow-proof/);assert.equal(p.d.querySelectorAll('[data-siy-approval]').length,0);
