@@ -66,15 +66,13 @@ test('cookie session uses authenticated gateway without browser-readable identit
     assert.ok(p.d.querySelector('#meBtn').textContent.includes('Server Company'));
   }finally{p.close();}
 });
-test('account menu shows server-verified builder connection and starts governed OAuth',async()=>{
-  const p=await page({integrationStatus:{ok:true,connected:false},integrationConnect:{ok:true,authorization_url:'https://cloud.activepieces.com/mcp-authorize?request=one',expires_in:600}});try{
+test('account menu routes Activepieces MCP to the direct browser tools screen',async()=>{
+  const p=await page();try{
     p.d.querySelector('#meBtn').click();await flush();
     assert.equal(p.d.querySelector('#builderConnectState').textContent,'اربط');
-    assert.equal(p.requests.find(x=>String(x.url).endsWith('/status')).credentials,'include');
     p.d.querySelector('#builderConnectBtn').click();await flush();
-    const connect=p.requests.find(x=>String(x.url).endsWith('/connect'));
-    assert.equal(connect.method,'POST');assert.equal(connect.credentials,'include');
-    assert.deepEqual(p.navigations,['https://cloud.activepieces.com/mcp-authorize?request=one']);
+    assert.match(thread(p),/Activepieces MCP المباشر/);
+    assert.equal(p.requests.some(x=>String(x.url).includes('/v1/integrations/activepieces/')),false);
     assert.ok(!source.includes('ACTIVEPIECES_MCP_ACCESS_TOKEN'));
   }finally{p.close();}
 });
