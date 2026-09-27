@@ -103,3 +103,10 @@ test('isolated lab relay is POST-only and pinned to the Activepieces MCP endpoin
   assert.match(labServer,/fetch\("https:\/\/cloud\.activepieces\.com\/mcp"/);
   assert.ok(!labServer.includes('proxy_pass'));
 });
+
+test('server records every Codex-origin experiment without persisting credentials',()=>{
+  assert.match(labServer,/SiyadahExperimentV1/);
+  assert.match(labServer,/\/siyadah-api\/v1\/experiments/);
+  assert.match(labServer,/tool_trace: mcpTrace\(result\)/);
+  assert.ok(!labServer.includes('authorization: apToken,'+'\n      experiment'));
+});

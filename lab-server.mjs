@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
-import { createReadStream, statSync } from "node:fs";
-import { extname, join, normalize } from "node:path";
+import { appendFileSync, createReadStream, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
+import { dirname, extname, join, normalize } from "node:path";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 
 const root = process.cwd();
@@ -9,8 +9,12 @@ const openAiKey = String(process.env.OPENAI_API_KEY || "").trim();
 const labToken = String(process.env.LAB_ACCESS_TOKEN || "").trim();
 const model = String(process.env.OPENAI_MODEL || "gpt-5.4-mini").trim();
 const conversations = new Map();
+const experimentLedgerPath = String(process.env.EXPERIMENT_LEDGER_PATH || join(root, "data", "experiments.jsonl"));
 
 if (!openAiKey || !labToken) throw new Error("OPENAI_API_KEY and LAB_ACCESS_TOKEN are required");
+
+mkdirSync(dirname(experimentLedgerPath), { recursive: true });
+if (!existsSync(experimentLedgerPath)) appendFileSync(experimentLedgerPath, "", { encoding: "utf8" });
 
 const mime = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
@@ -53,7 +57,52 @@ function outputText(result) {
     .filter(item => item?.type === "output_text").map(item => item.text).join("\n").trim();
 }
 
+function compact(value, limit = 1600) {
+  if (value == null) return null;
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  return text.length > limit ? `${text.slice(0, limit)}…` : text;
+}
+
+function mcpTrace(result) {
+  return (Array.isArray(result?.output) ? result.output : [])
+    .filter(item => String(item?.type || "").includes("mcp"))
+    .map(item => ({
+      type: item.type || null,
+      server: item.server_label || item.server || "activepieces",
+      tool: item.name || item.tool_name || null,
+      status: item.status || null,
+      arguments: compact(item.arguments ?? item.input),
+      output: compact(item.output ?? item.result),
+      error: compact(item.error)
+    }));
+}
+
+function idsFrom(text) {
+  const value = String(text || "");
+  const find = label => value.match(new RegExp(`${label}\\s*[:：#-]?\\s*([A-Za-z0-9_-]{8,})`, "i"))?.[1] || null;
+  return { flow_id: find("Flow\\s*ID"), run_id: find("Run\\s*ID") };
+}
+
+function writeExperiment(entry) {
+  const safe = {
+    schema: "SiyadahExperimentV1",
+    id: entry.id || randomUUID(),
+    recorded_at: new Date().toISOString(),
+    ...entry
+  };
+  appendFileSync(experimentLedgerPath, `${JSON.stringify(safe)}\n`, { encoding: "utf8" });
+  return safe;
+}
+
+function readExperiments(limit = 50) {
+  const lines = readFileSync(experimentLedgerPath, "utf8").split("\n").filter(Boolean);
+  return lines.slice(-Math.max(1, Math.min(limit, 200))).reverse().flatMap(line => {
+    try { return [JSON.parse(line)]; } catch { return []; }
+  });
+}
+
 async function chat(input) {
+  const startedAt = Date.now();
   const message = typeof input.message === "string" ? input.message.trim() : "";
   const apToken = typeof input.activepieces_token === "string" ? input.activepieces_token.trim() : "";
   if (!message) throw Object.assign(new Error("message_required"), { statusCode: 422 });
@@ -82,14 +131,42 @@ async function chat(input) {
       }),
       signal: controller.signal
     });
+    if (!response.ok) throw Object.assign(new Error(`openai_${response.status}`), { statusCode: 502 });
+    const result = await response.json();
+    const reply = outputText(result);
+    if (!reply) throw Object.assign(new Error("openai_empty_response"), { statusCode: 502 });
+    const refs = idsFrom(reply);
+    const experiment = writeExperiment({
+      origin: "codex_siyadah_server",
+      request_id: input.request_id || null,
+      conversation_id: conversationId,
+      user_request: message,
+      status: "completed",
+      latency_ms: Date.now() - startedAt,
+      model,
+      transport: "openai_responses_to_activepieces_mcp",
+      tool_trace: mcpTrace(result),
+      usage: result.usage || null,
+      evidence: { ...refs, reply: compact(reply, 4000) }
+    });
+    conversations.set(conversationId, [...history, { role: "user", content: message }, { role: "assistant", content: reply }].slice(-12));
+    return { ok: true, request_id: input.request_id, request_status: "observed", conversation_id: conversationId, reply,
+      experiment_id: experiment.id,
+      execution: { system: "openai_activepieces_mcp", surface: "isolated_lab", status: "completed" } };
+  } catch (error) {
+    writeExperiment({
+      origin: "codex_siyadah_server",
+      request_id: input.request_id || null,
+      conversation_id: conversationId,
+      user_request: message,
+      status: "failed",
+      latency_ms: Date.now() - startedAt,
+      model,
+      transport: "openai_responses_to_activepieces_mcp",
+      error: { code: error?.name === "AbortError" ? "openai_timeout" : String(error?.message || "unknown_error") }
+    });
+    throw error;
   } finally { clearTimeout(timer); }
-  if (!response.ok) throw Object.assign(new Error(`openai_${response.status}`), { statusCode: 502 });
-  const result = await response.json();
-  const reply = outputText(result);
-  if (!reply) throw Object.assign(new Error("openai_empty_response"), { statusCode: 502 });
-  conversations.set(conversationId, [...history, { role: "user", content: message }, { role: "assistant", content: reply }].slice(-12));
-  return { ok: true, request_id: input.request_id, request_status: "observed", conversation_id: conversationId, reply,
-    execution: { system: "openai_activepieces_mcp", surface: "isolated_lab", status: "completed" } };
 }
 
 async function relayMcp(request, response) {
@@ -126,6 +203,10 @@ createServer(async (request, response) => {
       return response.end();
     }
     if (!authorized(request)) return json(response, 404, { error: "not_found" });
+    if (request.method === "GET" && url.pathname === "/siyadah-api/v1/experiments") {
+      const limit = Number.parseInt(url.searchParams.get("limit") || "50", 10);
+      return json(response, 200, { ok: true, experiments: readExperiments(Number.isFinite(limit) ? limit : 50) });
+    }
     if (request.method === "POST" && url.pathname === "/activepieces-mcp") return await relayMcp(request, response);
     if (request.method === "POST" && url.pathname === "/siyadah-api/v1/chat") {
       const input = await body(request);

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>سيادة — سجل التجارب</title>
+  <style>
+    :root{color-scheme:dark;background:#0b0d10;color:#f5f5f3;font-family:system-ui,-apple-system,"IBM Plex Sans Arabic",sans-serif}body{margin:0;padding:32px;max-width:1100px;margin-inline:auto}header{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:24px}h1{font-size:28px;margin:0}p{color:#aeb4bd;margin:6px 0 0}.pill{border:1px solid #2a313b;border-radius:999px;padding:7px 11px;color:#b9f7cf;background:#10251a}.grid{display:grid;gap:14px}.card{border:1px solid #252b33;background:#11151a;border-radius:16px;padding:18px}.top{display:flex;justify-content:space-between;gap:16px;align-items:start}.status{font-weight:700}.ok{color:#72e09a}.failed{color:#ff8c8c}.meta,.trace{font-size:13px;color:#9da5b0}.request{font-size:18px;margin:12px 0;white-space:pre-wrap}.proof{display:flex;gap:8px;flex-wrap:wrap}.proof code{background:#1c222a;border-radius:7px;padding:5px 7px;color:#dfe7f2}details{margin-top:12px;border-top:1px solid #252b33;padding-top:10px}pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#c8d1dc;background:#0b0e12;padding:12px;border-radius:10px}@media(max-width:640px){body{padding:18px}.top,header{display:block}.pill{display:inline-block;margin-top:12px}}
+  </style>
+</head>
+<body>
+  <header><div><h1>سجل تجارب سيادة × Activepieces</h1><p>طلب المستخدم، المسار التقني، الأدوات، الاستهلاك، والدليل الفعلي — بلا ادعاءات.</p></div><span class="pill" id="count">جارٍ التحميل…</span></header>
+  <main class="grid" id="list"></main>
+  <script>
+    const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+    async function load(){
+      const response=await fetch('/siyadah-api/v1/experiments?limit=100',{credentials:'include'});
+      if(!response.ok)throw new Error('تعذّر تحميل السجل');
+      const data=await response.json(), rows=data.experiments||[];
+      document.querySelector('#count').textContent=`${rows.length} تجربة موثقة`;
+      document.querySelector('#list').innerHTML=rows.map(x=>`<article class="card"><div class="top"><div><b>${esc(x.origin)}</b><div class="meta">${esc(x.recorded_at)} · ${esc(x.latency_ms??'—')} ms · ${esc(x.model||'بدون LLM مسجل')}</div></div><span class="status ${x.status==='completed'?'ok':'failed'}">${esc(x.status)}</span></div><div class="request">${esc(x.user_request)}</div><div class="proof">${x.evidence?.flow_id?`<code>Flow ${esc(x.evidence.flow_id)}</code>`:''}${x.evidence?.run_id?`<code>Run ${esc(x.evidence.run_id)}</code>`:''}${x.usage?.total_tokens?`<code>${esc(x.usage.total_tokens)} tokens</code>`:''}</div><details><summary>التفكيك التقني</summary><pre>${esc(JSON.stringify({transport:x.transport,tool_trace:x.tool_trace,usage:x.usage,evidence:x.evidence,error:x.error,limits:x.limits},null,2))}</pre></details></article>`).join('')||'<p>لا توجد تجارب بعد.</p>';
+    }
+    load().catch(error=>{document.querySelector('#count').textContent='خطأ';document.querySelector('#list').innerHTML=`<p>${esc(error.message)}</p>`});
+  </script>
+</body>
+</html>
