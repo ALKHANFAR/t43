@@ -847,6 +847,7 @@ var I = {
   var TOOLS=(window.PIECES||[]).map(function(p){ return {s:p[0],n:p[1],d:p[5]||p[2],en:p[2],c:p[3],logo:p[4],on:!!ON[p[0]],by:ON[p[0]]||"",sug:SUG[p[0]]||""}; });
   var SOON=["سلة","زد","فودكس","ميسر","Unifonic","تابي","دفترة"];
   var tq="", tshown=24, picked=null, allOpen=false; /* allOpen: قسم «الكل» مطوي افتراضيًا */
+  var MCP_DIRECT={state:"idle",tools:[],error:""};
   /* مين يستخدم الأداة: من أدوات الموظفين، وإلا من الاقتراحات */
   function usersOf(s){ var u=EMPS.filter(function(e){return e.tools.indexOf(s)>-1}).map(function(e){return e.n}); if(u.length) return u.join(" · "); var g=SUG[s]; return g?g.replace(/^(يحتاجه|تحتاجه)\s+/,""):"بانتظار تعيين موظف"; }
   function tcard(t){
@@ -858,7 +859,12 @@ var I = {
   function tgrid(a,e){ return a.length?'<div class="tgrid">'+a.map(tcard).join("")+'</div>':'<div class="tempty">'+e+'</div>'; }
   function toolsHtml(){
     var f=TOOLS.filter(function(t){return !tq||(t.n+" "+t.d+" "+t.en+" "+t.s+" "+t.c).toLowerCase().indexOf(tq)>-1});
+    var connected=MCP_DIRECT.state==="connected",busy=MCP_DIRECT.state==="loading"||MCP_DIRECT.state==="connecting";
+    var directText=connected?("متصل مباشرة · "+MCP_DIRECT.tools.length+" أداة حقيقية"):(busy?"جارٍ الاتصال المباشر…":"غير متصل مباشرة");
+    var directDetails=connected?('<p style="margin:.55rem 0 0;color:var(--ash);font-size:.82rem">'+MCP_DIRECT.tools.slice(0,8).map(function(tool){return esc(tool.name||"");}).join(" · ")+(MCP_DIRECT.tools.length>8?" …":"")+'</p>'):(MCP_DIRECT.error?'<p style="margin:.55rem 0 0;color:var(--bad);font-size:.82rem">'+esc(MCP_DIRECT.error)+'</p>':'');
+    var directButton='<button type="button" class="lnk lnk--fill" id="mcpDirectBtn"'+(busy?' disabled aria-busy="true"':'')+'>'+(connected?'أعد قراءة الأدوات':'اربط Activepieces مباشرة')+'</button>';
     var h='<div class="tools"><h1>الأدوات</h1><p class="sub">'+TOOLS.length+' أداة. اربط اللي تستخدمه، وموظفوك يشتغلون فيه — ولا يوصل موظف لأداة ما ربطتها أنت.</p>'+
+      '<div class="card" style="margin:16px 0"><div class="card__b"><b>Activepieces MCP المباشر</b><p style="margin:.35rem 0;color:var(--ash);font-size:.88rem">'+directText+' — الاتصال من هذا المتصفح إلى Activepieces دون بوابة سيادة.</p>'+directButton+directDetails+'</div></div>'+
       '<div class="tsearch"><span class="drop"></span><input id="tq" placeholder="ابحث… واتساب، قيود، HubSpot" aria-label="ابحث في الأدوات" value="'+tq+'"><kbd>/</kbd></div>';
     if(!tq){
       var on=f.filter(function(t){return t.on}),sug=f.filter(function(t){return t.sug&&!t.on}),rest=f.filter(function(t){return !t.on&&!t.sug});
@@ -877,6 +883,7 @@ var I = {
   }
   function bindTools(){
     var q=$("#tq"); q.addEventListener("input",function(){ tq=this.value.trim().toLowerCase(); tshown=24; var pos=this.selectionStart; renderThread(); var nq=$("#tq"); nq.focus(); nq.setSelectionRange(pos,pos); });
+    var direct=$("#mcpDirectBtn"); if(direct) direct.addEventListener("click",function(){ siyDirectMcpAction(); });
   }
   /* dialog: focus in, trap Tab, Escape closes, focus returns to the opener */
   var modalOpener=null;
@@ -905,9 +912,10 @@ var I = {
   var pop=$("#pop");
   $("#meBtn").addEventListener("click",function(e){ e.stopPropagation(); pop.classList.toggle("on"); if(pop.classList.contains("on")) siyRefreshBuilderConnection(); });
   var builderConnectBtn=$("#builderConnectBtn");
-  if(builderConnectBtn) builderConnectBtn.addEventListener("click",function(){ siyConnectBuilder(); });
+  if(builderConnectBtn) builderConnectBtn.addEventListener("click",function(){ pop.classList.remove("on"); openTools(); });
   var lo=$("#logoutBtn"); if(lo) lo.addEventListener("click",function(){
     siyStopPolling();
+    if(window.SiyadahActivepiecesMcp) window.SiyadahActivepiecesMcp.disconnect();
     fetch((window.SIYADAH_AUTH_BASE||"/siyadah-api")+"/v1/auth/logout",{method:"POST",credentials:"include"})
       .catch(function(){})
       .finally(function(){ location.replace("../auth.html"); });
@@ -1057,34 +1065,42 @@ var I = {
     if(e.key==="/"&&!typing&&!mod){ e.preventDefault(); openTools(); setTimeout(function(){ var q=$("#tq"); if(q) q.focus(); },30); }
   });
 
-  /* بوابة سيادة المصادق عليها: لا تتصل الواجهة بـ Activepieces مباشرة. */
+  /* مسار الشات المحكوم يبقى مستقلًا؛ صفحة الأدوات تستطيع إثبات MCP مباشر من المتصفح. */
   var SIY_GATEWAY=window.SIYADAH_CHAT_GATEWAY||"/siyadah-api/v1/chat";
-  var SIY_INTEGRATIONS_BASE=(window.SIYADAH_AUTH_BASE||"/siyadah-api")+"/v1/integrations/activepieces";
   var siyPolls={}, siyGeneration=0, siyEmployeeStatePending={};
-  function siyBuilderState(text,connected){ var node=$("#builderConnectState"); if(!node) return; node.textContent=text; node.classList.toggle("apstate--ok",connected===true); }
-  async function siyRefreshBuilderConnection(){
-    if(!window.__SIY_REAL__) return;
-    siyBuilderState("يتحقق…",false);
-    try{
-      var response=await fetch(SIY_INTEGRATIONS_BASE+"/status",{credentials:"include",headers:{"Accept":"application/json"}});
-      if(response.status===401||response.status===403) throw siyAccessError("انتهت الجلسة");
-      var data=await response.json();
-      if(!response.ok||!data||data.ok!==true) throw new Error("status unavailable");
-      siyBuilderState(data.connected===true?"مربوط":"اربط",data.connected===true);
-    }catch(error){ siyBuilderState("تعذر التحقق",false); }
+  function siyRenderDirectMcp(){
+    var count=$("#toolsCnt");
+    if(count&&MCP_DIRECT.state==="connected") count.textContent=MCP_DIRECT.tools.length+" عبر MCP";
+    if(who==="tools") renderThread();
   }
-  async function siyConnectBuilder(){
-    if(!window.__SIY_REAL__) return;
-    var button=$("#builderConnectBtn"); if(!button||button.disabled) return;
-    button.disabled=true; siyBuilderState("يفتح…",false);
+  async function siyDirectMcpAction(){
+    var client=window.SiyadahActivepiecesMcp;
+    if(!window.__SIY_REAL__||!client){ MCP_DIRECT.error="العميل المباشر غير متاح."; siyRenderDirectMcp(); return; }
+    MCP_DIRECT.error="";
+    if(!client.status().connected){
+      MCP_DIRECT.state="connecting"; siyRenderDirectMcp();
+      try{ await client.connect(); }catch(error){ MCP_DIRECT.state="error"; MCP_DIRECT.error=error.message||"تعذّر بدء الربط."; siyRenderDirectMcp(); }
+      return;
+    }
+    MCP_DIRECT.state="loading"; siyRenderDirectMcp();
+    try{ MCP_DIRECT.tools=await client.listTools(); MCP_DIRECT.state="connected"; }
+    catch(error){ MCP_DIRECT.state="error"; MCP_DIRECT.error=error.message||"تعذّرت قراءة الأدوات."; }
+    siyRenderDirectMcp();
+  }
+  async function siyInitDirectMcp(){
+    var client=window.SiyadahActivepiecesMcp;
+    if(!window.__SIY_REAL__||!client) return;
     try{
-      var response=await fetch(SIY_INTEGRATIONS_BASE+"/connect",{method:"POST",credentials:"include",headers:{"Accept":"application/json"}});
-      var data=await response.json();
-      if(response.status===401||response.status===403) throw siyAccessError("انتهت الجلسة");
-      if(!response.ok||!data||data.ok!==true||typeof data.authorization_url!=="string") throw new Error("connect unavailable");
-      if(typeof window.__SIY_NAVIGATE__==="function") window.__SIY_NAVIGATE__(data.authorization_url);
-      else location.assign(data.authorization_url);
-    }catch(error){ button.disabled=false; siyBuilderState(error.noRetry?"سجل دخولك":"أعد المحاولة",false); }
+      MCP_DIRECT.state="loading";
+      await client.handleCallback();
+      if(!client.status().connected){ MCP_DIRECT.state="idle"; return; }
+      MCP_DIRECT.tools=await client.listTools(); MCP_DIRECT.state="connected"; siyRenderDirectMcp();
+    }catch(error){ MCP_DIRECT.state="error"; MCP_DIRECT.error=error.message||"تعذّر الاتصال المباشر."; siyRenderDirectMcp(); }
+  }
+  function siyBuilderState(text,connected){ var node=$("#builderConnectState"); if(!node) return; node.textContent=text; node.classList.toggle("apstate--ok",connected===true); }
+  function siyRefreshBuilderConnection(){
+    var client=window.SiyadahActivepiecesMcp,connected=!!(client&&client.status().connected);
+    siyBuilderState(connected?"مربوط مباشر":"اربط",connected);
   }
   function siyStopPolling(){ siyGeneration++; Object.keys(siyPolls).forEach(function(k){ clearTimeout(siyPolls[k]); }); siyPolls={}; }
   function siyAccessError(text){var e=new Error(text);e.noRetry=true;return e;}
@@ -1418,6 +1434,7 @@ var I = {
     }
     renderSide(); renderBar(); renderThread(); renderPlan();
     route(); window.addEventListener("hashchange",route);
+    siyInitDirectMcp();
     /* المبادرة التلقائية للعرض التجريبي فقط — الحساب الحقيقي لا يُظهر مبادرات وهمية */
     if(!window.__SIY_REAL__) setTimeout(function(){ triggerProactive(false); }, reduced()?0:6000);
   }
