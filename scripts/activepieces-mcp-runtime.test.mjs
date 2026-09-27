@@ -6,7 +6,7 @@ import { TextEncoder } from 'node:util';
 import { JSDOM } from 'jsdom';
 
 const source=readFileSync(new URL('../app/activepieces-mcp.js',import.meta.url),'utf8');
-const nginx=readFileSync(new URL('../nginx.conf',import.meta.url),'utf8');
+const labServer=readFileSync(new URL('../lab-server.mjs',import.meta.url),'utf8');
 const AP='https://cloud.activepieces.com';
 const MCP_TRANSPORT='/activepieces-mcp';
 
@@ -98,9 +98,8 @@ test('callback exchanges the code then initialize and tools/list use the fixed-t
   }finally{p.dom.window.close();}
 });
 
-test('nginx relay is POST-only and pinned to the Activepieces MCP endpoint',()=>{
-  assert.match(nginx,/location = \/activepieces-mcp\s*\{/);
-  assert.match(nginx,/limit_except POST \{ deny all; \}/);
-  assert.match(nginx,/proxy_set_header Host cloud\.activepieces\.com;/);
-  assert.match(nginx,/proxy_pass https:\/\/cloud\.activepieces\.com\/mcp;/);
+test('isolated lab relay is POST-only and pinned to the Activepieces MCP endpoint',()=>{
+  assert.match(labServer,/request\.method === "POST" && url\.pathname === "\/activepieces-mcp"/);
+  assert.match(labServer,/fetch\("https:\/\/cloud\.activepieces\.com\/mcp"/);
+  assert.ok(!labServer.includes('proxy_pass'));
 });
