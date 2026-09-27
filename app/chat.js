@@ -1067,6 +1067,7 @@ var I = {
 
   /* مسار الشات المحكوم يبقى مستقلًا؛ صفحة الأدوات تستطيع إثبات MCP مباشر من المتصفح. */
   var SIY_GATEWAY=window.SIYADAH_CHAT_GATEWAY||"/siyadah-api/v1/chat";
+  var SIY_NATIVE_CHAT=window.SIYADAH_CHAT_MODE==="activepieces-native";
   var siyPolls={}, siyGeneration=0, siyEmployeeStatePending={};
   function siyRenderDirectMcp(){
     var count=$("#toolsCnt");
@@ -1279,6 +1280,7 @@ var I = {
     },attempt<3?2000:5000);
   }
   function siyMessage(text,list,employeeId){
+    if(SIY_NATIVE_CHAT){ siyNativeMessage(text,list,employeeId); return; }
     var request={op:"message",message:text,conversation_id:list.siyConversationId||null,employee_id:employeeId||null,request_id:crypto.randomUUID()};
     if(list.siyLatestRequestId) request.prior_request_id=list.siyLatestRequestId;
     list.siyLatestRequestId=request.request_id;
@@ -1299,6 +1301,20 @@ var I = {
       }
     }
     submit();
+  }
+  function siyNativeMessage(text,list,employeeId){
+    var client=window.SiyadahActivepiecesChat;
+    var row={me:false,typing:true,at:""}; list.push(row); siyDraw();
+    if(!client||typeof client.send!=="function"){
+      row.typing=false; row.t=siyReplyHtml("عميل شات Activepieces الأصلي غير متاح."); siyDraw(); return;
+    }
+    client.send({conversationId:list.siyConversationId||null,content:text}).then(function(result){
+      if(!result||typeof result.conversationId!=="string"||!result.conversationId) throw new Error("لم يصل رقم محادثة Activepieces.");
+      siyRememberConversation({conversation_id:result.conversationId},list,employeeId,text);
+      row.typing=false; row.at=now(); row.t=siyReplyHtml(result.assistantText||"اكتمل الطلب داخل Activepieces دون نص ظاهر."); row.activepiecesRunId=result.runId||null; siyDraw();
+    }).catch(function(error){
+      row.typing=false; row.at=now(); row.t=siyReplyHtml(error.message||"تعذّر الاتصال بشات Activepieces الأصلي."); siyDraw();
+    });
   }
   /* لا نغيّر بيانات الحساب الحقيقي قبل ربط كتابة موثقة وقراءة تؤكدها. */
   function siyUnsupported(){ window.alert("هذا التعديل غير متاح بعد. لم يتم تغيير أي بيانات أو تشغيل."); }

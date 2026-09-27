@@ -16,13 +16,14 @@ test('chat UI never bypasses Siyadah with a direct Activepieces webhook',()=>{
   assert.ok(!source.includes('localStorage.getItem("siyadah_token")'));
 });
 
-async function page({storage={},hydrate=empty,message,work,approve,employee_state,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true}={}){
+async function page({storage={},hydrate=empty,message,work,approve,employee_state,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,nativeClient=null,hash='#run=build&plan=over',real=true}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
   const w=dom.window,requests=[],alerts=[],polls=[],navigations=[];let hydrateTimer;
   w.matchMedia=()=>({matches:true,addEventListener(){}});
   w.PIECES=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد']];
   w.SIYADAH_REAL_ACCOUNT=real;
   w.SIYADAH_CHAT_GATEWAY='https://gateway.test/sync';
+  if(nativeClient){w.SIYADAH_CHAT_MODE='activepieces-native';w.SiyadahActivepiecesChat=nativeClient;}
   Object.entries(storage).forEach(([k,v])=>w.localStorage.setItem(k,v));
   const realTimeout=w.setTimeout.bind(w);
   w.setTimeout=(cb,ms)=>{
@@ -112,6 +113,19 @@ test('central request mentioning report today reaches gateway and escapes consul
     for(const key of ['company_name','tenant_id','history','employees','flow_id'])assert.ok(!(key in req.body));
     assert.match(thread(p),/استشارة <img src=x>/);assert.equal(p.d.querySelectorAll('#thread img').length,0);
     assert.equal(p.d.querySelector('.hist[data-chat]').dataset.chat,'conversation-1');
+  }finally{p.close();}
+});
+test('native mode sends the central message to Activepieces native chat and preserves its conversation id',async()=>{
+  const nativeCalls=[];
+  const nativeClient={send:async input=>{nativeCalls.push(input);return {conversationId:'ap-conversation-1',runId:'ap-run-1',assistantText:'بنيت الفلو داخل Activepieces.'};}};
+  const p=await page({nativeClient});try{
+    send(p,'ابن فلو متابعة');await flush();await flush();
+    assert.equal(nativeCalls.length,1);assert.equal(nativeCalls[0].conversationId,null);assert.equal(nativeCalls[0].content,'ابن فلو متابعة');
+    assert.equal(p.requests.filter(x=>x.body&&x.body.op==='message').length,0);
+    assert.match(thread(p),/بنيت الفلو داخل Activepieces/);
+    assert.equal(p.d.querySelector('.hist[data-chat]').dataset.chat,'ap-conversation-1');
+    p.d.querySelector('[data-chat="ap-conversation-1"]').click();send(p,'كمل');await flush();await flush();
+    assert.equal(nativeCalls[1].conversationId,'ap-conversation-1');
   }finally{p.close();}
 });
 test('acceptance card shows proven gates and never labels a partial draft 10/10',async()=>{
