@@ -6,7 +6,9 @@ import { TextEncoder } from 'node:util';
 import { JSDOM } from 'jsdom';
 
 const source=readFileSync(new URL('../app/activepieces-mcp.js',import.meta.url),'utf8');
+const nginx=readFileSync(new URL('../nginx.conf',import.meta.url),'utf8');
 const AP='https://cloud.activepieces.com';
+const MCP_TRANSPORT='/activepieces-mcp';
 
 function response(body,{status=200,headers={}}={}){
   const text=typeof body==='string'?body:JSON.stringify(body);
@@ -62,14 +64,14 @@ test('OAuth callback rejects a mismatched state before token exchange',async()=>
   }finally{p.dom.window.close();}
 });
 
-test('callback exchanges the code then initialize and tools/list stay direct with MCP session',async()=>{
+test('callback exchanges the code then initialize and tools/list use the fixed-target MCP relay',async()=>{
   const calls=[];
   let phase='connect';
   const p=runtime(async(url,options={})=>{
     const target=String(url);calls.push({url:target,options});
     if(phase==='connect') return metadataFetch([])(url,options);
     if(target.endsWith('/token')) return response({access_token:'access-one',refresh_token:'refresh-one'});
-    if(target.endsWith('/mcp')){
+    if(target===MCP_TRANSPORT){
       const body=JSON.parse(options.body);
       if(body.method==='initialize') return response({jsonrpc:'2.0',id:body.id,result:{protocolVersion:'2025-11-25',capabilities:{}}},{headers:{'content-type':'application/json','mcp-session-id':'session-one'}});
       if(body.method==='notifications/initialized') return response('',{status:202});
@@ -89,9 +91,16 @@ test('callback exchanges the code then initialize and tools/list stay direct wit
     const tokenCall=calls.find(call=>call.url.endsWith('/token'));
     assert.match(tokenCall.options.body,/grant_type=authorization_code/);
     assert.ok(!tokenCall.url.includes('issued-code'));
-    const mcpCalls=calls.filter(call=>call.url===AP+'/mcp'&&call.options.method==='POST');
+    const mcpCalls=calls.filter(call=>call.url===MCP_TRANSPORT&&call.options.method==='POST');
     assert.deepEqual(mcpCalls.map(call=>JSON.parse(call.options.body).method),['initialize','notifications/initialized','tools/list']);
     assert.equal(mcpCalls[0].options.headers.Authorization,'Bearer access-one');
     assert.equal(mcpCalls[2].options.headers['Mcp-Session-Id'],'session-one');
   }finally{p.dom.window.close();}
+});
+
+test('nginx relay is POST-only and pinned to the Activepieces MCP endpoint',()=>{
+  assert.match(nginx,/location = \/activepieces-mcp\s*\{/);
+  assert.match(nginx,/limit_except POST \{ deny all; \}/);
+  assert.match(nginx,/proxy_set_header Host cloud\.activepieces\.com;/);
+  assert.match(nginx,/proxy_pass https:\/\/cloud\.activepieces\.com\/mcp;/);
 });

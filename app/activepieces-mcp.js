@@ -1,7 +1,8 @@
 (function(root){
   "use strict";
 
-  var MCP_URL="https://cloud.activepieces.com/mcp";
+  var MCP_RESOURCE_URL="https://cloud.activepieces.com/mcp";
+  var MCP_TRANSPORT_URL="/activepieces-mcp";
   var RESOURCE_METADATA_URL="https://cloud.activepieces.com/.well-known/oauth-protected-resource/mcp";
   var AUTH_METADATA_URL="https://cloud.activepieces.com/.well-known/oauth-authorization-server";
   var PRODUCTION_REDIRECT_URI="https://t43-frontend-production-5106.up.railway.app/app/chat.html";
@@ -83,7 +84,7 @@
       code_challenge_method:"S256",
       scope:"mcp",
       state:state,
-      resource:MCP_URL
+      resource:MCP_RESOURCE_URL
     });
     var url=metadata.auth.authorization_endpoint+"?"+params.toString();
     if(typeof root.__SIY_MCP_NAVIGATE__==="function") root.__SIY_MCP_NAVIGATE__(url);
@@ -98,7 +99,7 @@
   async function exchange(code){
     var tokenEndpoint=get("token_endpoint"), clientId=get("client_id"), verifier=get("verifier"), callback=get("redirect_uri");
     if(!tokenEndpoint||!clientId||!verifier||!callback) throw new Error("جلسة ربط Activepieces غير مكتملة. ابدأ الربط من جديد.");
-    var body=new URLSearchParams({grant_type:"authorization_code",client_id:clientId,code:code,code_verifier:verifier,redirect_uri:callback,resource:MCP_URL});
+    var body=new URLSearchParams({grant_type:"authorization_code",client_id:clientId,code:code,code_verifier:verifier,redirect_uri:callback,resource:MCP_RESOURCE_URL});
     var token=await fetch(tokenEndpoint,{method:"POST",headers:{Accept:"application/json","Content-Type":"application/x-www-form-urlencoded"},body:body.toString()}).then(json);
     if(!token.access_token) throw new Error("Activepieces لم يُصدر رمز وصول.");
     put("access_token",token.access_token);
@@ -120,7 +121,7 @@
   async function refresh(){
     var refreshToken=get("refresh_token"), tokenEndpoint=get("token_endpoint"), clientId=get("client_id");
     if(!refreshToken||!tokenEndpoint||!clientId) throw new Error("انتهت جلسة Activepieces. اربطها من جديد.");
-    var body=new URLSearchParams({grant_type:"refresh_token",client_id:clientId,refresh_token:refreshToken,resource:MCP_URL});
+    var body=new URLSearchParams({grant_type:"refresh_token",client_id:clientId,refresh_token:refreshToken,resource:MCP_RESOURCE_URL});
     var token=await fetch(tokenEndpoint,{method:"POST",headers:{Accept:"application/json","Content-Type":"application/x-www-form-urlencoded"},body:body.toString()}).then(json);
     if(!token.access_token) throw new Error("تعذّر تجديد جلسة Activepieces.");
     put("access_token",token.access_token);
@@ -145,7 +146,7 @@
     var headers={Authorization:"Bearer "+token,Accept:"application/json, text/event-stream","Content-Type":"application/json"};
     if(method!=="initialize") headers["MCP-Protocol-Version"]=protocolVersion;
     if(sessionId) headers["Mcp-Session-Id"]=sessionId;
-    var response=await fetch(MCP_URL,{method:"POST",headers:headers,body:JSON.stringify(payload)});
+    var response=await fetch(MCP_TRANSPORT_URL,{method:"POST",headers:headers,body:JSON.stringify(payload)});
     if(response.status===401&&!retried){ await refresh(); return rpc(method,params,true); }
     if(!response.ok) throw new Error("MCP HTTP "+response.status+": "+(await response.text()).slice(0,240));
     sessionId=response.headers.get("mcp-session-id")||sessionId;
