@@ -22,8 +22,8 @@ test('chat sends cookies and never reads or sends a browser bearer token',()=>{
   assert.ok(!chat.includes('"Authorization":"Bearer "+'));
 });
 
-test('nginx proxies the same-origin Siyadah path to the governed core',()=>{
+test('nginx proxies the same-origin Siyadah path to the governed preview core',()=>{
   assert.match(nginx,/location \/siyadah-api\//);
-  assert.match(nginx,/proxy_pass https:\/\/siyadah-core-api-production\.up\.railway\.app\//);
+  assert.match(nginx,/proxy_pass https:\/\/siyadah-core-preview-production\.up\.railway\.app\//);
   assert.match(nginx,/proxy_set_header Origin \$http_origin/);
 });
