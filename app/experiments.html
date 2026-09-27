@@ -10,14 +10,16 @@
 </head>
 <body>
   <header><div><h1>سجل تجارب سيادة × Activepieces</h1><p>طلب المستخدم، المسار التقني، الأدوات، الاستهلاك، والدليل الفعلي — بلا ادعاءات.</p></div><span class="pill" id="count">جارٍ التحميل…</span></header>
+  <p id="suite" class="meta"></p>
   <main class="grid" id="list"></main>
   <script>
     const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
     async function load(){
-      const response=await fetch('/siyadah-api/v1/experiments?limit=100',{credentials:'include'});
-      if(!response.ok)throw new Error('تعذّر تحميل السجل');
-      const data=await response.json(), rows=data.experiments||[];
-      document.querySelector('#count').textContent=`${rows.length} تجربة موثقة`;
+      const [response,suiteResponse]=await Promise.all([fetch('/siyadah-api/v1/experiments?limit=100',{credentials:'include'}),fetch('/data/experiment-suite.json',{credentials:'include'})]);
+      if(!response.ok||!suiteResponse.ok)throw new Error('تعذّر تحميل السجل');
+      const data=await response.json(), suite=await suiteResponse.json(), rows=data.experiments||[];
+      document.querySelector('#count').textContent=`${rows.length} / ${suite.total_cases} موثقة`;
+      document.querySelector('#suite').innerHTML=`الحزمة: ${esc(suite.generation_rule)} · <a href="/data/experiment-suite.json" style="color:#b9f7cf">المواصفة التقنية الكاملة</a>`;
       document.querySelector('#list').innerHTML=rows.map(x=>`<article class="card"><div class="top"><div><b>${esc(x.origin)}</b><div class="meta">${esc(x.recorded_at)} · ${esc(x.latency_ms??'—')} ms · ${esc(x.model||'بدون LLM مسجل')}</div></div><span class="status ${x.status==='completed'?'ok':'failed'}">${esc(x.status)}</span></div><div class="request">${esc(x.user_request)}</div><div class="proof">${x.evidence?.flow_id?`<code>Flow ${esc(x.evidence.flow_id)}</code>`:''}${x.evidence?.run_id?`<code>Run ${esc(x.evidence.run_id)}</code>`:''}${x.usage?.total_tokens?`<code>${esc(x.usage.total_tokens)} tokens</code>`:''}</div><details><summary>التفكيك التقني</summary><pre>${esc(JSON.stringify({transport:x.transport,tool_trace:x.tool_trace,usage:x.usage,evidence:x.evidence,error:x.error,limits:x.limits},null,2))}</pre></details></article>`).join('')||'<p>لا توجد تجارب بعد.</p>';
     }
     load().catch(error=>{document.querySelector('#count').textContent='خطأ';document.querySelector('#list').innerHTML=`<p>${esc(error.message)}</p>`});

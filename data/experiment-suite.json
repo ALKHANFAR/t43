@@ -1,0 +1,54 @@
+{
+  "schema": "SiyadahExperimentSuiteV1",
+  "version": "2026-09-27",
+  "name": "Siyadah Activepieces 360",
+  "total_cases": 360,
+  "generation_rule": "18 capabilities x 5 business domains x 4 runtime states",
+  "prompt_contract": {
+    "visible_prompt": "Business outcome in ordinary user language only",
+    "forbidden_in_visible_prompt": ["MCP names", "tool names", "schemas", "IDs", "validation commands", "implementation instructions"],
+    "internal_trace": ["intent", "selected tools", "tool schemas", "validated inputs", "flow structure", "step tests", "full run", "provider readback", "latency", "token usage", "credit usage", "errors"]
+  },
+  "domains": [
+    {"id":"sales","label":"المبيعات","goal":"استقبال العميل وتصنيفه ومتابعته"},
+    {"id":"support","label":"خدمة العملاء","goal":"استقبال الطلب وتصنيفه وحله أو تصعيده"},
+    {"id":"finance","label":"التحصيل والفواتير","goal":"اكتشاف المتأخر وتجهيز المتابعة وإيقافها عند السداد"},
+    {"id":"marketing","label":"التسويق","goal":"تجهيز المحتوى والمراجعة والقياس"},
+    {"id":"operations","label":"العمليات","goal":"استقبال المهمة والتحقق منها وتوجيهها ومتابعتها"}
+  ],
+  "states": [
+    {"id":"happy_path","label":"الحالة الطبيعية","expected":"Successful proof chain"},
+    {"id":"missing_connection","label":"الأداة غير مربوطة","expected":"Stop with exact connection requirement and no mutation"},
+    {"id":"invalid_input","label":"بيانات ناقصة أو خاطئة","expected":"Fail closed or repair with explicit evidence"},
+    {"id":"provider_failure","label":"تعطل المزود","expected":"Bounded retry without duplicate effect"}
+  ],
+  "capabilities": [
+    {"order":1,"id":"transport_catalog","label":"الاتصال والكتالوج","proof":["protocol version","tool count"]},
+    {"order":2,"id":"intent_to_tool","label":"تحويل الهدف إلى أداة","proof":["selected tool","selection reason"]},
+    {"order":3,"id":"tool_disambiguation","label":"التمييز بين الأدوات المتشابهة","proof":["candidates","chosen exact piece"]},
+    {"order":4,"id":"disabled_draft","label":"إنشاء مسودة معطلة","proof":["flow id","disabled status"]},
+    {"order":5,"id":"draft_readback","label":"قراءة المسودة ومطابقتها","proof":["actual structure","actual settings"]},
+    {"order":6,"id":"step_test","label":"اختبار كل خطوة","proof":["step results","non-empty outputs"]},
+    {"order":7,"id":"full_test_run","label":"اختبار الفلو كاملًا","proof":["run id","terminal status"]},
+    {"order":8,"id":"conversational_edit","label":"تعديل الفلو بالكلام","proof":["same flow id","before and after diff"]},
+    {"order":9,"id":"replace_bad_step","label":"إصلاح خطوة خاطئة","proof":["removed or replaced step","successful retest"]},
+    {"order":10,"id":"branching","label":"الشروط والمسارات","proof":["branch rules","result for each branch"]},
+    {"order":11,"id":"looping","label":"التكرار على قائمة","proof":["loop source","per-item outputs"]},
+    {"order":12,"id":"data_transform","label":"تنظيف وتحويل البيانات","proof":["input sample","output sample"]},
+    {"order":13,"id":"schedule_wait","label":"الجدولة والانتظار","proof":["timezone","schedule settings"]},
+    {"order":14,"id":"idempotency","label":"منع التكرار","proof":["idempotency key","single provider effect"]},
+    {"order":15,"id":"missing_data","label":"البيانات الناقصة","proof":["missing fields","safe handling"]},
+    {"order":16,"id":"self_repair","label":"الإصلاح بعد الفشل","proof":["original error","repair diff","successful retest"]},
+    {"order":17,"id":"alternative_tool","label":"اختيار بديل","proof":["unavailable primary","validated alternative"]},
+    {"order":18,"id":"provider_effect_kpi","label":"نتيجة المزود والأثر التجاري","proof":["provider receipt","customer-visible result","attributed KPI"]}
+  ],
+  "proof_chain": ["tenant project", "user request", "selected tools", "disabled flow", "validated structure", "step tests", "run id", "provider result", "customer-visible outcome", "business KPI"],
+  "safety": {
+    "default_flow_status": "DISABLED",
+    "external_effects": "Sandbox only until explicit user approval at action time",
+    "secrets_in_ledger": false,
+    "cross_tenant_access": "Fail closed"
+  },
+  "cost_controls": ["No OpenAI API for Codex experiments", "One discovery call per unresolved intent", "Cache catalog by Activepieces version", "Fetch schemas only for selected steps", "Stop a batch after one repeated platform-wide blocker"],
+  "current_blockers": [{"code":"activepieces_out_of_credits","scope":"All project-scoped MCP tools","resume_when":"Credits reset or are added"}]
+}
