@@ -16,7 +16,7 @@ test('chat UI never bypasses Siyadah with a direct Activepieces webhook',()=>{
   assert.ok(!source.includes('localStorage.getItem("siyadah_token")'));
 });
 
-async function page({storage={},hydrate=empty,message,work,approve,employee_state,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,nativeClient=null,hash='#run=build&plan=over',real=true}={}){
+async function page({storage={},hydrate=empty,message,employee_state,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,nativeClient=null,hash='#run=build&plan=over',real=true}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
   const w=dom.window,requests=[],alerts=[],polls=[],navigations=[];let hydrateTimer;
   w.matchMedia=()=>({matches:true,addEventListener(){}});
@@ -40,7 +40,7 @@ async function page({storage={},hydrate=empty,message,work,approve,employee_stat
       return {ok:true,status:200,json:async()=>response};
     }
     const body=JSON.parse(options.body);requests.push({url,body,headers:options.headers,credentials:options.credentials});
-    const handler={hydrate,message,work,approve,employee_state,export:exportResponse}[body.op];
+    const handler={hydrate,message,employee_state,export:exportResponse}[body.op];
     const response=typeof handler==='function'?await handler(body):handler;
     if(response instanceof Error)throw response;
     if(response?.httpStatus)return {ok:false,status:response.httpStatus,json:async()=>response};
@@ -77,15 +77,13 @@ test('account menu routes Activepieces MCP to the direct browser tools screen',a
     assert.ok(!source.includes('ACTIVEPIECES_MCP_ACCESS_TOKEN'));
   }finally{p.close();}
 });
-test('builder proposal uses a governed approval operation and renders flow readback',async()=>{
+test('legacy proposal fields cannot create an approval gate in direct chat',async()=>{
   const proposal={ok:true,conversation_id:'builder-conversation',work_id:'builder-work',interaction_state:'awaiting_approval',reply:'الخطة جاهزة.',flow_plan:{name:'Daily greeting',trigger:{piece_name:'@activepieces/piece-schedule',operation:'cron_expression'},steps:[{type:'CODE',display_name:'Greeting'}]},approval:{required:true,approval_id:'approval-1'}};
-  const built={ok:true,conversation_id:'builder-conversation',work_id:'builder-work',work_status:'awaiting_input',interaction_state:'draft_ready',reply:'تم إنشاء مسودة معطلة وقراءتها من Activepieces. لم تُختبر أو تُنشر بعد.',flow_id:'flow-proof',draft:{published:false,tested:false,validation:{valid:true},readback:{id:'flow-proof',status:'DISABLED'}}};
-  const p=await page({message:proposal,approve:built});try{
+  const p=await page({message:proposal});try{
     send(p,'أنشئ Flow يبدأ Webhook ثم Code يعيد {ok:true}');await flush();
-    assert.match(thread(p),/Daily greeting/);assert.match(thread(p),/cron_expression/);assert.match(thread(p),/Greeting/);
-    const button=p.d.querySelector('[data-siy-approval="approve"]');assert.ok(button);button.click();await flush();
-    const approval=p.requests.find(x=>x.body.op==='approve');assert.ok(approval.body.request_id);assert.equal(approval.body.conversation_id,'builder-conversation');assert.equal(approval.body.approval_id,'approval-1');assert.equal(approval.body.decision,'approve');
-    assert.match(thread(p),/مسودة معطلة/);assert.match(thread(p),/flow-proof/);assert.equal(p.d.querySelectorAll('[data-siy-approval]').length,0);
+    assert.match(thread(p),/الخطة جاهزة/);assert.ok(!thread(p).includes('Daily greeting'));
+    assert.equal(p.d.querySelectorAll('[data-siy-approval]').length,0);
+    assert.deepEqual(p.requests.filter(x=>['approve','work'].includes(x.body.op)),[]);
   }finally{p.close();}
 });
 test('browser storage cannot supply company identity or suppress server hydration',async()=>{
@@ -115,17 +113,15 @@ test('central request mentioning report today reaches gateway and escapes consul
     assert.equal(p.d.querySelector('.hist[data-chat]').dataset.chat,'conversation-1');
   }finally{p.close();}
 });
-test('native mode sends the central message to Activepieces native chat and preserves its conversation id',async()=>{
+test('legacy native mode flag cannot bypass the direct MCP gateway',async()=>{
   const nativeCalls=[];
   const nativeClient={send:async input=>{nativeCalls.push(input);return {conversationId:'ap-conversation-1',runId:'ap-run-1',assistantText:'بنيت الفلو داخل Activepieces.'};}};
-  const p=await page({nativeClient});try{
+  const p=await page({nativeClient,message:{ok:true,conversation_id:'direct-conversation',reply:'رد مباشر عبر MCP.'}});try{
     send(p,'ابن فلو متابعة');await flush();await flush();
-    assert.equal(nativeCalls.length,1);assert.equal(nativeCalls[0].conversationId,null);assert.equal(nativeCalls[0].content,'ابن فلو متابعة');
-    assert.equal(p.requests.filter(x=>x.body&&x.body.op==='message').length,0);
-    assert.match(thread(p),/بنيت الفلو داخل Activepieces/);
-    assert.equal(p.d.querySelector('.hist[data-chat]').dataset.chat,'ap-conversation-1');
-    p.d.querySelector('[data-chat="ap-conversation-1"]').click();send(p,'كمل');await flush();await flush();
-    assert.equal(nativeCalls[1].conversationId,'ap-conversation-1');
+    assert.equal(nativeCalls.length,0);
+    assert.equal(p.requests.filter(x=>x.body&&x.body.op==='message').length,1);
+    assert.match(thread(p),/رد مباشر عبر MCP/);
+    assert.equal(p.d.querySelector('.hist[data-chat]').dataset.chat,'direct-conversation');
   }finally{p.close();}
 });
 test('acceptance card shows proven gates and never labels a partial draft 10/10',async()=>{
@@ -154,27 +150,24 @@ test('complete disconnected draft gets its own 10/10 without a production claim'
     assert.ok(!thread(p).includes('نتيجة تشغيل مثبتة 10/10'));
   }finally{p.close();}
 });
-test('accepted work appears pending, then proof readback upserts stable employee without clearing chat',async()=>{
-  const p=await page({message:{ok:true,conversation_id:'conversation-1',work_id:'work-1',work_status:'queued'},work:{ok:true,work_id:'work-1',work_status:'succeeded',reply:'سُجلت النتيجة.',employee,recent_work:[proof]}});try{
-    send(p,'أنشئ موظف الفرص');await flush();assert.match(thread(p),/بانتظار التنفيذ/);assert.ok(!thread(p).includes('✓'));
-    assert.equal(p.w.EMPS.length,0);assert.equal(p.polls.length,1);await p.polls.shift()();await flush();
-    assert.equal(p.d.querySelector('#emps .emp').dataset.emp,employee.recordId);assert.equal(p.w.EMPS[0].flowId,employee.flowId);
-    assert.match(thread(p),/أنشئ موظف الفرص/);assert.match(thread(p),/سُجلت النتيجة/);assert.match(thread(p),/✓ succeeded/);
-    assert.equal(p.w.__SIY_DASH__.recent_work[0].runId,'run-1');assert.equal(p.polls.length,0);
+test('direct chat never enters legacy queued work polling',async()=>{
+  const p=await page({message:{ok:true,conversation_id:'conversation-1',work_id:'work-1',work_status:'queued',reply:'رد مباشر'}});try{
+    send(p,'أنشئ موظف الفرص');await flush();assert.match(thread(p),/رد مباشر/);
+    assert.equal(p.polls.length,0);assert.equal(p.requests.filter(x=>x.body.op==='message').length,1);
+    assert.equal(p.requests.some(x=>x.body.op==='work'),false);
   }finally{p.close();}
 });
-test('failed work with arbitrary proof text never renders success mark',async()=>{
-  const p=await page({message:{ok:true,conversation_id:'c',work_id:'w',work_status:'failed',recent_work:[{...proof,status:'failed'}]}});try{
-    send(p,'نفذ');await flush();assert.match(thread(p),/تعذّر إكمال/);assert.ok(!thread(p).includes('✓'));assert.equal(p.polls.length,0);
+test('direct reply does not infer status text from obsolete work fields',async()=>{
+  const p=await page({message:{ok:true,conversation_id:'c',work_id:'w',work_status:'failed',reply:'الدليل غير مكتمل'}});try{
+    send(p,'نفذ');await flush();assert.match(thread(p),/الدليل غير مكتمل/);assert.ok(!thread(p).includes('تعذّر إكمال العمل'));assert.equal(p.polls.length,0);
   }finally{p.close();}
 });
-test('ambiguous message timeout refreshes by original request ID without redispatch',async()=>{
-  const p=await page({message:Error('offline'),work:{ok:true,conversation_id:'c',work_id:'w',work_status:'succeeded',reply:'تم استلام السؤال'}});try{
-    send(p,'سؤال');await flush();assert.ok(p.d.querySelector('[data-siy-retry]'));
-    p.d.querySelector('[data-siy-retry]').click();await flush();
-    const reqs=p.requests.filter(x=>x.body.op==='message');assert.equal(reqs.length,1);
-    const refresh=p.requests.find(x=>x.body.op==='work');assert.equal(refresh.body.request_id,reqs[0].body.request_id);
-    assert.equal(refresh.body.conversation_id,null);assert.equal(p.d.querySelectorAll('[data-siy-retry]').length,0);
+test('message failure never falls back to work lookup or hidden redispatch',async()=>{
+  const p=await page({message:Error('offline')});try{
+    send(p,'سؤال');await flush();assert.match(thread(p),/offline/);
+    assert.equal(p.d.querySelector('[data-siy-retry]'),null);
+    assert.equal(p.requests.filter(x=>x.body.op==='message').length,1);
+    assert.equal(p.requests.some(x=>x.body.op==='work'),false);
   }finally{p.close();}
 });
 test('response after changing conversation stays in original stored thread',async()=>{
@@ -198,15 +191,9 @@ test('stable employee mapping rejects missing IDs and exact active status, no fa
     assert.equal(p.requests.length,2);
   }finally{p.close();}
 });
-test('hydrate resumes pending work by work ID without resending the original message',async()=>{
-  const p=await page({hydrate:{...empty,conversations:[{id:'c',title:'طلب جاري',messages:[]}],pending_work:[{work_id:'existing-work',conversation_id:'c',work_status:'running'}]},work:{ok:true,work_status:'succeeded',reply:'اكتمل'}});try{
-    assert.equal(p.polls.length,1);await p.polls.shift()();assert.equal(p.requests.filter(x=>x.body.op==='message').length,0);
-    assert.deepEqual(p.requests.find(x=>x.body.op==='work').body,{op:'work',work_id:'existing-work'});
-  }finally{p.close();}
-});
-test('expired authorization stops polling instead of looping or resubmitting',async()=>{
-  const p=await page({message:{ok:true,conversation_id:'c',work_id:'w',work_status:'running'},work:{httpStatus:403}});try{
-    send(p,'نفذ');await flush();await p.polls.shift()();assert.equal(p.polls.length,0);assert.match(thread(p),/صلاحية/);
+test('hydrate ignores obsolete pending work and never starts a polling gate',async()=>{
+  const p=await page({hydrate:{...empty,conversations:[{id:'c',title:'طلب جاري',messages:[]}],pending_work:[{work_id:'existing-work',conversation_id:'c',work_status:'running'}]}});try{
+    assert.equal(p.polls.length,0);assert.equal(p.requests.some(x=>x.body.op==='work'),false);
   }finally{p.close();}
 });
 
@@ -294,15 +281,14 @@ test('restored proofs match conversation and legacy evidence is labelled separat
  }finally{p.close();}
 });
 
-test('explicit cancel after timeout has a new request ID and targets prior request without replay',async()=>{
+test('explicit follow-up after failure gets a new request ID without hidden status lookup',async()=>{
  let calls=0;
- const p=await page({message:body=>++calls===1?Error('timeout'):{ok:true,conversation_id:'cancel-c',reply:'طلب الإلغاء قيد التحقق'},work:{ok:true,request_status:'not_observed',work_status:'unknown'}});try{
+ const p=await page({message:body=>++calls===1?Error('timeout'):{ok:true,conversation_id:'cancel-c',reply:'طلب الإلغاء قيد التحقق'}});try{
   send(p,'أنشئ الموظف');await flush();const first=p.requests.find(x=>x.body.op==='message').body;
   send(p,'ألغ طلبي السابق');await flush();const messages=p.requests.filter(x=>x.body.op==='message');
   assert.equal(messages.length,2);assert.notEqual(messages[1].body.request_id,first.request_id);assert.equal(messages[1].body.prior_request_id,first.request_id);
   assert.equal(messages[1].body.message,'ألغ طلبي السابق');assert.equal(p.alerts.length,0);
-  p.d.querySelector('[data-siy-retry]').click();await flush();assert.equal(p.requests.filter(x=>x.body.op==='message').length,2);
-  assert.equal(p.requests.at(-1).body.request_id,first.request_id);assert.match(thread(p),/حالته غير معروفة/);assert.ok(p.d.querySelector('[data-siy-retry]'));
+  assert.equal(p.requests.some(x=>x.body.op==='work'),false);assert.equal(p.d.querySelector('[data-siy-retry]'),null);
  }finally{p.close();}
 });
 
@@ -342,10 +328,10 @@ test('missing invalid and empty owned knowledge distinguish unavailable from emp
  }
 });
 
-test('paused employee answer keeps polling until final succeeded response with no execution proof',async()=>{
- let checks=0;const p=await page({hydrate:{...empty,team:[{...employee,status:'disabled'}],conversations:[{id:'paused-conv',employee_id:employee.recordId,title:'موظف متوقف',messages:[]}]},message:{ok:true,conversation_id:'paused-conv',work_id:'paused-work',work_status:'running',employee_id:null,recent_work:[]},work:()=>++checks===1?{ok:true,conversation_id:'paused-conv',work_id:'paused-work',work_status:'running',reply:'',recent_work:[]}:{ok:true,conversation_id:'paused-conv',work_id:'paused-work',work_status:'succeeded',reply:'موظف استقبال طلبات الصيانة معطّل حاليًا',recent_work:[]}});try{
-  p.d.querySelector('[data-chat="paused-conv"]').click();send(p,'شغّل الطلب');await flush();assert.match(thread(p),/العمل قيد التنفيذ/);assert.equal(p.polls.length,1);
-  await p.polls.shift()();assert.equal(p.polls.length,1);await p.polls.shift()();assert.equal(p.polls.length,0);assert.match(thread(p),/معطّل حاليًا/);assert.ok(!thread(p).includes('العمل قيد التنفيذ'));assert.equal(p.requests.filter(r=>r.body.op==='message').length,1);
+test('employee chat also uses one direct MCP request without polling',async()=>{
+ const p=await page({hydrate:{...empty,team:[{...employee,status:'disabled'}],conversations:[{id:'paused-conv',employee_id:employee.recordId,title:'موظف متوقف',messages:[]}]},message:{ok:true,conversation_id:'paused-conv',reply:'موظف استقبال طلبات الصيانة معطّل حاليًا'}});try{
+  p.d.querySelector('[data-chat="paused-conv"]').click();send(p,'شغّل الطلب');await flush();assert.match(thread(p),/معطّل حاليًا/);
+  assert.equal(p.polls.length,0);assert.equal(p.requests.filter(r=>r.body.op==='message').length,1);assert.equal(p.requests.some(r=>r.body.op==='work'),false);
  }finally{p.close();}
 });
 

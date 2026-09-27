@@ -1,3 +1,4 @@
-FROM nginx:alpine
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY . /usr/share/nginx/html
+FROM node:22-alpine
+WORKDIR /app
+COPY . .
+CMD ["node", "lab-server.mjs"]

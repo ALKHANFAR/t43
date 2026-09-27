@@ -751,7 +751,6 @@ var I = {
   $("#thread").addEventListener("click",function(e){
     var t=e.target, list, mEl=t.closest(".m"), mi=mEl?+mEl.dataset.mi:-1;
     if(t.closest("[data-siy-retry]")){ var retryList=curList(); if(retryList&&retryList[mi]&&retryList[mi].siyRetry) retryList[mi].siyRetry(); return; }
-    if(t.closest("[data-siy-approval]")){ var approvalList=curList(), approvalRow=approvalList&&approvalList[mi]; siyDecideBuilder(approvalRow,t.closest("[data-siy-approval]").dataset.siyApproval); return; }
     if(window.__SIY_REAL__ && t.closest("#instrSave,#instrPrev,[data-save],[data-approve],[data-decide],[data-opt],[data-pv],[data-hcancel],[data-undo]")){ siyUnsupported(); return; }
     if(t.closest("#renameBtn")){ renameEmp(); return; }
     var c=t.closest(".cardq"); if(c){ send(c.lastChild.textContent); return; }
@@ -1065,10 +1064,9 @@ var I = {
     if(e.key==="/"&&!typing&&!mod){ e.preventDefault(); openTools(); setTimeout(function(){ var q=$("#tq"); if(q) q.focus(); },30); }
   });
 
-  /* مسار الشات المحكوم يبقى مستقلًا؛ صفحة الأدوات تستطيع إثبات MCP مباشر من المتصفح. */
+  /* رسالة واحدة إلى خادم سيادة؛ الخادم يمررها مباشرة إلى LLM مع Activepieces MCP. */
   var SIY_GATEWAY=window.SIYADAH_CHAT_GATEWAY||"/siyadah-api/v1/chat";
-  var SIY_NATIVE_CHAT=window.SIYADAH_CHAT_MODE==="activepieces-native";
-  var siyPolls={}, siyGeneration=0, siyEmployeeStatePending={};
+  var siyGeneration=0, siyEmployeeStatePending={};
   function siyRenderDirectMcp(){
     var count=$("#toolsCnt");
     if(count&&MCP_DIRECT.state==="connected") count.textContent=MCP_DIRECT.tools.length+" عبر MCP";
@@ -1103,20 +1101,24 @@ var I = {
     var client=window.SiyadahActivepiecesMcp,connected=!!(client&&client.status().connected);
     siyBuilderState(connected?"مربوط مباشر":"اربط",connected);
   }
-  function siyStopPolling(){ siyGeneration++; Object.keys(siyPolls).forEach(function(k){ clearTimeout(siyPolls[k]); }); siyPolls={}; }
+  function siyStopPolling(){ siyGeneration++; }
   function siyAccessError(text){var e=new Error(text);e.noRetry=true;return e;}
   async function siyRequest(body){
     if(!/^(https:\/\/|\/)/.test(SIY_GATEWAY)) throw siyAccessError("اتصال شات سيادة لم يُجهّز بعد.");
-    var abort=new AbortController(), timer=setTimeout(function(){abort.abort();},60000);
+    if(window.SIYADAH_DIRECT_MCP_LAB===true&&body.op==="message"){
+      var directClient=window.SiyadahActivepiecesMcp, directToken=directClient&&typeof directClient.accessToken==="function"?directClient.accessToken():"";
+      if(!directToken) throw siyAccessError("اربط Activepieces MCP من قائمة الأدوات أولًا، ثم أرسل طلبك.");
+      body=Object.assign({},body,{activepieces_token:directToken});
+    }
+    var abort=new AbortController(), timer=setTimeout(function(){abort.abort();},130000);
     try{
       var response=await fetch(SIY_GATEWAY,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:abort.signal});
       if(response.status===401||response.status===403) throw siyAccessError("تعذّر التحقق من صلاحية هذا الطلب لحسابك.");
       if(!response.ok) throw new Error("تعذّر الاتصال بالخادم. أعد المحاولة.");
       var data=await response.json();
       if(!data||data.ok!==true) throw new Error("تعذّر إتمام الطلب. لم يتم تأكيد نجاحه.");
-      if(body.op==="work"&&!(data.request_status==="not_observed"&&data.work_status==="unknown")&&!["queued","running","succeeded","failed","awaiting_input","cancelled"].includes(data.work_status)) throw new Error("وصلت حالة عمل غير مكتملة؛ لم نتأكد من النتيجة.");
       return data;
-    }catch(e){ if(e.name==="AbortError") throw new Error("تأخر الرد. أعد المحاولة بنفس الطلب للتحقق من حالته."); throw e; }
+    }catch(e){ if(e.name==="AbortError") throw new Error("انتهت مهلة بناء Activepieces. لم نعتبر الطلب مكتملًا؛ أرسله مجددًا فقط بعد التحقق من قائمة الفلوهات."); throw e; }
     finally{clearTimeout(timer);}
   }
   async function siySetEmployeeState(e){
@@ -1193,11 +1195,6 @@ var I = {
       CHATS[c.id]={with:c.employee_id||"siyadah",emp:c.employee_id||null,t:String(c.title||"محادثة سيادة"),when:"today",msgs:messages};
       if(c.employee_id&&emp(c.employee_id)) eth[c.employee_id]=messages;
     });
-    if(restore&&Array.isArray(data.pending_work)) data.pending_work.forEach(function(work){
-      if(typeof work.work_id!=="string"||!work.work_id||!["queued","running"].includes(work.work_status)) return;
-      var convo=CHATS[work.conversation_id]; if(!convo) return;
-      var row=siyResultRow(work); convo.msgs.push(row); siyPoll(work.work_id,convo.msgs,row,0);
-    });
     if(isEmp()&&!emp(who)) {who="siyadah";chatId=null;}
   }
   function siyRememberConversation(data,list,employeeId,text){
@@ -1230,91 +1227,31 @@ var I = {
       (blocked.length?'<details><summary>وش باقي؟</summary><div class="msrc">'+blocked.map(function(row){return '• '+esc(row.label||row.key);}).join('<br>')+'</div></details>':'')+
       '</div>';
   }
-  function siyBuilderProposalHtml(data){
-    if(!data||!data.approval||data.approval.required!==true||typeof data.approval.approval_id!=="string") return "";
-    var plan=data.flow_plan&&typeof data.flow_plan==="object"?data.flow_plan:{};
-    var trigger=plan.trigger&&typeof plan.trigger==="object"?plan.trigger:{};
-    var steps=Array.isArray(plan.steps)?plan.steps:[];
-    var triggerText=[trigger.piece_name,trigger.operation].filter(Boolean).join(" · ")||"تم التحقق منه في Activepieces";
-    var stepRows=steps.map(function(step,index){
-      var text=[step.display_name,step.piece_name,step.operation].filter(Boolean).join(" · ")||step.type||("الخطوة "+(index+1));
-      return '<div class="prow"><b>الخطوة '+(index+1)+'</b><span>'+esc(text)+'</span></div>';
-    }).join("");
-    return '<div class="plan nr" style="margin-top:10px"><div class="plan__h"><span class="drop"></span>خطة بناء حقيقية</div>'+
-      (plan.name?'<div class="prow"><b>الاسم</b><span>'+esc(plan.name)+'</span></div>':'')+
-      '<div class="prow"><b>المشغّل</b><span>'+esc(triggerText)+'</span></div>'+stepRows+
-      '<div class="prow"><b>الحدود</b><span>مسودة معطلة فقط · بلا اختبار · بلا نشر</span></div></div>'+
-      '<div class="approve nr"><button type="button" class="bt" data-siy-approval="approve">'+I.check+'وافق وأنشئ المسودة</button>'+
-      '<button type="button" class="bt bt--line" data-siy-approval="reject">إلغاء</button></div>';
-  }
   function siyResultRow(data){
-    var state=data.work_status, text=data.reply;
-    if(!text) text=({queued:"تم استلام الطلب، بانتظار التنفيذ.",running:"العمل قيد التنفيذ.",succeeded:"اكتمل العمل حسب سجل التشغيل.",failed:"تعذّر إكمال العمل. راجع تفاصيل النتيجة.",awaiting_input:"العمل ينتظر معلومات إضافية منك.",cancelled:"أُلغي الطلب."})[state]||"وصل الرد دون تفاصيل إضافية.";
+    var text=data.reply||"وصل الرد دون تفاصيل إضافية.";
     var records=(Array.isArray(data.recent_work)?data.recent_work:[]).filter(function(r){return (!r.conversation_id||r.conversation_id===data.conversation_id)&&(!r.work_id||r.work_id===data.work_id);});
     var scoped=records.filter(function(r){return r.conversation_id;});
     var draft=data.draft&&data.flow_id?siyRefsHtml([['الفلو',data.flow_id],['العمل',data.work_id]]):'';
-    return {me:false,at:now(),t:siyReplyHtml(text)+siyBuilderProposalHtml(data)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,'نتائج هذا الطلب'):'')+siyLegacyProofHtml(records)+draft,workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;}),builderApproval:data.approval&&data.approval.required===true?{id:data.approval.approval_id,conversationId:data.conversation_id}:null};
-  }
-  async function siyDecideBuilder(row,decision){
-    if(!row||!row.builderApproval||row.siyInFlight) return;
-    row.siyInFlight=true; row.t=siyReplyHtml(decision==='approve'?'جارٍ إنشاء المسودة المعطلة في Activepieces…':'جارٍ إلغاء الخطة…'); siyDraw();
-    try{
-      var data=await siyRequest({op:'approve',request_id:crypto.randomUUID(),conversation_id:row.builderApproval.conversationId,approval_id:row.builderApproval.id,decision:decision});
-      Object.assign(row,siyResultRow(data)); row.builderApproval=null; row.siyInFlight=false; siyDraw();
-    }catch(error){ row.siyInFlight=false; row.t=siyReplyHtml(error.message||'تعذر تنفيذ القرار.'); siyDraw(); }
-  }
-  function siyPoll(workId,list,row,attempt){
-    var generation=siyGeneration;
-    siyPolls[workId]=setTimeout(async function(){
-      if(generation!==siyGeneration) return;
-      try{
-        var data=await siyRequest({op:"work",work_id:workId});
-        if(generation!==siyGeneration) return;
-        siyMerge(data,false); var updated=siyResultRow(data); Object.assign(row,updated); siyDraw();
-        if(["queued","running"].includes(data.work_status)) siyPoll(workId,list,row,attempt+1); else delete siyPolls[workId];
-      }catch(e){
-        if(generation!==siyGeneration) return;
-        row.t=siyReplyHtml(e.noRetry?e.message:"تعذّر تحديث حالة العمل. سنعيد التحقق دون إعادة التنفيذ."); siyDraw();
-        if(e.noRetry) delete siyPolls[workId]; else siyPoll(workId,list,row,attempt+1);
-      }
-    },attempt<3?2000:5000);
+    return {me:false,at:now(),t:siyReplyHtml(text)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,'نتائج هذا الطلب'):'')+siyLegacyProofHtml(records)+draft,proofIds:records.map(function(r){return r.recordId;})};
   }
   function siyMessage(text,list,employeeId){
-    if(SIY_NATIVE_CHAT){ siyNativeMessage(text,list,employeeId); return; }
     var request={op:"message",message:text,conversation_id:list.siyConversationId||null,employee_id:employeeId||null,request_id:crypto.randomUUID()};
     if(list.siyLatestRequestId) request.prior_request_id=list.siyLatestRequestId;
     list.siyLatestRequestId=request.request_id;
     var row={me:false,typing:true,at:"",requestId:request.request_id}; list.push(row); siyDraw();
     var generation=siyGeneration;
-    async function submit(refresh){
-      if(row.siyInFlight) return; row.siyInFlight=true; row.typing=true; row.siyRetry=null; siyDraw();
+    async function submit(){
+      if(row.siyInFlight) return; row.siyInFlight=true; row.typing=true; siyDraw();
       try{
-        var data=await siyRequest(refresh?{op:'work',request_id:request.request_id,conversation_id:request.conversation_id}:request); if(generation!==siyGeneration) return;
-        if(data.request_status==='not_observed') throw new Error('لم يظهر سجل الطلب بعد؛ حالته غير معروفة. تحديث الحالة لا يعيد تنفيذه.');
+        var data=await siyRequest(request); if(generation!==siyGeneration) return;
         siyRememberConversation(data,list,employeeId,text); siyMerge(data,false);
         Object.assign(row,siyResultRow(data)); row.typing=false; row.siyInFlight=false; siyDraw();
-        if(data.work_id&&["queued","running"].includes(data.work_status)) siyPoll(data.work_id,list,row,0);
       }catch(e){
         if(generation!==siyGeneration) return;
-        row.typing=false; row.siyInFlight=false; row.t=siyReplyHtml(e.message||"تعذّر الاتصال")+'<button type="button" class="lnk" data-siy-retry="1">تحقق من حالة الطلب</button>';
-        row.siyRetry=function(){submit(true);}; siyDraw(); // Read-only lookup of the original request; never redispatch after uncertainty.
+        row.typing=false; row.siyInFlight=false; row.t=siyReplyHtml(e.message||"تعذّر الاتصال"); siyDraw();
       }
     }
     submit();
-  }
-  function siyNativeMessage(text,list,employeeId){
-    var client=window.SiyadahActivepiecesChat;
-    var row={me:false,typing:true,at:""}; list.push(row); siyDraw();
-    if(!client||typeof client.send!=="function"){
-      row.typing=false; row.t=siyReplyHtml("عميل شات Activepieces الأصلي غير متاح."); siyDraw(); return;
-    }
-    client.send({conversationId:list.siyConversationId||null,content:text}).then(function(result){
-      if(!result||typeof result.conversationId!=="string"||!result.conversationId) throw new Error("لم يصل رقم محادثة Activepieces.");
-      siyRememberConversation({conversation_id:result.conversationId},list,employeeId,text);
-      row.typing=false; row.at=now(); row.t=siyReplyHtml(result.assistantText||"اكتمل الطلب داخل Activepieces دون نص ظاهر."); row.activepiecesRunId=result.runId||null; siyDraw();
-    }).catch(function(error){
-      row.typing=false; row.at=now(); row.t=siyReplyHtml(error.message||"تعذّر الاتصال بشات Activepieces الأصلي."); siyDraw();
-    });
   }
   /* لا نغيّر بيانات الحساب الحقيقي قبل ربط كتابة موثقة وقراءة تؤكدها. */
   function siyUnsupported(){ window.alert("هذا التعديل غير متاح بعد. لم يتم تغيير أي بيانات أو تشغيل."); }
@@ -1445,7 +1382,7 @@ var I = {
     if(window.__SIY_REAL__ && window.__SIY_EMPTY__){
       var co=(window.__SIY_DASH__&&window.__SIY_DASH__.company)||"";
       live.siyadah=[{me:false,at:now(),reveal:true,
-        t:"<p>أهلًا بك في <b>"+esc(co||"سيادة")+"</b> 👋</p><p>فريقك لسه فاضٍ. عطني موقع شركتك أو وصف قصير لخدماتكم، وأبني لك موظفين يعرفون شركتك ويشتغلون داخل أدواتك.</p><p>اكتب مثلًا: «موقعنا example.com، نبي موظف متابعة مبيعات وموظف دعم».</p>",
+        t:window.SIYADAH_DIRECT_MCP_LAB===true?"<p><b>مختبر سيادة المباشر</b></p><p>اربط Activepieces MCP من زر الأدوات، ثم اطلب الفلو مباشرة. لا توجد طبقة تخطيط أو موافقة أو polling بين الرسالة وMCP.</p>":"<p>أهلًا بك في <b>"+esc(co||"سيادة")+"</b> 👋</p><p>فريقك لسه فاضٍ. عطني موقع شركتك أو وصف قصير لخدماتكم، وأبني لك موظفين يعرفون شركتك ويشتغلون داخل أدواتك.</p><p>اكتب مثلًا: «موقعنا example.com، نبي موظف متابعة مبيعات وموظف دعم».</p>",
         why:"ما فيه بيانات وهمية — كل شي تشوفه يُبنى من معلومات شركتك أنت."}];
     }
     renderSide(); renderBar(); renderThread(); renderPlan();

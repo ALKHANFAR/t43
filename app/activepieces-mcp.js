@@ -171,7 +171,8 @@
     return tools;
   }
   function status(){ return {connected:!!get("access_token"),clientRegistered:!!get("client_id")}; }
+  function accessToken(){ return get("access_token")||""; }
   function disconnect(){ ["access_token","refresh_token","verifier","state","redirect_uri","token_endpoint","authorization_endpoint","registration_endpoint"].forEach(drop); sessionId=null; }
 
-  root.SiyadahActivepiecesMcp={connect:connect,handleCallback:handleCallback,listTools:listTools,status:status,disconnect:disconnect,_parseSse:parseSse};
+  root.SiyadahActivepiecesMcp={connect:connect,handleCallback:handleCallback,listTools:listTools,status:status,accessToken:accessToken,disconnect:disconnect,_parseSse:parseSse};
 })(window);
