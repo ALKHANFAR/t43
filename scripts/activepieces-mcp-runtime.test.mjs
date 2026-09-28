@@ -98,15 +98,16 @@ test('callback exchanges the code then initialize and tools/list use the fixed-t
   }finally{p.dom.window.close();}
 });
 
-test('isolated lab relay is POST-only and pinned to the Activepieces MCP endpoint',()=>{
+test('isolated lab relay is POST-only and uses the configured Activepieces MCP endpoint',()=>{
   assert.match(labServer,/request\.method === "POST" && url\.pathname === "\/activepieces-mcp"/);
-  assert.match(labServer,/fetch\("https:\/\/cloud\.activepieces\.com\/mcp"/);
+  assert.match(labServer,/ACTIVEPIECES_MCP_URL/);
+  assert.match(labServer,/fetch\(activepiecesMcpUrl/);
   assert.ok(!labServer.includes('proxy_pass'));
 });
 
 test('server records every Codex-origin experiment without persisting credentials',()=>{
   assert.match(labServer,/SiyadahExperimentV1/);
   assert.match(labServer,/\/siyadah-api\/v1\/experiments/);
-  assert.match(labServer,/tool_trace: mcpTrace\(result\)/);
+  assert.match(labServer,/tool_trace: toolTrace/);
   assert.ok(!labServer.includes('authorization: apToken,'+'\n      experiment'));
 });

@@ -1,10 +1,11 @@
 (function(root){
   "use strict";
 
-  var MCP_RESOURCE_URL="https://cloud.activepieces.com/mcp";
+  var ACTIVEPIECES_ORIGIN=String(root.SIYADAH_ACTIVEPIECES_URL||"https://cloud.activepieces.com").replace(/\/+$/,"");
+  var MCP_RESOURCE_URL=ACTIVEPIECES_ORIGIN+"/mcp";
   var MCP_TRANSPORT_URL="/activepieces-mcp";
-  var RESOURCE_METADATA_URL="https://cloud.activepieces.com/.well-known/oauth-protected-resource/mcp";
-  var AUTH_METADATA_URL="https://cloud.activepieces.com/.well-known/oauth-authorization-server";
+  var RESOURCE_METADATA_URL=ACTIVEPIECES_ORIGIN+"/.well-known/oauth-protected-resource/mcp";
+  var AUTH_METADATA_URL=ACTIVEPIECES_ORIGIN+"/.well-known/oauth-authorization-server";
   var PRODUCTION_REDIRECT_URI="https://t43-frontend-production-5106.up.railway.app/app/chat.html";
   var PRODUCTION_CLIENT_ID="8bdklPoIDyPBoY8xOd6-BVJwPtBjd59V";
   var STORAGE_PREFIX="siyadah.ap.mcp.";
@@ -40,11 +41,11 @@
   async function discover(){
     var resource=await fetch(RESOURCE_METADATA_URL,{headers:{Accept:"application/json"}}).then(json);
     var issuer=Array.isArray(resource.authorization_servers)&&resource.authorization_servers[0];
-    if(issuer!=="https://cloud.activepieces.com") throw new Error("Activepieces أعلن خادم تفويض غير متوقع.");
+    if(!issuer||new URL(issuer).origin!==new URL(ACTIVEPIECES_ORIGIN).origin) throw new Error("Activepieces أعلن خادم تفويض غير متوقع.");
     var auth=await fetch(AUTH_METADATA_URL,{headers:{Accept:"application/json"}}).then(json);
     if(!auth.authorization_endpoint||!auth.token_endpoint||!auth.registration_endpoint) throw new Error("بيانات OAuth من Activepieces ناقصة.");
     [auth.authorization_endpoint,auth.token_endpoint,auth.registration_endpoint].forEach(function(endpoint){
-      if(new URL(endpoint).origin!=="https://cloud.activepieces.com") throw new Error("نقطة OAuth غير موثوقة.");
+      if(new URL(endpoint).origin!==new URL(ACTIVEPIECES_ORIGIN).origin) throw new Error("نقطة OAuth غير موثوقة.");
     });
     put("token_endpoint",auth.token_endpoint);
     put("authorization_endpoint",auth.authorization_endpoint);

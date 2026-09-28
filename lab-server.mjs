@@ -5,13 +5,17 @@ import { randomUUID, timingSafeEqual } from "node:crypto";
 
 const root = process.cwd();
 const port = Number.parseInt(process.env.PORT || "3000", 10);
-const openAiKey = String(process.env.OPENAI_API_KEY || "").trim();
+const llmKey = String(process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || "").trim();
 const labToken = String(process.env.LAB_ACCESS_TOKEN || "").trim();
-const model = String(process.env.OPENAI_MODEL || "gpt-5.4-mini").trim();
+const model = String(process.env.LLM_MODEL || process.env.OPENAI_MODEL || "deepseek-flash").trim();
+const llmResponsesUrl = String(process.env.LLM_RESPONSES_URL || "https://api.deepseek.com/responses").trim();
+const activepiecesUrl = String(process.env.ACTIVEPIECES_URL || "https://cloud.activepieces.com").trim().replace(/\/+$/, "");
+const activepiecesMcpUrl = String(process.env.ACTIVEPIECES_MCP_URL ||
+  (process.env.ACTIVEPIECES_URL ? `${activepiecesUrl}/mcp` : "https://cloud.activepieces.com/mcp")).trim();
 const conversations = new Map();
 const experimentLedgerPath = String(process.env.EXPERIMENT_LEDGER_PATH || join(root, "data", "experiments.jsonl"));
 
-if (!openAiKey || !labToken) throw new Error("OPENAI_API_KEY and LAB_ACCESS_TOKEN are required");
+if (!labToken) throw new Error("LAB_ACCESS_TOKEN is required");
 
 mkdirSync(dirname(experimentLedgerPath), { recursive: true });
 if (!existsSync(experimentLedgerPath)) appendFileSync(experimentLedgerPath, "", { encoding: "utf8" });
@@ -57,24 +61,74 @@ function outputText(result) {
     .filter(item => item?.type === "output_text").map(item => item.text).join("\n").trim();
 }
 
+function parseMcpSse(text, id) {
+  const messages = [];
+  for (const block of text.split(/\r?\n\r?\n/)) {
+    const data = block.split(/\r?\n/).filter(line => line.startsWith("data:"))
+      .map(line => line.slice(5).trim()).join("\n");
+    if (data) try { messages.push(JSON.parse(data)); } catch {}
+  }
+  return messages.find(message => message?.id === id) || messages[0] || null;
+}
+
+async function mcpRpc(state, token, method, params) {
+  const notification = method.startsWith("notifications/");
+  const id = notification ? null : ++state.requestId;
+  const headers = {
+    authorization: `Bearer ${token}`,
+    accept: "application/json, text/event-stream",
+    "content-type": "application/json"
+  };
+  if (method !== "initialize") headers["mcp-protocol-version"] = state.protocolVersion;
+  if (state.sessionId) headers["mcp-session-id"] = state.sessionId;
+  const payload = { jsonrpc: "2.0", method };
+  if (!notification) payload.id = id;
+  if (params !== undefined) payload.params = params;
+  const response = await fetch(activepiecesMcpUrl, { method: "POST", headers, body: JSON.stringify(payload) });
+  if (!response.ok) throw Object.assign(new Error(`activepieces_mcp_${response.status}`), { statusCode: 502 });
+  state.sessionId = response.headers.get("mcp-session-id") || state.sessionId;
+  if (response.status === 202 || response.status === 204) return null;
+  const text = await response.text();
+  if (!text) return null;
+  const message = (response.headers.get("content-type") || "").includes("text/event-stream")
+    ? parseMcpSse(text, id) : JSON.parse(text);
+  if (message?.error) throw Object.assign(new Error(message.error.message || "activepieces_mcp_error"), { statusCode: 502 });
+  return message?.result ?? message;
+}
+
+async function openMcp(token) {
+  const state = { requestId: 0, sessionId: null, protocolVersion: "2025-11-25" };
+  const initialized = await mcpRpc(state, token, "initialize", {
+    protocolVersion: state.protocolVersion,
+    capabilities: {},
+    clientInfo: { name: "siyadah-deepseek", version: "1.0.0" }
+  });
+  if (initialized?.protocolVersion) state.protocolVersion = initialized.protocolVersion;
+  await mcpRpc(state, token, "notifications/initialized", {});
+  const tools = [];
+  let cursor = null;
+  do {
+    const result = await mcpRpc(state, token, "tools/list", cursor ? { cursor } : {});
+    if (!Array.isArray(result?.tools)) throw Object.assign(new Error("activepieces_tools_unavailable"), { statusCode: 502 });
+    tools.push(...result.tools);
+    cursor = result.nextCursor || null;
+  } while (cursor);
+  return { state, tools };
+}
+
+function llmTools(tools) {
+  return tools.filter(tool => /^[A-Za-z0-9_-]{1,128}$/.test(String(tool?.name || ""))).map(tool => ({
+    type: "function",
+    name: tool.name,
+    description: String(tool.description || "Activepieces tool").slice(0, 1200),
+    parameters: tool.inputSchema || { type: "object", properties: {} }
+  }));
+}
+
 function compact(value, limit = 1600) {
   if (value == null) return null;
   const text = typeof value === "string" ? value : JSON.stringify(value);
   return text.length > limit ? `${text.slice(0, limit)}…` : text;
-}
-
-function mcpTrace(result) {
-  return (Array.isArray(result?.output) ? result.output : [])
-    .filter(item => String(item?.type || "").includes("mcp"))
-    .map(item => ({
-      type: item.type || null,
-      server: item.server_label || item.server || "activepieces",
-      tool: item.name || item.tool_name || null,
-      status: item.status || null,
-      arguments: compact(item.arguments ?? item.input),
-      output: compact(item.output ?? item.result),
-      error: compact(item.error)
-    }));
 }
 
 function idsFrom(text) {
@@ -107,6 +161,7 @@ async function chat(input) {
   const apToken = typeof input.activepieces_token === "string" ? input.activepieces_token.trim() : "";
   if (!message) throw Object.assign(new Error("message_required"), { statusCode: 422 });
   if (!apToken) throw Object.assign(new Error("activepieces_not_connected"), { statusCode: 409 });
+  if (!llmKey) throw Object.assign(new Error("deepseek_not_configured"), { statusCode: 503 });
   const conversationId = typeof input.conversation_id === "string" && input.conversation_id ? input.conversation_id : randomUUID();
   const history = conversations.get(conversationId) || [];
   const instructions = [
@@ -119,22 +174,38 @@ async function chat(input) {
   ].join("\n");
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 120_000);
-  let response;
+  let result;
+  const toolTrace = [];
   try {
-    response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: { authorization: `Bearer ${openAiKey}`, "content-type": "application/json" },
-      body: JSON.stringify({
-        model, store: false, instructions,
-        input: [...history.slice(-12), { role: "user", content: message }],
-        tools: [{ type: "mcp", server_label: "activepieces", server_url: "https://cloud.activepieces.com/mcp", authorization: apToken, require_approval: "never" }]
-      }),
-      signal: controller.signal
-    });
-    if (!response.ok) throw Object.assign(new Error(`openai_${response.status}`), { statusCode: 502 });
-    const result = await response.json();
+    const mcp = await openMcp(apToken);
+    const tools = llmTools(mcp.tools);
+    if (!tools.length) throw Object.assign(new Error("activepieces_tools_unavailable"), { statusCode: 502 });
+    const modelInput = [...history.slice(-12), { role: "user", content: message }];
+    for (let round = 0; round < 8; round += 1) {
+      const response = await fetch(llmResponsesUrl, {
+        method: "POST",
+        headers: { authorization: `Bearer ${llmKey}`, "content-type": "application/json" },
+        body: JSON.stringify({ model, instructions, input: modelInput, tools, tool_choice: "auto", reasoning: { effort: "none" } }),
+        signal: controller.signal
+      });
+      if (!response.ok) {
+        const detail = compact(await response.text(), 500);
+        throw Object.assign(new Error(`llm_${response.status}${detail ? `: ${detail}` : ""}`), { statusCode: 502 });
+      }
+      result = await response.json();
+      const calls = (Array.isArray(result?.output) ? result.output : []).filter(item => item?.type === "function_call");
+      if (!calls.length) break;
+      for (const call of calls) {
+        let args;
+        try { args = JSON.parse(call.arguments || "{}"); } catch { throw Object.assign(new Error("llm_invalid_tool_arguments"), { statusCode: 502 }); }
+        const toolResult = await mcpRpc(mcp.state, apToken, "tools/call", { name: call.name, arguments: args });
+        toolTrace.push({ type: "function_call", server: "activepieces", tool: call.name, status: "completed", arguments: compact(args), output: compact(toolResult) });
+        modelInput.push({ type: "function_call", call_id: call.call_id, name: call.name, arguments: call.arguments || "{}" });
+        modelInput.push({ type: "function_call_output", call_id: call.call_id, output: JSON.stringify(toolResult) });
+      }
+    }
     const reply = outputText(result);
-    if (!reply) throw Object.assign(new Error("openai_empty_response"), { statusCode: 502 });
+    if (!reply) throw Object.assign(new Error("llm_empty_response"), { statusCode: 502 });
     const refs = idsFrom(reply);
     const experiment = writeExperiment({
       origin: "codex_siyadah_server",
@@ -144,15 +215,15 @@ async function chat(input) {
       status: "completed",
       latency_ms: Date.now() - startedAt,
       model,
-      transport: "openai_responses_to_activepieces_mcp",
-      tool_trace: mcpTrace(result),
+      transport: "deepseek_responses_to_activepieces_mcp",
+      tool_trace: toolTrace,
       usage: result.usage || null,
       evidence: { ...refs, reply: compact(reply, 4000) }
     });
     conversations.set(conversationId, [...history, { role: "user", content: message }, { role: "assistant", content: reply }].slice(-12));
     return { ok: true, request_id: input.request_id, request_status: "observed", conversation_id: conversationId, reply,
       experiment_id: experiment.id,
-      execution: { system: "openai_activepieces_mcp", surface: "isolated_lab", status: "completed" } };
+      execution: { system: "deepseek_activepieces_mcp", surface: "isolated_lab", status: "completed" } };
   } catch (error) {
     writeExperiment({
       origin: "codex_siyadah_server",
@@ -162,8 +233,8 @@ async function chat(input) {
       status: "failed",
       latency_ms: Date.now() - startedAt,
       model,
-      transport: "openai_responses_to_activepieces_mcp",
-      error: { code: error?.name === "AbortError" ? "openai_timeout" : String(error?.message || "unknown_error") }
+      transport: "deepseek_responses_to_activepieces_mcp",
+      error: { code: error?.name === "AbortError" ? "llm_timeout" : String(error?.message || "unknown_error") }
     });
     throw error;
   } finally { clearTimeout(timer); }
@@ -173,7 +244,7 @@ async function relayMcp(request, response) {
   const payload = await body(request);
   const headers = { authorization: String(request.headers.authorization || ""), accept: "application/json, text/event-stream", "content-type": "application/json" };
   for (const key of ["mcp-protocol-version", "mcp-session-id"]) if (request.headers[key]) headers[key] = request.headers[key];
-  const upstream = await fetch("https://cloud.activepieces.com/mcp", { method: "POST", headers, body: JSON.stringify(payload) });
+  const upstream = await fetch(activepiecesMcpUrl, { method: "POST", headers, body: JSON.stringify(payload) });
   const outgoing = { "content-type": upstream.headers.get("content-type") || "application/json", "cache-control": "no-store" };
   const sessionId = upstream.headers.get("mcp-session-id");
   if (sessionId) outgoing["mcp-session-id"] = sessionId;
@@ -195,7 +266,14 @@ function serve(request, response, pathname) {
 createServer(async (request, response) => {
   const url = new URL(request.url || "/", "http://lab.local");
   try {
-    if (request.method === "GET" && url.pathname === "/health") return json(response, 200, { status: "ok", service: "siyadah-direct-mcp-lab" });
+    if (request.method === "GET" && url.pathname === "/health") return json(response, 200, {
+      status: "ok", service: "siyadah-direct-mcp-lab", llm_configured: Boolean(llmKey),
+      llm_model: model, activepieces_url: activepiecesUrl
+    });
+    if (request.method === "GET" && url.pathname === "/app/runtime-config.js") {
+      response.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-store" });
+      return response.end(`window.SIYADAH_ACTIVEPIECES_URL=${JSON.stringify(activepiecesUrl)};`);
+    }
     if (request.method === "GET" && url.pathname.startsWith("/lab/enter/")) {
       const supplied = decodeURIComponent(url.pathname.slice("/lab/enter/".length));
       if (!equal(supplied, labToken)) return json(response, 404, { error: "not_found" });
