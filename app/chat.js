@@ -1117,14 +1117,14 @@ var I = {
         MCP_DIRECT.tools=await client.listTools(); MCP_DIRECT.state="connected"; siyRenderDirectMcp();
       }
       var tools=MCP_DIRECT.tools.map(function(tool){return {type:"function",function:{name:tool.name,description:tool.description||"",parameters:tool.inputSchema||{type:"object",properties:{}}}};});
-      var messages=[{role:"system",content:"أنت سيادة، مساعد عمليات عربي. استخدم أدوات Activepieces عند الحاجة. لا تدّعي نجاح أي عملية دون نتيجة الأداة. لا تنشئ أو تعدّل أو تشغّل شيئًا إلا إذا طلب المستخدم ذلك صراحة. أجب بإيجاز وبوضوح."}];
+      var messages=[{role:"system",content:"أنت سيادة، مساعد عمليات عربي. استخدم أدوات Activepieces عند الحاجة. في خادم المنصة ابدأ بـ ap_list_projects ثم اختر المشروع المطلوب مرة واحدة عبر ap_set_project_context قبل أدوات المشروع مثل ap_list_flows. لا تكرر اختيار المشروع إذا نجح. لا تدّعي نجاح أي عملية دون نتيجة الأداة. لا تنشئ أو تعدّل أو تشغّل شيئًا إلا إذا طلب المستخدم ذلك صراحة. أجب بإيجاز وبوضوح."}];
       list.slice(-10,-1).forEach(function(item){
         if(item.typing) return;
         var content=siyPlainText(item.t); if(content) messages.push({role:item.me?"user":"assistant",content:content});
       });
       messages.push({role:"user",content:text});
       var answer="";
-      for(var turn=0;turn<4;turn++){
+      for(var turn=0;turn<8;turn++){
         var assistant=await siyDeepSeek(messages,tools); messages.push(assistant);
         var calls=Array.isArray(assistant.tool_calls)?assistant.tool_calls:[];
         if(!calls.length){ answer=assistant.content||"تم."; break; }
@@ -1135,7 +1135,11 @@ var I = {
           messages.push({role:"tool",tool_call_id:call.id,content:siyToolResultText(result)});
         }
       }
-      if(!answer) throw new Error("توقفت المحادثة بعد عدة استدعاءات أدوات دون جواب نهائي.");
+      if(!answer){
+        messages.push({role:"system",content:"توقفت استدعاءات الأدوات الآن. لخّص للمستخدم النتائج التي وصلت بالفعل، واذكر بوضوح إن كانت المهمة لم تكتمل. لا تطلب أي أداة أخرى."});
+        var finalAssistant=await siyDeepSeek(messages,[]);
+        answer=finalAssistant.content||"لم تكتمل المهمة بعد.";
+      }
       row.typing=false; row.at=now(); row.t=siyReplyHtml(answer); siyDraw();
     }catch(error){ row.typing=false; row.at=now(); row.t=siyReplyHtml(error.message||"تعذّر إكمال الطلب."); siyDraw(); }
   }
