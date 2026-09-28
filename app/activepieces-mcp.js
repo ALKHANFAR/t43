@@ -1,11 +1,10 @@
 (function(root){
   "use strict";
 
-  var MCP_URL="https://cloud.activepieces.com/mcp";
-  var RESOURCE_METADATA_URL="https://cloud.activepieces.com/.well-known/oauth-protected-resource/mcp";
-  var AUTH_METADATA_URL="https://cloud.activepieces.com/.well-known/oauth-authorization-server";
-  var PRODUCTION_REDIRECT_URI="https://t43-frontend-production-5106.up.railway.app/app/chat.html";
-  var PRODUCTION_CLIENT_ID="8bdklPoIDyPBoY8xOd6-BVJwPtBjd59V";
+  var ACTIVEPIECES_ORIGIN="https://activepieces-production-82ad.up.railway.app";
+  var MCP_URL=ACTIVEPIECES_ORIGIN+"/mcp/platform";
+  var RESOURCE_METADATA_URL=ACTIVEPIECES_ORIGIN+"/.well-known/oauth-protected-resource/mcp/platform";
+  var AUTH_METADATA_URL=ACTIVEPIECES_ORIGIN+"/.well-known/oauth-authorization-server";
   var STORAGE_PREFIX="siyadah.ap.mcp.";
   var protocolVersion="2025-11-25";
   var requestId=0, sessionId=null;
@@ -39,11 +38,11 @@
   async function discover(){
     var resource=await fetch(RESOURCE_METADATA_URL,{headers:{Accept:"application/json"}}).then(json);
     var issuer=Array.isArray(resource.authorization_servers)&&resource.authorization_servers[0];
-    if(issuer!=="https://cloud.activepieces.com") throw new Error("Activepieces أعلن خادم تفويض غير متوقع.");
+    if(issuer!==ACTIVEPIECES_ORIGIN) throw new Error("Activepieces أعلن خادم تفويض غير متوقع.");
     var auth=await fetch(AUTH_METADATA_URL,{headers:{Accept:"application/json"}}).then(json);
     if(!auth.authorization_endpoint||!auth.token_endpoint||!auth.registration_endpoint) throw new Error("بيانات OAuth من Activepieces ناقصة.");
     [auth.authorization_endpoint,auth.token_endpoint,auth.registration_endpoint].forEach(function(endpoint){
-      if(new URL(endpoint).origin!=="https://cloud.activepieces.com") throw new Error("نقطة OAuth غير موثوقة.");
+      if(new URL(endpoint).origin!==ACTIVEPIECES_ORIGIN) throw new Error("نقطة OAuth غير موثوقة.");
     });
     put("token_endpoint",auth.token_endpoint);
     put("authorization_endpoint",auth.authorization_endpoint);
@@ -71,7 +70,7 @@
   async function connect(){
     var metadata=await discover();
     var callback=redirectUri();
-    var clientId=callback===PRODUCTION_REDIRECT_URI?PRODUCTION_CLIENT_ID:(get("client_id")||await register(metadata.auth.registration_endpoint));
+    var clientId=get("client_id")||await register(metadata.auth.registration_endpoint);
     put("client_id",clientId);
     var verifier=randomValue(64), state=randomValue(32);
     put("verifier",verifier); put("state",state); put("redirect_uri",callback);
@@ -169,8 +168,12 @@
     }while(cursor);
     return tools;
   }
+  async function callTool(name,args){
+    if(typeof name!=="string"||!name) throw new Error("اسم أداة Activepieces غير صالح.");
+    return rpc("tools/call",{name:name,arguments:args&&typeof args==="object"?args:{}});
+  }
   function status(){ return {connected:!!get("access_token"),clientRegistered:!!get("client_id")}; }
   function disconnect(){ ["access_token","refresh_token","verifier","state","redirect_uri","token_endpoint","authorization_endpoint","registration_endpoint"].forEach(drop); sessionId=null; }
 
-  root.SiyadahActivepiecesMcp={connect:connect,handleCallback:handleCallback,listTools:listTools,status:status,disconnect:disconnect,_parseSse:parseSse};
+  root.SiyadahActivepiecesMcp={connect:connect,handleCallback:handleCallback,listTools:listTools,callTool:callTool,status:status,disconnect:disconnect,_parseSse:parseSse};
 })(window);

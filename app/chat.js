@@ -518,7 +518,10 @@ var I = {
     list.push({me:true,t:text,at:now()});
     renderSide();
     $("#input").value=""; $("#input").style.height="auto"; renderThread();
-    if(window.__SIY_REAL__){ siyMessage(text,list,null); return; }
+    if(window.__SIY_REAL__){
+      if(window.SIYADAH_DIRECT_MCP_CHAT===true){ siyDirectChat(text,list); return; }
+      siyMessage(text,list,null); return;
+    }
     setTimeout(function(){
       if(w==="siyadah"&&/وش تعرف|ايش تعرف|تعرف عنا|الذاكرة/.test(text)) list.push({me:false,at:now(),t:memHtml(),why:"كل سطر في الذاكرة له مصدر — محادثة أو قاعدة كتبتها أنت."});
       else if(w==="siyadah"&&isBuild(text)) list.push({me:false,plan:true,at:now(),t:"جهّزت ثلاثة. هذي خطتهم — ما يتحرك شيء قبل موافقتك:"});
@@ -1087,6 +1090,55 @@ var I = {
     catch(error){ MCP_DIRECT.state="error"; MCP_DIRECT.error=error.message||"تعذّرت قراءة الأدوات."; }
     siyRenderDirectMcp();
   }
+  function siyPlainText(value){
+    var node=document.createElement("div"); node.innerHTML=String(value||""); return (node.textContent||"").trim();
+  }
+  function siyToolResultText(result){
+    if(result&&Array.isArray(result.content)){
+      var text=result.content.filter(function(item){return item&&item.type==="text"&&typeof item.text==="string";}).map(function(item){return item.text;}).join("\n");
+      if(text) return text;
+    }
+    try{return JSON.stringify(result);}catch(ignore){return String(result||"");}
+  }
+  async function siyDeepSeek(messages,tools){
+    var response=await fetch("/deepseek/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:messages,tools:tools,tool_choice:"auto"})});
+    var data=await response.json().catch(function(){return {};});
+    if(!response.ok) throw new Error(data.error&&data.error.message?data.error.message:"تعذّر اتصال DeepSeek.");
+    var message=data&&data.choices&&data.choices[0]&&data.choices[0].message;
+    if(!message) throw new Error("لم يصل رد صالح من DeepSeek.");
+    return message;
+  }
+  async function siyDirectChat(text,list){
+    var client=window.SiyadahActivepiecesMcp;
+    var row={me:false,typing:true,at:""}; list.push(row); siyDraw();
+    try{
+      if(!client||!client.status().connected) throw new Error("اربط Activepieces مباشرة من شاشة الأدوات أولًا، ثم أعد إرسال طلبك.");
+      if(MCP_DIRECT.state!=="connected"||!MCP_DIRECT.tools.length){
+        MCP_DIRECT.tools=await client.listTools(); MCP_DIRECT.state="connected"; siyRenderDirectMcp();
+      }
+      var tools=MCP_DIRECT.tools.map(function(tool){return {type:"function",function:{name:tool.name,description:tool.description||"",parameters:tool.inputSchema||{type:"object",properties:{}}}};});
+      var messages=[{role:"system",content:"أنت سيادة، مساعد عمليات عربي. استخدم أدوات Activepieces عند الحاجة. لا تدّعي نجاح أي عملية دون نتيجة الأداة. لا تنشئ أو تعدّل أو تشغّل شيئًا إلا إذا طلب المستخدم ذلك صراحة. أجب بإيجاز وبوضوح."}];
+      list.slice(-10,-1).forEach(function(item){
+        if(item.typing) return;
+        var content=siyPlainText(item.t); if(content) messages.push({role:item.me?"user":"assistant",content:content});
+      });
+      messages.push({role:"user",content:text});
+      var answer="";
+      for(var turn=0;turn<4;turn++){
+        var assistant=await siyDeepSeek(messages,tools); messages.push(assistant);
+        var calls=Array.isArray(assistant.tool_calls)?assistant.tool_calls:[];
+        if(!calls.length){ answer=assistant.content||"تم."; break; }
+        for(var i=0;i<calls.length;i++){
+          var call=calls[i],args={};
+          try{args=JSON.parse(call.function.arguments||"{}");}catch(ignore){}
+          var result=await client.callTool(call.function.name,args);
+          messages.push({role:"tool",tool_call_id:call.id,content:siyToolResultText(result)});
+        }
+      }
+      if(!answer) throw new Error("توقفت المحادثة بعد عدة استدعاءات أدوات دون جواب نهائي.");
+      row.typing=false; row.at=now(); row.t=siyReplyHtml(answer); siyDraw();
+    }catch(error){ row.typing=false; row.at=now(); row.t=siyReplyHtml(error.message||"تعذّر إكمال الطلب."); siyDraw(); }
+  }
   async function siyInitDirectMcp(){
     var client=window.SiyadahActivepiecesMcp;
     if(!window.__SIY_REAL__||!client) return;
@@ -1392,6 +1444,7 @@ var I = {
   function siyHydrate(done){
     if(window.SIYADAH_REAL_ACCOUNT!==true){done();return;}
     siyClearDemo(); siyIdentity("حسابك",null);
+    if(window.SIYADAH_DIRECT_MCP_CHAT===true){ window.__SIY_LOAD_ERROR__=""; window.__SIY_EMPTY__=true; done(); return; }
     window.__SIY_LOAD_ERROR__="تعذّر تحميل بيانات حسابك. أعد تحميل الصفحة للمحاولة.";
     var finished=false, timer=setTimeout(function(){finish(null);},15000);
     function finish(data){
