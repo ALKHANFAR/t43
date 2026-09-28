@@ -93,7 +93,7 @@ test('callback exchanges the code then initialize and tools/list stay direct wit
     assert.match(tokenCall.options.body,/grant_type=authorization_code/);
     assert.ok(!tokenCall.url.includes('issued-code'));
     const mcpCalls=calls.filter(call=>call.url===AP+'/mcp/platform'&&call.options.method==='POST');
-    assert.deepEqual(mcpCalls.map(call=>JSON.parse(call.options.body).method),['initialize','notifications/initialized','tools/list','tools/call']);
+    assert.deepEqual(mcpCalls.map(call=>JSON.parse(call.options.body).method),['initialize','tools/list','tools/call']);
     assert.equal(mcpCalls[0].options.headers.Authorization,'Bearer access-one');
     assert.equal(mcpCalls[2].options.headers['Mcp-Session-Id'],'session-one');
   }finally{p.dom.window.close();}

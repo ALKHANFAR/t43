@@ -159,7 +159,8 @@
     sessionId=null;
     var initialized=await rpc("initialize",{protocolVersion:"2025-11-25",capabilities:{},clientInfo:{name:"siyadah-browser",version:"1.0.0"}});
     if(initialized&&typeof initialized.protocolVersion==="string") protocolVersion=initialized.protocolVersion;
-    await rpc("notifications/initialized",{});
+    /* Activepieces serves MCP statelessly. Skip the optional initialized
+       notification because its empty browser response is not fetch-compatible. */
     var tools=[],cursor=null;
     do{
       var result=await rpc("tools/list",cursor?{cursor:cursor}:{});
