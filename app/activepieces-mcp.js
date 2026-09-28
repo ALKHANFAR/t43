@@ -9,7 +9,7 @@
   var protocolVersion="2025-11-25";
   var requestId=0, sessionId=null;
 
-  function storage(){ return root.sessionStorage; }
+  function storage(){ return root.localStorage; }
   function put(key,value){ storage().setItem(STORAGE_PREFIX+key,value); }
   function get(key){ return storage().getItem(STORAGE_PREFIX+key); }
   function drop(key){ storage().removeItem(STORAGE_PREFIX+key); }

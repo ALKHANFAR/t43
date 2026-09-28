@@ -46,8 +46,8 @@ test('direct connect dynamically registers with self-hosted Activepieces plus PK
     assert.equal(authorize.searchParams.get('client_id'),'public-client');
     assert.equal(authorize.searchParams.get('scope'),'mcp');
     assert.equal(authorize.searchParams.get('resource'),AP+'/mcp/platform');
-    assert.equal(authorize.searchParams.get('state'),p.w.sessionStorage.getItem('siyadah.ap.mcp.state'));
-    assert.ok(p.w.sessionStorage.getItem('siyadah.ap.mcp.verifier').length>=43);
+    assert.equal(authorize.searchParams.get('state'),p.w.localStorage.getItem('siyadah.ap.mcp.state'));
+    assert.ok(p.w.localStorage.getItem('siyadah.ap.mcp.verifier').length>=43);
   }finally{p.dom.window.close();}
 });
 
