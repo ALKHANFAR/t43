@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildEmployeePrompt,normalizeAgentProfile,normalizeCompanyProfile,recommendEmployees,selectCompanyUrls} from '../lib/company-profile.mjs';
+import {buildEmployeePrompt,createCompanyProfileService,normalizeAgentProfile,normalizeCompanyProfile,recommendEmployees,selectCompanyUrls} from '../lib/company-profile.mjs';
 
 test('selects bounded high-value pages from the same company site',()=>{
   const urls=selectCompanyUrls('https://example.com/',[
@@ -65,4 +65,33 @@ test('deep profile rejects a real quote that does not prove the claimed value',(
   }]},[{url,markdown:'We help teams automate repetitive work.'}],[url]);
   assert.equal(profile.facts.length,0);
   assert.equal(profile.rejectedClaims,1);
+});
+
+test('knowledge and employees are always read through the owning company id',async()=>{
+  const seen=[];
+  const profiles={
+    company_alpha:{company_id:'company_alpha',coverage_score:80,last_success_at:'2026-09-29T00:00:00Z',last_error:null},
+    company_beta:{company_id:'company_beta',coverage_score:20,last_success_at:null,last_error:null},
+  };
+  const query=async(text,values=[])=>{
+    seen.push({text,values});const companyId=values[0];
+    if(text.startsWith('SELECT * FROM siyadah_company_profiles'))return {rows:profiles[companyId]?[profiles[companyId]]:[]};
+    if(text.includes('FROM siyadah_company_knowledge_items'))return {rows:[{topic:'services',fact_key:`fact_${companyId}`,value_json:`value_${companyId}`,evidence_quote:'دليل',source_type:'company_website',source_url:`https://${companyId}.example`,certainty:'high',observed_at:'2026-09-29T00:00:00Z'}]};
+    if(text.includes('FROM siyadah_digital_employees'))return {rows:[{id:`employee_${companyId}`,activepieces_flow_id:companyId==='company_alpha'?'F12345678901234567890':'G12345678901234567890',name:companyId==='company_alpha'?'ألف':'باء',role_title:'دعم العملاء',prompt:'تعليمات',knowledge_topics_json:['services'],knowledge_version:1,status:'draft'}]};
+    throw new Error('unexpected query');
+  };
+  const service=createCompanyProfileService({query});
+  const [alphaKnowledge,betaKnowledge,alphaEmployees,betaEmployees]=await Promise.all([
+    service.ownedKnowledge('company_alpha'),service.ownedKnowledge('company_beta'),
+    service.listEmployees('company_alpha'),service.listEmployees('company_beta'),
+  ]);
+  assert.equal(alphaKnowledge.companyId,'company_alpha');
+  assert.equal(betaKnowledge.companyId,'company_beta');
+  assert.equal(alphaKnowledge.facts[0].key,'fact_company_alpha');
+  assert.equal(betaKnowledge.facts[0].key,'fact_company_beta');
+  assert.equal(alphaEmployees[0].recordId,'employee_company_alpha');
+  assert.equal(betaEmployees[0].recordId,'employee_company_beta');
+  assert.notEqual(alphaEmployees[0].flowId,betaEmployees[0].flowId);
+  assert.equal(seen.every(call=>call.values[0]==='company_alpha'||call.values[0]==='company_beta'),true);
+  assert.equal(seen.filter(call=>call.text.includes('siyadah_company_knowledge_items')||call.text.includes('siyadah_digital_employees')).every(call=>/company_id=\$1/.test(call.text)),true);
 });

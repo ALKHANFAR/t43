@@ -93,3 +93,53 @@ test('lists only flows returned for the company stored project',async()=>{
   });
   assert.equal((await service.listFlows('company_6006')).length,1);
 });
+
+test('two companies keep distinct projects and cannot receive each other flows',async()=>{
+  const projects={
+    company_alpha:'A12345678901234567890',
+    company_beta:'B12345678901234567890',
+  },rows=new Map(),providerCalls=[];
+  const query=async(text,values=[])=>{
+    if(text.startsWith('SELECT'))return {rows:rows.has(values[0])?[rows.get(values[0])]:[]};
+    if(text.startsWith('INSERT')){
+      const row={tenant_id:values[0],external_id:values[1],activepieces_project_id:values[2],display_name:values[3],provision_status:'ready'};
+      rows.set(values[0],row);return {rows:[row]};
+    }
+    return {rows:[]};
+  };
+  const fetchImpl=async(url,options={})=>{
+    providerCalls.push({url,options});
+    const method=options.method||'GET';
+    if(url.includes('/api/v1/projects?'))return {ok:true,status:200,json:async()=>({data:[]})};
+    if(url.endsWith('/api/v1/projects')&&method==='POST'){
+      const body=JSON.parse(options.body),tenantId=body.metadata.tenantId;
+      return {ok:true,status:201,json:async()=>({id:projects[tenantId],externalId:`siyadah:${tenantId}`})};
+    }
+    if(url.endsWith('/api/v1/flows')&&method==='POST'){
+      const body=JSON.parse(options.body);
+      return {ok:true,status:201,json:async()=>({id:body.projectId.startsWith('A')?'F12345678901234567890':'G12345678901234567890',projectId:body.projectId,status:'DISABLED'})};
+    }
+    if(url.includes('/api/v1/flows?')){
+      const projectId=new URL(url).searchParams.get('projectId');
+      return {ok:true,status:200,json:async()=>({data:[{id:projectId.startsWith('A')?'F12345678901234567890':'G12345678901234567890',projectId,status:'DISABLED'}]})};
+    }
+    throw new Error(`unexpected provider call: ${method} ${url}`);
+  };
+  const service=createTenantProjectService({query,fetchImpl,activepiecesUrl:'https://activepieces.example',apiKey:'secret'});
+  const [alpha,beta]=await Promise.all([
+    service.ensure({tenantId:'company_alpha',displayName:'شركة ألف'}),
+    service.ensure({tenantId:'company_beta',displayName:'شركة باء'}),
+  ]);
+  assert.notEqual(alpha.activepieces_project_id,beta.activepieces_project_id);
+  const [alphaFlow,betaFlow]=await Promise.all([
+    service.createFlow({tenantId:'company_alpha',displayName:'موظف ألف'}),
+    service.createFlow({tenantId:'company_beta',displayName:'موظف باء'}),
+  ]);
+  assert.equal(alphaFlow.projectId,projects.company_alpha);
+  assert.equal(betaFlow.projectId,projects.company_beta);
+  assert.deepEqual((await service.listFlows('company_alpha')).map(flow=>flow.projectId),[projects.company_alpha]);
+  assert.deepEqual((await service.listFlows('company_beta')).map(flow=>flow.projectId),[projects.company_beta]);
+  const flowBodies=providerCalls.filter(call=>call.url.endsWith('/api/v1/flows')&&call.options.method==='POST').map(call=>JSON.parse(call.options.body));
+  assert.deepEqual(new Set(flowBodies.map(body=>body.projectId)),new Set(Object.values(projects)));
+  assert.equal(flowBodies.every(body=>body.metadata.tenantId==='company_alpha'||body.metadata.tenantId==='company_beta'),true);
+});
