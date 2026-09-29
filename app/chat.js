@@ -519,6 +519,7 @@ var I = {
     renderSide();
     $("#input").value=""; $("#input").style.height="auto"; renderThread();
     if(window.__SIY_REAL__){
+      if(window.SIYADAH_NATIVE_AP_CHAT===true){ siyNativeChat(text,list); return; }
       if(window.SIYADAH_DIRECT_MCP_CHAT===true){ siyDirectChat(text,list); return; }
       siyMessage(text,list,null); return;
     }
@@ -742,7 +743,11 @@ var I = {
   $("#input").addEventListener("input",function(){ this.style.height="auto"; this.style.height=Math.min(this.scrollHeight,160)+"px"; });
 
   function go(w,c){ who=w; chatId=c||null; kpiOpen=null; renderSide(); renderBar(); renderThread(); }
-  function newChat(){ live={}; go("siyadah"); $("#input").focus(); }
+  function newChat(){
+    live={};
+    if(window.SIYADAH_NATIVE_AP_CHAT&&window.SiyadahActivepiecesChat) window.SiyadahActivepiecesChat.newConversation();
+    go("siyadah"); $("#input").focus();
+  }
   $("#emps").addEventListener("click",function(e){ var b=e.target.closest(".emp"); if(!b) return; go(b.dataset.emp); $("#input").focus(); });
   $(".side__scroll").addEventListener("click",function(e){ var b=e.target.closest(".hist"); if(!b||!b.dataset.chat) return;
     var c=CHATS[b.dataset.chat]; if(c&&c.emp){ go(c.emp,window.__SIY_REAL__?b.dataset.chat:null); $("#input").focus(); return; } /* مبادرة موظف: سجلّها يفتح محادثته */
@@ -1143,6 +1148,56 @@ var I = {
       row.typing=false; row.at=now(); row.t=siyReplyHtml(answer); siyDraw();
     }catch(error){ row.typing=false; row.at=now(); row.t=siyReplyHtml(error.message||"تعذّر إكمال الطلب."); siyDraw(); }
   }
+  function siyNativeToolLabel(part){
+    var input=part&&part.input&&typeof part.input==="object"?part.input:{};
+    return input.activeTitle||input.doneTitle||input.title||part.toolName||"خطوة Activepieces";
+  }
+  function siyNativeSnapshotHtml(snapshot){
+    var all=snapshot&&Array.isArray(snapshot.messages)?snapshot.messages:[];
+    var assistant=null;
+    for(var i=all.length-1;i>=0;i--){ if(all[i]&&all[i].role==="assistant"){assistant=all[i];break;} }
+    var parts=assistant&&Array.isArray(assistant.parts)?assistant.parts:[];
+    var texts=parts.filter(function(p){return p&&p.type==="text"&&typeof p.text==="string"&&p.text.trim();}).map(function(p){return p.text.trim();});
+    var thinking=parts.filter(function(p){return p&&(p.type==="thinking-status"||p.type==="reasoning")&&typeof p.text==="string"&&p.text.trim();}).map(function(p){return p.text.trim();});
+    var tools=parts.filter(function(p){return p&&p.type==="tool-call";}).slice(-8);
+    var html=texts.length?siyReplyHtml(texts.join("\n\n")):siyReplyHtml(thinking[thinking.length-1]||"Activepieces يعمل على طلبك الآن…");
+    if(tools.length){
+      html+='<div class="nr" style="margin-top:12px;border-top:1px solid var(--hair);padding-top:8px">'+tools.map(function(part){
+        var ok=part.status==="COMPLETED"||part.status==="SUCCEEDED"||part.output!==undefined;
+        return '<div style="display:flex;gap:7px;align-items:center;margin:5px 0"><span aria-hidden="true">'+(ok?'✓':'•')+'</span><span>'+esc(siyNativeToolLabel(part))+'</span></div>';
+      }).join("")+'</div>';
+    }
+    if(snapshot&&snapshot.gate){
+      html+='<div class="nr" style="margin-top:12px;padding:10px;border:1px solid var(--hair)"><b>'+esc(snapshot.gate.displayName||"تحتاج خطوة منك")+'</b><p>التنفيذ متوقف بأمان حتى تكمل الاتصال أو القرار.</p><a class="bts" href="'+esc(window.SiyadahActivepiecesChat.nativeUrl(snapshot.conversationId))+'">أكمل داخل Activepieces</a></div>';
+    }
+    return html;
+  }
+  async function siyNativeChat(text,list){
+    var client=window.SiyadahActivepiecesChat;
+    var row={me:false,typing:true,at:""}; list.push(row); siyDraw();
+    try{
+      if(!client||!client.status().available) throw new Error("جلسة Activepieces غير متاحة. افتح رابط سيادة من داخل Activepieces بعد تسجيل الدخول.");
+      await client.send(text,function(snapshot){ row.typing=false;row.at=now();row.t=siyNativeSnapshotHtml(snapshot);siyDraw(); });
+    }catch(error){
+      row.typing=false;row.at=now();row.t=siyReplyHtml(error.message||"تعذّر إكمال الطلب عبر Activepieces.");siyDraw();
+    }
+  }
+  async function siyRestoreNativeChat(){
+    if(!window.SIYADAH_NATIVE_AP_CHAT||!window.SiyadahActivepiecesChat) return;
+    var snapshot=await window.SiyadahActivepiecesChat.restore();
+    if(!snapshot||!snapshot.messages.length) return;
+    var restored=[];
+    snapshot.messages.forEach(function(message){
+      var parts=Array.isArray(message.parts)?message.parts:[];
+      if(message.role==="user"){
+        var userText=parts.filter(function(p){return p&&p.type==="text"&&typeof p.text==="string";}).map(function(p){return p.text;}).join("\n").trim();
+        if(userText) restored.push({me:true,t:userText,at:""});
+      }else if(message.role==="assistant"){
+        restored.push({me:false,t:siyNativeSnapshotHtml({messages:[message],gate:null,conversationId:snapshot.conversationId}),at:""});
+      }
+    });
+    if(restored.length){live.siyadah=restored;window.__SIY_EMPTY__=false;siyDraw();}
+  }
   async function siyInitDirectMcp(){
     var client=window.SiyadahActivepiecesMcp;
     if(!window.__SIY_REAL__||!client) return;
@@ -1448,7 +1503,7 @@ var I = {
   function siyHydrate(done){
     if(window.SIYADAH_REAL_ACCOUNT!==true){done();return;}
     siyClearDemo(); siyIdentity("حسابك",null);
-    if(window.SIYADAH_DIRECT_MCP_CHAT===true){ window.__SIY_LOAD_ERROR__=""; window.__SIY_EMPTY__=true; done(); return; }
+    if(window.SIYADAH_NATIVE_AP_CHAT===true||window.SIYADAH_DIRECT_MCP_CHAT===true){ window.__SIY_LOAD_ERROR__=""; window.__SIY_EMPTY__=true; done(); return; }
     window.__SIY_LOAD_ERROR__="تعذّر تحميل بيانات حسابك. أعد تحميل الصفحة للمحاولة.";
     var finished=false, timer=setTimeout(function(){finish(null);},15000);
     function finish(data){
@@ -1492,6 +1547,7 @@ var I = {
     renderSide(); renderBar(); renderThread(); renderPlan();
     route(); window.addEventListener("hashchange",route);
     siyInitDirectMcp();
+    siyRestoreNativeChat().catch(function(){ window.__SIY_LOAD_ERROR__="تعذّر استعادة المحادثة الأصلية."; });
     /* المبادرة التلقائية للعرض التجريبي فقط — الحساب الحقيقي لا يُظهر مبادرات وهمية */
     if(!window.__SIY_REAL__) setTimeout(function(){ triggerProactive(false); }, reduced()?0:6000);
   }

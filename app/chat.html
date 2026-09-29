@@ -593,9 +593,14 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
   </div>
 </div>
 
-<script>window.SIYADAH_REAL_ACCOUNT=true;window.SIYADAH_DIRECT_MCP_CHAT=true;</script>
+<script>
+window.SIYADAH_REAL_ACCOUNT=true;
+window.SIYADAH_NATIVE_AP_CHAT=location.pathname.indexOf('/siyadah/')===0;
+window.SIYADAH_DIRECT_MCP_CHAT=!window.SIYADAH_NATIVE_AP_CHAT;
+</script>
 <script src="../pieces.js?v=1.9.0" defer></script>
 <script src="activepieces-mcp.js?v=1.1.0" defer></script>
-<script src="chat.js?v=1.10.0" defer></script>
+<script src="activepieces-native-chat.js?v=1.0.0" defer></script>
+<script src="chat.js?v=1.11.0" defer></script>
 </body>
 </html>
