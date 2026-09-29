@@ -34,6 +34,7 @@ test('provisions one isolated project with stable externalId and reuses the stor
   const createdBody=JSON.parse(h.calls.find(call=>call.options.method==='POST').options.body);
   assert.equal(createdBody.externalId,'siyadah:tenant_1001');
   assert.equal(createdBody.metadata.tenantId,'tenant_1001');
+  assert.equal(createdBody.maxConcurrentJobs,2);
 });
 
 test('adopts the exact existing provider project instead of creating a duplicate',async()=>{
@@ -57,4 +58,26 @@ test('never accepts an unprovisioned or malformed tenant project for flow operat
   const h=harness();
   await assert.rejects(()=>h.service.requireProject('tenant_3003'),error=>error instanceof TenantProjectError&&error.code==='project_not_ready');
   await assert.rejects(()=>h.service.ensure({tenantId:'../other',displayName:'سيئ'}),error=>error instanceof TenantProjectError&&error.code==='invalid_tenant');
+});
+
+test('creates flows only with the stored tenant project and rejects a foreign provider result',async()=>{
+  const h=harness({createdProject:{id:projectId,externalId:'siyadah:tenant_5005'}});
+  await h.service.ensure({tenantId:'tenant_5005',displayName:'شركة هاء'});
+  h.calls.length=0;
+  const flowHarness=createTenantProjectService({
+    query:async(text,values=[])=>{
+      if(text.startsWith('SELECT'))return {rows:[h.rows.get(values[0])]};
+      return {rows:[]};
+    },
+    activepiecesUrl:'https://activepieces.example',apiKey:'secret',
+    fetchImpl:async(url,options)=>({ok:true,status:201,json:async()=>({id:'ZyXwVu9876543210TsRqP',projectId,version:{displayName:'فلو عميل'},status:'DISABLED'})})
+  });
+  const flow=await flowHarness.createFlow({tenantId:'tenant_5005',displayName:'فلو عميل'});
+  assert.equal(flow.projectId,projectId);
+
+  const foreign=createTenantProjectService({
+    query:async()=>({rows:[h.rows.get('tenant_5005')]}),activepiecesUrl:'https://activepieces.example',apiKey:'secret',
+    fetchImpl:async()=>({ok:true,status:201,json:async()=>({id:'ZyXwVu9876543210TsRqP',projectId:'WrongProject1234567890'})})
+  });
+  await assert.rejects(()=>foreign.createFlow({tenantId:'tenant_5005',displayName:'مرفوض'}),error=>error instanceof TenantProjectError&&error.code==='flow_project_mismatch');
 });

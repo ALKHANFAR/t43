@@ -23,10 +23,21 @@ async function tenantProjects(){
     const databaseUrl=new URL(process.env.DATABASE_URL);
     const ssl=databaseUrl.hostname.endsWith('.railway.internal')?false:(process.env.NODE_ENV==='production'?{rejectUnauthorized:false}:undefined);
     const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,ssl,max:10});
-    const service=createTenantProjectService({query:(text,values)=>pool.query(text,values),activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY});
+    const service=createTenantProjectService({query:(text,values)=>pool.query(text,values),activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY,defaultMaxConcurrentJobs:process.env.SIYADAH_DEFAULT_PROJECT_CONCURRENCY||2});
     await service.init();return service;
   })().catch(error=>{tenantProjectsPromise=null;throw error;});
   return tenantProjectsPromise;
+}
+async function createTenantFlow(req,res){
+  if(!authorized(req))return json(res,401,{ok:false,error:'unauthorized'});
+  try{
+    const input=await body(req),service=await tenantProjects();
+    const flow=await service.createFlow({tenantId:input.tenantId,displayName:input.flowName,metadata:{source:'siyadah-gateway'}});
+    return json(res,201,{ok:true,tenantId:input.tenantId,projectId:flow.projectId,flowId:flow.id,status:flow.status,displayName:flow.version?.displayName||input.flowName});
+  }catch(error){
+    if(error instanceof TenantProjectError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
+    console.error('tenant flow creation failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error'});
+  }
 }
 async function provisionTenant(req,res){
   if(!authorized(req))return json(res,401,{ok:false,error:'unauthorized'});
@@ -70,6 +81,7 @@ createServer((req,res)=>{
   }
   if(req.method==='GET'&&req.url==='/health')return json(res,200,{ok:true});
   if(req.method==='POST'&&req.url==='/internal/v1/tenants/provision')return provisionTenant(req,res);
+  if(req.method==='POST'&&req.url==='/internal/v1/tenant-flows/create')return createTenantFlow(req,res);
   if(req.method==='POST'&&req.url==='/deepseek/v1/chat/completions')return deepseek(req,res);
   if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{error:'method_not_allowed'});
   return staticFile(req,res);
