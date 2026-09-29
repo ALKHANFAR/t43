@@ -21,6 +21,17 @@ test('direct MCP project selection uses the tool that actually exists',()=>{
   assert.match(source,/ap_set_project_context دون projectId/);
 });
 
+test('routine draft work skips approval while severe final actions require it',()=>{
+  assert.match(source,/إنشاء المسودة وتعديلها والتحقق منها، ولا تطلب موافقة عليها/);
+  assert.match(source,/موافقة نهائية صريحة فقط مباشرة قبل فعل شديد الخطورة/);
+  assert.match(source,/إرسال رسالة خارجية ملزمة/);
+  assert.match(source,/تقديم نموذج نهائي/);
+  assert.match(source,/دفع أو شراء/);
+  assert.match(source,/حذف بيانات/);
+  assert.match(source,/تغيير صلاحيات/);
+  assert.match(source,/كشف بيانات حساسة/);
+});
+
 async function page({storage={},hydrate=empty,message,work,approve,employee_state,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
   const w=dom.window,requests=[],alerts=[],polls=[],navigations=[];let hydrateTimer;
