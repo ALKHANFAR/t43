@@ -5,11 +5,13 @@ import {randomUUID,timingSafeEqual} from 'node:crypto';
 import pg from 'pg';
 import {createTenantProjectService,TenantProjectError} from './lib/tenant-projects.mjs';
 import {SESSION_COOKIE,cookieValue,createTenantSession,readTenantSession,sessionCookie} from './lib/tenant-session.mjs';
+import {createFirecrawlClient,FirecrawlError} from './lib/firecrawl.mjs';
 
 const root=process.cwd();
 const port=Number(process.env.PORT||3000);
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.ico':'image/x-icon','.woff2':'font/woff2','.xml':'application/xml; charset=utf-8','.txt':'text/plain; charset=utf-8'};
 let tenantProjectsPromise;
+let firecrawlClient;
 
 function json(res,status,body,headers={}){res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...headers});res.end(JSON.stringify(body));}
 async function body(req,limit=32_000){let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>limit)throw new TenantProjectError('request_too_large','الطلب كبير جدًا.',413);}try{return JSON.parse(raw||'{}');}catch{throw new TenantProjectError('invalid_json','طلب غير صالح.',400);}}
@@ -49,6 +51,19 @@ async function provisionTenant(req,res){
   }catch(error){
     if(error instanceof TenantProjectError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
     console.error('tenant provision failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error'});
+  }
+}
+
+async function scrapeWeb(req,res){
+  if(!authorized(req))return json(res,401,{ok:false,error:'unauthorized'});
+  try{
+    const input=await body(req);
+    if(!firecrawlClient)firecrawlClient=createFirecrawlClient({apiKey:process.env.FIRECRAWL_API_KEY,baseUrl:process.env.FIRECRAWL_API_URL});
+    const result=await firecrawlClient.scrape(input.url);
+    return json(res,200,{ok:true,...result});
+  }catch(error){
+    if(error instanceof FirecrawlError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
+    console.error('web scrape failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error'});
   }
 }
 
@@ -131,6 +146,7 @@ createServer((req,res)=>{
   if(req.method==='GET'&&req.url==='/health')return json(res,200,{ok:true});
   if(req.method==='POST'&&req.url==='/internal/v1/tenants/provision')return provisionTenant(req,res);
   if(req.method==='POST'&&req.url==='/internal/v1/tenant-flows/create')return createTenantFlow(req,res);
+  if(req.method==='POST'&&req.url==='/internal/v1/web/scrape')return scrapeWeb(req,res);
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/chat')return publicChat(req,res);
   if(req.method==='POST'&&req.url==='/deepseek/v1/chat/completions')return deepseek(req,res);
   if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{error:'method_not_allowed'});
