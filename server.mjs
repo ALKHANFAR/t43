@@ -21,7 +21,7 @@ async function deepseek(req,res){
 }
 function staticFile(req,res){
   const url=new URL(req.url,'http://localhost');
-  const requested=url.pathname==='/'?'/app/chat.html':url.pathname;
+  const requested=url.pathname;
   const safe=normalize(decodeURIComponent(requested)).replace(/^(\.\.(\/|\\|$))+/,'');
   const file=join(root,safe);
   if(!file.startsWith(root))return json(res,403,{error:'forbidden'});
@@ -31,6 +31,11 @@ function staticFile(req,res){
   createReadStream(file).pipe(res);
 }
 createServer((req,res)=>{
+  const pathname=new URL(req.url,'http://localhost').pathname;
+  if((req.method==='GET'||req.method==='HEAD')&&pathname==='/'){
+    res.writeHead(302,{location:'/app/chat.html','cache-control':'no-store'});
+    return res.end();
+  }
   if(req.method==='GET'&&req.url==='/health')return json(res,200,{ok:true});
   if(req.method==='POST'&&req.url==='/deepseek/v1/chat/completions')return deepseek(req,res);
   if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{error:'method_not_allowed'});

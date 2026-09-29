@@ -1117,7 +1117,7 @@ var I = {
         MCP_DIRECT.tools=await client.listTools(); MCP_DIRECT.state="connected"; siyRenderDirectMcp();
       }
       var tools=MCP_DIRECT.tools.map(function(tool){return {type:"function",function:{name:tool.name,description:tool.description||"",parameters:tool.inputSchema||{type:"object",properties:{}}}};});
-      var messages=[{role:"system",content:"أنت سيادة، مساعد عمليات عربي. استخدم أدوات Activepieces عند الحاجة. في خادم المنصة ابدأ بـ ap_list_projects ثم اختر المشروع المطلوب مرة واحدة عبر ap_set_project_context قبل أدوات المشروع مثل ap_list_flows. لا تكرر اختيار المشروع إذا نجح. لا تدّعي نجاح أي عملية دون نتيجة الأداة. لا تنشئ أو تعدّل أو تشغّل شيئًا إلا إذا طلب المستخدم ذلك صراحة. أجب بإيجاز وبوضوح."}];
+      var messages=[{role:"system",content:"أنت سيادة، مساعد عمليات عربي. استخدم أدوات Activepieces عند الحاجة. في خادم المنصة استدعِ ap_set_project_context دون projectId لعرض المشاريع، ثم اختر المشروع المطلوب مرة واحدة باستدعائها مجددًا مع projectId قبل أدوات المشروع مثل ap_list_flows. لا تكرر اختيار المشروع إذا نجح. لا تدّعي نجاح أي عملية دون نتيجة الأداة. لا تنشئ أو تعدّل أو تشغّل شيئًا إلا إذا طلب المستخدم ذلك صراحة. أجب بإيجاز وبوضوح."}];
       list.slice(-10,-1).forEach(function(item){
         if(item.typing) return;
         var content=siyPlainText(item.t); if(content) messages.push({role:item.me?"user":"assistant",content:content});

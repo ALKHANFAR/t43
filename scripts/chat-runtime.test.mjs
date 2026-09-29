@@ -16,6 +16,11 @@ test('chat UI never bypasses Siyadah with a direct Activepieces webhook',()=>{
   assert.ok(!source.includes('localStorage.getItem("siyadah_token")'));
 });
 
+test('direct MCP project selection uses the tool that actually exists',()=>{
+  assert.ok(!source.includes('ap_list_projects'));
+  assert.match(source,/ap_set_project_context دون projectId/);
+});
+
 async function page({storage={},hydrate=empty,message,work,approve,employee_state,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
   const w=dom.window,requests=[],alerts=[],polls=[],navigations=[];let hydrateTimer;
