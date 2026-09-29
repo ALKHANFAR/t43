@@ -5,6 +5,8 @@ import { JSDOM } from 'jsdom';
 
 const source=readFileSync(new URL('../app/chat.js',import.meta.url),'utf8');
 const html=readFileSync(new URL('../app/chat.html',import.meta.url),'utf8');
+const onboardingHtml=readFileSync(new URL('../app/onboard.html',import.meta.url),'utf8');
+const onboardingSource=readFileSync(new URL('../app/onboard.js',import.meta.url),'utf8');
 const serverSource=readFileSync(new URL('../server.mjs',import.meta.url),'utf8');
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 const empty={ok:true,company:'Server Company',brain:null,memory:[],team:[],recent_work:[],conversations:[]};
@@ -24,9 +26,16 @@ test('browser has no direct execution client or project selection path',()=>{
   assert.ok(!source.includes('tenantId'));
 });
 
+test('customer shell hides implementation brands and forbidden legacy dependency',()=>{
+  assert.doesNotMatch(html,/>\s*(?:Activepieces|MCP|Flow)\b/i);
+  assert.doesNotMatch([html,source,onboardingHtml,onboardingSource,serverSource].join('\n'),/\b77766\b/);
+  assert.match(html,/الأدوات والربط/);
+  assert.doesNotMatch(onboardingHtml,/مسودة الموظف|<small>مسودة<\/small>/);
+});
+
 test('routine draft work skips approval while severe final actions require it',()=>{
   assert.match(serverSource,/state:'draft'/);
-  assert.match(serverSource,/لم يتم تشغيلها أو نشرها/);
+  assert.match(serverSource,/لن يبدأ العمل قبل ربط أدواته واختبار أول مهمة/);
   assert.ok(!serverSource.includes("input.op==='approve'"));
 });
 
@@ -83,9 +92,9 @@ test('cookie session uses authenticated gateway without browser-readable identit
 test('account menu reports the governed company gateway without direct browser connection',async()=>{
   const p=await page();try{
     p.d.querySelector('#meBtn').click();await flush();
-    assert.equal(p.d.querySelector('#builderConnectState').textContent,'بوابة سيادة');
+    assert.equal(p.d.querySelector('#builderConnectState').textContent,'مساحة شركتك');
     p.d.querySelector('#builderConnectBtn').click();await flush();
-    assert.match(thread(p),/محرك التنفيذ/);
+    assert.match(thread(p),/الأدوات/);
     assert.equal(p.requests.some(x=>String(x.url).includes('/v1/integrations/activepieces/')),false);
     assert.ok(!source.includes('ACTIVEPIECES_MCP_ACCESS_TOKEN'));
     assert.ok(!source.includes('SiyadahActivepiecesMcp'));
@@ -98,20 +107,31 @@ test('real account tools hide legacy demo employees and internal platform labels
     assert.doesNotMatch(visible,/يحتاجه سعد|تحتاجه ريم|تحتاجه نورة/);
     assert.doesNotMatch(visible,/Activepieces|MCP|ap_[a-z_]+/);
     assert.doesNotMatch(visible,/مقترحة لك/);
-    assert.match(visible,/محرك التنفيذ/);
-    assert.match(visible,/بوابة سيادة متصلة بحسابك/);
-    assert.doesNotMatch(visible,/اربط محرك التنفيذ/);
+    assert.match(visible,/الأدوات/);
+    assert.doesNotMatch(visible,/محرك التنفيذ|بوابة سيادة متصلة/);
   }finally{p.close();}
 });
-test('builder proposal uses a governed approval operation and renders flow readback',async()=>{
+test('real employee shows natural instructions without exposing a compiled prompt',async()=>{
+  const p=await page({hydrate:{...empty,team:[{...employee,instructions:'تابعي الفرص الجديدة واكتبي ملخصًا واضحًا.'}]}});try{
+    p.d.querySelector('#emps .emp').click();await flush();
+    p.d.querySelector('#instrTgl').click();await flush();
+    assert.match(thread(p),/تعليماته|تعليمات/);
+    assert.equal(p.d.querySelector('#instr').readOnly,true);
+    assert.equal(p.d.querySelector('.prompt'),null);
+    assert.doesNotMatch(thread(p),/Prompt|Activepieces|MCP|# الهوية|# الصلاحية/);
+  }finally{p.close();}
+});
+test('customer-facing builder proposal hides platform vocabulary and renders proof behind details',async()=>{
   const proposal={ok:true,conversation_id:'builder-conversation',work_id:'builder-work',interaction_state:'awaiting_approval',reply:'الخطة جاهزة.',flow_plan:{name:'Daily greeting',trigger:{piece_name:'@activepieces/piece-schedule',operation:'cron_expression'},steps:[{type:'CODE',display_name:'Greeting'}]},approval:{required:true,approval_id:'approval-1'}};
-  const built={ok:true,conversation_id:'builder-conversation',work_id:'builder-work',work_status:'awaiting_input',interaction_state:'draft_ready',reply:'تم إنشاء مسودة معطلة وقراءتها من Activepieces. لم تُختبر أو تُنشر بعد.',flow_id:'flow-proof',draft:{published:false,tested:false,validation:{valid:true},readback:{id:'flow-proof',status:'DISABLED'}}};
+  const built={ok:true,conversation_id:'builder-conversation',work_id:'builder-work',work_status:'awaiting_input',interaction_state:'draft_ready',reply:'تم إنشاء مسودة معطلة عبر @activepieces/piece-slack وقراءتها من Activepieces MCP. لم تُختبر أو تُنشر بعد.',flow_id:'flow-proof',draft:{published:false,tested:false,validation:{valid:true},readback:{id:'flow-proof',status:'DISABLED'}}};
   const p=await page({message:proposal,approve:built});try{
     send(p,'أنشئ Flow يبدأ Webhook ثم Code يعيد {ok:true}');await flush();
-    assert.match(thread(p),/Daily greeting/);assert.match(thread(p),/cron_expression/);assert.match(thread(p),/Greeting/);
+    assert.match(thread(p),/Daily greeting/);assert.match(thread(p),/الوقت أو الحدث الذي تحدده/);assert.match(thread(p),/Greeting/);
+    assert.doesNotMatch(thread(p),/Activepieces|MCP|cron_expression|@activepieces|\bCODE\b|المشغّل/);
     const button=p.d.querySelector('[data-siy-approval="approve"]');assert.ok(button);button.click();await flush();
     const approval=p.requests.find(x=>x.body.op==='approve');assert.ok(approval.body.request_id);assert.equal(approval.body.conversation_id,'builder-conversation');assert.equal(approval.body.approval_id,'approval-1');assert.equal(approval.body.decision,'approve');
-    assert.match(thread(p),/مسودة معطلة/);assert.match(thread(p),/flow-proof/);assert.equal(p.d.querySelectorAll('[data-siy-approval]').length,0);
+    assert.match(thread(p),/موظف قيد التجهيز|تجهيز/);assert.match(thread(p),/flow-proof/);assert.equal(p.d.querySelectorAll('[data-siy-approval]').length,0);
+    assert.doesNotMatch(thread(p),/Activepieces|MCP|مسودة معطلة|الفلو/);
   }finally{p.close();}
 });
 test('browser storage cannot supply company identity or suppress server hydration',async()=>{
@@ -148,9 +168,10 @@ test('acceptance card shows proven gates and never labels a partial draft 10/10'
   ]};
   const p=await page({message:{ok:true,conversation_id:'conversation-acceptance',reply:'جهزت المسودة.',acceptance}});try{
     send(p,'ابن الموظف');await flush();
-    assert.match(thread(p),/إثبات التشغيل والأثر: 6\/10/);
-    assert.match(thread(p),/Disabled Activepieces draft/);
-    assert.match(thread(p),/Attributed commercial KPI result/);
+    assert.match(thread(p),/حالة العمل: 6\/10/);
+    assert.match(thread(p),/تم تجهيز طريقة العمل/);
+    assert.match(thread(p),/ظهرت نتيجة أعمال مثبتة/);
+    assert.doesNotMatch(thread(p),/Activepieces|MCP/);
     assert.ok(!thread(p).includes('موظف مثبت 10/10'));
   }finally{p.close();}
 });
@@ -161,9 +182,9 @@ test('complete disconnected draft gets its own 10/10 without a production claim'
   ],draft_readiness:{schema:'SiyadahDraftReadinessV1',score:'10/10',can_claim_draft_10_of_10:true,claim:'المسودة جاهزة 10/10 للربط؛ لم يتم اختبار التشغيل أو إثبات الأثر بعد.',checks:Array.from({length:10},(_,i)=>({key:'g'+i,label:'gate '+i,passed:true}))}};
   const p=await page({message:{ok:true,conversation_id:'conversation-draft-ready',reply:'جهزت المسودة.',acceptance}});try{
     send(p,'ابن المسودة');await flush();
-    assert.match(thread(p),/المسودة جاهزة 10\/10/);
+    assert.match(thread(p),/الموظف جاهز للربط والاختبار/);
     assert.match(thread(p),/اربط الأدوات المطلوبة/);
-    assert.match(thread(p),/إثبات التشغيل والأثر: 6\/10/);
+    assert.match(thread(p),/حالة العمل: 6\/10/);
     assert.ok(!thread(p).includes('نتيجة تشغيل مثبتة 10/10'));
   }finally{p.close();}
 });
@@ -172,7 +193,7 @@ test('accepted work appears pending, then proof readback upserts stable employee
     send(p,'أنشئ موظف الفرص');await flush();assert.match(thread(p),/بانتظار التنفيذ/);assert.ok(!thread(p).includes('✓'));
     assert.equal(p.w.EMPS.length,0);assert.equal(p.polls.length,1);await p.polls.shift()();await flush();
     assert.equal(p.d.querySelector('#emps .emp').dataset.emp,employee.recordId);assert.equal(p.w.EMPS[0].flowId,employee.flowId);
-    assert.match(thread(p),/أنشئ موظف الفرص/);assert.match(thread(p),/سُجلت النتيجة/);assert.match(thread(p),/✓ succeeded/);
+    assert.match(thread(p),/أنشئ موظف الفرص/);assert.match(thread(p),/سُجلت النتيجة/);assert.match(thread(p),/✓ مكتملة/);
     assert.equal(p.w.__SIY_DASH__.recent_work[0].runId,'run-1');assert.equal(p.polls.length,0);
   }finally{p.close();}
 });

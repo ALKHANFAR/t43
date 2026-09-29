@@ -188,10 +188,26 @@ var I = {
   function fmt(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,","); }
   function now(){ var d=new Date(); return ("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2); }
   function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function customerText(value){
+    return String(value||"")
+      .replace(/@activepieces\/piece-[A-Za-z0-9_-]+/gi,"أداة العمل")
+      .replace(/Activepieces/gi,"مساحة العمل")
+      .replace(/\bMCP\b/gi,"")
+      .replace(/\bFlow\b/gi,"طريقة العمل")
+      .replace(/فلو/g,"طريقة العمل")
+      .replace(/مسودة معطلة/g,"موظف قيد التجهيز")
+      .replace(/Verified disabled draft; execution and commercial result remain unproved\.?/gi,"تم تجهيز طريقة العمل؛ التشغيل والنتيجة التجارية لم يثبتا بعد.")
+      .replace(/Execution is not proved\.?/gi,"التشغيل لم يثبت بعد.")
+      .replace(/\s{2,}/g," ").trim();
+  }
+  function acceptanceLabel(row){
+    var labels={draft_readback:"تم تجهيز طريقة العمل",flow_valid:"طريقة العمل سليمة",connection_ready:"الأداة جاهزة",execution_run:"اكتمل اختبار فعلي",provider_result:"وصلت نتيجة الخدمة",commercial_result:"ظهرت نتيجة أعمال مثبتة"};
+    return labels[row&&row.key]||customerText(row&& (row.label||row.key));
+  }
   function siyRefsHtml(items){
     var refs=(items||[]).filter(function(x){return x&&typeof x[1]==="string"&&/^[A-Za-z0-9_-]+$/.test(x[1]);});
     if(!window.__SIY_REAL__||!refs.length) return "";
-    return '<details class="siyrefs"><summary>المراجع</summary><div class="siyrefs__list">'+refs.map(function(x){return '<span>'+esc(x[0])+' <code>'+esc(x[1])+'</code></span>';}).join("")+'</div></details>';
+    return '<details class="siyrefs"><summary>الدليل التقني</summary><div class="siyrefs__list">'+refs.map(function(x){return '<span>'+esc(customerText(x[0]))+' <code>'+esc(x[1])+'</code></span>';}).join("")+'</div></details>';
   }
   /* عنوان المحادثة: قصّ عند حدود الكلمة */
   function title(t){ if(t.length<=32) return t; var c=t.slice(0,32), i=c.lastIndexOf(" "); return (i>12?c.slice(0,i):c).replace(/[،,.؟?!:]+$/,"")+"…"; }
@@ -349,7 +365,7 @@ var I = {
   }
   function pinHtml(e){
     var f=e.f;
-    return '<div class="pin"><div class="pin__r1"><span class="av">'+esc(e.ini)+'</span><div class="pin__t"><p class="pin__n">'+esc(e.n)+' <span>· '+esc(e.r)+'</span> <button type="button" class="pinbtn tip" id="renameBtn" data-tip="إعادة تسمية" aria-label="إعادة تسمية '+esc(e.n)+'"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1L18 7l-3-3L5 15l-1 5z"/><path d="M13 6l3 3"/></svg></button></p><div class="pin__s">'+esc(e.since)+'</div>'+siyRefsHtml([['الموظف',e.id],['الفلو',e.flowId]])+'</div>'+
+    return '<div class="pin"><div class="pin__r1"><span class="av">'+esc(e.ini)+'</span><div class="pin__t"><p class="pin__n">'+esc(e.n)+' <span>· '+esc(e.r)+'</span> <button type="button" class="pinbtn tip" id="renameBtn" data-tip="إعادة تسمية" aria-label="إعادة تسمية '+esc(e.n)+'"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1L18 7l-3-3L5 15l-1 5z"/><path d="M13 6l3 3"/></svg></button></p><div class="pin__s">'+esc(e.since)+'</div>'+siyRefsHtml([['الموظف',e.id],['طريقة العمل',e.flowId]])+'</div>'+
       '<div class="pin__c">'+(e.wait?'<span class="pill">ينتظر قرارك '+e.wait+'</span>':'')+
       '<span class="swl" style="font-size:.8rem;color:var(--ash)"><span id="onLbl">'+(window.__SIY_REAL__?(siyEmployeeStatePending[e.id]?'جارٍ التحقق من تغيير الحالة…':(e.on?'نشط في السجل':'متوقف في السجل')):(e.on?(f?'شغّالة':'شغّال'):(f?'متوقفة':'متوقف')))+'</span><button type="button" class="sw" id="onSw" role="switch"'+(siyEmployeeStatePending[e.id]?' disabled aria-busy="true"':'')+' aria-checked="'+e.on+'" aria-label="تشغيل '+esc(e.n)+'"></button></span></div></div>'+
       /* الأرقام مطوية افتراضيًا: سطر ملخص من قيم الـ kpi + «التفاصيل» يفتح المربعات الأربعة */
@@ -860,9 +876,7 @@ var I = {
   function tgrid(a,e){ return a.length?'<div class="tgrid">'+a.map(tcard).join("")+'</div>':'<div class="tempty">'+e+'</div>'; }
   function toolsHtml(){
     var f=TOOLS.filter(function(t){return !tq||(t.n+" "+t.d+" "+t.en+" "+t.s+" "+t.c).toLowerCase().indexOf(tq)>-1});
-    var directText="بوابة سيادة متصلة بحسابك";
     var h='<div class="tools"><h1>الأدوات</h1><p class="sub">'+TOOLS.length+' أداة. اربط اللي تستخدمه، وموظفوك يشتغلون فيه — ولا يوصل موظف لأداة ما ربطتها أنت.</p>'+
-      '<div class="card" style="margin:16px 0"><div class="card__b"><b>محرك التنفيذ</b><p style="margin:.35rem 0;color:var(--ash);font-size:.88rem">'+directText+' — يتيح لسيادة بناء مهام فريقك داخل مساحة شركتك المعزولة.</p></div></div>'+
       '<div class="tsearch"><span class="drop"></span><input id="tq" placeholder="ابحث… واتساب، قيود، HubSpot" aria-label="ابحث في الأدوات" value="'+tq+'"><kbd>/</kbd></div>';
     if(!tq){
       var on=f.filter(function(t){return t.on}),sug=f.filter(function(t){return t.sug&&!t.on}),rest=f.filter(function(t){return !t.on&&!t.sug});
@@ -1066,7 +1080,7 @@ var I = {
   var siyPolls={}, siyGeneration=0, siyEmployeeStatePending={};
   function siyBuilderState(text,connected){ var node=$("#builderConnectState"); if(!node) return; node.textContent=text; node.classList.toggle("apstate--ok",connected===true); }
   function siyRefreshBuilderConnection(){
-    siyBuilderState("بوابة سيادة",true);
+    siyBuilderState("مساحة شركتك",true);
   }
   function siyStopPolling(){ siyGeneration++; Object.keys(siyPolls).forEach(function(k){ clearTimeout(siyPolls[k]); }); siyPolls={}; }
   function siyAccessError(text){var e=new Error(text);e.noRetry=true;return e;}
@@ -1075,7 +1089,8 @@ var I = {
     var abort=new AbortController(), timer=setTimeout(function(){abort.abort();},60000);
     try{
       var response=await fetch(SIY_GATEWAY,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:abort.signal});
-      if(response.status===401||response.status===403) throw siyAccessError("تعذّر التحقق من صلاحية هذا الطلب لحسابك.");
+      if(response.status===401){location.replace("../auth.html");throw siyAccessError("انتهت جلستك. سجّل الدخول من جديد.");}
+      if(response.status===403) throw siyAccessError("تعذّر التحقق من صلاحية هذا الطلب لحسابك.");
       if(!response.ok) throw new Error("تعذّر الاتصال بالخادم. أعد المحاولة.");
       var data=await response.json();
       if(!data||data.ok!==true) throw new Error("تعذّر إتمام الطلب. لم يتم تأكيد نجاحه.");
@@ -1118,7 +1133,7 @@ var I = {
       button.disabled=false; button.removeAttribute('aria-busy');
     }
   }
-  function siyReplyHtml(text){ return '<p>'+esc(text||"").replace(/\n/g,"<br>")+'</p>'; }
+  function siyReplyHtml(text){ return '<p>'+esc(customerText(text)).replace(/\n/g,"<br>")+'</p>'; }
   function siyMessageTime(value){
     if(!value) return "";
     var text=String(value), date=/^\d{4}-\d{2}-\d{2}T/.test(text)?new Date(text):null;
@@ -1177,22 +1192,22 @@ var I = {
     var passed=readiness.checks.filter(function(row){return row&&row.passed===true;});
     var blocked=readiness.checks.filter(function(row){return row&&row.passed!==true;});
     var ready=readiness.can_claim_draft_10_of_10===true;
-    var title=ready?"المسودة جاهزة 10/10":"جاهزية المسودة: "+esc(readiness.score||passed.length+"/10");
+    var title=ready?"الموظف جاهز للربط والاختبار":"جاهزية الموظف: "+esc(readiness.score||passed.length+"/10");
     return '<div style="margin-top:10px;padding:10px;border:1px solid var(--hair);border-radius:10px">'+
-      '<b>'+title+'</b><div class="msrc">'+esc(readiness.claim||"")+'</div>'+
+      '<b>'+title+'</b><div class="msrc">'+esc(customerText(readiness.claim||""))+'</div>'+
       (ready?'<div class="msrc">الخطوة التالية: اربط الأدوات المطلوبة، ثم نختبر التشغيل والنتيجة.</div>':'')+
-      (blocked.length?'<details><summary>وش باقي في المسودة؟</summary><div class="msrc">'+blocked.map(function(row){return '• '+esc(row.label||row.key);}).join('<br>')+'</div></details>':'')+
+      (blocked.length?'<details><summary>وش باقي ليبدأ العمل؟</summary><div class="msrc">'+blocked.map(function(row){return '• '+esc(acceptanceLabel(row));}).join('<br>')+'</div></details>':'')+
       '</div>';
   }
   function siyAcceptanceHtml(acceptance){
     if(!acceptance||!["SiyadahFlowAcceptanceV1","SiyadahFlowAcceptanceV2"].includes(acceptance.schema)||!Array.isArray(acceptance.checks)) return "";
     var passed=acceptance.checks.filter(function(row){return row&&row.passed===true;});
     var blocked=acceptance.checks.filter(function(row){return row&&row.passed!==true;});
-    var title=acceptance.can_claim_10_of_10===true?"نتيجة تشغيل مثبتة 10/10":"إثبات التشغيل والأثر: "+esc(acceptance.score||passed.length+"/10");
+    var title=acceptance.can_claim_10_of_10===true?"العمل مكتمل ومثبت":"حالة العمل: "+esc(acceptance.score||passed.length+"/10");
     return siyDraftReadinessHtml(acceptance.draft_readiness)+'<div style="margin-top:10px;padding:10px;border:1px solid var(--hair);border-radius:10px">'+
-      '<b>'+title+'</b><div class="msrc">'+esc(acceptance.claim||"")+'</div>'+
-      (passed.length?'<div class="msrc">✓ '+passed.map(function(row){return esc(row.label||row.key);}).join(' · ')+'</div>':'')+
-      (blocked.length?'<details><summary>وش باقي؟</summary><div class="msrc">'+blocked.map(function(row){return '• '+esc(row.label||row.key);}).join('<br>')+'</div></details>':'')+
+      '<b>'+title+'</b><div class="msrc">'+esc(customerText(acceptance.claim||""))+'</div>'+
+      (passed.length?'<div class="msrc">✓ '+passed.map(function(row){return esc(acceptanceLabel(row));}).join(' · ')+'</div>':'')+
+      (blocked.length?'<details><summary>وش باقي؟</summary><div class="msrc">'+blocked.map(function(row){return '• '+esc(acceptanceLabel(row));}).join('<br>')+'</div></details>':'')+
       '</div>';
   }
   function siyBuilderProposalHtml(data){
@@ -1200,16 +1215,16 @@ var I = {
     var plan=data.flow_plan&&typeof data.flow_plan==="object"?data.flow_plan:{};
     var trigger=plan.trigger&&typeof plan.trigger==="object"?plan.trigger:{};
     var steps=Array.isArray(plan.steps)?plan.steps:[];
-    var triggerText=[trigger.piece_name,trigger.operation].filter(Boolean).join(" · ")||"تم التحقق منه في Activepieces";
+    var triggerText=customerText(trigger.display_name||trigger.label||"الوقت أو الحدث الذي تحدده");
     var stepRows=steps.map(function(step,index){
-      var text=[step.display_name,step.piece_name,step.operation].filter(Boolean).join(" · ")||step.type||("الخطوة "+(index+1));
+      var text=customerText(step.display_name||step.label||("إجراء "+(index+1)));
       return '<div class="prow"><b>الخطوة '+(index+1)+'</b><span>'+esc(text)+'</span></div>';
     }).join("");
-    return '<div class="plan nr" style="margin-top:10px"><div class="plan__h"><span class="drop"></span>خطة بناء حقيقية</div>'+
+    return '<div class="plan nr" style="margin-top:10px"><div class="plan__h"><span class="drop"></span>خطة عمل الموظف</div>'+
       (plan.name?'<div class="prow"><b>الاسم</b><span>'+esc(plan.name)+'</span></div>':'')+
-      '<div class="prow"><b>المشغّل</b><span>'+esc(triggerText)+'</span></div>'+stepRows+
-      '<div class="prow"><b>الحدود</b><span>مسودة معطلة فقط · بلا اختبار · بلا نشر</span></div></div>'+
-      '<div class="approve nr"><button type="button" class="bt" data-siy-approval="approve">'+I.check+'وافق وأنشئ المسودة</button>'+
+      '<div class="prow"><b>يبدأ عندما</b><span>'+esc(triggerText)+'</span></div>'+stepRows+
+      '<div class="prow"><b>الحالة</b><span>قيد التجهيز · لن يبدأ العمل قبل الاختبار</span></div></div>'+
+      '<div class="approve nr"><button type="button" class="bt" data-siy-approval="approve">'+I.check+'ابدأ التجهيز</button>'+
       '<button type="button" class="bt bt--line" data-siy-approval="reject">إلغاء</button></div>';
   }
   function siyResultRow(data){
@@ -1217,12 +1232,12 @@ var I = {
     if(!text) text=({queued:"تم استلام الطلب، بانتظار التنفيذ.",running:"العمل قيد التنفيذ.",succeeded:"اكتمل العمل حسب سجل التشغيل.",failed:"تعذّر إكمال العمل. راجع تفاصيل النتيجة.",awaiting_input:"العمل ينتظر معلومات إضافية منك.",cancelled:"أُلغي الطلب."})[state]||"وصل الرد دون تفاصيل إضافية.";
     var records=(Array.isArray(data.recent_work)?data.recent_work:[]).filter(function(r){return (!r.conversation_id||r.conversation_id===data.conversation_id)&&(!r.work_id||r.work_id===data.work_id);});
     var scoped=records.filter(function(r){return r.conversation_id;});
-    var draft=data.draft&&data.flow_id?siyRefsHtml([['الفلو',data.flow_id],['العمل',data.work_id]]):'';
+    var draft=data.draft&&data.flow_id?siyRefsHtml([['طريقة العمل',data.flow_id],['المهمة',data.work_id]]):'';
     return {me:false,at:now(),t:siyReplyHtml(text)+siyBuilderProposalHtml(data)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,'نتائج هذا الطلب'):'')+siyLegacyProofHtml(records)+draft,workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;}),builderApproval:data.approval&&data.approval.required===true?{id:data.approval.approval_id,conversationId:data.conversation_id}:null};
   }
   async function siyDecideBuilder(row,decision){
     if(!row||!row.builderApproval||row.siyInFlight) return;
-    row.siyInFlight=true; row.t=siyReplyHtml(decision==='approve'?'جارٍ إنشاء المسودة المعطلة في Activepieces…':'جارٍ إلغاء الخطة…'); siyDraw();
+    row.siyInFlight=true; row.t=siyReplyHtml(decision==='approve'?'جارٍ تجهيز الموظف داخل مساحة شركتك…':'جارٍ إلغاء الخطة…'); siyDraw();
     try{
       var data=await siyRequest({op:'approve',request_id:crypto.randomUUID(),conversation_id:row.builderApproval.conversationId,approval_id:row.builderApproval.id,decision:decision});
       Object.assign(row,siyResultRow(data)); row.builderApproval=null; row.siyInFlight=false; siyDraw();
@@ -1294,13 +1309,14 @@ var I = {
     var legacy=records.filter(function(r){return !r.conversation_id;});
     return legacy.length?siyWorkHtml(legacy,'نشاط سابق للموظف — غير مرتبط بهذه المحادثة'):'';
   }
+  function siyWorkStatus(value){ return ({succeeded:"مكتملة",failed:"تعذّرت",running:"قيد العمل",queued:"بانتظار البدء",awaiting_input:"تنتظر معلومات",cancelled:"ملغاة"})[value]||"غير مؤكدة"; }
   function siyWorkHtml(records,label){ var d=window.__SIY_DASH__, w=Array.isArray(records)?records:(d&&d.recent_work)||[];
     if(!w.length) return "<p>ما فيه عمل مسجّل بعد — أول ما يشتغل فريقك، كل نتيجة تنكتب هنا بإثباتها.</p>";
     return '<p>'+esc(label||'آخر عمل فعلي للفريق')+' (<span class="num">'+(Array.isArray(records)?w.length:(d.work_count||w.length))+'</span>):</p>'+w.map(function(x){
       return '<div style="margin:8px 0;padding-inline-start:10px;border-inline-start:2px solid var(--hair)"><b>'+esc(x.subject||"مهمة")+'</b>'+
         (x.priority?' <span class="msrc">· '+esc(x.priority)+'</span>':'')+
         (x.message?'<div>'+esc(x.message)+'</div>':'')+
-        '<div class="msrc">'+(x.status==='succeeded'&&x.recordId&&x.runId&&x.flowId?'✓ ':'')+esc(x.status||'غير مؤكدة')+(x.proof?' · '+esc(x.proof):'')+'</div>'+siyRefsHtml([['الطلب',x.work_id||x.workId],['التشغيل',x.runId],['النتيجة',x.recordId],['الفلو',x.flowId]])+'</div>';
+        '<div class="msrc">'+(x.status==='succeeded'&&x.recordId&&x.runId&&x.flowId?'✓ ':'')+esc(siyWorkStatus(x.status))+(x.proof?' · '+esc(customerText(x.proof)):'')+'</div>'+siyRefsHtml([['الطلب',x.work_id||x.workId],['التشغيل',x.runId],['النتيجة',x.recordId],['طريقة العمل',x.flowId]])+'</div>';
     }).join("");
   }
   var TOOL_SLUG={ "واتساب بزنس":"whatsapp","واتساب":"whatsapp","التقويم":"google-calendar","Wafeq":"wafeq","قيود/Wafeq":"wafeq",

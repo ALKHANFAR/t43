@@ -2,103 +2,103 @@
   "use strict";
   var $=function(s,c){return (c||document).querySelector(s)};
   var $$=function(s,c){return Array.prototype.slice.call((c||document).querySelectorAll(s))};
-  var step=1, TOTAL=4, timers=[], roles=[];
+  var step=1,TOTAL=4,PROFILE=null,SUGGESTIONS=[],SELECTED=null,CREATED=null,busy=false;
+  var TOPIC_LABELS={company_profile:'تعريف الشركة',industry:'القطاع',services:'الخدمات',products:'المنتجات',target_customers:'العملاء',pricing:'الأسعار',faq:'الأسئلة الشائعة',policies:'السياسات',contact:'التواصل',locations:'الفروع',hours:'ساعات العمل',brand:'صوت العلامة',case_studies:'قصص العملاء',social:'القنوات',delivery:'التوصيل'};
 
-  /* الأدوار — تُستنتج من جملتك بالكلمات المفتاحية؛ إذا ما طابق شيء نبني الأربعة */
-  var ROLES={
-    sales:  {n:"سعد", ini:"س", r:"متابعة المبيعات", brief:"تابع كل عميل جديد خلال خمس دقائق. اسأله وش يحتاج، وإذا كان جاهزًا احجز له موعدًا معي.", rules:["ما يعطي خصمًا بدون موافقتك","يتابع 3 مرات ثم يتوقف"], tools:["واتساب بزنس","التقويم"]},
-    inv:    {n:"نورة", ini:"ن", r:"تحصيل الفواتير", brief:"طالبي بالفواتير اللي تأخرت أكثر من سبعة أيام. لطيفة أولًا، وتوقفي فور السداد.", rules:["ما تهدد بإجراء قانوني","تتوقف فور السداد"], tools:["البريد","الجداول"]},
-    support:{n:"فهد", ini:"ف", r:"دعم العملاء", brief:"رد على أسئلة العملاء المتكررة. إذا ما تعرف الجواب قل «بنرجع لك» وارفعها لي.", rules:["يجاوب من معرفتك فقط","يصعّد الغاضب فورًا"], tools:["واتساب بزنس","شات الموقع"]},
-    mkt:    {n:"ريم", ini:"ر", r:"التسويق", brief:"جهّزي منشورًا كل يومين عن خدماتنا بصوتنا. ما تنشرين شيئًا قبل ما أوافق.", rules:["ما تنشر قبل موافقتك","ما تذكر أسعارًا"], tools:["لينكدإن"]}
-  };
-  var KEYS=[["sales",/مبيعات|عملاء/],["inv",/فواتير|تحصيل/],["support",/دعم/],["mkt",/تسويق/]];
-  function derive(text){ var r=KEYS.filter(function(k){return k[1].test(text)}).map(function(k){return k[0]}); return r.length? r : ["sales","inv","support","mkt"]; }
-
-  /* نتيجة قراءة الموقع — في المنصة الحقيقية تجي من خدمة الزحف في الخلفية */
-  var SITE=null, siteTimer=null;
-  function readSite(url){
-    var st=$("#siteSt"), tx=$("#siteTx");
-    st.style.display="flex"; st.className="site busy"; tx.innerHTML="نقرأ "+url+"…<small>الصفحات، الخدمات، الأسعار، الأسئلة الشائعة</small>";
-    clearTimeout(siteTimer);
-    siteTimer=setTimeout(function(){
-      SITE={pages:14, pagesL:"صفحة", services:4, faqs:9, tone:"مباشرة وواثقة", name:"شركة الأفق", what:"حلول توصيل للمطاعم في الرياض وجدة", from:"موقعك"};
-      st.className="site ok";
-      tx.innerHTML="<b>"+SITE.name+"</b> — "+SITE.what+"<small>قرأنا 14 صفحة · 4 خدمات · الأسعار · 9 أسئلة شائعة · صوت "+SITE.tone+"</small>";
-      $("#next").disabled=false;
-    }, 2200);
+  function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  async function api(payload){
+    var response=await fetch('/siyadah-api/v1/onboarding',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    var data=await response.json().catch(function(){return {};});
+    if(!response.ok||data.ok!==true)throw new Error(data.message||'تعذّر إكمال الخطوة. حاول مرة ثانية.');
+    return data;
   }
-  /* بدون موقع: ثلاثة أسطر بكلماتك تكفي */
-  function readLines(){
-    var what=($("#lines3").value.split("\n")[0]||"").trim().slice(0,70);
-    SITE={pages:3, pagesL:"أسطر كتبتها", services:1, faqs:1, tone:"مباشرة", name:$("#co").value.trim()||"شركتك", what:what, from:"كلماتك"};
+  function wait(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}
+  function normalizeUrl(value){
+    var raw=String(value||'').trim();if(!/^https?:\/\//i.test(raw))raw='https://'+raw;
+    var url=new URL(raw);if(!/^https?:$/.test(url.protocol))throw new Error('اكتب رابط موقع صالح.');return url.toString();
   }
-  function noSiteOn(){ return $("#alts").classList.contains("on"); }
-  function step1Ready(){ return noSiteOn() ? !!$("#lines3").value.trim() : !!SITE; }
-  $("#site").addEventListener("change",function(){ var v=this.value.trim(); if(v.length>3) readSite(v.replace(/^https?:\/\//,"")); });
-  $("#site").addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); this.dispatchEvent(new Event("change")); } });
-  $("#noSite").addEventListener("click",function(){ var a=$("#alts"), on=!a.classList.contains("on"); a.classList.toggle("on",on); this.setAttribute("aria-expanded",String(on)); this.textContent=on?"عندي موقع":"ما عندي موقع";
-    if(on){ clearTimeout(siteTimer); $("#siteSt").style.display="none"; SITE=null; $("#lines3").focus(); } $("#next").disabled=!step1Ready(); });
-  $("#lines3").addEventListener("input",function(){ if(step===1) $("#next").disabled=!step1Ready(); });
-  $("#brief").addEventListener("input",function(){ if(step===2) $("#next").disabled=!this.value.trim(); });
+  function noSiteOn(){return $('#alts').classList.contains('on');}
+  function step1Ready(){return noSiteOn()?!!$('#lines3').value.trim():!!PROFILE;}
+  function setBusy(value,label){busy=value;$('#next').disabled=value;if(label){$('#next').textContent=label;$('#live').textContent=label;}}
 
-  function first(){ return ROLES[roles[0]||"sales"]; }
+  function siteState(kind,title,detail){
+    var st=$('#siteSt');st.style.display='flex';st.className='site '+kind;
+    st.innerHTML='<span class="drop"></span><div><b>'+esc(title)+'</b><small>'+esc(detail)+'</small></div>';
+  }
+  async function readSite(value){
+    var url;try{url=normalizeUrl(value);}catch(error){siteState('',error.message,'');PROFILE=null;show();return;}
+    PROFILE=null;SUGGESTIONS=[];SELECTED=null;setBusy(true,'نبحث بعمق…');siteState('busy','نبحث في '+new URL(url).hostname,'لن نحفظ معلومة بلا مصدر واقتباس واضح');
+    try{
+      var data=await api({op:'enrich_company',website_url:url});
+      for(var attempt=0;data.status==='processing'&&attempt<100;attempt++){
+        await wait(attempt<2?2000:3000);data=await api({op:'check_company_enrichment'});
+        siteState('busy','نتحقق من كل معلومة',data.creditsUsed?'استخدم البحث '+data.creditsUsed+' رصيدًا حتى الآن':'نطابق الاقتباسات مع صفحاتها الأصلية');
+      }
+      if(data.status!=='ready'||!data.profile)throw new Error('البحث العميق ما زال مستمرًا. أعد المحاولة بعد قليل.');
+      PROFILE=data.profile;SUGGESTIONS=data.suggestions||[];
+      siteState('ok',PROFILE.companyName||new URL(url).hostname,PROFILE.factCount+' حقائق مثبتة من '+PROFILE.pagesRead+' صفحات · لم نعتمد '+PROFILE.rejectedClaims+' ادعاءات بلا دليل كافٍ');
+    }catch(error){PROFILE=null;siteState('',error.message,'لم نحفظ نتيجة غير مكتملة.');}
+    finally{setBusy(false);show();}
+  }
+  async function readLines(){
+    setBusy(true,'نجهّز ملف شركتك…');
+    try{
+      var data=await api({op:'describe_company',name:$('#co').value.trim(),description:$('#lines3').value.trim()});PROFILE=data.profile;SUGGESTIONS=data.suggestions||[];return true;
+    }catch(error){window.alert(error.message);return false;}
+    finally{setBusy(false);}
+  }
 
+  function companySummary(){
+    if(!PROFILE)return '';
+    var areas=(PROFILE.knowledgeAreas||[]).map(function(topic){return '<span>'+esc(TOPIC_LABELS[topic]||topic)+'</span>';}).join('');
+    var meta=[PROFILE.industry,PROFILE.brandTone].filter(Boolean).map(function(value){return '<span>'+esc(value)+'</span>';}).join('')+areas;
+    return '<div class="kb"><div class="kb__h"><span class="drop"></span><b>'+esc(PROFILE.companyName||'شركتك')+'</b><span>بصمة مثبتة قابلة للتعديل</span></div>'+
+      '<div class="kb__body"><div class="coverage" style="--coverage:'+Number(PROFILE.coverageScore||0)+'"><strong>'+esc(PROFILE.coverageScore||0)+'٪</strong></div><div><p class="kb__summary">'+esc(PROFILE.summary||'يمكنك إكمال معلومات الشركة وتصحيحها لاحقًا من قاعدة المعرفة.')+'</p><div class="kb__meta">'+meta+'</div></div></div>'+
+      '<div class="kb__g"><div><div class="kb__v">'+esc(PROFILE.pagesRead||0)+'</div><div class="kb__l">صفحات راجعناها</div></div><div><div class="kb__v">'+esc(PROFILE.factCount||1)+'</div><div class="kb__l">حقائق مثبتة</div></div><div><div class="kb__v">v'+esc(PROFILE.knowledgeVersion||1)+'</div><div class="kb__l">إصدار المعرفة</div></div></div>'+
+      '<div class="kb__f"><span class="drop"></span>كل حقيقة معها مصدر واقتباس. استبعدنا '+esc(PROFILE.rejectedClaims||0)+' بلا دليل كافٍ.</div></div>';
+  }
+  function renderSuggestions(){
+    var selected=SUGGESTIONS.find(function(item){return item.id===SELECTED;});
+    $('#plan').innerHTML='<div class="plan">'+SUGGESTIONS.slice(0,3).map(function(item,index){
+      var pressed=SELECTED===item.id;
+      return '<button type="button" class="prow rolepick" data-suggestion="'+esc(item.id)+'" aria-pressed="'+pressed+'"><span class="av">'+esc(item.name.slice(0,1))+'</span><div><b>'+esc(item.name)+' · '+esc(item.title)+(index===0?'<span class="rank">أفضل بداية</span>':'')+'</b><p>'+esc(item.goal)+'</p><div class="fit"><i style="--fit:'+Number(item.confidence||0)+'%"></i><span>'+esc(item.confidence)+'٪</span></div></div></button>';
+    }).join('')+'</div>'+(selected?'<div class="choice"><b>لماذا '+esc(selected.name)+'؟</b><p>'+esc(selected.reason)+'</p><small>سيقرأ: '+(selected.knowledgeTopics||[]).slice(0,3).map(function(topic){return esc(TOPIC_LABELS[topic]||topic);}).join(' · ')+'</small></div>':'')+'<div class="note"><span class="drop"></span>الموظف الذي تختاره سيظهر في فريقك، ولن يبدأ العمل حتى تختبره.</div>';
+  }
   function show(){
-    $$(".step").forEach(function(s){ s.classList.toggle("on", +s.dataset.step===step); });
-    $("#stepLbl").textContent = step+" من "+TOTAL;
-    $("#prog").style.width = (step/TOTAL*100)+"%";
-    var nx=$("#next"), bk=$("#back");
-    bk.style.visibility = (step===2||step===3) ? "visible":"hidden";
-    bk.textContent = step===3 ? "عدّل" : "رجوع";
-    if(step===1){ nx.innerHTML='التالي <span class="drop"></span>'; nx.disabled=!step1Ready(); }
-    if(step===2){ nx.innerHTML='ابنِ الفريق <span class="drop"></span>'; nx.disabled=!$("#brief").value.trim(); $("#brief").focus(); }
-    if(step===3){ nx.innerHTML='وافق وشغّل <span class="drop"></span>'; nx.disabled=true; runBuild(); }
-    if(step===4){ nx.innerHTML='ادخل المنصة <span class="drop"></span>'; nx.disabled=false;
-      var f=first(); $("#doneAv").textContent=f.ini; $("#doneH").textContent=f.n+(f.ini==="ن"||f.ini==="ر"?" شغّالة.":" شغّال."); }
-    window.scrollTo({top:0,behavior:"smooth"});
+    $$('.step').forEach(function(section){section.classList.toggle('on',+section.dataset.step===step);});
+    $('#stepLbl').textContent=step+' من '+TOTAL;$('#prog').style.width=(step/TOTAL*100)+'%';
+    var next=$('#next'),back=$('#back');back.style.visibility=(step===2||step===3)?'visible':'hidden';back.textContent='رجوع';
+    if(step===1){next.innerHTML='التالي <span class="drop"></span>';next.disabled=busy||!step1Ready();}
+    if(step===2){$('#companyRead').innerHTML=companySummary();next.innerHTML='اعرض اقتراحاتي <span class="drop"></span>';next.disabled=busy;$('#brief').focus();}
+    if(step===3){renderSuggestions();var picked=SUGGESTIONS.find(function(item){return item.id===SELECTED;});next.innerHTML=(picked?'جهّز '+esc(picked.name):'اختر موظفًا')+' <span class="drop"></span>';next.disabled=busy||!SELECTED;}
+    if(step===4){next.innerHTML='افتح مساحة الموظف <span class="drop"></span>';next.disabled=false;if(CREATED){$('#doneAv').textContent=CREATED.initial;$('#doneH').textContent=CREATED.name+' جاهز للخطوة التالية.';$('#doneKnowledge').textContent='الإصدار '+esc(CREATED.knowledgeVersion||PROFILE&&PROFILE.knowledgeVersion||1);}}
+    window.scrollTo({top:0,behavior:'smooth'});
   }
 
-  /* ---------- البناء ---------- */
-  function runBuild(){
-    timers.forEach(clearTimeout); timers=[];
-    $("#build").style.display=""; $("#plan").style.display="none";
-    $("#h3").textContent="لحظة… أقرأ طلبك."; $("#s3").textContent="أبني الموظفين — وأوريك الخطة قبل ما يتحرك شيء."; $("#clock").textContent="00:00";
-    var co=SITE?SITE.name:"شركتك", rs=roles.map(function(k){return ROLES[k]});
-    var lines=[["قرأت طلبك وفهمت "+rs.length+(rs.length===1?" دورًا":" أدوار")]]
-      .concat(SITE? [["قرأت "+SITE.from+" — "+SITE.pages+" "+SITE.pagesL],["استخرجت "+SITE.services+" خدمات"+(SITE.faqs?" و"+SITE.faqs+" أسئلة شائعة":"")],["بنيت قاعدة المعرفة"]] : [["عرّفت "+co+" وما تقدمه"],["قاعدة المعرفة تبدأ فاضية وتكبر من أسئلة عملائك"]])
-      .concat(rs.map(function(r){return ["أبني "+r.n+" — "+r.r]}))
-      .concat([["أضبط الخطوط الحمراء لكل واحد"],["أجهّز الخطة لموافقتك"]]);
-    $("#lines").innerHTML=lines.map(function(l){return '<div class="line"><span class="drop"></span>'+l[0]+'<span class="st">…</span></div>'}).join("");
-    var els=$$(".line"), sec=0, clock=$("#clock");
-    var tick=setInterval(function(){ sec++; clock.textContent="00:"+("0"+sec).slice(-2); },1000); timers.push(tick);
-    els.forEach(function(el,i){
-      timers.push(setTimeout(function(){ el.classList.add("on"); },200+i*520));
-      timers.push(setTimeout(function(){ el.classList.add("done"); $(".st",el).textContent="تم"; },700+i*520));
-    });
-    timers.push(setTimeout(function(){
-      clearInterval(tick);
-      $("#h3").textContent="هذي الخطة. ما يتحرك شيء قبل موافقتك.";
-      $("#s3").textContent=(SITE?"قاعدة المعرفة جاهزة من "+SITE.from+". ":"قاعدة المعرفة تكبر مع الأسئلة. ")+"كل موظف: وش يسوي، وخطوطه الحمراء، وأدواته. تعدّل أي شيء بعدين بجملة.";
-      $("#build").style.display="none";
-      $("#plan").style.display="block";
-      $("#plan").innerHTML=(SITE? '<div class="kb"><div class="kb__h"><span class="drop"></span><b>قاعدة المعرفة</b>من '+SITE.from+' — جاهزة</div>'+
-        '<div class="kb__g"><div><div class="kb__v">'+SITE.services+'</div><div class="kb__l">خدمات بوصفها وأسعارها</div></div><div><div class="kb__v">'+SITE.faqs+'</div><div class="kb__l">أسئلة شائعة بأجوبتها</div></div><div><div class="kb__v">'+SITE.pages+'</div><div class="kb__l">'+SITE.pagesL+'</div></div></div>'+
-        '<div class="kb__f">صوت علامتك: <b>'+SITE.tone+'</b> — موظفوك يتكلمون كذا.</div></div>' : '')+
-        '<div class="plan">'+rs.map(function(r){return '<div class="prow"><span class="av">'+r.ini+'</span><div><b>'+r.n+' · '+r.r+'</b><p>'+r.brief+'</p><div class="rules">'+r.rules.map(function(x){return '<span>'+x+'</span>'}).join("")+r.tools.map(function(x){return '<span style="color:var(--accent);border-color:rgba(11,132,75,.3)">'+x+'</span>'}).join("")+'</div></div></div>'}).join("")+'</div>'+
-        '<div class="note"><span class="drop"></span>تقدر توقف أي موظف بضغطة، في أي وقت. الأدوات يطلبها كل موظف وقت ما يحتاجها.</div>';
-      $("#next").disabled=false;
-    }, 900+els.length*520));
-  }
-
-  /* ---------- الأحداث ---------- */
-  $("#next").addEventListener("click",function(){
-    if(step===4){ window.location.href="chat.html"; return; }
-    if(step===1&&noSiteOn()) readLines();
-    if(step===2) roles=derive($("#brief").value);
-    step++; show();
+  $('#site').addEventListener('change',function(){if(this.value.trim().length>3)readSite(this.value);});
+  $('#site').addEventListener('keydown',function(event){if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}});
+  $('#noSite').addEventListener('click',function(){
+    var alternatives=$('#alts'),on=!alternatives.classList.contains('on');alternatives.classList.toggle('on',on);this.setAttribute('aria-expanded',String(on));this.textContent=on?'عندي موقع':'ما عندي موقع';
+    if(on){$('#siteSt').style.display='none';PROFILE=null;SUGGESTIONS=[];$('#lines3').focus();}show();
   });
-  $("#back").addEventListener("click",function(){ if(step>1){ timers.forEach(clearTimeout); timers=[]; step--; show(); } });
-  document.addEventListener("keydown",function(e){ if(e.key==="Enter"&&document.activeElement.tagName!=="TEXTAREA"&&!$("#next").disabled){ e.preventDefault(); $("#next").click(); } });
-
+  $('#lines3').addEventListener('input',show);
+  $('#plan').addEventListener('click',function(event){var button=event.target.closest('[data-suggestion]');if(!button)return;SELECTED=button.dataset.suggestion;show();});
+  $('#next').addEventListener('click',async function(){
+    if(busy)return;
+    if(step===4){window.location.href='chat.html';return;}
+    if(step===1){if(noSiteOn()&&!await readLines())return;step=2;show();return;}
+    if(step===2){
+      setBusy(true,'نرتب الاقتراحات…');
+      try{var data=await api({op:'recommend_employees',goal:$('#brief').value.trim()});SUGGESTIONS=data.suggestions||SUGGESTIONS;SELECTED=null;step=3;}
+      catch(error){window.alert(error.message);}finally{setBusy(false);show();}return;
+    }
+    if(step===3){
+      setBusy(true,'نجهّز الموظف…');
+      try{var selected=await api({op:'select_employee',suggestion_id:SELECTED});CREATED=selected.employee;step=4;}
+      catch(error){window.alert(error.message);}finally{setBusy(false);show();}
+    }
+  });
+  $('#back').addEventListener('click',function(){if(!busy&&step>1){step--;show();}});
+  document.addEventListener('keydown',function(event){if(event.key==='Enter'&&document.activeElement.tagName!=='TEXTAREA'&&!$('#next').disabled){event.preventDefault();$('#next').click();}});
   show();
 })();

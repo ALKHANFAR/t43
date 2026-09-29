@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head><script>try{if(!localStorage.getItem("siyadah_token")){location.replace("../auth.html");}}catch(e){}</script>
+<head><script>document.documentElement.style.visibility="hidden";fetch("/siyadah-api/v1/auth/session",{credentials:"same-origin"}).then(function(r){if(!r.ok)throw 0;document.documentElement.style.visibility="";}).catch(function(){location.replace("../auth.html");});</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>سيادة — أول موظف لك</title>
@@ -13,7 +13,7 @@
 <style>
 /* ==========================================================================
    سيادة — الإعداد الأول
-   أربع لحظات: موقعك، جملتك، الخطة، شغّل. سؤال واحد في كل مرة، بدون قوائم ولا إعدادات.
+   أربع لحظات: موقعك، أولويتك، ثلاثة اقتراحات، وتجهيز موظف واحد.
    الأدوات تُربط لاحقًا وقت الحاجة من داخل المحادثة — ما فيه خطوة ربط هنا.
    ========================================================================== */
 :root{
@@ -45,7 +45,7 @@ button{cursor:pointer}
 @keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .k{font-family:var(--f-display);font-size:.8rem;color:var(--ash);display:flex;align-items:center;gap:10px;margin-block-end:18px}
 h1{font-family:var(--f-display);font-weight:300;font-size:clamp(1.7rem,4vw,2.5rem);letter-spacing:-.01em;line-height:1.25;margin:0 0 12px}
-.sub{color:var(--ash);margin:0 0 30px;max-width:48ch}
+.sub{color:var(--ash);margin:0 0 30px;max-width:52ch;text-wrap:pretty}
 
 .field{margin-block-end:18px}
 .field label{display:block;font-family:var(--f-display);font-size:.8rem;color:var(--ash);margin-block-end:8px}
@@ -59,59 +59,75 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 .hint{display:flex;align-items:center;gap:10px;font-size:.875rem;color:var(--ash);margin-block-start:12px}
 
 /* قراءة الموقع — تصير في الخلفية، العميل يشوف النتيجة فقط */
-.site{border:1px solid var(--hair);padding:12px 14px;margin-block-start:10px;display:flex;align-items:center;gap:12px;font-size:.875rem;color:var(--ash);min-height:46px;transition:.3s}
+.site{position:relative;overflow:hidden;border:1px solid var(--hair);padding:14px 16px;margin-block-start:12px;display:flex;align-items:center;gap:12px;font-size:.875rem;color:var(--ash);min-height:52px;transition:border-color .3s ease,background-color .3s ease}
 .site.busy .drop{animation:pulse 1.2s infinite}
 @keyframes pulse{50%{opacity:.2}}
-.site.ok{border-color:rgba(11,132,75,.3);color:var(--ink)}
+.site.busy::after{content:"";position:absolute;inset-block-end:0;inset-inline-start:0;width:38%;height:2px;background:var(--accent);animation:scan 1.25s var(--ease) infinite}
+@keyframes scan{from{transform:translateX(260%)}to{transform:translateX(-360%)}}
+.site.ok{border-color:rgba(11,132,75,.3);background:var(--accent-wash);color:var(--ink)}
 .site b{font-weight:500}
 .site small{display:block;color:var(--ash);font-size:.8rem}
+.discover{display:flex;flex-wrap:wrap;gap:8px;margin-block-start:14px;color:var(--ash);font-size:.78rem}
+.discover span{border:1px solid var(--hair);padding:4px 9px;background:var(--paper)}
 .kb{border:1px solid var(--hair);margin-block-end:18px}
 .kb__h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-block-end:1px solid var(--hair);background:var(--wash);font-family:var(--f-display);font-size:.8rem;color:var(--ash)}
 .kb__h b{font-weight:400;color:var(--ink);font-size:.95rem}
+.kb__body{display:grid;grid-template-columns:110px 1fr;gap:22px;padding:20px;align-items:center}
+.coverage{--coverage:0;position:relative;width:92px;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--accent) calc(var(--coverage)*1%),var(--hair) 0)}
+.coverage::after{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--paper)}
+.coverage strong{position:relative;z-index:1;font-family:var(--f-display);font-size:1.25rem;font-weight:300;font-variant-numeric:tabular-nums}
+.kb__summary{margin:0;color:var(--ink);font-size:.95rem;line-height:1.75}
+.kb__meta{display:flex;flex-wrap:wrap;gap:8px;margin-block-start:12px}
+.kb__meta span{font-size:.75rem;color:var(--ash);border:1px solid var(--hair);padding:3px 8px}
 .kb__g{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--hair)}
-.kb__g div{background:var(--paper);padding:14px 16px}
-.kb__v{font-family:var(--f-display);font-weight:300;font-size:1.6rem;line-height:1}
+.kb__g div{background:var(--paper);padding:12px 16px}
+.kb__v{font-family:var(--f-display);font-weight:300;font-size:1.35rem;line-height:1}
 .kb__l{font-size:.8rem;color:var(--ash);margin-block-start:5px}
-.kb__f{padding:12px 16px;font-size:.875rem;color:var(--ash);border-block-start:1px solid var(--hair)}
+.kb__f{padding:11px 16px;font-size:.8rem;color:var(--ash);border-block-start:1px solid var(--hair);display:flex;align-items:center;gap:8px}
 .kb__f b{color:var(--ink);font-weight:500}
-@media (max-width:600px){ .kb__g{grid-template-columns:1fr} }
+@media (max-width:600px){.kb__body{grid-template-columns:1fr}.coverage{width:76px}.kb__g{grid-template-columns:repeat(3,1fr)}.kb__g div{padding:10px}.kb__v{font-size:1.1rem}}
 
 /* بدون موقع — بدائل بنفس الوزن */
-.nosite{background:none;border:0;padding:0;font-size:.875rem;color:var(--ash);text-decoration:underline;text-underline-offset:4px;margin-block-start:10px}
+.nosite{min-height:44px;background:none;border:0;padding:8px 0;font-size:.875rem;color:var(--ash);text-decoration:underline;text-underline-offset:4px;margin-block-start:4px}
 .nosite:hover{color:var(--ink)}
 .alts{display:none;margin-block-start:18px;animation:in .3s var(--ease)}
 .alts.on{display:block}
 
-/* البناء */
-.build{border:1px solid var(--hair)}
-.build__h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-block-end:1px solid var(--hair);background:var(--wash);font-family:var(--f-display);font-size:.8rem;color:var(--ash)}
-.build__h .t{margin-inline-start:auto;direction:ltr;font-variant-numeric:tabular-nums}
-.line{display:flex;align-items:center;gap:12px;padding:13px 16px;border-block-end:1px solid var(--hair);opacity:0;transform:translateY(6px);transition:.45s var(--ease);font-size:.95rem}
-.line.on{opacity:1;transform:none}
-.line:last-child{border-block-end:0}
-.line .st{margin-inline-start:auto;font-family:var(--f-display);font-size:.75rem;color:var(--ash-2)}
-.line.done .st{color:var(--accent)}
-.line .drop{opacity:.25}.line.done .drop{opacity:1}
-
 /* الخطة */
-.plan{border:1px solid var(--hair);margin-block-end:18px}
-.prow{display:grid;grid-template-columns:44px 1fr;gap:14px;padding:16px;border-block-end:1px solid var(--hair);align-items:start}
+.plan{border:1px solid var(--hair);margin-block-end:18px;background:var(--hair);display:grid;gap:1px}
+.prow{position:relative;display:grid;grid-template-columns:44px 1fr;gap:12px;padding:14px 15px;align-items:start;overflow:hidden}
 .prow:last-child{border-block-end:0}
-.av{width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--hair);background:var(--wash);font-family:var(--f-display);font-size:1.15rem}
+.av{width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--hair);background:var(--wash);font-family:var(--f-display);font-size:1.1rem}
 .prow b{font-family:var(--f-display);font-weight:400;font-size:1.02rem;display:block}
-.prow p{margin:4px 0 8px;color:var(--ash);font-size:.875rem;line-height:1.6}
-.prow .rules{display:flex;flex-wrap:wrap;gap:6px}
-.prow .rules span{font-family:var(--f-display);font-size:.7rem;border:1px solid var(--hair);padding:2px 8px;color:var(--ash)}
-.note{font-size:.875rem;color:var(--ash);display:flex;align-items:center;gap:10px;margin-block-end:22px}
+.prow p{margin:3px 0 5px;color:var(--ash);font-size:.84rem;line-height:1.55}
+.rolepick{width:100%;border:0;background:var(--paper);text-align:start;color:inherit;cursor:pointer}
+.rolepick:hover{background:#FBFCFB}
+.rolepick[aria-pressed="true"]{background:var(--accent-wash);box-shadow:inset 0 0 0 1px var(--accent)}
+.rolepick[aria-pressed="true"] .av{border-color:var(--accent);background:var(--accent);color:#fff}
+.rank{display:inline-block;margin-inline-start:8px;font-family:var(--f-body);font-size:.68rem;color:var(--accent);background:var(--accent-wash);padding:2px 7px;vertical-align:2px}
+.fit{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;margin-block-start:8px;color:var(--ash);font-size:.72rem}
+.fit i{display:block;height:3px;background:var(--hair);overflow:hidden}
+.fit i::after{content:"";display:block;height:100%;width:var(--fit);background:var(--accent);transform-origin:right;animation:grow .55s var(--ease)}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.choice{border:1px solid rgba(11,132,75,.28);background:var(--accent-wash);padding:14px 16px;margin-block-end:18px;animation:in .3s var(--ease)}
+.choice b{display:block;font-family:var(--f-display);font-size:.78rem;font-weight:400;color:var(--accent);margin-block-end:4px}
+.choice p{margin:0;color:var(--ink);font-size:.875rem;line-height:1.65}
+.choice small{display:block;color:var(--ash);margin-block-start:6px;font-size:.75rem}
+.note{font-size:.8rem;color:var(--ash);display:flex;align-items:center;gap:8px;margin-block-end:22px}
 
 
 /* النهاية */
-.done{text-align:center;padding-block-start:20px}
+.done{text-align:center;padding-block-start:10px}
 .done .av{width:72px;height:72px;font-size:1.8rem;margin:0 auto 22px;background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .done h1{margin-block-end:8px}
 .done .sub{margin-inline:auto}
-.first{border:1px solid var(--hair);padding:16px 18px;text-align:start;margin:26px 0;display:grid;grid-template-columns:auto 1fr;gap:12px;font-size:.875rem}
+.receipt{border:1px solid var(--hair);text-align:start;margin:26px 0;background:var(--paper)}
+.receipt__h{padding:12px 16px;background:var(--wash);border-block-end:1px solid var(--hair);font-family:var(--f-display);font-size:.8rem;color:var(--ash)}
+.receipt__row{display:grid;grid-template-columns:18px 1fr auto;gap:10px;align-items:center;padding:12px 16px;border-block-end:1px solid var(--hair);font-size:.875rem}
+.receipt__row:last-child{border-block-end:0}.receipt__row svg{color:var(--accent)}.receipt__row small{color:var(--ash);font-size:.75rem}
+.first{border:1px solid var(--hair);padding:16px 18px;text-align:start;margin:0 0 26px;display:grid;grid-template-columns:auto 1fr;gap:12px;font-size:.875rem}
 .first small{display:block;color:var(--ash);font-size:.8rem}
+.live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
 /* الأزرار */
 .bar{position:fixed;inset-block-end:0;inset-inline:0;background:linear-gradient(to top,var(--paper) 70%,transparent);padding:18px 22px 26px}
@@ -137,11 +153,12 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 
   <!-- 1 — موقعك -->
   <section class="step on" data-step="1">
-    <div class="k"><span class="drop"></span>ثلاث دقائق، وعندك أول موظف</div>
-    <h1>وين نقرأ عن شركتك؟</h1>
-    <p class="sub">اكتب موقعك. سيادة تقرأه كامل — خدماتك، أسعارك، أسئلتك الشائعة، وصوتك — وتبني منه معرفة موظفيك. أنت ما تكتب شيئًا.</p>
+    <div class="k"><span class="drop"></span>أول موظفك يبدأ من هنا</div>
+    <h1>أعطنا رابطك. والباقي علينا.</h1>
+    <p class="sub">سيادة تقرأ الصفحات المهمة وتحوّلها إلى معرفة جاهزة لأول موظف في شركتك.</p>
     <div class="field"><label for="site">موقعك — نقرأه ونعبّي الباقي عنك</label><input class="in" id="site" type="url" dir="ltr" style="text-align:left" placeholder="ufuq.sa" autofocus>
       <div class="site" id="siteSt" style="display:none"><span class="drop"></span><div id="siteTx"></div></div>
+      <div class="discover" role="group" aria-label="ما سنستخرجه من الموقع"><span>الخدمات والمنتجات</span><span>الأسئلة والسياسات</span><span>صوت الشركة</span></div>
       <button class="nosite" id="noSite" type="button" aria-expanded="false" aria-controls="alts">ما عندي موقع</button>
       <div class="alts" id="alts">
         <div class="field"><label for="lines3">اكتب ثلاثة أسطر — وش تبيع، لمين، ووش يسألونك دايمًا</label>
@@ -151,33 +168,31 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
     </div>
   </section>
 
-  <!-- 2 — جملتك -->
+  <!-- 2 — أولويتك -->
   <section class="step" data-step="2">
-    <div class="k"><span class="drop"></span>بكلماتك</div>
-    <h1>قول له وش تبي، زي ما تقول لموظف جديد.</h1>
-    <p class="sub">جملة وحدة تكفي. سيادة تفهم منها مين تحتاج — مبيعات، تحصيل، دعم، تسويق — وتبني لك الفريق.</p>
-    <textarea class="in" id="brief" aria-label="وش تبي من فريقك" placeholder="أبي أحد يتابع كل عميل جديد خلال خمس دقائق، ويطالب بالفواتير اللي تأخرت أكثر من سبعة أيام، ويرد على أسئلة الدعم المتكررة."></textarea>
-    <div class="hint"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4M12 16h.01"/></svg>ما يحتاج تكون دقيقًا. سيادة تسأل لو احتاجت شيئًا.</div>
+    <div class="k"><span class="drop"></span>فهمنا شركتك</div>
+    <h1>هذه بصمة شركتك الأولى.</h1>
+    <p class="sub">راجعها، وحدد أولويتك إن رغبت.</p>
+    <div id="companyRead"></div>
+    <textarea class="in" id="brief" aria-label="أهم أولوية للشركة" placeholder="مثلًا: أبي أتابع العملاء الجدد أسرع، أو أخفف أسئلة الدعم المتكررة."></textarea>
+    <div class="hint"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4M12 16h.01"/></svg>تقدر تتركها فاضية ونرتب الاقتراحات من موقعك.</div>
   </section>
 
   <!-- 3 — الخطة -->
   <section class="step" data-step="3">
-    <div class="k"><span class="drop"></span>سيادة تبني</div>
-    <h1 id="h3">لحظة… أقرأ طلبك.</h1>
-    <p class="sub" id="s3">أبني الموظفين — وأوريك الخطة قبل ما يتحرك شيء.</p>
-    <div class="build" id="build">
-      <div class="build__h"><span class="drop"></span>جلسة البناء<span class="t" id="clock">00:00</span></div>
-      <div id="lines"></div>
-    </div>
-    <div id="plan" style="display:none"></div>
+    <div class="k"><span class="drop"></span>أفضل بداية لشركتك</div>
+    <h1 id="h3">ثلاثة موظفين. بداية واحدة ذكية.</h1>
+    <p class="sub" id="s3">اختر واحدًا. سنوضح لك لماذا يناسبك.</p>
+    <div id="plan"></div>
   </section>
 
   <!-- 4 — شغّل -->
   <section class="step done" data-step="4">
     <div class="av" id="doneAv">س</div>
-    <h1 id="doneH">سعد شغّال.</h1>
-    <p class="sub" id="doneP">أول ليد يوصلك، يرد عليه خلال دقائق. وأول شيء يحتاج قرارك، يوصلك أنت.</p>
-    <div class="first"><svg class="ic" viewBox="0 0 24 24" style="margin-block-start:4px"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg><div>أول ما يحتاج موظف أداة، يطلبها منك داخل المحادثة.<small>ما يوصل موظف لأداة ما ربطتها أنت.</small></div></div>
+    <h1 id="doneH">موظفك جاهز للخطوة التالية.</h1>
+    <p class="sub" id="doneP">ربطناه بمعرفة شركتك وتعليماته. لن يعمل أو يرسل شيئًا حتى تكتمل أدوات مهمته واختبارها.</p>
+    <div class="receipt" role="group" aria-label="ما تم تجهيزه"><div class="receipt__h">ما تم تجهيزه الآن</div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span>معرفة شركتك مرتبطة بالموظف</span><small id="doneKnowledge">الإصدار 1</small></div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span>الدور والتعليمات وحدود المعرفة</span><small>جاهزة</small></div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span>مساحة عمل مستقلة لشركتك</span><small>قيد التجهيز</small></div></div>
+    <div class="first"><svg class="ic" viewBox="0 0 24 24" style="margin-block-start:4px"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg><div>التالي: نربط أدوات مهمته ونختبر أول نتيجة.<small>لن يعمل أو يرسل شيئًا قبل اكتمال الأدوات والاختبار.</small></div></div>
   </section>
 
 </main>
@@ -187,6 +202,8 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
   <span class="sp" id="sp"></span>
   <button type="button" class="btn" id="next">التالي <span class="drop"></span></button>
 </div></footer>
+
+<div class="live" id="live" aria-live="polite"></div>
 
 <script src="onboard.js?v=1.9.0" defer></script>
 </body>
