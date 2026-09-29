@@ -39,7 +39,7 @@ test('routine draft work skips approval while severe final actions require it',(
   assert.ok(!serverSource.includes("input.op==='approve'"));
 });
 
-async function page({storage={},hydrate=empty,message,work,approve,employee_state,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد']]}={}){
+async function page({storage={},hydrate=empty,message,work,approve,employee_state,add_knowledge,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد']]}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
   const w=dom.window,requests=[],alerts=[],polls=[],navigations=[];let hydrateTimer;
   w.matchMedia=()=>({matches:true,addEventListener(){}});
@@ -62,7 +62,7 @@ async function page({storage={},hydrate=empty,message,work,approve,employee_stat
       return {ok:true,status:200,json:async()=>response};
     }
     const body=JSON.parse(options.body);requests.push({url,body,headers:options.headers,credentials:options.credentials});
-    const handler={hydrate,message,work,approve,employee_state,export:exportResponse}[body.op];
+    const handler={hydrate,message,work,approve,employee_state,add_knowledge,export:exportResponse}[body.op];
     const response=typeof handler==='function'?await handler(body):handler;
     if(response instanceof Error)throw response;
     if(response?.httpStatus)return {ok:false,status:response.httpStatus,json:async()=>response};
@@ -366,8 +366,19 @@ test('real settings are read-only and remove demo file counts and unconditional 
 });
 
 test('company knowledge panel shows owned facts with source time and partial coverage without demo data',async()=>{
- const p=await page({hydrate:{...empty,owned_knowledge:{schemaVersion:1,companyId:'owner-1',coverage:'partial',lastSuccessAt:'2026-09-09T10:00:00Z',lastError:null,facts:[{key:'price',topic:'السعر',value:'1200 <img src=x>',sourceKind:'user',certainty:'user_confirmed',observedAt:'2026-09-09T09:00:00Z'},{key:'service',topic:'خدمة',value:'الصيانة',sourceKind:'company_website',sourceUrl:'https://company.test/service',certainty:'observed',observedAt:'2026-09-08T09:00:00Z'}]}}});try{
-  p.d.querySelector('#memTgl').click();const panel=p.d.querySelector('#memList');assert.match(panel.textContent,/1200 <img src=x>/);assert.match(panel.textContent,/من رسائلك/);assert.match(panel.textContent,/https:\/\/company.test\/service/);assert.match(panel.textContent,/تغطية جزئية/);assert.match(panel.textContent,/آخر تحديث ناجح/);assert.ok(!panel.querySelector('img,script,[data-mdel]'));assert.match(panel.textContent,/صححها في شات سيادة/);assert.equal(p.requests.length,1);
+ const p=await page({hydrate:{...empty,owned_knowledge:{schemaVersion:1,companyId:'owner-1',knowledgeVersion:3,coverage:'partial',coverageScore:40,lastSuccessAt:'2026-09-09T10:00:00Z',lastError:null,facts:[{key:'price',topic:'السعر',value:'1200 <img src=x>',sourceKind:'user',certainty:'user_confirmed',observedAt:'2026-09-09T09:00:00Z'},{key:'service',topic:'خدمة',value:'الصيانة',sourceKind:'company_website',sourceUrl:'https://company.test/service',certainty:'observed',observedAt:'2026-09-08T09:00:00Z'}]}}});try{
+  p.d.querySelector('#memTgl').click();const panel=p.d.querySelector('#memList');assert.match(panel.textContent,/1200 <img src=x>/);assert.match(panel.textContent,/من رسائلك/);assert.match(panel.textContent,/https:\/\/company.test\/service/);assert.match(panel.textContent,/تغطية جزئية 40٪/);assert.match(panel.textContent,/الإصدار 3/);assert.match(panel.textContent,/آخر تحديث ناجح/);assert.ok(!panel.querySelector('img,script,[data-mdel]'));assert.equal(panel.querySelectorAll('[data-kedit]').length,2);assert.ok(panel.querySelector('#kbAdd'));assert.equal(p.requests.length,1);
+ }finally{p.close();}
+});
+test('company owner can add knowledge without sending company identity from the browser',async()=>{
+ const before={schemaVersion:1,companyId:'owner-1',knowledgeVersion:1,coverage:'partial',coverageScore:40,facts:[]};
+ const after={schemaVersion:1,companyId:'owner-1',knowledgeVersion:2,coverage:'partial',coverageScore:50,facts:[{key:'server-key',topic:'faq',value:'نرد خلال ساعة',sourceKind:'user',certainty:'user_confirmed'}]};let hydrates=0;
+ const p=await page({hydrate:()=>({...empty,owned_knowledge:++hydrates===1?before:after}),add_knowledge:{ok:true,knowledgeVersion:2,coverageScore:50}});try{
+  p.d.querySelector('#memTgl').click();p.d.querySelector('#kbAdd').click();p.d.querySelector('#kbTopic').value='faq';p.d.querySelector('#kbValue').value='نرد خلال ساعة';p.d.querySelector('#kbSave').click();await flush();await flush();
+  const save=p.requests.find(r=>r.body.op==='add_knowledge');assert.deepEqual(save.body,{op:'add_knowledge',topic:'faq',value:'نرد خلال ساعة'});assert.equal(save.credentials,'include');for(const key of ['companyId','company_id','tenantId','projectId'])assert.equal(key in save.body,false);
+  assert.match(p.d.querySelector('#memList').textContent,/الإصدار 2/);assert.match(p.d.querySelector('#memList').textContent,/50٪/);assert.match(p.d.querySelector('#memList').textContent,/نرد خلال ساعة/);
+  p.d.querySelector('[data-kedit]').click();assert.equal(p.d.querySelector('#kbTopic').value,'faq');assert.equal(p.d.querySelector('#kbValue').value,'نرد خلال ساعة');p.d.querySelector('#kbValue').value='نرد خلال ساعتين';p.d.querySelector('#kbSave').click();await flush();await flush();
+  const saves=p.requests.filter(r=>r.body.op==='add_knowledge');assert.deepEqual(saves[1].body,{op:'add_knowledge',topic:'faq',key:'server-key',value:'نرد خلال ساعتين'});
  }finally{p.close();}
 });
 test('missing invalid and empty owned knowledge distinguish unavailable from empty without invented counts',async()=>{

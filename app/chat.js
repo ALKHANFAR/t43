@@ -990,7 +990,7 @@ var I = {
       var knowledge=window.__SIY_DASH__&&window.__SIY_DASH__.owned_knowledge;
       if(!knowledge){el.innerHTML='<p>لم تصل المعرفة المحفوظة بعد.</p>';return;}
       var facts=knowledge.facts;
-      el.innerHTML='<p>المعرفة المحفوظة · '+(knowledge.coverage==='partial'?'تغطية جزئية':'اكتمال التغطية غير مؤكد')+'</p>'+
+      el.innerHTML='<p>المعرفة المحفوظة · '+(knowledge.coverage==='partial'?'تغطية جزئية':'تغطية جيدة')+(Number.isFinite(knowledge.coverageScore)?' '+knowledge.coverageScore+'٪':'')+(knowledge.knowledgeVersion?' · الإصدار '+knowledge.knowledgeVersion:'')+'</p>'+
         (knowledge.lastSuccessAt?'<p class="msrc">آخر تحديث ناجح: '+siyKnowledgeTime(knowledge.lastSuccessAt)+'</p>':'')+
         (knowledge.lastError?'<p class="msrc">تعذّر آخر تحديث؛ المعروض آخر معلومات محفوظة.</p>':'')+
         (facts.length?'<ul class="mem">'+facts.map(function(f){
@@ -1000,9 +1000,9 @@ var I = {
           var topic=Object.prototype.hasOwnProperty.call(topics,f.topic)?topics[f.topic]:(/[\u0600-\u06ff]/.test(f.topic||'')?f.topic:'معلومة عن الشركة');
           var value=typeof f.evidenceQuote==='string'&&f.evidenceQuote.trim()?f.evidenceQuote:(typeof f.value==='string'?f.value:JSON.stringify(f.value));
           return '<li><b>'+esc(topic)+':</b><span class="v">'+esc(value)+'</span>'+
-            '<span class="msrc">'+source+(f.sourceUrl?' · '+esc(f.sourceUrl):'')+' · '+certainty+' · '+siyKnowledgeTime(f.observedAt)+'</span></li>';
+            '<span class="msrc">'+source+(f.sourceUrl?' · '+esc(f.sourceUrl):'')+' · '+certainty+' · '+siyKnowledgeTime(f.observedAt)+'</span><button type="button" class="lnk" data-kedit="'+knowledge.facts.indexOf(f)+'">صحّح</button></li>';
         }).join('')+'</ul>':'<p>لا توجد حقائق محفوظة بعد.</p>')+
-        '<p class="msrc">أضف المعلومات أو صححها في شات سيادة، ثم أعد تحميل الصفحة للتحقق من حفظها.</p>';
+        '<div class="acts"><button type="button" class="lnk" id="kbAdd">أضف معلومة</button></div><div id="kbEdit" hidden style="margin-top:10px"><label>نوع المعلومة<select class="ctrl" id="kbTopic"><option value="company_profile">عن الشركة</option><option value="services">الخدمات</option><option value="products">المنتجات</option><option value="target_customers">العملاء المستهدفون</option><option value="pricing">الأسعار</option><option value="faq">الأسئلة الشائعة</option><option value="policies">السياسات</option><option value="contact">التواصل</option><option value="brand">صوت الشركة</option></select></label><label>المعلومة<textarea class="ctrl" id="kbValue" rows="3" maxlength="1200"></textarea></label><div class="acts"><button type="button" class="lnk lnk--fill" id="kbSave">احفظ</button><button type="button" class="lnk" id="kbCancel">إلغاء</button></div><p class="msrc" id="kbStatus" role="status"></p></div>';
       return;
     }
     el.innerHTML=MEM.length?'<ul class="mem">'+MEM.map(function(m,i){
@@ -1018,6 +1018,14 @@ var I = {
     var dx=e.target.closest("[data-mdel]");
     if(dx&&window.__SIY_REAL__){ siyUnsupported(); return; }
     if(dx){ MEM.splice(+dx.dataset.mdel,1); renderMem(); return; }
+    var add=e.target.closest("#kbAdd"),edit=e.target.closest("[data-kedit]");
+    if(window.__SIY_REAL__&&(add||edit)){
+      var form=$("#kbEdit"),knowledge=window.__SIY_DASH__&&window.__SIY_DASH__.owned_knowledge,fact=edit&&knowledge&&knowledge.facts[Number(edit.dataset.kedit)];
+      var select=$("#kbTopic"),hasTopic=fact&&Array.prototype.some.call(select.options,function(option){return option.value===fact.topic;});
+      form.hidden=false;form.dataset.key=fact&&fact.key||"";select.value=hasTopic?fact.topic:"company_profile";$("#kbValue").value=fact?(typeof fact.value==='string'?fact.value:JSON.stringify(fact.value)):"";$("#kbStatus").textContent="";$("#kbValue").focus();return;
+    }
+    if(e.target.closest("#kbCancel")){ $("#kbEdit").hidden=true;return; }
+    if(window.__SIY_REAL__&&e.target.closest("#kbSave")){ siySaveKnowledge();return; }
     var sb=e.target.closest("[data-sub]");
     if(sb){ sb.textContent="قريبًا — الاشتراك المبكر"; sb.disabled=true;
       var note=sb.parentNode.querySelector(".sub-note"); if(!note){ note=document.createElement("small"); note.className="sub-note"; note.style.cssText="display:block;margin-top:6px;color:var(--ash)"; note.textContent="الدفع (مدى/فيزا) قيد التفعيل — تواصل معنا للترقية في الوصول المبكر."; sb.parentNode.appendChild(note); } }
@@ -1076,7 +1084,7 @@ var I = {
   });
 
   /* نطاق الشركة يأتي من جلسة HttpOnly على الخادم فقط. */
-  var SIY_GATEWAY=window.SIYADAH_CHAT_GATEWAY||"/siyadah-api/v1/chat";
+  var SIY_GATEWAY=window.SIYADAH_CHAT_GATEWAY||"/siyadah-api/v1/chat",SIY_ONBOARDING="/siyadah-api/v1/onboarding";
   var siyPolls={}, siyGeneration=0, siyEmployeeStatePending={};
   function siyBuilderState(text,connected){ var node=$("#builderConnectState"); if(!node) return; node.textContent=text; node.classList.toggle("apstate--ok",connected===true); }
   function siyRefreshBuilderConnection(){
@@ -1084,11 +1092,11 @@ var I = {
   }
   function siyStopPolling(){ siyGeneration++; Object.keys(siyPolls).forEach(function(k){ clearTimeout(siyPolls[k]); }); siyPolls={}; }
   function siyAccessError(text){var e=new Error(text);e.noRetry=true;return e;}
-  async function siyRequest(body){
-    if(!/^(https:\/\/|\/)/.test(SIY_GATEWAY)) throw siyAccessError("اتصال شات سيادة لم يُجهّز بعد.");
+  async function siyPost(url,body){
+    if(!/^(https:\/\/|\/)/.test(url)) throw siyAccessError("اتصال سيادة لم يُجهّز بعد.");
     var abort=new AbortController(), timer=setTimeout(function(){abort.abort();},60000);
     try{
-      var response=await fetch(SIY_GATEWAY,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:abort.signal});
+      var response=await fetch(url,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:abort.signal});
       if(response.status===401){location.replace("../auth.html");throw siyAccessError("انتهت جلستك. سجّل الدخول من جديد.");}
       if(response.status===403) throw siyAccessError("تعذّر التحقق من صلاحية هذا الطلب لحسابك.");
       if(!response.ok) throw new Error("تعذّر الاتصال بالخادم. أعد المحاولة.");
@@ -1098,6 +1106,15 @@ var I = {
       return data;
     }catch(e){ if(e.name==="AbortError") throw new Error("تأخر الرد. أعد المحاولة بنفس الطلب للتحقق من حالته."); throw e; }
     finally{clearTimeout(timer);}
+  }
+  function siyRequest(body){return siyPost(SIY_GATEWAY,body);}
+  async function siySaveKnowledge(){
+    var form=$("#kbEdit"),button=$("#kbSave"),status=$("#kbStatus"),value=$("#kbValue").value.trim();if(!value){status.textContent="اكتب المعلومة أولًا.";return;}
+    button.disabled=true;status.textContent="جارٍ الحفظ…";
+    try{
+      await siyPost(SIY_ONBOARDING,{op:'add_knowledge',topic:$("#kbTopic").value,key:form.dataset.key||undefined,value:value});
+      var data=await siyRequest({op:'hydrate'});siyMerge(data,false);renderMem();status=$("#kbStatus");if(status)status.textContent="تم الحفظ في إصدار جديد.";
+    }catch(error){status.textContent=error.message||"تعذّر حفظ المعلومة.";}finally{button=$("#kbSave");if(button)button.disabled=false;}
   }
   async function siySetEmployeeState(e){
     if(!e||typeof e.id!=="string"||!e.id||typeof e.flowId!=="string"||!e.flowId||siyEmployeeStatePending[e.id]) return;
@@ -1330,7 +1347,7 @@ var I = {
     var role=String(m.role||"موظف"), displayName=String(m.name||"موظف");
     return { id:m.recordId, flowId:m.flowId||null, n:displayName, r:role, ini:String(m.initial||displayName.slice(0,1)),
       f:i%2===1, on:/^(نشط|active)$/i.test(String(m.status||"").trim()), wait:0, waits:[],
-      since:(/^(نشط|active)$/i.test(String(m.status||"").trim())?"مسجل كنشط — التشغيل لم يُتحقق منه":"مسجل كمتوقف"), ver:1,
+      since:(/^(نشط|active)$/i.test(String(m.status||"").trim())?"مسجل كنشط — التشغيل لم يُتحقق منه":"مسجل كمتوقف"), ver:Number(m.knowledgeVersion)||1,
       kpi:[{v:"—",l:"مهام اليوم",t:"—"},{v:"—",l:"قيد التنفيذ",t:"—"},{v:"—",l:"مكتملة",t:"—"},{v:"—",l:"بانتظارك",t:"—"}],
       log:[["—","بيانات الموظف من سجل الشركة. نتائج التنفيذ تظهر في سجل العمل."]], auto:siyAuto(m.autonomy), autonomy:typeof m.autonomy==="string"?m.autonomy:"", tone:siyTone(m.tone), hours:"—",
       rules:rules, tools:(Array.isArray(m.tools)?m.tools:[]).map(function(t){return TOOL_SLUG[t]||String(t);}),
