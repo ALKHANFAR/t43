@@ -49,13 +49,18 @@
   }
   async function send(text,onUpdate){
     var conversation=await ensureConversation(text);
+    var before=await messages(conversation.id);
+    var assistantCountBefore=before.filter(function(message){return message&&message.role==="assistant";}).length;
     var sent=await request("/conversations/"+encodeURIComponent(conversation.id)+"/messages",{method:"POST",body:{content:text}});
     var last=null;
     for(var i=0;i<MAX_POLLS;i++){
       last=await snapshot(conversation.id);
       last.runId=sent.runId||null;
       if(typeof onUpdate==="function") onUpdate(last);
-      if(last.gate||last.conversation.status!=="STREAMING") return last;
+      if(last.gate) return last;
+      var assistantCount=last.messages.filter(function(message){return message&&message.role==="assistant";}).length;
+      if(last.conversation.status==="ERROR") throw new Error("تعذّر إكمال استدعاء Agent Runtime.");
+      if(last.conversation.status!=="STREAMING"&&assistantCount>assistantCountBefore) return last;
       await wait(POLL_MS);
     }
     throw new Error("استمر التنفيذ وقتًا طويلًا. افتح المحادثة الأصلية لمتابعة حالتها.");
