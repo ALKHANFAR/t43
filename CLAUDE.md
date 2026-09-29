@@ -12,14 +12,16 @@ Working branch chosen by the owner on 2026-09-29: tag `v1.9.0` (simulated chat, 
 | `app/onboard.html` / `.js` | Four-step onboarding (site → sentence → plan → go live), simulated. |
 | `pieces.js` | Tool catalog `window.PIECES`: `[slug, name, descEN, category, logo, descAR]`, 712 tools. |
 | `integrations.html/.js`, `demo*.html/.js`, `privacy.html`, `404.html` | Secondary pages. |
-| `Dockerfile`, `nginx.conf`, `.dockerignore` | Static nginx container (added for hosting; `*.md`, `scripts/`, `package*.json` excluded). |
+| `Dockerfile`, `nginx.conf.template`, `.dockerignore` | Static nginx container (`*.md`, `scripts/`, `package*.json` excluded). The template proxies `/siyadah-api/` → `${GATEWAY_URL}` (envsubst at start; unset → dead port → simulator). |
+| `auth.html` | Login / signup (AR) → `POST /siyadah-api/v1/auth/login|signup` (cookie) → `app/chat.html`. |
+| `chat.js` real mode | Block «الوضع الحقيقي» after `send()`: `REAL` = account when `GET /siyadah-api/v1/auth/session` returns JSON ok; 401 → `auth.html`; no gateway → simulator. Only Siyadah's chat goes to `POST /v1/chat`. |
 
 ## The backend seam
 `chat.js` line 1 documents the orchestrator event contract (`say / step / handoff / await / preview / result / done`). `playEvents(list, events)` plays them; wiring a real backend = feeding the same events from the server instead of the local arrays. Keep that seam; do not spread network calls through the UI.
 
 ## Live side effects — careful
 - `site.js` `CONFIG.endpoint` posts the reserve form to a live Activepieces Cloud webhook. Do not submit the form while testing.
-- Everything in `app/` is local simulation; no network calls.
+- `app/` is local simulation, except the real-mode block in `chat.js` (same-origin `/siyadah-api` only).
 
 ## Rules for changes
 - Smallest change that does the job; match the existing compact style (ES5, `var`, single-line helpers, Arabic comments).

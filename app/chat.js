@@ -495,6 +495,7 @@ var I = {
     list.push({me:true,t:text,at:now()});
     renderSide();
     $("#input").value=""; $("#input").style.height="auto"; renderThread();
+    if(REAL&&w==="siyadah"){ realSend(list,text); return; } /* الوضع الحقيقي: سيادة ترد من البوابة */
     setTimeout(function(){
       if(w==="siyadah"&&/وش تعرف|ايش تعرف|تعرف عنا|الذاكرة/.test(text)) list.push({me:false,at:now(),t:memHtml(),why:"كل سطر في الذاكرة له مصدر — محادثة أو قاعدة كتبتها أنت."});
       else if(w==="siyadah"&&isBuild(text)) list.push({me:false,plan:true,at:now(),t:"جهّزت ثلاثة. هذي خطتهم — ما يتحرك شيء قبل موافقتك:"});
@@ -502,6 +503,38 @@ var I = {
       if(who===w) renderThread();
     },650);
   }
+  /* ==========================================================================
+     الوضع الحقيقي — بوابة سيادة على نفس الأصل /siyadah-api (كوكي HttpOnly)
+     عند التحميل: session → JSON ok:true = حقيقي · 401 = صفحة الدخول ·
+     فشل الطلب أو رد مو JSON (ما فيه بوابة، مثل خادم محلي ثابت) = يبقى المحاكي بصمت.
+     سيادة فقط تكلّم البوابة؛ الموظفون والأدوات والخطة يبقون محاكاة.
+     ========================================================================== */
+  var API="/siyadah-api", REAL=null; /* REAL = الحساب {id,email,company,project_id} لما تكون البوابة موجودة */
+  function api(path,body){ return fetch(API+path,body?{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}:{credentials:"include"}); }
+  function plain(h){ return (new DOMParser().parseFromString(String(h||"").replace(/<\/p>\s*<p>|<br\s*\/?>/g,"\n"),"text/html").body.textContent||"").trim(); }
+  function realHtml(s){ var ps=String(s||"").split(/\n+/).filter(function(x){return x.trim()}); return ps.length?'<p>'+ps.map(esc).join('</p><p>')+'</p>':'<p>…</p>'; }
+  /* آخر 10 أدوار نصية قبل رسالتك الحالية */
+  function histOf(list){ return list.slice(0,-1).filter(function(m){ return m.t&&!m.typing&&!m.plan&&!m.trace&&!m.wait; })
+    .map(function(m){ return {role:m.me?"user":"assistant", content:m.me?String(m.t):plain(m.t)}; }).filter(function(h){ return h.content; }).slice(-10); }
+  function realSend(list,text){
+    var hist=histOf(list), ty={me:false,typing:true,at:""}; list.push(ty); renderThread();
+    function put(r){ r.me=false; r.at=now(); r.reveal=true; var i=list.indexOf(ty); if(i>-1) list.splice(i,1,r); else list.push(r); if(curList()===list) renderThread(); }
+    api("/v1/chat",{message:text,history:hist}).then(function(r){ if(r.status===401){ location.href="../auth.html"; return null; } return r.json(); })
+      .then(function(d){ if(!d) return;
+        if(d.ok!==true){ put({t:'<p>'+esc(d.message||"تعذّر الرد — حاول مرة ثانية.")+'</p>'}); return; }
+        var tu=(d.tools_used||[]).map(function(x){ return esc(x.name)+(x.ok?" ✓":" ✗"); });
+        put({t:realHtml(d.reply), why:tu.length?"استخدمت: "+tu.join("، "):"رد مباشر من سيادة — بدون أدوات."}); })
+      .catch(function(){ put({t:"<p>انقطع الاتصال — حاول مرة ثانية.</p>"}); });
+  }
+  function realMe(){ var n=$("#meBtn .me__n"), sm=$("small",n), nm=REAL.email||"";
+    n.firstChild.nodeValue=nm; sm.textContent=REAL.company||""; $("#meBtn .av").textContent=(REAL.company||nm||"؟").charAt(0).toUpperCase(); }
+  api("/v1/auth/session").then(function(r){ if(r.status===401){ location.href="../auth.html"; return null; }
+      return (r.headers.get("content-type")||"").indexOf("json")>-1 ? r.json() : null; })
+    .then(function(d){ if(d&&d.ok===true&&d.account){ REAL=d.account; realMe(); } })
+    .catch(function(){ /* ما فيه بوابة — المحاكي */ });
+  $("#logout").addEventListener("click",function(){ if(!REAL) return;
+    api("/v1/auth/logout",{}).then(null,function(){}).then(function(){ location.href="../auth.html"; }); });
+
   /* الذاكرة الحيّة: سيادة تسرد اللي تحفظه — سطر لكل معلومة مع مصدرها */
   function memHtml(){
     if(!MEM.length) return "<p>الذاكرة فاضية للحين — أي قاعدة تحفظها من المحادثات تنحفظ هنا.</p>";
