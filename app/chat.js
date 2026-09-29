@@ -557,7 +557,8 @@ var I = {
         rc.ms=d.methods||[]; if(!rc.ms.length){ rcBox('<p class="mf__e" role="alert">ما لهذي الأداة طريقة ربط متاحة.</p>'); return; } rcRender(); })
       .catch(function(){ if(rc&&rc.t===t) rcBox('<p class="mf__e" role="alert">انقطع الاتصال — حاول مرة ثانية.</p>'); }); }
   /* حقل عام من قائمة البوابة: نص/سر/رقم/صح-خطأ/قائمة/نص طويل — القائمة تحفظ رقم الخيار ونرجّع قيمته */
-  function rcField(f,k){ var id="mf"+k, a=' id="'+id+'" data-f="'+esc(f.name)+'"'+(f.required?' aria-required="true"':'')+(f.description?' aria-describedby="'+id+'d"':''),
+  function rcField(f,k){ f.type={CHECKBOX:"checkbox",STATIC_DROPDOWN:"dropdown",LONG_TEXT:"textarea",SECRET_TEXT:"password",NUMBER:"number"}[f.type]||f.type; /* أنواع Activepieces ← أنواع النموذج */
+    var id="mf"+k, a=' id="'+id+'" data-f="'+esc(f.name)+'"'+(f.required?' aria-required="true"':'')+(f.description?' aria-describedby="'+id+'d"':''),
       lb=esc(f.label||f.name)+(f.required?' *':''), d=f.description?'<small id="'+id+'d">'+esc(f.description)+'</small>':'';
     if(f.type==="checkbox") return '<div class="mf__f"><label class="mf__c"><input type="checkbox"'+a+'> '+lb+'</label>'+d+'</div>';
     var c=f.type==="dropdown"?'<select'+a+'><option value="">اختر…</option>'+(f.options||[]).map(function(o,j){ return '<option value="'+j+'">'+esc(o.label)+'</option>'; }).join("")+'</select>'
