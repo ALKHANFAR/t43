@@ -32,11 +32,11 @@ test('routine draft work skips approval while severe final actions require it',(
   assert.match(source,/كشف بيانات حساسة/);
 });
 
-async function page({storage={},hydrate=empty,message,work,approve,employee_state,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true}={}){
+async function page({storage={},hydrate=empty,message,work,approve,employee_state,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد']]}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
   const w=dom.window,requests=[],alerts=[],polls=[],navigations=[];let hydrateTimer;
   w.matchMedia=()=>({matches:true,addEventListener(){}});
-  w.PIECES=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد']];
+  w.PIECES=pieces;
   w.SIYADAH_REAL_ACCOUNT=real;
   w.SIYADAH_CHAT_GATEWAY='https://gateway.test/sync';
   Object.entries(storage).forEach(([k,v])=>w.localStorage.setItem(k,v));
@@ -87,9 +87,20 @@ test('account menu routes Activepieces MCP to the direct browser tools screen',a
     p.d.querySelector('#meBtn').click();await flush();
     assert.equal(p.d.querySelector('#builderConnectState').textContent,'اربط');
     p.d.querySelector('#builderConnectBtn').click();await flush();
-    assert.match(thread(p),/Activepieces MCP المباشر/);
+    assert.match(thread(p),/محرك التنفيذ/);
     assert.equal(p.requests.some(x=>String(x.url).includes('/v1/integrations/activepieces/')),false);
     assert.ok(!source.includes('ACTIVEPIECES_MCP_ACCESS_TOKEN'));
+  }finally{p.close();}
+});
+test('real account tools hide legacy demo employees and internal platform labels',async()=>{
+  const p=await page({pieces:[['gmail','Gmail','Email','communication','https://example.test/gmail.png','البريد'],['hubspot','HubSpot','CRM','sales','https://example.test/hubspot.png','إدارة العملاء']]});try{
+    p.d.querySelector('#toolsLink').click();await flush();
+    const visible=thread(p);
+    assert.doesNotMatch(visible,/يحتاجه سعد|تحتاجه ريم|تحتاجه نورة/);
+    assert.doesNotMatch(visible,/Activepieces|MCP|ap_[a-z_]+/);
+    assert.doesNotMatch(visible,/مقترحة لك/);
+    assert.match(visible,/محرك التنفيذ/);
+    assert.match(visible,/اربط محرك التنفيذ/);
   }finally{p.close();}
 });
 test('builder proposal uses a governed approval operation and renders flow readback',async()=>{

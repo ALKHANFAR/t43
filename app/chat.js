@@ -847,12 +847,12 @@ var I = {
   /* الكتالوج الحقيقي من pieces.js: [slug, name, description EN, category, logo, description AR] */
   var ON ={"gmail":"سعد · نورة · فهد","google-sheets":"نورة","google-calendar":"سعد","whatsapp":"سعد · فهد"};
   var SUG={"linkedin":"تحتاجه ريم","hubspot":"يحتاجه سعد","wafeq":"تحتاجه نورة","cal-com":"يحتاجه سعد","instagram-business":"تحتاجه ريم","google-docs":"تحتاجه ريم"};
-  var TOOLS=(window.PIECES||[]).map(function(p){ return {s:p[0],n:p[1],d:p[5]||p[2],en:p[2],c:p[3],logo:p[4],on:!!ON[p[0]],by:ON[p[0]]||"",sug:SUG[p[0]]||""}; });
+  var TOOLS=(window.PIECES||[]).map(function(p){ return {s:p[0],n:p[1],d:p[5]||p[2],en:p[2],c:p[3],logo:p[4],on:!!ON[p[0]],by:ON[p[0]]||"",sug:window.SIYADAH_REAL_ACCOUNT===true?"":(SUG[p[0]]||"")}; });
   var SOON=["سلة","زد","فودكس","ميسر","Unifonic","تابي","دفترة"];
   var tq="", tshown=24, picked=null, allOpen=false; /* allOpen: قسم «الكل» مطوي افتراضيًا */
   var MCP_DIRECT={state:"idle",tools:[],error:""};
   /* مين يستخدم الأداة: من أدوات الموظفين، وإلا من الاقتراحات */
-  function usersOf(s){ var u=EMPS.filter(function(e){return e.tools.indexOf(s)>-1}).map(function(e){return e.n}); if(u.length) return u.join(" · "); var g=SUG[s]; return g?g.replace(/^(يحتاجه|تحتاجه)\s+/,""):"بانتظار تعيين موظف"; }
+  function usersOf(s){ var u=EMPS.filter(function(e){return e.tools.indexOf(s)>-1}).map(function(e){return e.n}); if(u.length) return u.join(" · "); if(window.__SIY_REAL__) return "بانتظار تعيين موظف"; var g=SUG[s]; return g?g.replace(/^(يحتاجه|تحتاجه)\s+/,""):"بانتظار تعيين موظف"; }
   function tcard(t){
     var st=t.on?'<span class="st"><i></i>مربوطة</span>':(t.sug?'<span class="st st--w">'+t.sug+'</span>':'');
     return '<div class="tl'+(t.on?' tl--on':'')+'"><span class="tl__i"><img src="'+t.logo+'" alt="" loading="lazy" crossorigin="anonymous" referrerpolicy="no-referrer" data-fb="1"></span><div><div class="tl__n">'+t.n+'</div>'+
@@ -863,16 +863,16 @@ var I = {
   function toolsHtml(){
     var f=TOOLS.filter(function(t){return !tq||(t.n+" "+t.d+" "+t.en+" "+t.s+" "+t.c).toLowerCase().indexOf(tq)>-1});
     var connected=MCP_DIRECT.state==="connected",busy=MCP_DIRECT.state==="loading"||MCP_DIRECT.state==="connecting";
-    var directText=connected?("متصل مباشرة · "+MCP_DIRECT.tools.length+" أداة حقيقية"):(busy?"جارٍ الاتصال المباشر…":"غير متصل مباشرة");
-    var directDetails=connected?('<p style="margin:.55rem 0 0;color:var(--ash);font-size:.82rem">'+MCP_DIRECT.tools.slice(0,8).map(function(tool){return esc(tool.name||"");}).join(" · ")+(MCP_DIRECT.tools.length>8?" …":"")+'</p>'):(MCP_DIRECT.error?'<p style="margin:.55rem 0 0;color:var(--bad);font-size:.82rem">'+esc(MCP_DIRECT.error)+'</p>':'');
-    var directButton='<button type="button" class="lnk lnk--fill" id="mcpDirectBtn"'+(busy?' disabled aria-busy="true"':'')+'>'+(connected?'أعد قراءة الأدوات':'اربط Activepieces مباشرة')+'</button>';
+    var directText=connected?("متصل · "+MCP_DIRECT.tools.length+" قدرة تنفيذ متاحة"):(busy?"جارٍ التحقق من قدرات التنفيذ…":"غير متصل");
+    var directDetails=MCP_DIRECT.error?'<p style="margin:.55rem 0 0;color:var(--bad);font-size:.82rem">'+esc(MCP_DIRECT.error)+'</p>':'';
+    var directButton='<button type="button" class="lnk lnk--fill" id="mcpDirectBtn"'+(busy?' disabled aria-busy="true"':'')+'>'+(connected?'أعد التحقق':'اربط محرك التنفيذ')+'</button>';
     var h='<div class="tools"><h1>الأدوات</h1><p class="sub">'+TOOLS.length+' أداة. اربط اللي تستخدمه، وموظفوك يشتغلون فيه — ولا يوصل موظف لأداة ما ربطتها أنت.</p>'+
-      '<div class="card" style="margin:16px 0"><div class="card__b"><b>Activepieces MCP المباشر</b><p style="margin:.35rem 0;color:var(--ash);font-size:.88rem">'+directText+' — الاتصال من هذا المتصفح إلى Activepieces دون بوابة سيادة.</p>'+directButton+directDetails+'</div></div>'+
+      '<div class="card" style="margin:16px 0"><div class="card__b"><b>محرك التنفيذ</b><p style="margin:.35rem 0;color:var(--ash);font-size:.88rem">'+directText+' — يتيح لسيادة بناء مهام فريقك داخل مساحة عملك.</p>'+directButton+directDetails+'</div></div>'+
       '<div class="tsearch"><span class="drop"></span><input id="tq" placeholder="ابحث… واتساب، قيود، HubSpot" aria-label="ابحث في الأدوات" value="'+tq+'"><kbd>/</kbd></div>';
     if(!tq){
       var on=f.filter(function(t){return t.on}),sug=f.filter(function(t){return t.sug&&!t.on}),rest=f.filter(function(t){return !t.on&&!t.sug});
       h+='<div class="tsec"><b>المربوطة</b>'+on.length+'</div>'+tgrid(on,"ما ربطت شيئًا بعد");
-      h+='<div class="tsec"><b>مقترحة لك</b>حسب موظفيك</div>'+tgrid(sug,"—");
+      if(sug.length) h+='<div class="tsec"><b>مقترحة لك</b>حسب فريقك الحالي</div>'+tgrid(sug,"—");
       h+='<div class="tsec"><b>الكل</b>'+TOOLS.length+'</div>';
       if(allOpen){ h+=tgrid(rest.slice(0,tshown),"—");
         if(rest.length>tshown) h+='<button type="button" class="more" id="more">اعرض المزيد — باقي '+(rest.length-tshown)+'</button>'; }
@@ -1073,7 +1073,7 @@ var I = {
   var siyPolls={}, siyGeneration=0, siyEmployeeStatePending={};
   function siyRenderDirectMcp(){
     var count=$("#toolsCnt");
-    if(count&&MCP_DIRECT.state==="connected") count.textContent=MCP_DIRECT.tools.length+" عبر MCP";
+    if(count&&MCP_DIRECT.state==="connected") count.textContent=MCP_DIRECT.tools.length+" قدرة متاحة";
     if(who==="tools") renderThread();
   }
   async function siyDirectMcpAction(){
@@ -1440,7 +1440,7 @@ var I = {
     if(memoryToggle){ var memorySummary=memoryToggle.parentNode; if(memorySummary.firstChild&&memorySummary.firstChild.nodeType===3) memorySummary.firstChild.textContent='المعرفة المحفوظة في حسابك '; var memoryCaption=memorySummary.parentNode.querySelector('small'); if(memoryCaption) memoryCaption.textContent='المعلومات المتاحة لمستشار سيادة وموظفيك'; }
     Object.keys(CHATS).forEach(function(k){ delete CHATS[k]; });
     live={}; eth={}; PRES={}; PULSE={}; pendAns=null; pendEdit=null;
-    if(typeof TOOLS!=="undefined") TOOLS.forEach(function(t){ t.on=false; t.by=[]; });
+    if(typeof TOOLS!=="undefined") TOOLS.forEach(function(t){ t.on=false; t.by=[]; t.sug=""; });
     var count=$("#toolsCnt"); if(count) count.textContent="لم يتم التحقق من الاتصالات";
     PLAN.state="unknown"; PLAN.actions.used=null; PLAN.employees.used=0;
     PLAN.credit={sar:0,actions:0}; PLAN.invoices=[]; PLAN.payment=""; PLAN.vat=""; PLAN.cr="";
