@@ -519,7 +519,6 @@ var I = {
     renderSide();
     $("#input").value=""; $("#input").style.height="auto"; renderThread();
     if(window.__SIY_REAL__){
-      if(window.SIYADAH_DIRECT_MCP_CHAT===true){ siyDirectChat(text,list); return; }
       siyMessage(text,list,null); return;
     }
     setTimeout(function(){
@@ -850,7 +849,6 @@ var I = {
   var TOOLS=(window.PIECES||[]).map(function(p){ return {s:p[0],n:p[1],d:p[5]||p[2],en:p[2],c:p[3],logo:p[4],on:!!ON[p[0]],by:ON[p[0]]||"",sug:window.SIYADAH_REAL_ACCOUNT===true?"":(SUG[p[0]]||"")}; });
   var SOON=["سلة","زد","فودكس","ميسر","Unifonic","تابي","دفترة"];
   var tq="", tshown=24, picked=null, allOpen=false; /* allOpen: قسم «الكل» مطوي افتراضيًا */
-  var MCP_DIRECT={state:"idle",tools:[],error:""};
   /* مين يستخدم الأداة: من أدوات الموظفين، وإلا من الاقتراحات */
   function usersOf(s){ var u=EMPS.filter(function(e){return e.tools.indexOf(s)>-1}).map(function(e){return e.n}); if(u.length) return u.join(" · "); if(window.__SIY_REAL__) return "بانتظار تعيين موظف"; var g=SUG[s]; return g?g.replace(/^(يحتاجه|تحتاجه)\s+/,""):"بانتظار تعيين موظف"; }
   function tcard(t){
@@ -862,12 +860,9 @@ var I = {
   function tgrid(a,e){ return a.length?'<div class="tgrid">'+a.map(tcard).join("")+'</div>':'<div class="tempty">'+e+'</div>'; }
   function toolsHtml(){
     var f=TOOLS.filter(function(t){return !tq||(t.n+" "+t.d+" "+t.en+" "+t.s+" "+t.c).toLowerCase().indexOf(tq)>-1});
-    var connected=MCP_DIRECT.state==="connected",busy=MCP_DIRECT.state==="loading"||MCP_DIRECT.state==="connecting";
-    var directText=connected?("متصل · "+MCP_DIRECT.tools.length+" قدرة تنفيذ متاحة"):(busy?"جارٍ التحقق من قدرات التنفيذ…":"غير متصل");
-    var directDetails=MCP_DIRECT.error?'<p style="margin:.55rem 0 0;color:var(--bad);font-size:.82rem">'+esc(MCP_DIRECT.error)+'</p>':'';
-    var directButton='<button type="button" class="lnk lnk--fill" id="mcpDirectBtn"'+(busy?' disabled aria-busy="true"':'')+'>'+(connected?'أعد التحقق':'اربط محرك التنفيذ')+'</button>';
+    var directText="بوابة سيادة متصلة بحسابك";
     var h='<div class="tools"><h1>الأدوات</h1><p class="sub">'+TOOLS.length+' أداة. اربط اللي تستخدمه، وموظفوك يشتغلون فيه — ولا يوصل موظف لأداة ما ربطتها أنت.</p>'+
-      '<div class="card" style="margin:16px 0"><div class="card__b"><b>محرك التنفيذ</b><p style="margin:.35rem 0;color:var(--ash);font-size:.88rem">'+directText+' — يتيح لسيادة بناء مهام فريقك داخل مساحة عملك.</p>'+directButton+directDetails+'</div></div>'+
+      '<div class="card" style="margin:16px 0"><div class="card__b"><b>محرك التنفيذ</b><p style="margin:.35rem 0;color:var(--ash);font-size:.88rem">'+directText+' — يتيح لسيادة بناء مهام فريقك داخل مساحة شركتك المعزولة.</p></div></div>'+
       '<div class="tsearch"><span class="drop"></span><input id="tq" placeholder="ابحث… واتساب، قيود، HubSpot" aria-label="ابحث في الأدوات" value="'+tq+'"><kbd>/</kbd></div>';
     if(!tq){
       var on=f.filter(function(t){return t.on}),sug=f.filter(function(t){return t.sug&&!t.on}),rest=f.filter(function(t){return !t.on&&!t.sug});
@@ -886,7 +881,6 @@ var I = {
   }
   function bindTools(){
     var q=$("#tq"); q.addEventListener("input",function(){ tq=this.value.trim().toLowerCase(); tshown=24; var pos=this.selectionStart; renderThread(); var nq=$("#tq"); nq.focus(); nq.setSelectionRange(pos,pos); });
-    var direct=$("#mcpDirectBtn"); if(direct) direct.addEventListener("click",function(){ siyDirectMcpAction(); });
   }
   /* dialog: focus in, trap Tab, Escape closes, focus returns to the opener */
   var modalOpener=null;
@@ -918,7 +912,6 @@ var I = {
   if(builderConnectBtn) builderConnectBtn.addEventListener("click",function(){ pop.classList.remove("on"); openTools(); });
   var lo=$("#logoutBtn"); if(lo) lo.addEventListener("click",function(){
     siyStopPolling();
-    if(window.SiyadahActivepiecesMcp) window.SiyadahActivepiecesMcp.disconnect();
     fetch((window.SIYADAH_AUTH_BASE||"/siyadah-api")+"/v1/auth/logout",{method:"POST",credentials:"include"})
       .catch(function(){})
       .finally(function(){ location.replace("../auth.html"); });
@@ -1068,95 +1061,12 @@ var I = {
     if(e.key==="/"&&!typing&&!mod){ e.preventDefault(); openTools(); setTimeout(function(){ var q=$("#tq"); if(q) q.focus(); },30); }
   });
 
-  /* مسار الشات المحكوم يبقى مستقلًا؛ صفحة الأدوات تستطيع إثبات MCP مباشر من المتصفح. */
+  /* نطاق الشركة يأتي من جلسة HttpOnly على الخادم فقط. */
   var SIY_GATEWAY=window.SIYADAH_CHAT_GATEWAY||"/siyadah-api/v1/chat";
   var siyPolls={}, siyGeneration=0, siyEmployeeStatePending={};
-  function siyRenderDirectMcp(){
-    var count=$("#toolsCnt");
-    if(count&&MCP_DIRECT.state==="connected") count.textContent=MCP_DIRECT.tools.length+" قدرة متاحة";
-    if(who==="tools") renderThread();
-  }
-  async function siyDirectMcpAction(){
-    var client=window.SiyadahActivepiecesMcp;
-    if(!window.__SIY_REAL__||!client){ MCP_DIRECT.error="العميل المباشر غير متاح."; siyRenderDirectMcp(); return; }
-    MCP_DIRECT.error="";
-    if(!client.status().connected){
-      MCP_DIRECT.state="connecting"; siyRenderDirectMcp();
-      try{ await client.connect(); }catch(error){ MCP_DIRECT.state="error"; MCP_DIRECT.error=error.message||"تعذّر بدء الربط."; siyRenderDirectMcp(); }
-      return;
-    }
-    MCP_DIRECT.state="loading"; siyRenderDirectMcp();
-    try{ MCP_DIRECT.tools=await client.listTools(); MCP_DIRECT.state="connected"; }
-    catch(error){ MCP_DIRECT.state="error"; MCP_DIRECT.error=error.message||"تعذّرت قراءة الأدوات."; }
-    siyRenderDirectMcp();
-  }
-  function siyPlainText(value){
-    var node=document.createElement("div"); node.innerHTML=String(value||""); return (node.textContent||"").trim();
-  }
-  function siyToolResultText(result){
-    if(result&&Array.isArray(result.content)){
-      var text=result.content.filter(function(item){return item&&item.type==="text"&&typeof item.text==="string";}).map(function(item){return item.text;}).join("\n");
-      if(text) return text;
-    }
-    try{return JSON.stringify(result);}catch(ignore){return String(result||"");}
-  }
-  async function siyDeepSeek(messages,tools){
-    var response=await fetch("/deepseek/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:messages,tools:tools,tool_choice:"auto"})});
-    var data=await response.json().catch(function(){return {};});
-    if(!response.ok) throw new Error(data.error&&data.error.message?data.error.message:"تعذّر اتصال DeepSeek.");
-    var message=data&&data.choices&&data.choices[0]&&data.choices[0].message;
-    if(!message) throw new Error("لم يصل رد صالح من DeepSeek.");
-    return message;
-  }
-  async function siyDirectChat(text,list){
-    var client=window.SiyadahActivepiecesMcp;
-    var row={me:false,typing:true,at:""}; list.push(row); siyDraw();
-    try{
-      if(!client||!client.status().connected) throw new Error("اربط Activepieces مباشرة من شاشة الأدوات أولًا، ثم أعد إرسال طلبك.");
-      if(MCP_DIRECT.state!=="connected"||!MCP_DIRECT.tools.length){
-        MCP_DIRECT.tools=await client.listTools(); MCP_DIRECT.state="connected"; siyRenderDirectMcp();
-      }
-      var tools=MCP_DIRECT.tools.map(function(tool){return {type:"function",function:{name:tool.name,description:tool.description||"",parameters:tool.inputSchema||{type:"object",properties:{}}}};});
-      var messages=[{role:"system",content:"أنت سيادة، مساعد عمليات عربي. استخدم أدوات Activepieces عند الحاجة، لكن لا تذكر للعميل أسماء الأدوات أو تفاصيل المنصة الداخلية. في خادم المنصة استدعِ ap_set_project_context دون projectId لعرض المشاريع، ثم اختر المشروع المطلوب مرة واحدة باستدعائها مجددًا مع projectId قبل أدوات المشروع مثل ap_list_flows. لا تكرر اختيار المشروع إذا نجح. نفّذ الأعمال الروتينية القابلة للتراجع مباشرة عندما يطلبها العميل، ومنها إنشاء المسودة وتعديلها والتحقق منها، ولا تطلب موافقة عليها. أكمل بناء المسودة حتى لو كانت بعض الحسابات غير مربوطة، ثم اذكر للعميل ما ينقصه في النهاية. اطلب موافقة نهائية صريحة فقط مباشرة قبل فعل شديد الخطورة أو صعب التراجع: إرسال رسالة خارجية ملزمة، تقديم نموذج نهائي، نشر أو تشغيل فلو قد يتواصل خارجيًا، دفع أو شراء، حذف بيانات، تغيير صلاحيات، أو كشف بيانات حساسة. لا تعتبر طلب الإنشاء موافقة على هذه الأفعال النهائية. لا تدّعِ نجاح أي عملية دون نتيجة الأداة. أجب بإيجاز وبوضوح."}];
-      list.slice(-10,-1).forEach(function(item){
-        if(item.typing) return;
-        var content=siyPlainText(item.t); if(content) messages.push({role:item.me?"user":"assistant",content:content});
-      });
-      messages.push({role:"user",content:text});
-      var answer="";
-      for(var turn=0;turn<8;turn++){
-        var assistant=await siyDeepSeek(messages,tools); messages.push(assistant);
-        var calls=Array.isArray(assistant.tool_calls)?assistant.tool_calls:[];
-        if(!calls.length){ answer=assistant.content||"تم."; break; }
-        for(var i=0;i<calls.length;i++){
-          var call=calls[i],args={};
-          try{args=JSON.parse(call.function.arguments||"{}");}catch(ignore){}
-          var result=await client.callTool(call.function.name,args);
-          messages.push({role:"tool",tool_call_id:call.id,content:siyToolResultText(result)});
-        }
-      }
-      if(!answer){
-        messages.push({role:"system",content:"توقفت استدعاءات الأدوات الآن. لخّص للمستخدم النتائج التي وصلت بالفعل، واذكر بوضوح إن كانت المهمة لم تكتمل. لا تطلب أي أداة أخرى."});
-        var finalAssistant=await siyDeepSeek(messages,[]);
-        answer=finalAssistant.content||"لم تكتمل المهمة بعد.";
-      }
-      row.typing=false; row.at=now(); row.t=siyReplyHtml(answer); siyDraw();
-    }catch(error){ row.typing=false; row.at=now(); row.t=siyReplyHtml(error.message||"تعذّر إكمال الطلب."); siyDraw(); }
-  }
-  async function siyInitDirectMcp(){
-    var client=window.SiyadahActivepiecesMcp;
-    if(!window.__SIY_REAL__||!client) return;
-    try{
-      MCP_DIRECT.state="loading";
-      await client.handleCallback();
-      if(!client.status().connected){ MCP_DIRECT.state="idle"; return; }
-      MCP_DIRECT.tools=await client.listTools(); MCP_DIRECT.state="connected"; siyRenderDirectMcp();
-    }catch(error){ MCP_DIRECT.state="error"; MCP_DIRECT.error=error.message||"تعذّر الاتصال المباشر."; siyRenderDirectMcp(); }
-  }
   function siyBuilderState(text,connected){ var node=$("#builderConnectState"); if(!node) return; node.textContent=text; node.classList.toggle("apstate--ok",connected===true); }
   function siyRefreshBuilderConnection(){
-    var client=window.SiyadahActivepiecesMcp,connected=!!(client&&client.status().connected);
-    siyBuilderState(connected?"مربوط مباشر":"اربط",connected);
+    siyBuilderState("بوابة سيادة",true);
   }
   function siyStopPolling(){ siyGeneration++; Object.keys(siyPolls).forEach(function(k){ clearTimeout(siyPolls[k]); }); siyPolls={}; }
   function siyAccessError(text){var e=new Error(text);e.noRetry=true;return e;}
@@ -1448,7 +1358,6 @@ var I = {
   function siyHydrate(done){
     if(window.SIYADAH_REAL_ACCOUNT!==true){done();return;}
     siyClearDemo(); siyIdentity("حسابك",null);
-    if(window.SIYADAH_DIRECT_MCP_CHAT===true){ window.__SIY_LOAD_ERROR__=""; window.__SIY_EMPTY__=true; done(); return; }
     window.__SIY_LOAD_ERROR__="تعذّر تحميل بيانات حسابك. أعد تحميل الصفحة للمحاولة.";
     var finished=false, timer=setTimeout(function(){finish(null);},15000);
     function finish(data){
@@ -1491,7 +1400,6 @@ var I = {
     }
     renderSide(); renderBar(); renderThread(); renderPlan();
     route(); window.addEventListener("hashchange",route);
-    siyInitDirectMcp();
     /* المبادرة التلقائية للعرض التجريبي فقط — الحساب الحقيقي لا يُظهر مبادرات وهمية */
     if(!window.__SIY_REAL__) setTimeout(function(){ triggerProactive(false); }, reduced()?0:6000);
   }

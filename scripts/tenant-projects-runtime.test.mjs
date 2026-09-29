@@ -81,3 +81,15 @@ test('creates flows only with the stored tenant project and rejects a foreign pr
   });
   await assert.rejects(()=>foreign.createFlow({tenantId:'tenant_5005',displayName:'مرفوض'}),error=>error instanceof TenantProjectError&&error.code==='flow_project_mismatch');
 });
+
+test('lists only flows returned for the company stored project',async()=>{
+  const row={tenant_id:'company_6006',external_id:'siyadah:company_6006',activepieces_project_id:projectId,display_name:'شركة واو',provision_status:'ready'};
+  const service=createTenantProjectService({
+    query:async()=>({rows:[row]}),activepiecesUrl:'https://activepieces.example',apiKey:'secret',
+    fetchImpl:async url=>{
+      assert.match(url,new RegExp(`projectId=${projectId}`));
+      return {ok:true,status:200,json:async()=>({data:[{id:'QrStUv1234567890WxYzA',projectId,status:'DISABLED'}]})};
+    }
+  });
+  assert.equal((await service.listFlows('company_6006')).length,1);
+});

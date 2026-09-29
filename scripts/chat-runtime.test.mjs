@@ -5,6 +5,7 @@ import { JSDOM } from 'jsdom';
 
 const source=readFileSync(new URL('../app/chat.js',import.meta.url),'utf8');
 const html=readFileSync(new URL('../app/chat.html',import.meta.url),'utf8');
+const serverSource=readFileSync(new URL('../server.mjs',import.meta.url),'utf8');
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 const empty={ok:true,company:'Server Company',brain:null,memory:[],team:[],recent_work:[],conversations:[]};
 const employee={recordId:'employee-record-1',flowId:'flow-1',name:'سارة',role:'تسجيل الفرص',status:'active',tools:['gmail']};
@@ -16,20 +17,17 @@ test('chat UI never bypasses Siyadah with a direct Activepieces webhook',()=>{
   assert.ok(!source.includes('localStorage.getItem("siyadah_token")'));
 });
 
-test('direct MCP project selection uses the tool that actually exists',()=>{
-  assert.ok(!source.includes('ap_list_projects'));
-  assert.match(source,/ap_set_project_context دون projectId/);
+test('browser has no direct execution client or project selection path',()=>{
+  assert.ok(!html.includes('activepieces-mcp.js'));
+  assert.ok(!source.includes('SiyadahActivepiecesMcp'));
+  assert.ok(!source.includes('projectId'));
+  assert.ok(!source.includes('tenantId'));
 });
 
 test('routine draft work skips approval while severe final actions require it',()=>{
-  assert.match(source,/إنشاء المسودة وتعديلها والتحقق منها، ولا تطلب موافقة عليها/);
-  assert.match(source,/موافقة نهائية صريحة فقط مباشرة قبل فعل شديد الخطورة/);
-  assert.match(source,/إرسال رسالة خارجية ملزمة/);
-  assert.match(source,/تقديم نموذج نهائي/);
-  assert.match(source,/دفع أو شراء/);
-  assert.match(source,/حذف بيانات/);
-  assert.match(source,/تغيير صلاحيات/);
-  assert.match(source,/كشف بيانات حساسة/);
+  assert.match(serverSource,/state:'draft'/);
+  assert.match(serverSource,/لم يتم تشغيلها أو نشرها/);
+  assert.ok(!serverSource.includes("input.op==='approve'"));
 });
 
 async function page({storage={},hydrate=empty,message,work,approve,employee_state,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد']]}={}){
@@ -82,14 +80,15 @@ test('cookie session uses authenticated gateway without browser-readable identit
     assert.ok(p.d.querySelector('#meBtn').textContent.includes('Server Company'));
   }finally{p.close();}
 });
-test('account menu routes Activepieces MCP to the direct browser tools screen',async()=>{
+test('account menu reports the governed company gateway without direct browser connection',async()=>{
   const p=await page();try{
     p.d.querySelector('#meBtn').click();await flush();
-    assert.equal(p.d.querySelector('#builderConnectState').textContent,'اربط');
+    assert.equal(p.d.querySelector('#builderConnectState').textContent,'بوابة سيادة');
     p.d.querySelector('#builderConnectBtn').click();await flush();
     assert.match(thread(p),/محرك التنفيذ/);
     assert.equal(p.requests.some(x=>String(x.url).includes('/v1/integrations/activepieces/')),false);
     assert.ok(!source.includes('ACTIVEPIECES_MCP_ACCESS_TOKEN'));
+    assert.ok(!source.includes('SiyadahActivepiecesMcp'));
   }finally{p.close();}
 });
 test('real account tools hide legacy demo employees and internal platform labels',async()=>{
@@ -100,7 +99,8 @@ test('real account tools hide legacy demo employees and internal platform labels
     assert.doesNotMatch(visible,/Activepieces|MCP|ap_[a-z_]+/);
     assert.doesNotMatch(visible,/مقترحة لك/);
     assert.match(visible,/محرك التنفيذ/);
-    assert.match(visible,/اربط محرك التنفيذ/);
+    assert.match(visible,/بوابة سيادة متصلة بحسابك/);
+    assert.doesNotMatch(visible,/اربط محرك التنفيذ/);
   }finally{p.close();}
 });
 test('builder proposal uses a governed approval operation and renders flow readback',async()=>{
