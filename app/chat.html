@@ -360,6 +360,15 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 .mbox h2{font-family:var(--f-display);font-weight:300;font-size:1.25rem;margin:0 0 6px;display:flex;align-items:center;gap:12px;padding-inline-end:36px}
 .mbox p{color:var(--ash);font-size:.875rem;margin:0 0 18px}
 .mbox__a{display:flex;gap:10px}
+.mbox [hidden]{display:none}
+.mf__f{margin:0 0 12px}
+.mf label{display:block;font-family:var(--f-display);font-size:.8rem;margin:0 0 4px}
+.mf input:not([type=checkbox]),.mf select,.mf textarea{display:block;width:100%;border:1px solid var(--hair);background:var(--paper);color:var(--ink);padding:8px 10px;font:inherit;font-size:.9rem}
+.mf input:focus,.mf select:focus,.mf textarea:focus{border-color:var(--ink)}
+.mf small{display:block;color:var(--ash);font-size:.75rem;margin-block-start:4px}
+.mf .mf__c{display:flex;gap:8px;align-items:center}
+.mf__seg{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.mbox .mf__e{color:var(--bad);margin:0 0 12px}
 
 /* المحرر */
 .comp{padding:10px 20px 18px;background:linear-gradient(to top,var(--paper) 70%,transparent)}
@@ -546,6 +555,7 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
   <button type="button" class="ico" id="mX" aria-label="إغلاق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   <h2><span class="tl__i" id="mI">W</span><span id="mN"></span></h2>
   <p id="mD"></p>
+  <div class="mf" id="mF" hidden></div>
   <div class="mbox__a"><button type="button" class="lnk lnk--fill" id="mGo">اربط</button></div>
 </div></div>
 
@@ -574,6 +584,6 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 </div>
 
 <script src="../pieces.js?v=1.9.0" defer></script>
-<script src="chat.js?v=1.9.1" defer></script>
+<script src="chat.js?v=1.9.2" defer></script>
 </body>
 </html>

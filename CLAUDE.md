@@ -15,6 +15,8 @@ Working branch chosen by the owner on 2026-09-29: tag `v1.9.0` (simulated chat, 
 | `Dockerfile`, `nginx.conf.template`, `.dockerignore` | Static nginx container (`*.md`, `scripts/`, `package*.json` excluded). The template proxies `/siyadah-api/` → `${GATEWAY_URL}` (envsubst at start; unset → dead port → simulator). |
 | `auth.html` | Login / signup (AR) → `POST /siyadah-api/v1/auth/login|signup` (cookie) → `app/chat.html`. |
 | `chat.js` real mode | Block «الوضع الحقيقي» after `send()`: `REAL` = account when `GET /siyadah-api/v1/auth/session` returns JSON ok; 401 → `auth.html`; no gateway → simulator. Only Siyadah's chat goes to `POST /v1/chat`. |
+| `chat.js` real connect | Real mode only: `openConnect` → `realConnect(t)` renders `GET /v1/connect/<@activepieces/piece-slug>` methods as a form `#mF` inside `#modal`, `POST` the same path (`{type, values}` or OAuth popup → `{type, code, state}`; `message` accepted only from `OAUTH_ORIGINS`, code via `oauthCode`). |
+| `chat.js` real tools state | On real start `realTools()` clears the demo `ON` flags and marks tools from `GET /v1/project/connections` (pieceName → slug); `connected(t)` is the shared "now linked" step for simulator and real. |
 
 ## The backend seam
 `chat.js` line 1 documents the orchestrator event contract (`say / step / handoff / await / preview / result / done`). `playEvents(list, events)` plays them; wiring a real backend = feeding the same events from the server instead of the local arrays. Keep that seam; do not spread network calls through the UI.

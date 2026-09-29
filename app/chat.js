@@ -530,10 +530,64 @@ var I = {
     n.firstChild.nodeValue=nm; sm.textContent=REAL.company||""; $("#meBtn .av").textContent=(REAL.company||nm||"؟").charAt(0).toUpperCase(); }
   api("/v1/auth/session").then(function(r){ if(r.status===401){ location.href="../auth.html"; return null; }
       return (r.headers.get("content-type")||"").indexOf("json")>-1 ? r.json() : null; })
-    .then(function(d){ if(d&&d.ok===true&&d.account){ REAL=d.account; realMe(); } })
+    .then(function(d){ if(d&&d.ok===true&&d.account){ REAL=d.account; realMe(); realTools(); } })
     .catch(function(){ /* ما فيه بوابة — المحاكي */ });
   $("#logout").addEventListener("click",function(){ if(!REAL) return;
     api("/v1/auth/logout",{}).then(null,function(){}).then(function(){ location.href="../auth.html"; }); });
+
+  /* ربط الأدوات الحقيقي: GET /v1/connect/<piece> = طرق الدخول · POST = اربط في مشروع العميل · OAuth بنافذة منبثقة */
+  var OAUTH_ORIGINS=["https://secrets.activepieces.com","https://activepieces-production-82ad.up.railway.app"], oauthOff=null, rc=null; /* rc = {t: الأداة, ms: الطرق, i: المختارة} */
+  function pieceUrl(s){ return "/v1/connect/"+encodeURIComponent("@activepieces/piece-"+s); }
+  function toolsCount(){ $("#toolsCnt").textContent=TOOLS.filter(function(t){return t.on}).length+" مربوطة"; }
+  function apiJson(r){ if(r.status===401){ location.href="../auth.html"; return null; } return r.json(); }
+  /* الكود من رسالة النافذة: data.code · data.data.code · رابط فيه ?code= (نص، أو data.url) */
+  function oauthCode(d){ if(d&&typeof d==="object"){ if(d.code) return String(d.code); if(d.data&&d.data.code) return String(d.data.code); d=d.url; }
+    var m=typeof d==="string"&&/[?&#]code=([^&#]+)/.exec(d); return m?decodeURIComponent(m[1].replace(/\+/g," ")):null; }
+  /* عند بدء الوضع الحقيقي: نمسح أعلام العرض ON ونعلّم المربوط فعلًا في مشروع العميل */
+  function realTools(){ TOOLS.forEach(function(t){ t.on=false; t.by=""; });
+    api("/v1/project/connections").then(apiJson).then(function(d){ if(!d||d.ok!==true) return;
+      (d.data||[]).forEach(function(c){ var s=String(c.pieceName||"").replace(/^@activepieces\/piece-/,""); TOOLS.forEach(function(t){ if(t.s===s){ t.on=true; t.by=usersOf(s); t.sug=""; } }); }); })
+      .catch(function(){}).then(function(){ toolsCount(); if(who==="tools") renderThread(); }); }
+  function isOAuth(m){ return /OAUTH2$/.test(m.type); }
+  function rcMsg(s){ var e=$("#mE"); if(e){ e.textContent=s||""; e.hidden=!s; } }
+  function rcBox(h){ $("#mF").innerHTML=h; }
+  function realConnect(t){ rc={t:t,ms:[],i:0}; rcBox('<p class="mf__m">نجهّز طرق الربط…</p>');
+    api(pieceUrl(t.s)).then(apiJson).then(function(d){ if(!d||!rc||rc.t!==t) return;
+        if(d.ok!==true){ rcBox('<p class="mf__e" role="alert">'+esc(d.message||"تعذّر جلب طرق الربط.")+'</p>'); return; }
+        rc.ms=d.methods||[]; if(!rc.ms.length){ rcBox('<p class="mf__e" role="alert">ما لهذي الأداة طريقة ربط متاحة.</p>'); return; } rcRender(); })
+      .catch(function(){ if(rc&&rc.t===t) rcBox('<p class="mf__e" role="alert">انقطع الاتصال — حاول مرة ثانية.</p>'); }); }
+  /* حقل عام من قائمة البوابة: نص/سر/رقم/صح-خطأ/قائمة/نص طويل — القائمة تحفظ رقم الخيار ونرجّع قيمته */
+  function rcField(f,k){ var id="mf"+k, a=' id="'+id+'" data-f="'+esc(f.name)+'"'+(f.required?' aria-required="true"':'')+(f.description?' aria-describedby="'+id+'d"':''),
+      lb=esc(f.label||f.name)+(f.required?' *':''), d=f.description?'<small id="'+id+'d">'+esc(f.description)+'</small>':'';
+    if(f.type==="checkbox") return '<div class="mf__f"><label class="mf__c"><input type="checkbox"'+a+'> '+lb+'</label>'+d+'</div>';
+    var c=f.type==="dropdown"?'<select'+a+'><option value="">اختر…</option>'+(f.options||[]).map(function(o,j){ return '<option value="'+j+'">'+esc(o.label)+'</option>'; }).join("")+'</select>'
+      :f.type==="textarea"?'<textarea rows="3"'+a+'></textarea>'
+      :'<input type="'+(f.type==="password"?"password":f.type==="number"?"number":"text")+'" autocomplete="off" dir="ltr"'+a+'>';
+    return '<div class="mf__f"><label for="'+id+'">'+lb+'</label>'+c+d+'</div>'; }
+  function rcRender(seg){ var m=rc.ms[rc.i], off=m.available===false, h="";
+    if(rc.ms.length>1) h+='<div class="mf__seg" role="group" aria-label="طريقة الربط">'+rc.ms.map(function(x,j){ return '<button type="button" class="lnk'+(j===rc.i?' lnk--fill':'')+'" data-m="'+j+'" aria-pressed="'+(j===rc.i)+'">'+esc(x.displayName||x.type)+'</button>'; }).join("")+'</div>';
+    if(m.description) h+='<p class="mf__m">'+esc(m.description)+'</p>';
+    if(off) h+='<p class="mf__e">'+esc(m.message||"طريقة الربط هذي غير متاحة حاليًا.")+'</p>'; else h+=(m.fields||[]).map(rcField).join("");
+    h+='<p class="mf__e" id="mE" role="alert" hidden></p><div class="mbox__a"><button type="submit" class="lnk lnk--fill" id="mOk"'+(off?' disabled':'')+'>'+(isOAuth(m)?'سجّل الدخول عبر '+esc(rc.t.n):'اربط')+'</button></div>';
+    rcBox('<form novalidate>'+h+'</form>'); (seg?$('[data-m="'+rc.i+'"]',$("#mF")):($("[data-f]",$("#mF"))||$("#mOk:not([disabled])")||$("#mX"))).focus(); }
+  $("#mF").addEventListener("click",function(e){ var b=e.target.closest("[data-m]"); if(b&&rc){ rc.i=+b.dataset.m; rcRender(true); } });
+  /* submit يصعد من <form> داخل #mF */
+  $("#mF").addEventListener("submit",function(e){ e.preventDefault(); var m=rc&&rc.ms[rc.i]; if(!m||m.available===false) return; var vals={}, fs=m.fields||[];
+    for(var k=0;k<fs.length;k++){ var f=fs[k], el=$("#mf"+k), v=f.type==="checkbox"?el.checked:f.type==="dropdown"?(el.value===""?"":f.options[+el.value].value):f.type==="number"?(el.value===""?"":Number(el.value)):el.value.trim();
+      if(f.required&&v===""){ rcMsg("املأ «"+(f.label||f.name)+"» أول."); el.focus(); return; } if(v!=="") vals[f.name]=v; }
+    if(isOAuth(m)) rcOAuth(m,vals); else rcPost({type:m.type,values:vals}); });
+  function rcPost(body){ var t=rc.t; $("#mOk").disabled=true; rcMsg("");
+    function fail(s){ if(!rc||rc.t!==t) return; var x=$("#mOk"); if(x) x.disabled=false; rcMsg(s); }
+    api(pieceUrl(t.s),body).then(apiJson).then(function(d){ if(!d) return; if(d.ok!==true){ fail(d.message||"تعذّر الربط — راجع البيانات وحاول مرة ثانية."); return; }
+        if(rc&&rc.t===t){ rc=null; connected(t); } else { t.on=true; t.by=usersOf(t.s); t.sug=""; toolsCount(); } })
+      .catch(function(){ fail("انقطع الاتصال — حاول مرة ثانية."); }); }
+  /* OAuth: نافذة منبثقة؛ نسمع رسالة من أصلين فقط، ثم نشيل المستمع */
+  function rcOAuth(m,vals){ var t=rc.t, w=window.open(m.authorizeUrl,"siy_oauth","width=520,height=680");
+    if(!w){ rcMsg("المتصفح منع النافذة المنبثقة — اسمح بها وحاول مرة ثانية."); return; }
+    if(oauthOff) oauthOff(); rcMsg("أكمل الدخول في النافذة المنبثقة…");
+    function on(e){ if(OAUTH_ORIGINS.indexOf(e.origin)<0) return; var c=oauthCode(e.data); if(!c) return; oauthOff(); try{ w.close(); }catch(x){ /* نافذة من أصل آخر */ }
+      if(rc&&rc.t===t) rcPost({type:m.type,code:c,state:m.state,values:vals}); }
+    window.addEventListener("message",on); oauthOff=function(){ window.removeEventListener("message",on); oauthOff=null; }; }
 
   /* الذاكرة الحيّة: سيادة تسرد اللي تحفظه — سطر لكل معلومة مع مصدرها */
   function memHtml(){
@@ -884,21 +938,24 @@ var I = {
   var modalOpener=null;
   function openConnect(slug){ picked=TOOLS.filter(function(x){return x.s===slug})[0]; if(!picked) return;
     $("#mI").innerHTML='<img src="'+picked.logo+'" alt="" crossorigin="anonymous" referrerpolicy="no-referrer" style="width:26px;height:26px;object-fit:contain">'; $("#mN").textContent=picked.n; $("#mD").textContent="بعد الربط يقدر موظفوك يستخدمون "+picked.n+". "+picked.d+".";
-    openModal(); }
+    $("#mF").hidden=!REAL; $("#mGo").parentNode.hidden=!!REAL; /* الوضع الحقيقي: نموذج البوابة بدل الزر المحاكي */
+    openModal(); if(REAL){ $("#mX").focus(); realConnect(picked); } }
   function openModal(){ modalOpener=document.activeElement; $("#modal").classList.add("on"); var f=$("#mGo")||$("#mX"); if(f) f.focus(); }
-  function closeModal(){ $("#modal").classList.remove("on"); var back=(modalOpener&&document.contains(modalOpener))?modalOpener:($("#tq")||$("#input")); if(back&&back.focus) back.focus(); modalOpener=null; }
+  function closeModal(){ rc=null; if(oauthOff) oauthOff(); $("#modal").classList.remove("on"); var back=(modalOpener&&document.contains(modalOpener))?modalOpener:($("#tq")||$("#input")); if(back&&back.focus) back.focus(); modalOpener=null; }
   $("#mX").addEventListener("click",closeModal);
   $("#modal").addEventListener("click",function(e){ if(e.target===this) closeModal(); });
   /* shared Tab trap for dialogs */
   function trapTab(e,root){ if(e.key!=="Tab") return; var f=$$("button,[href],input,textarea,select,[tabindex]:not([tabindex=\"-1\"])",root).filter(function(x){return !x.disabled&&x.offsetParent!==null}); if(!f.length) return; var a=f[0],z=f[f.length-1]; if(e.shiftKey&&document.activeElement===a){ e.preventDefault(); z.focus(); } else if(!e.shiftKey&&document.activeElement===z){ e.preventDefault(); a.focus(); } }
   $("#modal").addEventListener("keydown",function(e){ trapTab(e,$("#modal")); });
-  $("#mGo").addEventListener("click",function(){
-    if(picked){ picked.on=true; picked.by=usersOf(picked.s); picked.sug="";
+  $("#mGo").addEventListener("click",function(){ connected(picked); });
+  /* بعد الربط (محاكاة أو حقيقي): الأداة مربوطة، والعدّاد والشاشة يتحدثون */
+  function connected(t){
+    if(t){ t.on=true; t.by=usersOf(t.s); t.sug="";
       /* ربط من بطاقة ريم «اربط لينكدإن» يحسم البطاقة */
-      if(who==="reem"&&picked.s==="linkedin"){ var e=emp(who), list=empThread(who), i=-1; list.forEach(function(m,k){ if(i<0&&m.wait&&!m.done&&/^اربط/.test(m.wait.a[0])) i=k; });
+      if(who==="reem"&&t.s==="linkedin"){ var e=emp(who), list=empThread(who), i=-1; list.forEach(function(m,k){ if(i<0&&m.wait&&!m.done&&/^اربط/.test(m.wait.a[0])) i=k; });
         if(i>-1){ e.on=true; e.since="شغّالة منذ الحين"; resolveWait(e,list,i,"اربط لينكدإن",list[i].wait.r[0]); } }
     }
-    closeModal(); $("#toolsCnt").textContent=TOOLS.filter(function(t){return t.on}).length+" مربوطة"; renderThread(); });
+    closeModal(); toolsCount(); renderThread(); }
   function openTools(){ allOpen=false; tshown=24; go("tools"); }
   $("#toolsLink").addEventListener("click",openTools);
 
