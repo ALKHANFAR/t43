@@ -1152,6 +1152,29 @@ var I = {
     var input=part&&part.input&&typeof part.input==="object"?part.input:{};
     return input.activeTitle||input.doneTitle||input.title||part.toolName||"خطوة Activepieces";
   }
+  function siyNativeMarkdown(text){
+    var lines=String(text||"").split(/\r?\n/),out=[],i=0;
+    function inline(value){return esc(value).replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>").replace(/`([^`]+)`/g,"<code>$1</code>");}
+    while(i<lines.length){
+      var line=lines[i];
+      if(/^\s*\|.*\|\s*$/.test(line)&&i+1<lines.length&&/^\s*\|?[\s:|-]+\|\s*$/.test(lines[i+1])){
+        var rows=[];
+        while(i<lines.length&&/^\s*\|.*\|\s*$/.test(lines[i])){
+          if(rows.length!==1) rows.push(lines[i].trim().replace(/^\||\|$/g,"").split("|").map(function(cell){return cell.trim();}));
+          else rows.push(null);
+          i++;
+        }
+        var head=rows.shift()||[],body=rows.filter(Boolean);
+        out.push('<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;margin:10px 0"><thead><tr>'+head.map(function(c){return '<th style="text-align:start;border-bottom:1px solid var(--hair);padding:6px">'+inline(c)+'</th>';}).join("")+'</tr></thead><tbody>'+body.map(function(row){return '<tr>'+row.map(function(c){return '<td style="border-bottom:1px solid var(--hair);padding:6px">'+inline(c)+'</td>';}).join("")+'</tr>';}).join("")+'</tbody></table></div>');
+        continue;
+      }
+      if(/^#{1,3}\s+/.test(line)){out.push('<p><b>'+inline(line.replace(/^#{1,3}\s+/,""))+'</b></p>');i++;continue;}
+      if(/^\s*[-*]\s+/.test(line)){var items=[];while(i<lines.length&&/^\s*[-*]\s+/.test(lines[i])){items.push('<li>'+inline(lines[i].replace(/^\s*[-*]\s+/,""))+'</li>');i++;}out.push('<ul>'+items.join("")+'</ul>');continue;}
+      if(line.trim()) out.push('<p>'+inline(line)+'</p>');
+      i++;
+    }
+    return out.join("");
+  }
   function siyNativeSnapshotHtml(snapshot){
     var all=snapshot&&Array.isArray(snapshot.messages)?snapshot.messages:[];
     var assistant=null;
@@ -1160,7 +1183,7 @@ var I = {
     var texts=parts.filter(function(p){return p&&p.type==="text"&&typeof p.text==="string"&&p.text.trim();}).map(function(p){return p.text.trim();});
     var thinking=parts.filter(function(p){return p&&(p.type==="thinking-status"||p.type==="reasoning")&&typeof p.text==="string"&&p.text.trim();}).map(function(p){return p.text.trim();});
     var tools=parts.filter(function(p){return p&&p.type==="tool-call";}).slice(-8);
-    var html=texts.length?siyReplyHtml(texts.join("\n\n")):siyReplyHtml(thinking[thinking.length-1]||"Activepieces يعمل على طلبك الآن…");
+    var html=texts.length?siyNativeMarkdown(texts.join("\n\n")):siyReplyHtml(thinking[thinking.length-1]||"Activepieces يعمل على طلبك الآن…");
     if(tools.length){
       html+='<div class="nr" style="margin-top:12px;border-top:1px solid var(--hair);padding-top:8px">'+tools.map(function(part){
         var ok=part.status==="COMPLETED"||part.status==="SUCCEEDED"||part.output!==undefined;

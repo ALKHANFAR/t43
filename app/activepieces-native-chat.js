@@ -31,7 +31,7 @@
     if(id){
       try{return await getConversation(id);}catch(error){ if(!/not.found|404|ENTITY_NOT_FOUND/i.test(error.message||"")) throw error; forget(); }
     }
-    var conversation=await request("/conversations",{method:"POST",body:{title:(title||"محادثة سيادة").slice(0,100),modelName:"smart"}});
+    var conversation=await request("/conversations",{method:"POST",body:{title:(title||"محادثة سيادة").slice(0,100),modelName:"deepseek-v4-pro"}});
     saveId(conversation.id);
     return conversation;
   }

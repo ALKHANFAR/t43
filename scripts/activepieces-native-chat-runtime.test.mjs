@@ -31,7 +31,7 @@ test('native Siyadah chat uses the authenticated Activepieces conversation runti
   assert.equal(updates.length,1);
   assert.equal(dom.window.localStorage.getItem('siyadah.activepieces.conversation_id'),'conv-1');
   assert.equal(calls[0].url,'/api/v1/agents/conversations');
-  assert.deepEqual(JSON.parse(calls[0].options.body),{title:'اعرض الفلوهات فقط',modelName:'smart'});
+  assert.deepEqual(JSON.parse(calls[0].options.body),{title:'اعرض الفلوهات فقط',modelName:'deepseek-v4-pro'});
   assert.ok(calls.every(call=>call.options.headers.Authorization==='Bearer test-user-token'));
   assert.ok(calls.every(call=>!String(call.url).includes('/mcp')));
   assert.ok(calls.every(call=>!String(call.url).includes('deepseek')));
