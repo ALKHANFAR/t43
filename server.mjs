@@ -128,6 +128,7 @@ async function onboarding(req,res){
       return json(res,200,{ok:true,profile:profileView(profile),suggestions:profile.suggestions},sessionHeaders);
     }
     if(input.op==='recommend_employees')return json(res,200,{ok:true,suggestions:await profiles.recommend(companyId,input.goal)},sessionHeaders);
+    if(input.op==='add_knowledge')return json(res,201,{ok:true,...await profiles.addKnowledge({companyId,topic:input.topic,key:input.key,value:input.value})},sessionHeaders);
     if(input.op==='select_employee'){
       const row=await profiles.read(companyId),suggestions=Array.isArray(row?.suggestions_json)?row.suggestions_json:[],suggestion=suggestions.find(item=>item.id===input.suggestion_id);
       if(!suggestion)throw new CompanyProfileError('invalid_suggestion','اختر موظفًا من الاقتراحات الحالية.',400);

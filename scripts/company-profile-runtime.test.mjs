@@ -95,3 +95,26 @@ test('knowledge and employees are always read through the owning company id',asy
   assert.equal(seen.every(call=>call.values[0]==='company_alpha'||call.values[0]==='company_beta'),true);
   assert.equal(seen.filter(call=>call.text.includes('siyadah_company_knowledge_items')||call.text.includes('siyadah_digital_employees')).every(call=>/company_id=\$1/.test(call.text)),true);
 });
+
+test('user correction creates a new knowledge version without deleting unrelated website facts',async()=>{
+  const calls=[],profile={company_id:'company_alpha',knowledge_version:1,profile_json:{facts:[
+    {id:'web-price',topic:'pricing',key:'monthly_price',value:'99 ريال',sourceType:'company_website'},
+    {id:'web-service',topic:'services',key:'delivery',value:'التوصيل',sourceType:'company_website'},
+  ]}};
+  const query=async(text,values=[])=>{
+    calls.push({text,values});
+    if(text.startsWith('SELECT * FROM siyadah_company_profiles'))return {rows:[profile]};
+    return {rows:[],rowCount:1};
+  };
+  const service=createCompanyProfileService({query});
+  const result=await service.addKnowledge({companyId:'company_alpha',topic:'pricing',key:'monthly_price',value:'149 ريال'});
+  assert.equal(result.knowledgeVersion,2);
+  assert.equal(result.fact.value,'149 ريال');
+  const profileUpdate=calls.find(call=>call.text.startsWith('UPDATE siyadah_company_profiles SET profile_json'));
+  const saved=JSON.parse(profileUpdate.values[1]);
+  assert.equal(saved.facts.some(fact=>fact.key==='delivery'&&fact.value==='التوصيل'),true);
+  assert.equal(saved.facts.some(fact=>fact.key==='monthly_price'&&fact.value==='149 ريال'),true);
+  assert.equal(saved.facts.some(fact=>fact.key==='monthly_price'&&fact.value==='99 ريال'),false);
+  assert.equal(calls.some(call=>call.text.includes("status='superseded'")&&call.values[0]==='company_alpha'),true);
+  assert.equal(calls.some(call=>call.text.startsWith('UPDATE siyadah_digital_employees')&&call.values[1]===2),true);
+});
