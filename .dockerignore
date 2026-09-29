@@ -11,6 +11,8 @@ evidence
 *.csv
 *.md
 package*.json
+!package.json
+!package-lock.json
 Dockerfile
 .dockerignore
 .editorconfig
