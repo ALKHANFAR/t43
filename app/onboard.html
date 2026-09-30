@@ -50,14 +50,13 @@ h1{font-family:var(--f-display);font-weight:300;font-size:clamp(1.7rem,4vw,2.5re
 
 .field{margin-block-end:18px}
 .field label{display:block;font-family:var(--f-display);font-size:.8rem;color:var(--ash);margin-block-end:8px}
+.optional{font-family:var(--f-body);font-size:.75rem;color:var(--ash);margin-inline-start:4px}
 .in{width:100%;padding:13px 0;border:0;border-block-end:1px solid var(--field-edge);background:none;font-size:1.05rem;transition:border-color .2s}
 .in:focus{outline:none;border-block-end-color:var(--accent)}
 .in::placeholder{color:#757575}
 textarea.in{resize:vertical;min-height:120px;line-height:1.8;border:1px solid var(--field-edge);padding:14px 16px;font-size:1.02rem}
 textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-wash)}
 
-
-.hint{display:flex;align-items:center;gap:10px;font-size:.875rem;color:var(--ash);margin-block-start:12px}
 
 /* قراءة الموقع — تصير في الخلفية، العميل يشوف النتيجة فقط */
 .site{position:relative;overflow:hidden;border:1px solid var(--hair);padding:14px 16px;margin-block-start:12px;display:flex;align-items:center;gap:12px;font-size:.875rem;color:var(--ash);min-height:52px;transition:border-color .3s ease,background-color .3s ease}
@@ -68,8 +67,6 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 .site.ok{border-color:var(--accent-edge);background:var(--accent-wash);color:var(--ink)}
 .site b{font-weight:500}
 .site small{display:block;color:var(--ash);font-size:.8rem}
-.discover{display:flex;flex-wrap:wrap;gap:8px;margin-block-start:14px;color:var(--ash);font-size:.78rem}
-.discover span{border:1px solid var(--hair);padding:4px 9px;background:var(--paper)}
 .kb{border:1px solid var(--hair);margin-block-end:18px}
 .kb__h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-block-end:1px solid var(--hair);background:var(--wash);font-family:var(--f-display);font-size:.8rem;color:var(--ash)}
 .kb__h b{font-weight:400;color:var(--ink);font-size:.95rem}
@@ -126,8 +123,6 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 .receipt__h{padding:12px 16px;background:var(--wash);border-block-end:1px solid var(--hair);font-family:var(--f-display);font-size:.8rem;color:var(--ash)}
 .receipt__row{display:grid;grid-template-columns:18px 1fr auto;gap:10px;align-items:center;padding:12px 16px;border-block-end:1px solid var(--hair);font-size:.875rem}
 .receipt__row:last-child{border-block-end:0}.receipt__row svg{color:var(--accent)}.receipt__row small{color:var(--ash);font-size:.75rem}
-.first{border:1px solid var(--hair);padding:16px 18px;text-align:start;margin:0 0 26px;display:grid;grid-template-columns:auto 1fr;gap:12px;font-size:.875rem}
-.first small{display:block;color:var(--ash);font-size:.8rem}
 .live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
 /* الأزرار */
@@ -157,15 +152,15 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 
   <!-- 1 — موقعك -->
   <section class="step on" data-step="1">
-    <div class="k"><span class="drop"></span>أول موظفك يبدأ من هنا</div>
-    <h1>أعطنا رابطك. والباقي علينا.</h1>
-    <p class="sub">سيادة تقرأ الصفحات المهمة وتحوّلها إلى معرفة جاهزة لأول موظف في شركتك.</p>
-    <div class="field"><label for="site">موقعك — نقرأه ونعبّي الباقي عنك</label><input class="in" id="site" type="url" dir="ltr" style="text-align:left" placeholder="ufuq.sa" autofocus>
+    <div class="k"><span class="drop"></span>البداية</div>
+    <h1 id="startTitle">ابدأ من موقع شركتك.</h1>
+    <p class="sub" id="startSub">نستخرج ما يحتاجه موظفك الأول، مع مصدر كل معلومة.</p>
+    <div class="field"><div id="siteEntry"><label for="site">رابط موقع الشركة</label><input class="in" id="site" type="url" dir="ltr" style="text-align:left" placeholder="ufuq.sa" autofocus>
       <div class="site" id="siteSt" role="status" aria-live="polite" style="display:none"><span class="drop"></span><div id="siteTx"></div></div>
-      <div class="discover" role="group" aria-label="ما سنستخرجه من الموقع"><span>الخدمات والمنتجات</span><span>الأسئلة والسياسات</span><span>صوت الشركة</span></div>
+      </div>
       <button class="nosite" id="noSite" type="button" aria-expanded="false" aria-controls="alts">ما عندي موقع</button>
       <div class="alts" id="alts">
-        <div class="field"><label for="lines3">اكتب ثلاثة أسطر — وش تبيع، لمين، ووش يسألونك دايمًا</label>
+        <div class="field"><label for="lines3">ماذا تقدم؟</label>
           <textarea class="in" id="lines3" rows="3" placeholder="نوصّل طلبات المطاعم في الرياض وجدة. عملاؤنا مطاعم متوسطة. أكثر سؤال: كم عمولتكم وكم يوم التفعيل؟"></textarea></div>
         <div class="field"><label for="co">اسم الشركة</label><input class="in" id="co" type="text" placeholder="شركة الأفق"></div>
       </div>
@@ -174,29 +169,27 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 
   <!-- 2 — أولويتك -->
   <section class="step" data-step="2">
-    <div class="k"><span class="drop"></span>فهمنا شركتك</div>
-    <h1>هذه بصمة شركتك الأولى.</h1>
-    <p class="sub">راجعها، وحدد أولويتك إن رغبت.</p>
+    <div class="k"><span class="drop"></span>ملف شركتك</div>
+    <h1>هذه شركتك كما فهمناها.</h1>
+    <p class="sub">راجع المعلومات، ثم اختر ما يبدأ به موظفك.</p>
     <div id="companyRead"></div>
-    <textarea class="in" id="brief" aria-label="أهم أولوية للشركة" placeholder="مثلًا: أبي أتابع العملاء الجدد أسرع، أو أخفف أسئلة الدعم المتكررة."></textarea>
-    <div class="hint"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4M12 16h.01"/></svg>تقدر تتركها فاضية ونرتب الاقتراحات من موقعك.</div>
+    <div class="field"><label for="brief">ما أول مهمة تريدها؟ <span class="optional">اختياري</span></label><textarea class="in" id="brief" placeholder="مثلًا: ابنِ لي موظف سوشيال ميديا."></textarea></div>
   </section>
 
   <!-- 3 — الخطة -->
   <section class="step" data-step="3">
-    <div class="k"><span class="drop"></span>أفضل بداية لشركتك</div>
-    <h1 id="h3">ثلاثة موظفين. بداية واحدة ذكية.</h1>
-    <p class="sub" id="s3">اختر واحدًا. سنوضح لك لماذا يناسبك.</p>
+    <div class="k"><span class="drop"></span>اقتراحاتك</div>
+    <h1 id="h3">اختر أول موظف.</h1>
+    <p class="sub" id="s3">اختر اقتراحًا لترى سبب ملاءمته.</p>
     <div id="plan"></div>
   </section>
 
   <!-- 4 — شغّل -->
   <section class="step done" data-step="4">
     <div class="av" id="doneAv">س</div>
-    <h1 id="doneH">موظفك جاهز للخطوة التالية.</h1>
-    <p class="sub" id="doneP">ربطناه بمعرفة شركتك وتعليماته. لن يعمل أو يرسل شيئًا حتى تكتمل أدوات مهمته واختبارها.</p>
-    <div class="receipt" role="group" aria-label="ما تم تجهيزه"><div class="receipt__h">ما تم تجهيزه الآن</div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span>معرفة شركتك مرتبطة بالموظف</span><small id="doneKnowledge">الإصدار 1</small></div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span>الدور والتعليمات وحدود المعرفة</span><small>جاهزة</small></div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span>مساحة عمل مستقلة لشركتك</span><small>قيد التجهيز</small></div></div>
-    <div class="first"><svg class="ic" viewBox="0 0 24 24" style="margin-block-start:4px"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg><div>التالي: نربط أدوات مهمته ونختبر أول نتيجة.<small>لن يعمل أو يرسل شيئًا قبل اكتمال الأدوات والاختبار.</small></div></div>
+    <h1 id="doneH">مسودة موظفك جاهزة.</h1>
+    <p class="sub" id="doneP">دوره ومعرفته جاهزان للمراجعة. أدواته غير متصلة.</p>
+    <div class="receipt" role="group" aria-label="حالة الموظف"><div class="receipt__h">حالة الموظف</div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span>معرفة الشركة</span><small id="doneKnowledge">الإصدار 1</small></div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span>الدور والتعليمات</span><small>جاهزة</small></div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span>الأدوات والتنفيذ</span><small>بانتظار الربط</small></div></div>
   </section>
 
 </main>

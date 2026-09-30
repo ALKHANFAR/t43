@@ -18,8 +18,8 @@
     var url=new URL(raw);if(!/^https?:$/.test(url.protocol))throw new Error('اكتب رابط موقع صالح.');return url.toString();
   }
   function noSiteOn(){return $('#alts').classList.contains('on');}
-  function step1Ready(){return noSiteOn()?!!$('#lines3').value.trim():!!PROFILE;}
-  function setBusy(value,label){busy=value;$('#next').disabled=value;$('#site').disabled=value;$('#noSite').disabled=value;if(label){$('#next').textContent=label;$('#live').textContent=label;}}
+  function step1Ready(){return noSiteOn()?!!$('#lines3').value.trim()&&!!$('#co').value.trim():!!PROFILE;}
+  function setBusy(value,label){busy=value;$('#next').disabled=value;$('#site').disabled=value;$('#noSite').disabled=value;$('#live').textContent=value?(label||''):'';if(label)$('#next').textContent=label;}
 
   function siteState(kind,title,detail){
     var st=$('#siteSt');st.style.display='flex';st.className='site '+kind;
@@ -39,7 +39,7 @@
     PROFILE=null;SUGGESTIONS=[];SELECTED=null;setBusy(true,'نبحث بعمق…');siteState('busy','نبحث في '+new URL(url).hostname,'لن نحفظ معلومة بلا مصدر واقتباس واضح');
     try{
       await finishEnrichment(await api({op:'enrich_company',website_url:url}));
-      siteState('ok',PROFILE.companyName||new URL(url).hostname,PROFILE.factCount+' حقائق مثبتة من '+PROFILE.pagesRead+' صفحات · لم نعتمد '+PROFILE.rejectedClaims+' ادعاءات بلا دليل كافٍ');
+      siteState('ok',PROFILE.companyName||new URL(url).hostname,PROFILE.factCount+' معلومات من '+PROFILE.pagesRead+' صفحات');
     }catch(error){PROFILE=null;siteState('',error.message,'لم نحفظ نتيجة غير مكتملة.');}
     finally{setBusy(false);show();}
   }
@@ -63,10 +63,13 @@
     if(!PROFILE)return '';
     var areas=(PROFILE.knowledgeAreas||[]).map(function(topic){return '<span>'+esc(TOPIC_LABELS[topic]||topic)+'</span>';}).join('');
     var meta=[PROFILE.industry,PROFILE.brandTone].filter(Boolean).map(function(value){return '<span>'+esc(value)+'</span>';}).join('')+areas;
-    return '<div class="kb"><div class="kb__h"><span class="drop"></span><b>'+esc(PROFILE.companyName||'شركتك')+'</b><span>بصمة مثبتة قابلة للتعديل</span></div>'+
-      '<div class="kb__body"><div class="coverage" style="--coverage:'+Number(PROFILE.coverageScore||0)+'"><strong>'+esc(PROFILE.coverageScore||0)+'٪</strong></div><div><p class="kb__summary">'+esc(PROFILE.summary||'يمكنك إكمال معلومات الشركة وتصحيحها لاحقًا من قاعدة المعرفة.')+'</p><div class="kb__meta">'+meta+'</div></div></div>'+
-      '<div class="kb__g"><div><div class="kb__v">'+esc(PROFILE.pagesRead||0)+'</div><div class="kb__l">صفحات راجعناها</div></div><div><div class="kb__v">'+esc(PROFILE.factCount||0)+'</div><div class="kb__l">حقائق مثبتة</div></div><div><div class="kb__v">v'+esc(PROFILE.knowledgeVersion||1)+'</div><div class="kb__l">إصدار المعرفة</div></div></div>'+
-      '<div class="kb__f"><span class="drop"></span>كل حقيقة معها مصدر واقتباس. استبعدنا '+esc(PROFILE.rejectedClaims||0)+' بلا دليل كافٍ.</div></div>';
+    var sourced=Number(PROFILE.pagesRead||0)>0,verified=Number(PROFILE.factCount||0)>0;
+    var status=sourced?(verified?'من موقعك · راجعها':'لم نجد معلومات كافية · أضفها لاحقًا'):'من وصفك · راجعه';
+    var footer=sourced?(verified?'راجعنا '+esc(PROFILE.pagesRead||0)+' صفحات. استبعدنا '+esc(PROFILE.rejectedClaims||0)+' معلومات بلا مصدر كافٍ.':'يمكنك إضافة معلومات الشركة وتصحيحها لاحقًا.'):'هذه المعلومات من وصفك، ويمكنك تعديلها لاحقًا.';
+    return '<div class="kb"><div class="kb__h"><span class="drop"></span><b>'+esc(PROFILE.companyName||'شركتك')+'</b><span>'+status+'</span></div>'+
+      '<div class="kb__body"><div class="coverage" role="img" aria-label="تغطية معلومات الشركة: '+(verified?esc(PROFILE.coverageScore||0)+'٪':'غير متاحة')+'" style="--coverage:'+(verified?Math.min(100,Math.max(0,Number(PROFILE.coverageScore||0))):0)+'"><strong>'+(verified?esc(PROFILE.coverageScore||0)+'٪':'—')+'</strong></div><div><p class="kb__summary">'+esc(PROFILE.summary||'يمكنك إكمال معلومات الشركة وتصحيحها لاحقًا من قاعدة المعرفة.')+'</p><div class="kb__meta">'+meta+'</div></div></div>'+
+      '<div class="kb__g"><div><div class="kb__v">'+esc(PROFILE.pagesRead||0)+'</div><div class="kb__l">صفحات راجعناها</div></div><div><div class="kb__v">'+esc(PROFILE.factCount||0)+'</div><div class="kb__l">معلومات محفوظة</div></div><div><div class="kb__v">v'+esc(PROFILE.knowledgeVersion||1)+'</div><div class="kb__l">إصدار المعرفة</div></div></div>'+
+      '<div class="kb__f"><span class="drop"></span>'+footer+'</div></div>';
   }
   function renderSuggestions(){
     var selected=SUGGESTIONS.find(function(item){return item.id===SELECTED;});
@@ -82,7 +85,7 @@
     if(step===1){next.innerHTML='التالي <span class="drop"></span>';next.disabled=busy||!step1Ready();}
     if(step===2){$('#companyRead').innerHTML=companySummary();next.innerHTML='اعرض اقتراحاتي <span class="drop"></span>';next.disabled=busy;$('#brief').focus();}
     if(step===3){renderSuggestions();var picked=SUGGESTIONS.find(function(item){return item.id===SELECTED;});next.innerHTML=(picked?'جهّز '+esc(picked.name):'اختر موظفًا')+' <span class="drop"></span>';next.disabled=busy||!SELECTED;}
-    if(step===4){next.innerHTML='افتح مساحة الموظف <span class="drop"></span>';next.disabled=false;if(CREATED){$('#doneAv').textContent=CREATED.initial;$('#doneH').textContent=CREATED.name+' جاهز للخطوة التالية.';$('#doneKnowledge').textContent='الإصدار '+esc(CREATED.knowledgeVersion||PROFILE&&PROFILE.knowledgeVersion||1);}}
+    if(step===4){next.innerHTML='افتح مساحة العمل <span class="drop"></span>';next.disabled=false;if(CREATED){$('#doneAv').textContent=CREATED.initial;$('#doneKnowledge').textContent='الإصدار '+esc(CREATED.knowledgeVersion||PROFILE&&PROFILE.knowledgeVersion||1);}}
     window.scrollTo({top:0,behavior:'smooth'});
   }
 
@@ -90,9 +93,11 @@
   $('#site').addEventListener('keydown',function(event){if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}});
   $('#noSite').addEventListener('click',function(){
     var alternatives=$('#alts'),on=!alternatives.classList.contains('on');alternatives.classList.toggle('on',on);this.setAttribute('aria-expanded',String(on));this.textContent=on?'عندي موقع':'ما عندي موقع';
-    if(on){$('#siteSt').style.display='none';PROFILE=null;SUGGESTIONS=[];$('#lines3').focus();}show();
+    $('#siteEntry').hidden=on;$('#startTitle').textContent=on?'عرّفنا بشركتك.':'ابدأ من موقع شركتك.';$('#startSub').textContent=on?'اسمها وما تقدمه يكفيان لنبدأ.':'نستخرج ما يحتاجه موظفك الأول، مع مصدر كل معلومة.';
+    if(on){$('#siteSt').style.display='none';PROFILE=null;SUGGESTIONS=[];$('#lines3').focus();}else{$('#site').focus();}show();
   });
   $('#lines3').addEventListener('input',show);
+  $('#co').addEventListener('input',show);
   $('#plan').addEventListener('click',function(event){var button=event.target.closest('[data-suggestion]');if(!button)return;SELECTED=button.dataset.suggestion;show();});
   $('#next').addEventListener('click',async function(){
     if(busy)return;

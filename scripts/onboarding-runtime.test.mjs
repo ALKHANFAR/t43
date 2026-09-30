@@ -12,12 +12,12 @@ test('onboarding uses live company enrichment and prepares one employee safely',
   assert.match(js,/SUGGESTIONS\.slice\(0,3\)/);
   assert.ok(!js.includes('pages:14'));
   assert.ok(!html.includes('وافق وشغّل'));
-  assert.match(html,/موظفك جاهز للخطوة التالية/);
-  assert.match(html,/لن يعمل أو يرسل شيئًا/);
-  assert.match(html,/هذه بصمة شركتك الأولى/);
-  assert.match(html,/ما تم تجهيزه الآن/);
+  assert.match(html,/مسودة موظفك جاهزة/);
+  assert.match(html,/أدواته غير متصلة/);
+  assert.match(html,/هذه شركتك كما فهمناها/);
+  assert.match(html,/حالة الموظف/);
   assert.match(js,/أفضل بداية/);
-  assert.match(js,/حقائق مثبتة/);
+  assert.match(js,/معلومات محفوظة/);
   assert.match(server,/factCount:Array\.isArray\(profile\.facts\)/);
   assert.match(server,/knowledgeAreas:Array\.from/);
 });
@@ -39,6 +39,8 @@ test('onboarding restores an existing company profile instead of restarting webs
   assert.equal(w.document.querySelector('#stepLbl').textContent,'2 من 4');
   assert.match(w.document.querySelector('#companyRead').textContent,/شركة اختبار/);
   assert.equal(w.document.querySelectorAll('#companyRead .kb__v')[1].textContent,'0');
+  assert.match(w.document.querySelector('#companyRead').textContent,/لم نجد معلومات كافية/);
+  assert.equal(w.document.querySelector('#companyRead .coverage strong').textContent,'—');
   dom.window.close();
 });
 
@@ -60,5 +62,27 @@ test('onboarding keeps logout available when the server request fails',async()=>
   assert.equal(requests.at(-1).options.credentials,'same-origin');
   assert.equal(w.document.querySelector('#logoutBtn').disabled,false);
   assert.match(w.document.querySelector('#logoutStatus').textContent,/تعذّر تسجيل الخروج/);
+  dom.window.close();
+});
+
+test('without a website, onboarding asks for company name and description before continuing',async()=>{
+  const [html,js]=await Promise.all([
+    readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),
+    readFile(new URL('../app/onboard.js',import.meta.url),'utf8'),
+  ]);
+  const dom=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html',runScripts:'outside-only'}),w=dom.window;
+  w.scrollTo=()=>{};
+  w.fetch=async()=>{throw new Error('no saved company')};
+  w.eval(js);await new Promise(resolve=>setImmediate(resolve));
+  w.document.querySelector('#noSite').click();
+  assert.equal(w.document.querySelector('#siteEntry').hidden,true);
+  assert.equal(w.document.querySelector('#startTitle').textContent,'عرّفنا بشركتك.');
+  w.document.querySelector('#lines3').value='نقدم خدمة توصيل للمطاعم';
+  w.document.querySelector('#lines3').dispatchEvent(new w.Event('input'));
+  assert.equal(w.document.querySelector('#next').disabled,true);
+  w.document.querySelector('#co').value='شركة مثال';
+  w.document.querySelector('#co').dispatchEvent(new w.Event('input'));
+  assert.equal(w.document.querySelector('#next').disabled,false);
+  assert.equal(w.document.querySelector('#live').textContent,'');
   dom.window.close();
 });

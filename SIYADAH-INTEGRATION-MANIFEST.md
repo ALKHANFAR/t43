@@ -15,6 +15,7 @@ This repository has one delivery-candidate branch:
 - The account example now starts with a specific social media employee request, reveals the role and publishing limits, and ends at a reviewable draft before tools are connected. Stage labels are Request, Plan, and Result in both languages.
 - Account copy now leaves login and signup at one heading and their fields; the selectable story reveals detail only when chosen. The original mark is white without a surrounding box, while recovery retains its necessary instruction.
 - Onboarding offers a visible exit. Chat and onboarding report logout failure in place and redirect only after the server confirms logout.
+- Onboarding now uses a shorter four-step narrative: company site or description, company understanding, employee choice, and a reviewable employee draft. The no-site path changes its heading and requires both company name and description. Company information is labeled by its actual source, and zero facts never appear as verified coverage.
 - Shared Siyadah appearance tokens across public and customer pages; page layouts stay separate so future themes can replace visual values without changing customer flows.
 - Shared typography, measure, and spacing roles in `siyadah-theme.css`, documented in `SIYADAH-TYPOGRAPHY.md`; the account page applies the full scale in Arabic and English.
 - Cloudlight-inspired bilingual public story showing company context, permission, and proof as selectable illustrative stages.
