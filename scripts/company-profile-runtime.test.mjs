@@ -125,3 +125,27 @@ test('user correction creates a new knowledge version without deleting unrelated
   assert.equal(calls.some(call=>call.text.includes("status='superseded'")&&call.values[0]==='company_alpha'),true);
   assert.equal(calls.some(call=>call.text.startsWith('UPDATE siyadah_digital_employees')&&call.values[1]===2),true);
 });
+
+test('employee conversations persist idempotently inside the owning company',async()=>{
+  const conversations=[],messages=[];
+  const query=async(sql,values=[])=>{
+    if(sql.startsWith('INSERT INTO siyadah_conversations')){
+      const [company_id,id,employee_id,title]=values,current=conversations.find(row=>row.company_id===company_id&&row.id===id);
+      if(current){current.employee_id=employee_id||current.employee_id;current.updated_at='2026-09-30T02:00:00Z';}else conversations.push({company_id,id,employee_id,title,updated_at:'2026-09-30T01:00:00Z'});return {rows:[]};
+    }
+    if(sql.startsWith('INSERT INTO siyadah_conversation_messages')){
+      const [company_id,conversation_id,request_id,user,assistant]=values;
+      for(const [role,content] of [['user',user],['assistant',assistant]])if(!messages.some(row=>row.company_id===company_id&&row.conversation_id===conversation_id&&row.request_id===request_id&&row.role===role))messages.push({company_id,conversation_id,request_id,role,content,created_at:'2026-09-30T01:00:00Z'});
+      return {rows:[]};
+    }
+    if(sql.startsWith('SELECT id,employee_id,title'))return {rows:conversations.filter(row=>row.company_id===values[0])};
+    if(sql.startsWith('SELECT conversation_id,role'))return {rows:messages.filter(row=>row.company_id===values[0])};
+    throw new Error(`unexpected query: ${sql}`);
+  };
+  const service=createCompanyProfileService({query}),input={conversationId:'chat_one',employeeId:'11111111-1111-4111-8111-111111111111',requestId:'request_one',userMessage:'تابع العميل',assistantMessage:'تم التنفيذ'};
+  await service.recordConversation({companyId:'company_alpha',...input});await service.recordConversation({companyId:'company_alpha',...input});
+  await service.recordConversation({companyId:'company_beta',...input,conversationId:'chat_two'});
+  const alpha=await service.listConversations('company_alpha'),beta=await service.listConversations('company_beta');
+  assert.equal(alpha.length,1);assert.equal(alpha[0].messages.length,2);assert.equal(alpha[0].messages[0].content,'تابع العميل');assert.equal(alpha[0].messages[1].content,'تم التنفيذ');
+  assert.equal(beta.length,1);assert.equal(beta[0].id,'chat_two');assert.equal(beta[0].messages.length,2);
+});

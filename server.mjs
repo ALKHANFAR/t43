@@ -238,7 +238,7 @@ async function publicChat(req,res){
     const service=await tenantProjects(),companyId=resolved.session.companyId;
     if(input.op==='hydrate'){
       const flows=await service.listFlows(companyId),profiles=await companyProfiles(),saved=await profiles.listEmployees(companyId),savedFlows=new Set(saved.map(item=>item.flowId)),profile=await profiles.read(companyId),recentWork=await profiles.recentWork(companyId);
-      return json(res,200,{ok:true,company:profile?.company_name||resolved.account.company_name,company_settings:await profiles.readSettings(companyId),team:saved.concat(flows.filter(flow=>!savedFlows.has(flow.id)).map(employee)),memory:[],owned_knowledge:await profiles.ownedKnowledge(companyId),recent_work:recentWork,work_count:recentWork.length,conversations:[],pending_work:[]},sessionHeaders);
+      return json(res,200,{ok:true,company:profile?.company_name||resolved.account.company_name,company_settings:await profiles.readSettings(companyId),team:saved.concat(flows.filter(flow=>!savedFlows.has(flow.id)).map(employee)),memory:[],owned_knowledge:await profiles.ownedKnowledge(companyId),recent_work:recentWork,work_count:recentWork.length,conversations:await profiles.listConversations(companyId),pending_work:[]},sessionHeaders);
     }
     if(input.op==='employee_state'){
       const profiles=await companyProfiles(),saved=await profiles.findEmployee(companyId,input.employee_id);
@@ -262,9 +262,11 @@ async function publicChat(req,res){
         const requestId=typeof input.request_id==='string'&&input.request_id?input.request_id:randomUUID();
         const run=await service.runFlow({tenantId:companyId,flowId:saved.activepieces_flow_id,requestId,message:input.message});
         const tools=run.tool.pieceName==='@activepieces/piece-http'?['اتصال ويب']:[];
-        const updated=await profiles.recordEmployeeRun({companyId,employeeId:saved.id,flowId:run.flowId,runId:run.runId,result:run.result,tools});
+        const updated=await profiles.recordEmployeeRun({companyId,employeeId:saved.id,flowId:run.flowId,runId:run.runId,result:run.result,tools,conversationId});
         const proof={recordId:`proof_${run.runId}`,employeeId:saved.id,flowId:run.flowId,runId:run.runId,work_id:`work_${run.runId}`,conversation_id:conversationId,subject:`مهمة ${saved.name}`,message:'اكتملت المهمة ووصل رد الخدمة.',status:'succeeded',proof:`ردت الخدمة برمز ${run.result.status||200}`,at:run.finishedAt};
-        return json(res,200,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',work_id:proof.work_id,reply:`نفّذت المهمة ووصلت النتيجة بنجاح.`,employee:updated,recent_work:[proof]},sessionHeaders);
+        const reply='نفّذت المهمة ووصلت النتيجة بنجاح.';
+        await profiles.recordConversation({companyId,conversationId,employeeId:saved.id,requestId,userMessage:input.message,assistantMessage:reply});
+        return json(res,200,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',work_id:proof.work_id,reply,employee:updated,recent_work:[proof]},sessionHeaders);
       }
       if(wantsEmployee(input.message)){
         await service.ensure({tenantId:companyId,displayName:`شركة سيادة ${companyId.slice(-8)}`});
