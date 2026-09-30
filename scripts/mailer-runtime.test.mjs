@@ -36,5 +36,6 @@ test('mailer follows the requested interface language with one shared branded la
   await mailer.sendPasswordReset({to:'user@example.com',url:'https://siyadah.example/reset',locale:'en-US'});
   await mailer.sendEmailVerification({to:'user@example.com',url:'https://siyadah.example/verify',locale:'ar-SA'});
   assert.equal(requests[0].subject,'Reset your Siyadah password');assert.match(requests[0].html,/dir="ltr"/);assert.match(requests[0].html,/SIYADAH|Siyadah/i);
+  assert.match(requests[0].html,/#0B844B/);assert.doesNotMatch(requests[0].html,/#1029CF/);
   assert.equal(requests[1].subject,'أكد بريدك في سيادة');assert.match(requests[1].html,/dir="rtl"/);assert.match(requests[1].html,/siyadah-ai\.com/);
 });
