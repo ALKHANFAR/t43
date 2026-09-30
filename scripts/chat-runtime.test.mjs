@@ -125,6 +125,83 @@ test('account loading error follows interface language without changing a saved 
   }finally{p.close();}
 });
 
+test('saved connections use interface language while their real account and employee names survive switching',async()=>{
+  const connection={id:'C'.repeat(21),pieceName:'@activepieces/piece-gmail',displayName:'Gmail',status:'ACTIVE',scope:'PROJECT',flowIds:['flow-1']};
+  const saved={id:'locale-conversation',title:'عميل الرياض',messages:[{role:'assistant',content:'وصلنا الطلب من العميل',at:'09:01'}]};
+  const p=await page({locale:'en',hydrate:{...empty,company:'شركة مدار',team:[employee],conversations:[saved]},integrations:{list:{ok:true,connections:[connection]}},hash:''});try{
+    assert.match(p.d.querySelector('#toolsCnt').textContent,/1 saved connection/);
+    p.d.querySelector('#toolsLink').click();await flush();
+    assert.match(thread(p),/Saved connections/);
+    assert.match(thread(p),/Assigned/);
+    assert.match(thread(p),/سارة/);
+    p.d.querySelector('[data-tool-details="gmail"]').click();
+    assert.match(p.d.querySelector('#mD').textContent,/Connection saved.*Run a real task.*سارة/);
+    assert.equal(p.d.querySelector('#mGo').hidden,true);
+    assert.equal(p.d.activeElement,p.d.querySelector('#mX'));
+    p.d.querySelector('#mX').click();p.d.querySelector('#localeToggle').click();
+    assert.match(p.d.querySelector('#toolsCnt').textContent,/اتصال محفوظ/);
+    assert.match(thread(p),/الاتصالات المحفوظة/);
+    p.d.querySelector('[data-chat="locale-conversation"]').click();
+    assert.match(thread(p),/وصلنا الطلب من العميل/);
+    assert.match(p.d.querySelector('#meBtn').textContent,/شركة مدار/);
+  }finally{p.close();}
+});
+
+test('connection load failure and retry labels follow interface language without claiming a connection',async()=>{
+  const p=await page({locale:'en',integrations:{list:new Error('offline')}});try{
+    p.d.querySelector('#toolsLink').click();await flush();
+    assert.match(thread(p),/Could not load connection status/);
+    assert.match(p.d.querySelector('#toolsCnt').textContent,/Connection status unavailable/);
+    assert.match(p.d.querySelector('[data-retry-tools]').textContent,/Try again/);
+    assert.doesNotMatch(thread(p),/Assigned|Connection saved/);
+    p.d.querySelector('#localeToggle').click();
+    assert.match(thread(p),/تعذّر تحميل حالة الاتصالات/);
+    assert.match(p.d.querySelector('#toolsCnt').textContent,/حالة الربط غير متاحة/);
+    assert.match(p.d.querySelector('[data-retry-tools]').textContent,/أعد المحاولة/);
+  }finally{p.close();}
+});
+
+test('real account waiting state shows no guessed tool scan or connection count before server readback',async()=>{
+  let finishList,finishMessage;
+  const listPending=new Promise(resolve=>{finishList=resolve;});
+  const messagePending=new Promise(resolve=>{finishMessage=resolve;});
+  const p=await page({locale:'en',integrations:{list:()=>listPending},message:()=>messagePending,hash:''});try{
+    assert.match(p.d.querySelector('#toolsCnt').textContent,/Connections not verified/);
+    send(p,'Build a social media employee');await flush();
+    assert.match(thread(p),/Processing your request/);
+    assert.equal(p.d.querySelector('#thread .toolscan'),null);
+    assert.equal(p.d.querySelector('#thread .scanmeta'),null);
+    assert.doesNotMatch(thread(p),/Gmail|Checked \d+ tools/);
+  }finally{
+    finishList({ok:true,connections:[]});
+    finishMessage({ok:true,conversation_id:'wait-test',reply:'Received'});
+    await flush();p.close();
+  }
+});
+
+test('English settings save retains Arabic company values, reply language, and stored conversation text',async()=>{
+  const initial={voice:'مباشر وهادئ',language:'auto',dialect:'سعودية بيضاء',preferredWords:['أبشر'],forbiddenWords:['مستحيل'],version:2};
+  const saved={id:'saved-settings',title:'رحلة العميل',messages:[{role:'user',content:'ابن لي موظف سوشل ميديا',at:'09:00'}]};
+  const p=await page({locale:'en',hydrate:{...empty,company:'شركة مدار',company_settings:initial,conversations:[saved]},update_company_settings:{ok:true,settings:{...initial,voice:'مختصر وواضح'},version:3},hash:''});try{
+    assert.equal(p.d.querySelector('#companyNameField').value,'شركة مدار');
+    assert.equal(p.d.querySelector('#companyVoice').value,'مباشر وهادئ');
+    assert.equal(p.d.querySelector('#companyLanguage').value,'auto');
+    assert.match(p.d.querySelector('#settingsSave').textContent,/Save settings/);
+    p.d.querySelector('#companyVoice').value='مختصر وواضح';
+    p.d.querySelector('#settingsSave').click();await flush();
+    const save=p.requests.find(r=>r.body.op==='update_company_settings');
+    assert.equal(save.body.voice,'مختصر وواضح');assert.equal(save.body.language,'auto');
+    assert.deepEqual(save.body.preferredWords,['أبشر']);
+    assert.match(p.d.querySelector('#settingsStatus').textContent,/Saved.*version 3/);
+    p.d.querySelector('[data-chat="saved-settings"]').click();
+    assert.match(thread(p),/ابن لي موظف سوشل ميديا/);
+    p.d.querySelector('#localeToggle').click();
+    assert.equal(p.d.querySelector('#companyVoice').value,'مختصر وواضح');
+    assert.equal(p.d.querySelector('#companyLanguage').value,'auto');
+    assert.match(thread(p),/ابن لي موظف سوشل ميديا/);
+  }finally{p.close();}
+});
+
 test('offline authenticated boot clears demo data, billing and fake connections',async()=>{
   const p=await page({hydrate:Error('offline')});try{
     assert.equal(p.w.__SIY_REAL__,true);assert.equal(p.w.EMPS.length,0);assert.equal(p.w.MEM.length,0);assert.equal(p.w.ACTIONS.length,0);

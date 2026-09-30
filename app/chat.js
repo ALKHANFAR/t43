@@ -196,10 +196,18 @@ var I = {
     var toggle=$("#localeToggle");if(toggle)toggle.setAttribute("aria-label",ui("التحويل إلى الإنجليزية","Switch to Arabic"));
   }
   function changeLocale(){
+    var knowledgeOpen=$("#memList")&&!$("#memList").hidden;
+    var knowledgeDraft=knowledgeOpen&&$("#kbEdit")&&!$("#kbEdit").hidden?{topic:$("#kbTopic").value,value:$("#kbValue").value,key:$("#kbEdit").dataset.key,status:$("#kbStatus").textContent}:null;
     locale=locale==="ar"?"en":"ar";
     try{sessionStorage.setItem("siyadah_locale",locale);}catch(e){}
     if(window.__SIY_LOAD_ERROR__&&live.siyadah&&live.siyadah[0]&&live.siyadah[0].uiLoadError)live.siyadah[0].t="<p>"+esc(loadErrorCopy())+"</p>";
     applyLocale();renderSide();renderBar();renderThread();renderPlan();toolsCount();refreshLiveLabels();siyRefreshBuilderConnection();
+    if(knowledgeOpen){renderMem();if(knowledgeDraft){var form=$("#kbEdit");form.hidden=false;form.dataset.key=knowledgeDraft.key;$("#kbTopic").value=knowledgeDraft.topic;$("#kbValue").value=knowledgeDraft.value;$("#kbStatus").textContent=knowledgeDraft.status;}}
+    if($("#pal")&&!$("#pal").hidden)renderPal();
+    if($("#modal").classList.contains("on")&&picked){
+      if(rc&&$("#mOk")){ $("#mOk").textContent=rc.methods[rc.index].type==="OAUTH2"?ui('سجّل الدخول عبر ','Sign in with ')+rc.tool.n:ui('احفظ الاتصال','Save connection');var selector=$("#mf0");if(selector&&selector.tagName==='SELECT'&&selector.options[0])selector.options[0].textContent=ui('اختر…','Select…'); }
+      else if(picked.connection){var c=picked.connection;$("#mD").textContent=(c.status==='ERROR'?ui('الاتصال فيه خطأ','Connection needs attention'):ui('الاتصال محفوظ؛ اختبر مهمة فعلية للتأكد من النتيجة','Connection saved. Run a real task to verify the outcome'))+ui(' · يستخدمها: ',' · Used by: ')+usersOf(picked.s);var check=$("[data-revalidate]",$("#mF")),disconnect=$("[data-disconnect]",$("#mF"));if(check)check.textContent=ui('اختبر الاتصال','Check connection');if(disconnect)disconnect.textContent=ui('افصل','Disconnect');}
+    }
   }
   document.addEventListener("click",function(event){if(event.target.closest("#localeToggle"))changeLocale();});
   applyLocale();
@@ -231,13 +239,14 @@ var I = {
       .replace(/\s{2,}/g," ").trim();
   }
   function acceptanceLabel(row){
-    var labels={draft_readback:"تم تجهيز طريقة العمل",flow_valid:"طريقة العمل سليمة",connection_ready:"الأداة جاهزة",execution_run:"اكتمل اختبار فعلي",provider_result:"وصلت نتيجة الخدمة",commercial_result:"ظهرت نتيجة أعمال مثبتة"};
+    var labels=locale==='en'?{draft_readback:'Work plan saved',flow_valid:'Work plan valid',connection_ready:'Tool ready',execution_run:'Real run completed',provider_result:'Provider result received',commercial_result:'Business outcome verified'}:{draft_readback:"تم تجهيز طريقة العمل",flow_valid:"طريقة العمل سليمة",connection_ready:"الأداة جاهزة",execution_run:"اكتمل اختبار فعلي",provider_result:"وصلت نتيجة الخدمة",commercial_result:"ظهرت نتيجة أعمال مثبتة"};
     return labels[row&&row.key]||customerText(row&& (row.label||row.key));
   }
   function siyRefsHtml(items){
     var refs=(items||[]).filter(function(x){return x&&typeof x[1]==="string"&&/^[A-Za-z0-9_-]+$/.test(x[1]);});
     if(!window.__SIY_REAL__||!refs.length) return "";
-    return '<details class="siyrefs"><summary>الدليل التقني</summary><div class="siyrefs__list">'+refs.map(function(x){return '<span>'+esc(customerText(x[0]))+' <code>'+esc(x[1])+'</code></span>';}).join("")+'</div></details>';
+    var refNames=locale==='en'?{'الطلب':'Request','المهمة':'Task','التشغيل':'Run','النتيجة':'Result','طريقة العمل':'Work plan','الموظف':'Employee'}:{};
+    return '<details class="siyrefs"><summary>'+ui('الدليل التقني','Technical evidence')+'</summary><div class="siyrefs__list">'+refs.map(function(x){return '<span>'+esc(refNames[x[0]]||customerText(x[0]))+' <code>'+esc(x[1])+'</code></span>';}).join("")+'</div></details>';
   }
   /* عنوان المحادثة: قصّ عند حدود الكلمة */
   function title(t){ if(t.length<=32) return t; var c=t.slice(0,32), i=c.lastIndexOf(" "); return (i>12?c.slice(0,i):c).replace(/[،,.؟?!:]+$/,"")+"…"; }
@@ -307,8 +316,8 @@ var I = {
     if(m.me) return '<div class="m m--me" data-mi="'+i+'"><div class="m__b" dir="auto">'+esc(m.t)+'<span class="m__t">'+m.at+'</span></div></div>';
     if(m.typing){
       var scan=m.toolScan&&Array.isArray(m.toolScan.items)?m.toolScan.items:[];
-      return '<div class="m m--ai" data-mi="'+i+'"><span class="m__av">'+avHtml(w)+'</span><div class="m__b"><div class="think"><span class="typing" aria-label="يعمل…"><i></i><i></i><i></i></span><b>'+esc(m.progress||"أفهم طلبك…")+'</b>'+
-        (scan.length?'<div class="toolscan" aria-label="فحص الأدوات">'+scan.map(function(t){return '<span><img src="'+esc(t.logo)+'" alt=""><small>'+esc(t.n)+'</small></span>';}).join('')+'</div><small class="scanmeta">راجعت <span class="num">'+(m.toolScan.count||scan.length)+'</span> أداة من كتالوج سيادة</small>':'')+
+      return '<div class="m m--ai" data-mi="'+i+'"><span class="m__av">'+avHtml(w)+'</span><div class="m__b"><div class="think"><span class="typing" aria-label="'+ui('يعمل…','Processing…')+'"><i></i><i></i><i></i></span><b>'+esc(window.__SIY_REAL__?ui('الطلب قيد المعالجة…','Processing your request…'):(m.progress||ui('أفهم طلبك…','Understanding your request…')))+'</b>'+
+        (!window.__SIY_REAL__&&scan.length?'<div class="toolscan" aria-label="'+ui('فحص الأدوات','Checking tools')+'">'+scan.map(function(t){return '<span><img src="'+esc(t.logo)+'" alt=""><small>'+esc(t.n)+'</small></span>';}).join('')+'</div><small class="scanmeta">'+ui('راجعت ','Checked ')+'<span class="num">'+(m.toolScan.count||scan.length)+'</span> '+ui('أداة من كتالوج سيادة','tools from Siyadah’s catalog')+'</small>':'')+
         '</div></div></div>';
     }
     if(m.trace) return '<div class="m m--ai" data-mi="'+i+'"><span class="m__av">'+avHtml(w)+'</span><div class="m__b"><div class="tr">'+
@@ -409,8 +418,8 @@ var I = {
       '<span class="swl" style="font-size:.8rem;color:var(--ash)"><span id="onLbl">'+(window.__SIY_REAL__?(siyEmployeeStatePending[e.id]?ui('جارٍ التحقق من تغيير الحالة…','Verifying status…'):(e.draft?ui('بانتظار الربط','Needs connection'):e.on?ui('نشط في السجل','Recorded as active'):ui('متوقف في السجل','Recorded as paused'))):(e.on?(f?ui('شغّالة','Active'):ui('شغّال','Active')):(f?ui('متوقفة','Paused'):ui('متوقف','Paused'))))+'</span><button type="button" class="sw" id="onSw" role="switch"'+(siyEmployeeStatePending[e.id]?' disabled aria-busy="true"':e.draft?' disabled title="'+ui('اربط الأدوات واختبرها قبل التشغيل','Connect and test tools before activation')+'"':'')+' aria-checked="'+e.on+'" aria-label="'+(e.draft?ui('التشغيل متاح بعد ربط الأدوات واختبارها','Activation available after connecting and testing tools'):ui('تشغيل ','Activate ')+esc(e.n))+'"></button></span></div></div>'+
       metrics+
       (e.draft?'<div class="pin__r3"><button type="button" class="link" id="draftTools">'+ui('الأدوات والربط','Tools & connections')+'</button></div>':'<div class="pin__r3"><span class="pin__k">'+ui(f?'أدواتها':'أدواته','Tools')+'</span>'+e.tools.map(chipHtml).join("")+
-      '<span class="mchip tip" data-tip="ساعات العمل'+(e.hours&&e.hours!=="—"?": "+e.hours:"")+'"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l3 2"/></svg>'+(e.hours&&e.hours!=="—"?'<span>'+e.hours+'</span>':'')+'</span>'+
-      '<span class="mchip tip" data-tip="'+(window.__SIY_REAL__?'الصلاحيات المسجلة؛ تطبيقها أثناء التشغيل غير مؤكد':(f?'تستأذنك':'يستأذنك')+' في القرارات الحساسة')+'"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span>'+
+      '<span class="mchip tip" data-tip="'+ui('ساعات العمل','Working hours')+(e.hours&&e.hours!=="—"?": "+esc(e.hours):"")+'"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l3 2"/></svg>'+(e.hours&&e.hours!=="—"?'<span>'+esc(e.hours)+'</span>':'')+'</span>'+
+      '<span class="mchip tip" data-tip="'+(window.__SIY_REAL__?ui('الصلاحيات المسجلة؛ تطبيقها أثناء التشغيل غير مؤكد','Permissions are recorded; runtime enforcement is unverified'):ui((f?'تستأذنك':'يستأذنك')+' في القرارات الحساسة','Asks before sensitive decisions'))+'"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span>'+
       '<button type="button" class="link" id="instrTgl" aria-expanded="false" aria-controls="instrWrap">'+ui('التعليمات','Instructions')+'</button></div>')+'</div>';
   }
   function toolNames(e){ return e.tools.map(function(s){return TN[s]||s}).join("، "); }
@@ -945,15 +954,15 @@ var I = {
   /* dialog: focus in, trap Tab, Escape closes, focus returns to the opener */
   var modalOpener=null;
   function openConnect(slug){ picked=TOOLS.filter(function(x){return x.s===slug})[0]; if(!picked) return;
-    $("#mI").innerHTML='<img src="'+picked.logo+'" alt="" crossorigin="anonymous" referrerpolicy="no-referrer" style="width:26px;height:26px;object-fit:contain">'; $("#mN").textContent=picked.n; $("#mD").textContent="بعد الربط يقدر موظفوك يستخدمون "+picked.n+". "+picked.d+".";
-    $("#mF").hidden=true; $("#mF").innerHTML=""; $("#mGo").hidden=false; $("#mGo").disabled=false; $("#mGo").textContent="اربط";
+    $("#mI").innerHTML='<img src="'+picked.logo+'" alt="" crossorigin="anonymous" referrerpolicy="no-referrer" style="width:26px;height:26px;object-fit:contain">'; $("#mN").textContent=picked.n; $("#mD").textContent=ui("بعد الربط يقدر موظفوك يستخدمون ","Once connected, your employees can use ")+picked.n+". "+(locale==='en'?picked.en:picked.d)+".";
+    $("#mF").hidden=true; $("#mF").innerHTML=""; $("#mGo").hidden=false; $("#mGo").disabled=false; $("#mGo").textContent=ui("اربط","Connect");
     openModal(); if(window.__SIY_REAL__) realConnect(picked); }
   function openToolDetails(slug){ picked=TOOLS.filter(function(x){return x.s===slug&&hasConnection(x);})[0]; if(!picked) return;
     $("#mI").innerHTML='<img src="'+picked.logo+'" alt="" crossorigin="anonymous" referrerpolicy="no-referrer" style="width:26px;height:26px;object-fit:contain">'; $("#mN").textContent=picked.n;
-    if(window.__SIY_REAL__){ var c=picked.connection,status=c&&c.status==='ERROR'?"الاتصال فيه خطأ":"الاتصال محفوظ؛ اختبر مهمة فعلية للتأكد من النتيجة";
-      $("#mD").textContent=status+" · يستخدمها: "+usersOf(picked.s); $("#mGo").hidden=true; $("#mF").hidden=false; $("#mF").innerHTML='<p class="mf__m">'+esc(c&&c.displayName||picked.n)+'</p><p class="mf__e" id="mE" role="alert" hidden></p><div class="mbox__a"><button type="button" class="lnk" data-revalidate="1">اختبر الاتصال</button><button type="button" class="lnk" data-disconnect="1">افصل</button></div>'; }
-    else { $("#mF").hidden=true; $("#mGo").hidden=false; $("#mGo").disabled=true; $("#mGo").textContent="جاهزة"; } openModal(); }
-  function openModal(){ modalOpener=document.activeElement; $("#modal").classList.add("on"); var f=$("#mGo")||$("#mX"); if(f) f.focus(); }
+    if(window.__SIY_REAL__){ var c=picked.connection,status=c&&c.status==='ERROR'?ui("الاتصال فيه خطأ","Connection needs attention"):ui("الاتصال محفوظ؛ اختبر مهمة فعلية للتأكد من النتيجة","Connection saved. Run a real task to verify the outcome");
+      $("#mD").textContent=status+ui(" · يستخدمها: "," · Used by: ")+usersOf(picked.s); $("#mGo").hidden=true; $("#mF").hidden=false; $("#mF").innerHTML='<p class="mf__m">'+esc(c&&c.displayName||picked.n)+'</p><p class="mf__e" id="mE" role="alert" hidden></p><div class="mbox__a"><button type="button" class="lnk" data-revalidate="1">'+ui('اختبر الاتصال','Check connection')+'</button><button type="button" class="lnk" data-disconnect="1">'+ui('افصل','Disconnect')+'</button></div>'; }
+    else { $("#mF").hidden=true; $("#mGo").hidden=false; $("#mGo").disabled=true; $("#mGo").textContent=ui("جاهزة","Ready"); } openModal(); }
+  function openModal(){ modalOpener=document.activeElement; $("#modal").classList.add("on"); $("#mX").focus(); }
   function closeModal(){ if(oauthOff)oauthOff(); rc=null; $("#modal").classList.remove("on"); var back=(modalOpener&&document.contains(modalOpener))?modalOpener:($("#tq")||$("#input")); if(back&&back.focus) back.focus(); modalOpener=null; }
   $("#mX").addEventListener("click",closeModal);
   $("#modal").addEventListener("click",function(e){ if(e.target===this) closeModal(); });
@@ -983,29 +992,29 @@ var I = {
   function rcField(field,index){
     var id="mf"+index,a=' id="'+id+'"'+(field.required?' aria-required="true"':'')+(field.description?' aria-describedby="'+id+'d"':''),label=esc(field.label||field.name)+(field.required?' *':''),description=field.description?'<small id="'+id+'d">'+esc(field.description)+'</small>':'';
     if(field.type==="checkbox")return '<div class="mf__f"><label class="mf__c"><input type="checkbox"'+a+(field.defaultValue?' checked':'')+'> '+label+'</label>'+description+'</div>';
-    var control=field.type==="dropdown"?'<select'+a+'><option value="">اختر…</option>'+(field.options||[]).map(function(option,j){return '<option value="'+j+'">'+esc(option.label)+'</option>';}).join("")+'</select>':field.type==="textarea"?'<textarea rows="3"'+a+'></textarea>':'<input type="'+(field.type==="password"?'password':field.type==="number"?'number':'text')+'" autocomplete="off" dir="ltr"'+a+' value="'+esc(field.defaultValue==null?'':field.defaultValue)+'">';
+    var control=field.type==="dropdown"?'<select'+a+'><option value="">'+ui('اختر…','Select…')+'</option>'+(field.options||[]).map(function(option,j){return '<option value="'+j+'">'+esc(option.label)+'</option>';}).join("")+'</select>':field.type==="textarea"?'<textarea rows="3"'+a+'></textarea>':'<input type="'+(field.type==="password"?'password':field.type==="number"?'number':'text')+'" autocomplete="off" dir="ltr"'+a+' value="'+esc(field.defaultValue==null?'':field.defaultValue)+'">';
     return '<div class="mf__f"><label for="'+id+'">'+label+'</label>'+control+description+'</div>';
   }
   function rcRender(focusTabs){
     var method=rc.methods[rc.index],off=method.available===false,html="";
-    if(rc.methods.length>1)html+='<div class="mf__seg" role="group" aria-label="طريقة الربط">'+rc.methods.map(function(item,index){return '<button type="button" class="lnk'+(index===rc.index?' lnk--fill':'')+'" data-method="'+index+'" aria-pressed="'+(index===rc.index)+'">'+esc(item.displayName||item.type)+'</button>';}).join("")+'</div>';
-    if(method.description)html+='<p class="mf__m">'+esc(method.description)+'</p>'; if(off)html+='<p class="mf__e">'+esc(method.message||"طريقة الربط غير متاحة حاليًا.")+'</p>';else html+=(method.fields||[]).map(rcField).join("");
-    html+='<p class="mf__e" id="mE" role="alert" hidden></p><div class="mbox__a"><button type="submit" class="lnk lnk--fill" id="mOk"'+(off?' disabled':'')+'>'+(method.type==="OAUTH2"?'سجّل الدخول عبر '+esc(rc.tool.n):'احفظ الاتصال')+'</button></div>';rcBox('<form novalidate>'+html+'</form>');
+    if(rc.methods.length>1)html+='<div class="mf__seg" role="group" aria-label="'+ui('طريقة الربط','Connection method')+'">'+rc.methods.map(function(item,index){return '<button type="button" class="lnk'+(index===rc.index?' lnk--fill':'')+'" data-method="'+index+'" aria-pressed="'+(index===rc.index)+'">'+esc(item.displayName||item.type)+'</button>';}).join("")+'</div>';
+    if(method.description)html+='<p class="mf__m">'+esc(method.description)+'</p>'; if(off)html+='<p class="mf__e">'+esc(method.message||ui("طريقة الربط غير متاحة حاليًا.","This connection method is currently unavailable."))+'</p>';else html+=(method.fields||[]).map(rcField).join("");
+    html+='<p class="mf__e" id="mE" role="alert" hidden></p><div class="mbox__a"><button type="submit" class="lnk lnk--fill" id="mOk"'+(off?' disabled':'')+'>'+(method.type==="OAUTH2"?ui('سجّل الدخول عبر ','Sign in with ')+esc(rc.tool.n):ui('احفظ الاتصال','Save connection'))+'</button></div>';rcBox('<form novalidate>'+html+'</form>');
     var focus=focusTabs?$("[data-method=\""+rc.index+"\"]",$("#mF")):$("[id^=mf]",$("#mF"));if(focus)focus.focus();
   }
   async function realConnect(tool){
-    rc={tool:tool,methods:[],index:0};rcBox('<p class="mf__m">أجهّز طرق الربط الآمنة…</p>');
-    try{var data=await integration({op:"methods",piece:tool.s});if(!rc||rc.tool!==tool)return;if(data.noAuth){rcBox('<p class="mf__m">هذه الأداة لا تحتاج حسابًا أو مفتاحًا. تصبح جاهزة عند استخدامها داخل مهمة.</p>');return;}rc.methods=data.methods||[];if(!rc.methods.length)throw new Error("لا توجد طريقة ربط لهذه الأداة.");rcRender();}catch(error){if(rc&&rc.tool===tool)rcBox('<p class="mf__e" role="alert">'+esc(error.message||"تعذّر تجهيز الربط.")+'</p>');}
+    rc={tool:tool,methods:[],index:0};rcBox('<p class="mf__m">'+ui('أجهّز طرق الربط الآمنة…','Preparing secure connection methods…')+'</p>');
+    try{var data=await integration({op:"methods",piece:tool.s});if(!rc||rc.tool!==tool)return;if(data.noAuth){rcBox('<p class="mf__m">'+ui('هذه الأداة لا تحتاج حسابًا أو مفتاحًا. تصبح جاهزة عند استخدامها داخل مهمة.','This tool needs no account or key. It becomes available when used in a task.')+'</p>');return;}rc.methods=data.methods||[];if(!rc.methods.length)throw new Error(ui("لا توجد طريقة ربط لهذه الأداة.","No connection method is available for this tool."));rcRender();}catch(error){if(rc&&rc.tool===tool)rcBox('<p class="mf__e" role="alert">'+esc(error.message||ui("تعذّر تجهيز الربط.","Could not prepare the connection."))+'</p>');}
   }
-  function rcValues(method){var values={};for(var i=0;i<(method.fields||[]).length;i++){var field=method.fields[i],el=$("#mf"+i),value=field.type==="checkbox"?el.checked:field.type==="dropdown"?(el.value===""?"":field.options[+el.value].value):field.type==="number"?(el.value===""?"":Number(el.value)):el.value.trim();if(field.required&&(value===""||value==null)){rcMsg("أكمل «"+(field.label||field.name)+"» أولًا.");el.focus();return null;}if(value!=="")values[field.name]=value;}return values;}
-  async function rcPost(payload){var tool=rc.tool,button=$("#mOk");button.disabled=true;rcMsg("");try{var data=await integration(payload);tool.connection=data.connection;tool.on=data.connection.status==='ACTIVE';tool.by=usersOf(tool.s);tool.sug="";rc=null;closeModal();toolsCount();renderThread();}catch(error){button=$("#mOk");if(button)button.disabled=false;rcMsg(error.message||"تعذّر الربط. راجع البيانات وحاول مرة ثانية.");}}
+  function rcValues(method){var values={};for(var i=0;i<(method.fields||[]).length;i++){var field=method.fields[i],el=$("#mf"+i),value=field.type==="checkbox"?el.checked:field.type==="dropdown"?(el.value===""?"":field.options[+el.value].value):field.type==="number"?(el.value===""?"":Number(el.value)):el.value.trim();if(field.required&&(value===""||value==null)){rcMsg(ui("أكمل «","Complete “")+(field.label||field.name)+ui("» أولًا.","” first."));el.focus();return null;}if(value!=="")values[field.name]=value;}return values;}
+  async function rcPost(payload){var tool=rc.tool,button=$("#mOk");button.disabled=true;rcMsg("");try{var data=await integration(payload);tool.connection=data.connection;tool.on=data.connection.status==='ACTIVE';tool.by=usersOf(tool.s);tool.sug="";rc=null;closeModal();toolsCount();renderThread();}catch(error){button=$("#mOk");if(button)button.disabled=false;rcMsg(error.message||ui("تعذّر الربط. راجع البيانات وحاول مرة ثانية.","Could not connect. Check the details and try again."));}}
   function oauthResult(data){if(data&&typeof data==="object"&&data.data)data=data.data;if(data&&typeof data==="object"&&data.code)return {code:String(data.code),state:String(data.state||"")};if(data&&typeof data==="object")data=data.url;var code=typeof data==="string"&&/[?&#]code=([^&#]+)/.exec(data),state=typeof data==="string"&&/[?&#]state=([^&#]+)/.exec(data);return {code:code?decodeURIComponent(code[1].replace(/\+/g," ")):"",state:state?decodeURIComponent(state[1].replace(/\+/g," ")):""};}
   async function rcOAuth(values){
-    var tool=rc.tool,button=$("#mOk");button.disabled=true;rcMsg("أجهّز صفحة الدخول…");try{var started=await integration({op:"oauth_start",piece:tool.s,values:values}),popup=window.open(started.authorizationUrl,"siyadah_oauth","width=520,height=680");if(!popup)throw new Error("المتصفح منع نافذة الدخول. اسمح بها وحاول مرة ثانية.");rcMsg("أكمل تسجيل الدخول في النافذة المنبثقة…");if(oauthOff)oauthOff();var timer=setTimeout(function(){if(oauthOff)oauthOff();rcMsg("استغرقت العملية وقتًا طويلًا. أعد المحاولة.");},10*60*1000);function on(event){if(event.origin!==started.allowedOrigin)return;var result=oauthResult(event.data);if(!result.code||result.state!==started.attempt)return;oauthOff();try{popup.close();}catch(ignore){}rcPost({op:"oauth_finish",attempt:started.attempt,code:result.code,state:result.state});}window.addEventListener("message",on);oauthOff=function(){clearTimeout(timer);window.removeEventListener("message",on);oauthOff=null;};}catch(error){button=$("#mOk");if(button)button.disabled=false;rcMsg(error.message||"تعذّر بدء تسجيل الدخول.");}
+    var tool=rc.tool,button=$("#mOk");button.disabled=true;rcMsg(ui("أجهّز صفحة الدخول…","Preparing sign-in…"));try{var started=await integration({op:"oauth_start",piece:tool.s,values:values}),popup=window.open(started.authorizationUrl,"siyadah_oauth","width=520,height=680");if(!popup)throw new Error(ui("المتصفح منع نافذة الدخول. اسمح بها وحاول مرة ثانية.","Your browser blocked the sign-in window. Allow pop-ups and try again."));rcMsg(ui("أكمل تسجيل الدخول في النافذة المنبثقة…","Complete sign-in in the pop-up window…"));if(oauthOff)oauthOff();var timer=setTimeout(function(){if(oauthOff)oauthOff();rcMsg(ui("استغرقت العملية وقتًا طويلًا. أعد المحاولة.","This is taking too long. Try again."));},10*60*1000);function on(event){if(event.origin!==started.allowedOrigin)return;var result=oauthResult(event.data);if(!result.code||result.state!==started.attempt)return;oauthOff();try{popup.close();}catch(ignore){}rcPost({op:"oauth_finish",attempt:started.attempt,code:result.code,state:result.state});}window.addEventListener("message",on);oauthOff=function(){clearTimeout(timer);window.removeEventListener("message",on);oauthOff=null;};}catch(error){button=$("#mOk");if(button)button.disabled=false;rcMsg(error.message||ui("تعذّر بدء تسجيل الدخول.","Could not start sign-in."));}
   }
   $("#mF").addEventListener("click",async function(event){
     var method=event.target.closest("[data-method]");if(method&&rc){rc.index=+method.dataset.method;rcRender(true);return;}
-    var test=event.target.closest("[data-revalidate]"),disconnect=event.target.closest("[data-disconnect]");if(!picked||!picked.connection||(!test&&!disconnect))return;event.target.disabled=true;rcMsg("");try{if(test){var data=await integration({op:"revalidate",connection_id:picked.connection.id});picked.connection=data.connection;picked.on=data.connection.status==='ACTIVE';$("#mD").textContent=(data.connection.status==='ERROR'?"الاتصال فيه خطأ":"تم التحقق من بيانات الربط؛ نتيجة الاستخدام تحتاج مهمة فعلية")+" · يستخدمها: "+usersOf(picked.s);event.target.disabled=false;}else{await integration({op:"disconnect",connection_id:picked.connection.id});picked.connection=null;picked.on=false;closeModal();toolsCount();renderThread();}}catch(error){event.target.disabled=false;rcMsg(error.message||"لم يتم تأكيد العملية.");}
+    var test=event.target.closest("[data-revalidate]"),disconnect=event.target.closest("[data-disconnect]");if(!picked||!picked.connection||(!test&&!disconnect))return;event.target.disabled=true;rcMsg("");try{if(test){var data=await integration({op:"revalidate",connection_id:picked.connection.id});picked.connection=data.connection;picked.on=data.connection.status==='ACTIVE';$("#mD").textContent=(data.connection.status==='ERROR'?ui("الاتصال فيه خطأ","Connection needs attention"):ui("تم التحقق من بيانات الربط؛ نتيجة الاستخدام تحتاج مهمة فعلية","Connection details verified. A real task is needed to verify the outcome"))+ui(" · يستخدمها: "," · Used by: ")+usersOf(picked.s);event.target.disabled=false;}else{await integration({op:"disconnect",connection_id:picked.connection.id});picked.connection=null;picked.on=false;closeModal();toolsCount();renderThread();}}catch(error){event.target.disabled=false;rcMsg(error.message||ui("لم يتم تأكيد العملية.","The action could not be confirmed."));}
   });
   $("#mF").addEventListener("submit",function(event){event.preventDefault();var method=rc&&rc.methods[rc.index],values=method&&rcValues(method);if(!method||values===null)return;if(method.type==="OAUTH2")rcOAuth(values);else rcPost({op:"connect",piece:rc.tool.s,type:method.type,values:values});});
   function openTools(){ allOpen=false; tshown=24; go("tools"); }
@@ -1074,27 +1083,28 @@ var I = {
 
   /* الذاكرة في الإعدادات: «إدارة» تفتح القائمة داخل الصف نفسه، وكل سطر يُحذف بـ × */
   function siyKnowledgeTime(value){
-    var date=new Date(value);return value&&Number.isFinite(date.getTime())?esc(date.toLocaleString('ar-SA',{dateStyle:'medium',timeStyle:'short'})):'وقت غير محدد';
+    var date=new Date(value);return value&&Number.isFinite(date.getTime())?esc(date.toLocaleString(locale==='en'?'en-US':'ar-SA',{dateStyle:'medium',timeStyle:'short'})):ui('وقت غير محدد','Time unavailable');
   }
   function renderMem(){
     var el=$("#memList"); if(!el) return;
     if(window.__SIY_REAL__){
       var knowledge=window.__SIY_DASH__&&window.__SIY_DASH__.owned_knowledge;
-      if(!knowledge){el.innerHTML='<p>لم تصل المعرفة المحفوظة بعد.</p>';return;}
+      if(!knowledge){el.innerHTML='<p>'+ui('لم تصل المعرفة المحفوظة بعد.','Saved knowledge is not available yet.')+'</p>';return;}
       var facts=knowledge.facts;
-      el.innerHTML='<p>المعرفة المحفوظة · '+(knowledge.coverage==='partial'?'تغطية جزئية':'تغطية جيدة')+(Number.isFinite(knowledge.coverageScore)?' '+knowledge.coverageScore+'٪':'')+(knowledge.knowledgeVersion?' · الإصدار '+knowledge.knowledgeVersion:'')+'</p>'+
-        (knowledge.lastSuccessAt?'<p class="msrc">آخر تحديث ناجح: '+siyKnowledgeTime(knowledge.lastSuccessAt)+'</p>':'')+
-        (knowledge.lastError?'<p class="msrc">تعذّر آخر تحديث؛ المعروض آخر معلومات محفوظة.</p>':'')+
+      el.innerHTML='<p>'+ui('المعرفة المحفوظة','Saved knowledge')+' · '+(knowledge.coverage==='partial'?ui('تغطية جزئية','Partial coverage'):ui('تغطية جيدة','Good coverage'))+(Number.isFinite(knowledge.coverageScore)?' '+knowledge.coverageScore+ui('٪','%'):'')+(knowledge.knowledgeVersion?ui(' · الإصدار ',' · version ')+knowledge.knowledgeVersion:'')+'</p>'+
+        (knowledge.lastSuccessAt?'<p class="msrc">'+ui('آخر تحديث ناجح: ','Last successful update: ')+siyKnowledgeTime(knowledge.lastSuccessAt)+'</p>':'')+
+        (knowledge.lastError?'<p class="msrc">'+ui('تعذّر آخر تحديث؛ المعروض آخر معلومات محفوظة.','The latest update failed. Showing the last saved knowledge.')+'</p>':'')+
         (facts.length?'<ul class="mem">'+facts.map(function(f){
-          var source=({user:'من رسائلك',company_website:'موقع الشركة',external:'مصدر خارجي'})[f.sourceKind]||'مصدر غير محدد';
-          var certainty=({user_confirmed:'أكدها المستخدم',observed:'معلومة مرصودة',uncertain:'غير مؤكدة'})[f.certainty]||'درجة التأكد غير محددة';
+          var source=(locale==='en'?{user:'Your messages',company_website:'Company website',external:'External source'}:{user:'من رسائلك',company_website:'موقع الشركة',external:'مصدر خارجي'})[f.sourceKind]||ui('مصدر غير محدد','Source unknown');
+          var certainty=(locale==='en'?{user_confirmed:'Confirmed by you',observed:'Observed',uncertain:'Uncertain'}:{user_confirmed:'أكدها المستخدم',observed:'معلومة مرصودة',uncertain:'غير مؤكدة'})[f.certainty]||ui('درجة التأكد غير محددة','Confidence unknown');
           var topics={pricing:'الأسعار والتكاليف',price:'السعر',services:'الخدمات',service:'الخدمة',products:'المنتجات',product:'المنتج',availability:'التوفر',contact:'التواصل',contacts:'التواصل',company:'الشركة',company_profile:'تعريف الشركة',profile:'تعريف الشركة',constraints:'القيود',policy:'السياسات',policies:'السياسات',faq:'الأسئلة الشائعة',faqs:'الأسئلة الشائعة'};
-          var topic=Object.prototype.hasOwnProperty.call(topics,f.topic)?topics[f.topic]:(/[\u0600-\u06ff]/.test(f.topic||'')?f.topic:'معلومة عن الشركة');
+          var topicsEn={pricing:'Pricing and costs',price:'Price',services:'Services',service:'Service',products:'Products',product:'Product',availability:'Availability',contact:'Contact',contacts:'Contact',company:'Company',company_profile:'Company profile',profile:'Company profile',constraints:'Constraints',policy:'Policies',policies:'Policies',faq:'FAQ',faqs:'FAQ'};
+          var topic=Object.prototype.hasOwnProperty.call(topics,f.topic)?(locale==='en'?topicsEn[f.topic]:topics[f.topic]):(/[\u0600-\u06ff]/.test(f.topic||'')?f.topic:ui('معلومة عن الشركة','Company information'));
           var value=typeof f.evidenceQuote==='string'&&f.evidenceQuote.trim()?f.evidenceQuote:(typeof f.value==='string'?f.value:JSON.stringify(f.value));
           return '<li><b>'+esc(topic)+':</b><span class="v">'+esc(value)+'</span>'+
-            '<span class="msrc">'+source+(f.sourceUrl?' · '+esc(f.sourceUrl):'')+' · '+certainty+' · '+siyKnowledgeTime(f.observedAt)+'</span><button type="button" class="lnk" data-kedit="'+knowledge.facts.indexOf(f)+'">صحّح</button></li>';
-        }).join('')+'</ul>':'<p>لا توجد حقائق محفوظة بعد.</p>')+
-        '<div class="acts"><button type="button" class="lnk" id="kbAdd">أضف معلومة</button></div><div id="kbEdit" hidden style="margin-top:10px"><label>نوع المعلومة<select class="ctrl" id="kbTopic"><option value="company_profile">عن الشركة</option><option value="services">الخدمات</option><option value="products">المنتجات</option><option value="target_customers">العملاء المستهدفون</option><option value="pricing">الأسعار</option><option value="faq">الأسئلة الشائعة</option><option value="policies">السياسات</option><option value="contact">التواصل</option><option value="brand">صوت الشركة</option></select></label><label>المعلومة<textarea class="ctrl" id="kbValue" rows="3" maxlength="1200"></textarea></label><div class="acts"><button type="button" class="lnk lnk--fill" id="kbSave">احفظ</button><button type="button" class="lnk" id="kbCancel">إلغاء</button></div><p class="msrc" id="kbStatus" role="status"></p></div>';
+            '<span class="msrc">'+source+(f.sourceUrl?' · '+esc(f.sourceUrl):'')+' · '+certainty+' · '+siyKnowledgeTime(f.observedAt)+'</span><button type="button" class="lnk" data-kedit="'+knowledge.facts.indexOf(f)+'">'+ui('صحّح','Correct')+'</button></li>';
+        }).join('')+'</ul>':'<p>'+ui('لا توجد حقائق محفوظة بعد.','No saved facts yet.')+'</p>')+
+        '<div class="acts"><button type="button" class="lnk" id="kbAdd">'+ui('أضف معلومة','Add information')+'</button></div><div id="kbEdit" hidden style="margin-top:10px"><label>'+ui('نوع المعلومة','Information type')+'<select class="ctrl" id="kbTopic"><option value="company_profile">'+ui('عن الشركة','About the company')+'</option><option value="services">'+ui('الخدمات','Services')+'</option><option value="products">'+ui('المنتجات','Products')+'</option><option value="target_customers">'+ui('العملاء المستهدفون','Target customers')+'</option><option value="pricing">'+ui('الأسعار','Pricing')+'</option><option value="faq">'+ui('الأسئلة الشائعة','FAQ')+'</option><option value="policies">'+ui('السياسات','Policies')+'</option><option value="contact">'+ui('التواصل','Contact')+'</option><option value="brand">'+ui('صوت الشركة','Brand voice')+'</option></select></label><label>'+ui('المعلومة','Information')+'<textarea class="ctrl" id="kbValue" rows="3" maxlength="1200"></textarea></label><div class="acts"><button type="button" class="lnk lnk--fill" id="kbSave">'+ui('احفظ','Save')+'</button><button type="button" class="lnk" id="kbCancel">'+ui('إلغاء','Cancel')+'</button></div><p class="msrc" id="kbStatus" role="status"></p></div>';
       return;
     }
     el.innerHTML=MEM.length?'<ul class="mem">'+MEM.map(function(m,i){
@@ -1186,37 +1196,37 @@ var I = {
   function siyStopPolling(){ siyGeneration++; Object.keys(siyPolls).forEach(function(k){ clearTimeout(siyPolls[k]); }); siyPolls={}; }
   function siyAccessError(text){var e=new Error(text);e.noRetry=true;return e;}
   async function siyPost(url,body){
-    if(!/^(https:\/\/|\/)/.test(url)) throw siyAccessError("اتصال سيادة لم يُجهّز بعد.");
+    if(!/^(https:\/\/|\/)/.test(url)) throw siyAccessError(ui("اتصال سيادة لم يُجهّز بعد.","Siyadah connection is not configured yet."));
     var abort=new AbortController(), timer=setTimeout(function(){abort.abort();},60000);
     try{
       var response=await fetch(url,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:abort.signal});
-      if(response.status===401){location.replace("../auth.html");throw siyAccessError("انتهت جلستك. سجّل الدخول من جديد.");}
-      if(response.status===403) throw siyAccessError("تعذّر التحقق من صلاحية هذا الطلب لحسابك.");
-      if(!response.ok) throw new Error("تعذّر الاتصال بالخادم. أعد المحاولة.");
+      if(response.status===401){location.replace("../auth.html");throw siyAccessError(ui("انتهت جلستك. سجّل الدخول من جديد.","Your session ended. Sign in again."));}
+      if(response.status===403) throw siyAccessError(ui("تعذّر التحقق من صلاحية هذا الطلب لحسابك.","This request could not be authorized for your account."));
+      if(!response.ok) throw new Error(ui("تعذّر الاتصال بالخادم. أعد المحاولة.","Could not reach the server. Try again."));
       var data=await response.json();
-      if(!data||data.ok!==true) throw new Error("تعذّر إتمام الطلب. لم يتم تأكيد نجاحه.");
-      if(body.op==="work"&&!(data.request_status==="not_observed"&&data.work_status==="unknown")&&!["queued","running","succeeded","failed","awaiting_input","cancelled"].includes(data.work_status)) throw new Error("وصلت حالة عمل غير مكتملة؛ لم نتأكد من النتيجة.");
+      if(!data||data.ok!==true) throw new Error(ui("تعذّر إتمام الطلب. لم يتم تأكيد نجاحه.","The request was not confirmed as complete."));
+      if(body.op==="work"&&!(data.request_status==="not_observed"&&data.work_status==="unknown")&&!["queued","running","succeeded","failed","awaiting_input","cancelled"].includes(data.work_status)) throw new Error(ui("وصلت حالة عمل غير مكتملة؛ لم نتأكد من النتيجة.","The work status is incomplete; the outcome is unverified."));
       return data;
-    }catch(e){ if(e.name==="AbortError") throw new Error("تأخر الرد. أعد المحاولة بنفس الطلب للتحقق من حالته."); throw e; }
+    }catch(e){ if(e.name==="AbortError") throw new Error(ui("تأخر الرد. أعد المحاولة بنفس الطلب للتحقق من حالته.","The response timed out. Check the same request to verify its status.")); throw e; }
     finally{clearTimeout(timer);}
   }
   function siyRequest(body){return siyPost(SIY_GATEWAY,body);}
   async function siySaveKnowledge(){
-    var form=$("#kbEdit"),button=$("#kbSave"),status=$("#kbStatus"),value=$("#kbValue").value.trim();if(!value){status.textContent="اكتب المعلومة أولًا.";return;}
-    button.disabled=true;status.textContent="جارٍ الحفظ…";
+    var form=$("#kbEdit"),button=$("#kbSave"),status=$("#kbStatus"),value=$("#kbValue").value.trim();if(!value){status.textContent=ui("اكتب المعلومة أولًا.","Enter the information first.");return;}
+    button.disabled=true;status.textContent=ui("جارٍ الحفظ…","Saving…");
     try{
       await siyPost(SIY_ONBOARDING,{op:'add_knowledge',topic:$("#kbTopic").value,key:form.dataset.key||undefined,value:value});
-      var data=await siyRequest({op:'hydrate'});siyMerge(data,false);renderMem();status=$("#kbStatus");if(status)status.textContent="تم الحفظ في إصدار جديد.";
-    }catch(error){status.textContent=error.message||"تعذّر حفظ المعلومة.";}finally{button=$("#kbSave");if(button)button.disabled=false;}
+      var data=await siyRequest({op:'hydrate'});siyMerge(data,false);renderMem();status=$("#kbStatus");if(status)status.textContent=ui("تم الحفظ في إصدار جديد.","Saved in a new version.");
+    }catch(error){status.textContent=error.message||ui("تعذّر حفظ المعلومة.","Could not save the information.");}finally{button=$("#kbSave");if(button)button.disabled=false;}
   }
   function siySettingsWords(value){ return String(value||"").split(/[،,\n]/).map(function(item){return item.trim();}).filter(Boolean).slice(0,40); }
   async function siySaveSettings(){
     var button=$("#settingsSave"),status=$("#settingsStatus");if(!button||button.disabled)return;
-    button.disabled=true;status.textContent="جارٍ الحفظ…";
+    button.disabled=true;status.textContent=ui("جارٍ الحفظ…","Saving…");
     try{
       var data=await siyPost(SIY_ONBOARDING,{op:'update_company_settings',voice:$("#companyVoice").value,language:$("#companyLanguage").value,dialect:$("#companyDialect").value,preferredWords:siySettingsWords($("#preferredWords").value),forbiddenWords:siySettingsWords($("#forbiddenWords").value)});
-      siyMerge({company_settings:{...data.settings,version:data.version}},false);status=$("#settingsStatus");if(status)status.textContent="تم الحفظ · الإصدار "+data.version;
-    }catch(error){status.textContent=error.message||"تعذّر حفظ الإعدادات.";}finally{button=$("#settingsSave");if(button)button.disabled=false;}
+      siyMerge({company_settings:{...data.settings,version:data.version}},false);status=$("#settingsStatus");if(status)status.textContent=ui("تم الحفظ · الإصدار ","Saved · version ")+data.version;
+    }catch(error){status.textContent=error.message||ui("تعذّر حفظ الإعدادات.","Could not save settings.");}finally{button=$("#settingsSave");if(button)button.disabled=false;}
   }
   async function siySetEmployeeState(e){
     if(!e||typeof e.id!=="string"||!e.id||typeof e.flowId!=="string"||!e.flowId||siyEmployeeStatePending[e.id]) return;
@@ -1228,7 +1238,7 @@ var I = {
       if(data.state_verified!==true||!data.employee||data.employee.recordId!==id||data.employee.flowId!==flowId||data.employee.status!==status) throw new Error("لم يصل تأكيد مطابق لحالة الموظف.");
       siyMerge({employee:data.employee},false);
     }catch(error){
-      if(generation===siyGeneration) window.alert("لم نتأكد من تغيير حالة الموظف. المعروض آخر حالة مؤكدة؛ حدّث الصفحة للتحقق.");
+      if(generation===siyGeneration) window.alert(ui("لم نتأكد من تغيير حالة الموظف. المعروض آخر حالة مؤكدة؛ حدّث الصفحة للتحقق.","Employee status change was not verified. The last confirmed status is shown; reload to check."));
     }finally{
       delete siyEmployeeStatePending[id]; if(generation===siyGeneration) siyDraw();
     }
@@ -1236,12 +1246,12 @@ var I = {
   async function siySaveEmployeeInstructions(e,instructions){
     var button=$("#instrSave"),note=$("#instrF").firstChild,previous=e.instr;
     if(button.disabled)return;
-    button.disabled=true;button.textContent="جارٍ الحفظ…";note.textContent="أحفظها داخل مساحة شركتك وأتحقق من القراءة…";
+    button.disabled=true;button.textContent=ui("جارٍ الحفظ…","Saving…");note.textContent=ui("أحفظها داخل مساحة شركتك وأتحقق من القراءة…","Saving in your workspace and verifying the result…");
     try{
       var data=await siyRequest({op:'employee_instructions',employee_id:e.id,instructions:instructions});
-      if(!data.instructions_verified||!data.employee||data.employee.recordId!==e.id||data.employee.instructions!==instructions)throw new Error('لم تتطابق قراءة التعليمات بعد الحفظ.');
-      e.instr=data.employee.instructions;e.instrSource=data.employee.instructionSource;e.instrVersion=data.employee.instructionVersion;e.ver+=1;note.textContent="تم الحفظ والتحقق · النسخة "+e.instrVersion+" أصبحت النسخة المعتمدة.";button.textContent="تم الحفظ";
-    }catch(error){e.instr=previous;note.textContent=error.message||"تعذّر حفظ التعليمات.";button.textContent="أعد المحاولة";}
+      if(!data.instructions_verified||!data.employee||data.employee.recordId!==e.id||data.employee.instructions!==instructions)throw new Error(ui('لم تتطابق قراءة التعليمات بعد الحفظ.','Saved instructions could not be verified.'));
+      e.instr=data.employee.instructions;e.instrSource=data.employee.instructionSource;e.instrVersion=data.employee.instructionVersion;e.ver+=1;note.textContent=ui("تم الحفظ والتحقق · النسخة ","Saved and verified · version ")+e.instrVersion+ui(" أصبحت النسخة المعتمدة."," is now current.");button.textContent=ui("تم الحفظ","Saved");
+    }catch(error){e.instr=previous;note.textContent=error.message||ui("تعذّر حفظ التعليمات.","Could not save instructions.");button.textContent=ui("أعد المحاولة","Try again");}
     finally{button.disabled=false;}
   }
   async function siyExportCustomer(button){
@@ -1257,7 +1267,7 @@ var I = {
       if(!/^[^\\/:*?"<>|\u0000-\u001f]{1,160}\.json$/i.test(filename)) filename='siyadah-customer.json';
       url=URL.createObjectURL(new Blob([JSON.stringify(bundle,null,2)],{type:'application/json;charset=utf-8'}));
       link=document.createElement('a'); link.href=url; link.download=filename; link.hidden=true; document.body.appendChild(link); link.click();
-    }catch(error){ if(generation===siyGeneration) window.alert(error.message||'تعذّر تنزيل ملف العميل.'); }
+    }catch(error){ if(generation===siyGeneration) window.alert(error.message||ui('تعذّر تنزيل ملف العميل.','Could not download the customer file.')); }
     finally{
       if(link) link.remove(); if(url) URL.revokeObjectURL(url);
       button.disabled=false; button.removeAttribute('aria-busy');
@@ -1333,22 +1343,22 @@ var I = {
     var passed=readiness.checks.filter(function(row){return row&&row.passed===true;});
     var blocked=readiness.checks.filter(function(row){return row&&row.passed!==true;});
     var ready=readiness.can_claim_draft_10_of_10===true;
-    var title=ready?"الموظف جاهز للربط والاختبار":"جاهزية الموظف: "+esc(readiness.score||passed.length+"/10");
+    var title=ready?ui("الموظف جاهز للربط والاختبار","Employee ready for connection and testing"):ui("جاهزية الموظف: ","Employee readiness: ")+esc(readiness.score||passed.length+"/10");
     return '<div style="margin-top:10px;padding:10px;border:1px solid var(--hair);border-radius:10px">'+
       '<b>'+title+'</b><div class="msrc">'+esc(customerText(readiness.claim||""))+'</div>'+
-      (ready?'<div class="msrc">الخطوة التالية: اربط الأدوات المطلوبة، ثم نختبر التشغيل والنتيجة.</div>':'')+
-      (blocked.length?'<details><summary>وش باقي ليبدأ العمل؟</summary><div class="msrc">'+blocked.map(function(row){return '• '+esc(acceptanceLabel(row));}).join('<br>')+'</div></details>':'')+
+      (ready?'<div class="msrc">'+ui('الخطوة التالية: اربط الأدوات المطلوبة، ثم نختبر التشغيل والنتيجة.','Next: connect the required tools, then test execution and its outcome.')+'</div>':'')+
+      (blocked.length?'<details><summary>'+ui('وش باقي ليبدأ العمل؟','What remains before work starts?')+'</summary><div class="msrc">'+blocked.map(function(row){return '• '+esc(acceptanceLabel(row));}).join('<br>')+'</div></details>':'')+
       '</div>';
   }
   function siyAcceptanceHtml(acceptance){
     if(!acceptance||!["SiyadahFlowAcceptanceV1","SiyadahFlowAcceptanceV2"].includes(acceptance.schema)||!Array.isArray(acceptance.checks)) return "";
     var passed=acceptance.checks.filter(function(row){return row&&row.passed===true;});
     var blocked=acceptance.checks.filter(function(row){return row&&row.passed!==true;});
-    var title=acceptance.can_claim_10_of_10===true?"العمل مكتمل ومثبت":"حالة العمل: "+esc(acceptance.score||passed.length+"/10");
+    var title=acceptance.can_claim_10_of_10===true?ui("العمل مكتمل ومثبت","Work completed and verified"):ui("حالة العمل: ","Work status: ")+esc(acceptance.score||passed.length+"/10");
     return siyDraftReadinessHtml(acceptance.draft_readiness)+'<div style="margin-top:10px;padding:10px;border:1px solid var(--hair);border-radius:10px">'+
       '<b>'+title+'</b><div class="msrc">'+esc(customerText(acceptance.claim||""))+'</div>'+
       (passed.length?'<div class="msrc">✓ '+passed.map(function(row){return esc(acceptanceLabel(row));}).join(' · ')+'</div>':'')+
-      (blocked.length?'<details><summary>وش باقي؟</summary><div class="msrc">'+blocked.map(function(row){return '• '+esc(acceptanceLabel(row));}).join('<br>')+'</div></details>':'')+
+      (blocked.length?'<details><summary>'+ui('وش باقي؟','What remains?')+'</summary><div class="msrc">'+blocked.map(function(row){return '• '+esc(acceptanceLabel(row));}).join('<br>')+'</div></details>':'')+
       '</div>';
   }
   function siyBuilderProposalHtml(data){
@@ -1356,33 +1366,33 @@ var I = {
     var plan=data.flow_plan&&typeof data.flow_plan==="object"?data.flow_plan:{};
     var trigger=plan.trigger&&typeof plan.trigger==="object"?plan.trigger:{};
     var steps=Array.isArray(plan.steps)?plan.steps:[];
-    var triggerText=customerText(trigger.display_name||trigger.label||"الوقت أو الحدث الذي تحدده");
+    var triggerText=customerText(trigger.display_name||trigger.label||ui("الوقت أو الحدث الذي تحدده","The time or event you choose"));
     var stepRows=steps.map(function(step,index){
-      var text=customerText(step.display_name||step.label||("إجراء "+(index+1)));
-      return '<div class="prow"><b>الخطوة '+(index+1)+'</b><span>'+esc(text)+'</span></div>';
+      var text=customerText(step.display_name||step.label||ui("إجراء ","Action ")+(index+1));
+      return '<div class="prow"><b>'+ui('الخطوة ','Step ')+(index+1)+'</b><span>'+esc(text)+'</span></div>';
     }).join("");
-    return '<div class="plan nr" style="margin-top:10px"><div class="plan__h"><span class="drop"></span>خطة عمل الموظف</div>'+
-      (plan.name?'<div class="prow"><b>الاسم</b><span>'+esc(plan.name)+'</span></div>':'')+
-      '<div class="prow"><b>يبدأ عندما</b><span>'+esc(triggerText)+'</span></div>'+stepRows+
-      '<div class="prow"><b>الحالة</b><span>قيد التجهيز · لن يبدأ العمل قبل الاختبار</span></div></div>'+
-      '<div class="approve nr"><button type="button" class="bt" data-siy-approval="approve">'+I.check+'ابدأ التجهيز</button>'+
-      '<button type="button" class="bt bt--line" data-siy-approval="reject">إلغاء</button></div>';
+    return '<div class="plan nr" style="margin-top:10px"><div class="plan__h"><span class="drop"></span>'+ui('خطة عمل الموظف','Employee work plan')+'</div>'+
+      (plan.name?'<div class="prow"><b>'+ui('الاسم','Name')+'</b><span>'+esc(plan.name)+'</span></div>':'')+
+      '<div class="prow"><b>'+ui('يبدأ عندما','Starts when')+'</b><span>'+esc(triggerText)+'</span></div>'+stepRows+
+      '<div class="prow"><b>'+ui('الحالة','Status')+'</b><span>'+ui('قيد التجهيز · لن يبدأ العمل قبل الاختبار','In preparation · work starts after testing')+'</span></div></div>'+
+      '<div class="approve nr"><button type="button" class="bt" data-siy-approval="approve">'+I.check+ui('ابدأ التجهيز','Start preparation')+'</button>'+
+      '<button type="button" class="bt bt--line" data-siy-approval="reject">'+ui('إلغاء','Cancel')+'</button></div>';
   }
   function siyResultRow(data){
     var state=data.work_status, text=data.reply;
-    if(!text) text=({queued:"تم استلام الطلب، بانتظار التنفيذ.",running:"العمل قيد التنفيذ.",succeeded:"اكتمل العمل حسب سجل التشغيل.",failed:"تعذّر إكمال العمل. راجع تفاصيل النتيجة.",awaiting_input:"العمل ينتظر معلومات إضافية منك.",cancelled:"أُلغي الطلب."})[state]||"وصل الرد دون تفاصيل إضافية.";
+    if(!text) text=(locale==='en'?{queued:'Request received, awaiting execution.',running:'Work in progress.',succeeded:'Work completed according to the run record.',failed:'Work could not be completed. Review the result details.',awaiting_input:'Work needs more information from you.',cancelled:'Request cancelled.'}:{queued:"تم استلام الطلب، بانتظار التنفيذ.",running:"العمل قيد التنفيذ.",succeeded:"اكتمل العمل حسب سجل التشغيل.",failed:"تعذّر إكمال العمل. راجع تفاصيل النتيجة.",awaiting_input:"العمل ينتظر معلومات إضافية منك.",cancelled:"أُلغي الطلب."})[state]||ui("وصل الرد دون تفاصيل إضافية.","Response received without further details.");
     var records=(Array.isArray(data.recent_work)?data.recent_work:[]).filter(function(r){return (!r.conversation_id||r.conversation_id===data.conversation_id)&&(!r.work_id||r.work_id===data.work_id);});
     var scoped=records.filter(function(r){return r.conversation_id;});
     var draft=data.draft&&data.flow_id?siyRefsHtml([['طريقة العمل',data.flow_id],['المهمة',data.work_id]]):'';
-    return {me:false,at:now(),t:siyReplyHtml(text)+siyBuilderProposalHtml(data)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,'نتائج هذا الطلب'):'')+siyLegacyProofHtml(records)+draft,workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;}),builderApproval:data.approval&&data.approval.required===true?{id:data.approval.approval_id,conversationId:data.conversation_id}:null};
+    return {me:false,at:now(),t:siyReplyHtml(text)+siyBuilderProposalHtml(data)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,ui('نتائج هذا الطلب','Results for this request')):'')+siyLegacyProofHtml(records)+draft,workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;}),builderApproval:data.approval&&data.approval.required===true?{id:data.approval.approval_id,conversationId:data.conversation_id}:null};
   }
   async function siyDecideBuilder(row,decision){
     if(!row||!row.builderApproval||row.siyInFlight) return;
-    row.siyInFlight=true; row.t=siyReplyHtml(decision==='approve'?'جارٍ تجهيز الموظف داخل مساحة شركتك…':'جارٍ إلغاء الخطة…'); siyDraw();
+    row.siyInFlight=true; row.t=siyReplyHtml(decision==='approve'?ui('جارٍ تجهيز الموظف داخل مساحة شركتك…','Preparing the employee in your workspace…'):ui('جارٍ إلغاء الخطة…','Cancelling the plan…')); siyDraw();
     try{
       var data=await siyRequest({op:'approve',request_id:crypto.randomUUID(),conversation_id:row.builderApproval.conversationId,approval_id:row.builderApproval.id,decision:decision});
       Object.assign(row,siyResultRow(data)); row.builderApproval=null; row.siyInFlight=false; siyDraw();
-    }catch(error){ row.siyInFlight=false; row.t=siyReplyHtml(error.message||'تعذر تنفيذ القرار.'); siyDraw(); }
+    }catch(error){ row.siyInFlight=false; row.t=siyReplyHtml(error.message||ui('تعذر تنفيذ القرار.','Could not apply the decision.')); siyDraw(); }
   }
   function siyPoll(workId,list,row,attempt){
     var generation=siyGeneration;
@@ -1395,7 +1405,7 @@ var I = {
         if(["queued","running"].includes(data.work_status)) siyPoll(workId,list,row,attempt+1); else delete siyPolls[workId];
       }catch(e){
         if(generation!==siyGeneration) return;
-        row.t=siyReplyHtml(e.noRetry?e.message:"تعذّر تحديث حالة العمل. سنعيد التحقق دون إعادة التنفيذ."); siyDraw();
+        row.t=siyReplyHtml(e.noRetry?e.message:ui("تعذّر تحديث حالة العمل. سنعيد التحقق دون إعادة التنفيذ.","Could not update work status. We will check again without running it twice.")); siyDraw();
         if(e.noRetry) delete siyPolls[workId]; else siyPoll(workId,list,row,attempt+1);
       }
     },attempt<3?2000:5000);
@@ -1404,37 +1414,26 @@ var I = {
     var request={op:"message",message:text,conversation_id:list.siyConversationId||null,employee_id:employeeId||null,request_id:crypto.randomUUID()};
     if(list.siyLatestRequestId) request.prior_request_id=list.siyLatestRequestId;
     list.siyLatestRequestId=request.request_id;
-    var row={me:false,typing:true,at:"",requestId:request.request_id,progress:"أفهم طلبك من سياق شركتك…"}; list.push(row); siyDraw();
+    var row={me:false,typing:true,at:"",requestId:request.request_id}; list.push(row); siyDraw();
     var generation=siyGeneration;
-    var scanTimers=[];
-    function stopExperience(){scanTimers.forEach(clearTimeout);scanTimers=[];}
-    if(!employeeId&&/أبغى|ابي|أبي|أريد|اريد|سو|نفذ|رتب|ارسل|أرسل|تابع|ابحث|حلل|أنشئ|انشئ|موظف|اربط|حدّث|حدث|استخرج|اجمع|اقترح|أهم خطوة|اهم خطوة/i.test(text)){
-      var terms=String(text||"").toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(function(term){return term.length>2;});
-      var businessOrder=['whatsapp','hubspot','google-sheets','google-calendar','slack','notion','airtable','cal-com','wafeq','zendesk','mailchimp','instagram-business','linkedin','google-drive','stripe','shopify','woocommerce','http'];
-      var intentOrder=/حلل|تقرير|بيانات|وضع|مؤشر/.test(text)?['google-sheets','hubspot','notion','airtable','google-drive','slack']:/تسويق|محتوى|نشر|حملة/.test(text)?['linkedin','instagram-business','mailchimp','google-sheets','notion']:/دعم|عميل|رسائل|رد/.test(text)?['whatsapp','zendesk','gmail','hubspot','slack']:/موعد|تقويم|حجز/.test(text)?['google-calendar','cal-com','hubspot','whatsapp']:businessOrder.slice(0,8);
-      var ranked=TOOLS.map(function(tool,index){var hay=(tool.n+' '+tool.d+' '+tool.en+' '+tool.c).toLowerCase(),score=terms.reduce(function(sum,term){return sum+(hay.indexOf(term)>-1?3:0);},0),intent=intentOrder.indexOf(tool.s),preferred=businessOrder.indexOf(tool.s);if(intent>-1)score+=30-intent;return {tool:tool,score:score,index:index,preferred:preferred<0?businessOrder.length+index:preferred};}).sort(function(a,b){return b.score-a.score||a.preferred-b.preferred;}).slice(0,50).map(function(item){return item.tool;});
-      scanTimers.push(setTimeout(function(){if(!row.typing||generation!==siyGeneration)return;row.progress="أفحص الأدوات الأقرب للنتيجة…";row.toolScan={items:ranked.slice(0,10),count:Math.min(18,ranked.length)};siyDraw();},500));
-      scanTimers.push(setTimeout(function(){if(!row.typing||generation!==siyGeneration)return;row.progress="أقارن أفضل مسار قبل التنفيذ…";row.toolScan={items:ranked.slice(10,20),count:Math.min(36,ranked.length)};siyDraw();},1300));
-      scanTimers.push(setTimeout(function(){if(!row.typing||generation!==siyGeneration)return;row.progress="أدقق الخيار الأنسب لشركتك…";row.toolScan={items:ranked.slice(0,6),count:ranked.length};siyDraw();},2200));
-    }
     async function submit(refresh){
       if(row.siyInFlight) return; row.siyInFlight=true; row.typing=true; row.siyRetry=null; siyDraw();
       try{
         var data=await siyRequest(refresh?{op:'work',request_id:request.request_id,conversation_id:request.conversation_id}:request); if(generation!==siyGeneration) return;
-        if(data.request_status==='not_observed') throw new Error('لم يظهر سجل الطلب بعد؛ حالته غير معروفة. تحديث الحالة لا يعيد تنفيذه.');
+        if(data.request_status==='not_observed') throw new Error(ui('لم يظهر سجل الطلب بعد؛ حالته غير معروفة. تحديث الحالة لا يعيد تنفيذه.','The request is not in the record yet. Its status is unknown. Checking status does not run it again.'));
         siyRememberConversation(data,list,employeeId,text); siyMerge(data,false);
-        stopExperience(); Object.assign(row,siyResultRow(data)); row.typing=false; row.siyInFlight=false; siyDraw();
+        Object.assign(row,siyResultRow(data)); row.typing=false; row.siyInFlight=false; siyDraw();
         if(data.work_id&&["queued","running"].includes(data.work_status)) siyPoll(data.work_id,list,row,0);
       }catch(e){
         if(generation!==siyGeneration) return;
-        stopExperience(); row.typing=false; row.siyInFlight=false; row.t=siyReplyHtml(e.message||"تعذّر الاتصال")+'<button type="button" class="lnk" data-siy-retry="1">تحقق من حالة الطلب</button>';
+        row.typing=false; row.siyInFlight=false; row.t=siyReplyHtml(e.message||ui("تعذّر الاتصال","Could not connect"))+'<button type="button" class="lnk" data-siy-retry="1">'+ui('تحقق من حالة الطلب','Check request status')+'</button>';
         row.siyRetry=function(){submit(true);}; siyDraw(); // Read-only lookup of the original request; never redispatch after uncertainty.
       }
     }
     submit();
   }
   /* لا نغيّر بيانات الحساب الحقيقي قبل ربط كتابة موثقة وقراءة تؤكدها. */
-  function siyUnsupported(){ window.alert("هذا التعديل غير متاح بعد. لم يتم تغيير أي بيانات أو تشغيل."); }
+  function siyUnsupported(){ window.alert(ui("هذا التعديل غير متاح بعد. لم يتم تغيير أي بيانات أو تشغيل.","This change is not available yet. No data was changed or action run.")); }
   function siyPatch(){ if(window.__SIY_REAL__) siyUnsupported(); }
   function renameEmp(){
     if(window.__SIY_REAL__){ siyUnsupported(); return; }
@@ -1465,7 +1464,7 @@ var I = {
   function siyWorkHtml(records,label){ var d=window.__SIY_DASH__, w=Array.isArray(records)?records:(d&&d.recent_work)||[];
     if(!w.length) return '<p>'+ui('ما فيه عمل مسجّل بعد — أول ما يشتغل فريقك، كل نتيجة تنكتب هنا بإثباتها.','No work recorded yet. Verified results will appear here when your team runs.')+'</p>';
     return '<p>'+esc(label||ui('آخر عمل فعلي للفريق','Latest verified team work'))+' (<span class="num">'+(Array.isArray(records)?w.length:(d.work_count||w.length))+'</span>):</p>'+w.map(function(x){
-      return '<div style="margin:8px 0;padding-inline-start:10px;border-inline-start:2px solid var(--hair)"><b>'+esc(x.subject||"مهمة")+'</b>'+
+      return '<div style="margin:8px 0;padding-inline-start:10px;border-inline-start:2px solid var(--hair)"><b>'+esc(x.subject||ui("مهمة","Task"))+'</b>'+
         (x.priority?' <span class="msrc">· '+esc(x.priority)+'</span>':'')+
         (x.message?'<div>'+esc(x.message)+'</div>':'')+
         '<div class="msrc">'+(x.status==='succeeded'&&x.recordId&&x.runId&&x.flowId?'✓ ':'')+esc(siyWorkStatus(x.status))+(x.proof?' · '+esc(customerText(x.proof)):'')+'</div>'+siyRefsHtml([['الطلب',x.work_id||x.workId],['التشغيل',x.runId],['النتيجة',x.recordId],['طريقة العمل',x.flowId]])+'</div>';

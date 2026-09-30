@@ -62,11 +62,9 @@ test('employee conversation reads its saved instructions while external executio
   assert.match(server,/instruction_version:Number\(saved\.prompt_version\|\|1\),external_execution:false/);
 });
 
-test('thinking experience scans the real catalog and remains reduced-motion safe',()=>{
-  assert.match(chat,/TOOLS\.map\(/);
-  assert.match(chat,/\.slice\(0,50\)/);
-  assert.match(chat,/intentOrder/);
-  assert.match(chat,/أفحص الأدوات الأقرب للنتيجة/);
-  assert.match(chat,/أدقق الخيار الأنسب لشركتك/);
-  assert.match(chat,/stopExperience\(\)/);
+test('real account waiting state does not invent catalog scanning before server readback',()=>{
+  assert.match(chat,/window\.__SIY_REAL__\?ui\('الطلب قيد المعالجة…','Processing your request…'\)/);
+  assert.match(chat,/!window\.__SIY_REAL__&&scan\.length/);
+  assert.doesNotMatch(chat,/أفحص الأدوات الأقرب للنتيجة/);
+  assert.doesNotMatch(chat,/أدقق الخيار الأنسب لشركتك/);
 });

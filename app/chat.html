@@ -177,6 +177,7 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 .sw::after{content:"";position:absolute;inset-block-start:3px;inset-inline-start:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .25s var(--ease)}
 .sw[aria-checked="true"]{background:var(--accent)}
 [dir="rtl"] .sw[aria-checked="true"]::after{transform:translateX(-18px)}
+[dir="ltr"] .sw[aria-checked="true"]::after{transform:translateX(18px)}
 
 /* بطاقة الموظف — مثبتة فوق محادثته: صف الهوية، أربعة أرقام، أدواته */
 .thread--emp{padding-block-start:0} /* حشوة الأعلى تروح للبطاقة المثبتة عشان ما يطل شيء من خلفها */
@@ -331,6 +332,7 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 .swm::after{content:"";position:absolute;inset-block-start:3px;inset-inline-start:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .25s var(--ease)}
 .swm[aria-checked="true"]{background:var(--accent)}
 [dir="rtl"] .swm[aria-checked="true"]::after{transform:translateX(-18px)}
+[dir="ltr"] .swm[aria-checked="true"]::after{transform:translateX(18px)}
 .price{font-family:var(--f-display);font-weight:300;font-size:1.35rem;line-height:1.2}
 .price s{color:var(--ash-2);font-size:.65em;margin-inline-start:8px}
 .tag{font-family:var(--f-display);font-size:.7rem;border:1px solid var(--accent);color:var(--accent);padding:2px 8px;margin-inline-start:10px;vertical-align:middle;white-space:nowrap}
