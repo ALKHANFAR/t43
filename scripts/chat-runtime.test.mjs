@@ -43,7 +43,7 @@ test('employee execution proof is scoped to the conversation that produced it',(
   assert.match(serverSource,/const proof=\{[^\n]+conversation_id:conversationId/);
 });
 
-async function page({storage={},hydrate=empty,message,work,approve,employee_state,add_knowledge,update_company_settings,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد']]}={}){
+async function page({storage={},hydrate=empty,message,work,approve,employee_state,employee_instructions,add_knowledge,update_company_settings,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد']]}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
   const w=dom.window,requests=[],alerts=[],polls=[],navigations=[];let hydrateTimer;
   w.matchMedia=()=>({matches:true,addEventListener(){}});
@@ -66,7 +66,7 @@ async function page({storage={},hydrate=empty,message,work,approve,employee_stat
       return {ok:true,status:200,json:async()=>response};
     }
     const body=JSON.parse(options.body);requests.push({url,body,headers:options.headers,credentials:options.credentials});
-    const handler={hydrate,message,work,approve,employee_state,add_knowledge,update_company_settings,export:exportResponse}[body.op];
+    const handler={hydrate,message,work,approve,employee_state,employee_instructions,add_knowledge,update_company_settings,export:exportResponse}[body.op];
     const response=typeof handler==='function'?await handler(body):handler;
     if(response instanceof Error)throw response;
     if(response?.httpStatus)return {ok:false,status:response.httpStatus,json:async()=>response};
@@ -125,11 +125,16 @@ test('tool buttons show verified details or prepare a chat request instead of do
   }finally{p.close();}
 });
 test('real employee shows natural instructions without exposing a compiled prompt',async()=>{
-  const p=await page({hydrate:{...empty,team:[{...employee,instructions:'تابعي الفرص الجديدة واكتبي ملخصًا واضحًا.'}]}});try{
+  const changed='تابعي الفرص الجديدة وأرسلي ملخصًا واضحًا.';
+  const p=await page({hydrate:{...empty,team:[{...employee,instructions:'تابعي الفرص الجديدة واكتبي ملخصًا واضحًا.',instructionSource:'company_profile',instructionVersion:1}]},employee_instructions:body=>({ok:true,instructions_verified:true,employee:{...employee,instructions:body.instructions,instructionSource:'owner',instructionVersion:2}})});try{
     p.d.querySelector('#emps .emp').click();await flush();
     p.d.querySelector('#instrTgl').click();await flush();
     assert.match(thread(p),/تعليماته|تعليمات/);
-    assert.equal(p.d.querySelector('#instr').readOnly,true);
+    assert.equal(p.d.querySelector('#instr').readOnly,false);
+    p.d.querySelector('#instr').value=changed;p.d.querySelector('#instrSave').click();await flush();
+    assert.equal(p.requests.at(-1).body.op,'employee_instructions');
+    assert.equal(p.requests.at(-1).body.instructions,changed);
+    assert.match(p.d.querySelector('#instrF').textContent,/تم الحفظ والتحقق · النسخة 2/);
     assert.equal(p.d.querySelector('.prompt'),null);
     assert.doesNotMatch(thread(p),/Prompt|Activepieces|MCP|# الهوية|# الصلاحية/);
   }finally{p.close();}
@@ -330,7 +335,7 @@ test('real saved instructions escape content and distinguish stored autonomy fro
   const p=await page({hydrate:{...empty,team:[{...employee,autonomy,instructions:'راجع <img src=x onerror=alert(1)>',rules:['لا ترسل <script>'],how:['وعد غير مثبت']}]}});try{
    p.d.querySelector('#emps .emp').click();p.d.querySelector('#instrTgl').click();const instructions=p.d.querySelector('#instrWrap');
    assert.match(instructions.textContent,new RegExp(label));assert.match(instructions.textContent,/لم يُتحقق منه/);
-   assert.equal(instructions.querySelector('textarea').readOnly,true);assert.ok(!instructions.querySelector('img,script'));
+   assert.equal(instructions.querySelector('textarea').readOnly,false);assert.ok(!instructions.querySelector('img,script'));
    for(const fabricated of ['شركة الأفق','تسري فورًا','كذا يشتغل فعلًا','وعد غير مثبت'])assert.ok(!instructions.textContent.includes(fabricated));
    assert.ok(!p.d.querySelector('[data-tip="يستأذنك في القرارات الحساسة"]'));
   }finally{p.close();}

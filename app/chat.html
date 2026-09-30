@@ -221,6 +221,12 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 .typing i{width:5px;height:5px;border-radius:50%;background:var(--ash-2);animation:blink 1s infinite}
 .typing i:nth-child(2){animation-delay:.18s}.typing i:nth-child(3){animation-delay:.36s}
 @keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.think{display:grid;gap:8px;min-width:min(360px,72vw)}.think>b{font-size:12px;font-weight:650;color:var(--ink-2)}
+.toolscan{display:flex;gap:5px;overflow:hidden;max-width:340px;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.toolscan span{flex:0 0 34px;display:grid;place-items:center;gap:2px;animation:toolPass .42s ease both}.toolscan img{width:22px;height:22px;border-radius:6px;object-fit:contain;background:#fff;border:1px solid var(--hair)}
+.toolscan small{display:block;width:34px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;font-size:7px;color:var(--ash-2)}.scanmeta{font-size:10px;color:var(--ash-2)}
+@keyframes toolPass{from{opacity:0;transform:translateX(10px) scale(.88)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.toolscan span{animation:none}}
 .m--rev .w{visibility:hidden}.m--rev .w.on{visibility:visible}
 .m--rev .nr{opacity:0}.m--rev .nr.on{opacity:1;transition:opacity .3s}
 .m__c .link{font-size:inherit}

@@ -275,7 +275,12 @@ var I = {
   }
   function msgHtml(m, w, i){
     if(m.me) return '<div class="m m--me" data-mi="'+i+'"><div class="m__b">'+esc(m.t)+'<span class="m__t">'+m.at+'</span></div></div>';
-    if(m.typing) return '<div class="m m--ai" data-mi="'+i+'"><span class="m__av">'+avHtml(w)+'</span><div class="m__b"><span class="typing" aria-label="يكتب…"><i></i><i></i><i></i></span></div></div>';
+    if(m.typing){
+      var scan=m.toolScan&&Array.isArray(m.toolScan.items)?m.toolScan.items:[];
+      return '<div class="m m--ai" data-mi="'+i+'"><span class="m__av">'+avHtml(w)+'</span><div class="m__b"><div class="think"><span class="typing" aria-label="يعمل…"><i></i><i></i><i></i></span><b>'+esc(m.progress||"أفهم طلبك…")+'</b>'+
+        (scan.length?'<div class="toolscan" aria-label="فحص الأدوات">'+scan.map(function(t){return '<span><img src="'+esc(t.logo)+'" alt=""><small>'+esc(t.n)+'</small></span>';}).join('')+'</div><small class="scanmeta">راجعت <span class="num">'+(m.toolScan.count||scan.length)+'</span> أداة من كتالوج سيادة</small>':'')+
+        '</div></div></div>';
+    }
     if(m.trace) return '<div class="m m--ai" data-mi="'+i+'"><span class="m__av">'+avHtml(w)+'</span><div class="m__b"><div class="tr">'+
       m.trace.map(function(r,ri){return trHtml(r,ri)}).join("")+'</div><span class="m__t">'+esc(name(w))+' · '+m.at+'</span></div></div>';
     var body = m.wait ? waitHtml(m) : ((m.t||"").indexOf("<p>")===0? m.t : '<p>'+m.t+'</p>') + (m.plan? planHtml(m):'') + (m.diff? diffHtml(m):'');
@@ -412,8 +417,10 @@ var I = {
   function instrHtml(e){
     if(window.__SIY_REAL__){
       var savedRules=e.rules.filter(function(r){return r[1];}).map(function(r){return esc(r[0]);});
-      return '<div class="card"><div class="card__h">'+I.pen+'<b>تعليماته</b><span class="cnt">المحفوظة في السجل</span></div>'+
-        '<div class="card__b"><textarea class="instr" id="instr" readonly aria-label="تعليمات '+esc(e.n)+'">'+esc(e.instr)+'</textarea></div>'+
+      var instructionSource=e.instrSource==='owner'?'تعديلك':e.instrSource==='manual_setup'?'مسودة أولية':'دور الموظف ومعرفة الشركة';
+      return '<div class="card"><div class="card__h">'+I.pen+'<b>تعليمات الموظف</b><span class="cnt">نسخة '+e.instrVersion+' · '+instructionSource+'</span></div>'+
+        '<div class="card__b"><textarea class="instr" id="instr" maxlength="12000" aria-label="تعليمات '+esc(e.n)+'">'+esc(e.instr)+'</textarea>'+
+        '<div class="instr__f" id="instrF"><span>مصدر البداية: الدور المختار ومعرفة شركتك. أي تعديل منك يُحفظ كنسخة جديدة.</span><button type="button" class="bts" id="instrSave">حفظ التعليمات</button></div></div>'+
         '<div class="card__h">'+I.shield+'<b>حدوده</b><span class="cnt">من السجل</span></div>'+
         '<div class="card__b"><p>الصلاحية المسجلة: '+esc(e.auto===null?'غير محددة':AUTON[e.auto])+'.</p>'+
         '<p>القيود المسجلة: '+(savedRules.length?savedRules.join('، '):'غير محددة')+'.</p>'+
@@ -770,7 +777,7 @@ var I = {
     var t=e.target, list, mEl=t.closest(".m"), mi=mEl?+mEl.dataset.mi:-1;
     if(t.closest("[data-siy-retry]")){ var retryList=curList(); if(retryList&&retryList[mi]&&retryList[mi].siyRetry) retryList[mi].siyRetry(); return; }
     if(t.closest("[data-siy-approval]")){ var approvalList=curList(), approvalRow=approvalList&&approvalList[mi]; siyDecideBuilder(approvalRow,t.closest("[data-siy-approval]").dataset.siyApproval); return; }
-    if(window.__SIY_REAL__ && t.closest("#instrSave,#instrPrev,[data-save],[data-approve],[data-decide],[data-opt],[data-pv],[data-hcancel],[data-undo]")){ siyUnsupported(); return; }
+    if(window.__SIY_REAL__ && t.closest("#instrPrev,[data-save],[data-approve],[data-decide],[data-opt],[data-pv],[data-hcancel],[data-undo]")){ siyUnsupported(); return; }
     if(t.closest("#renameBtn")){ renameEmp(); return; }
     var toolDetails=t.closest("[data-tool-details]"); if(toolDetails){ openToolDetails(toolDetails.dataset.toolDetails); return; }
     if(t.closest("[data-request-tool]")){ newChat(); var requestInput=$("#input"); requestInput.value="أحتاج أداة غير موجودة في القائمة: "; requestInput.focus(); return; }
@@ -839,6 +846,7 @@ var I = {
     if(t.closest("#instrTgl")){ var w=$("#instrWrap"), b=$("#instrTgl"); w.hidden=!w.hidden; b.setAttribute("aria-expanded",String(!w.hidden)); if(!w.hidden){ $("#thread").scrollTop=0; $("#instr").focus(); } return; }
     if(t.closest("#onSw")){ if(window.__SIY_REAL__){ siySetEmployeeState(emp(who)); return; } var sw=$("#onSw"), eo=emp(who), v=sw.getAttribute("aria-checked")==="true"; sw.setAttribute("aria-checked",String(!v)); eo.on=!v; $("#onLbl").textContent=eo.on?(eo.f?"شغّالة":"شغّال"):(eo.f?"متوقفة":"متوقف"); renderSide(); siyPatch(eo.n,"status",eo.on?"نشط":"متوقف"); return; }
     if(t.closest("#instrSave")){ var e2=emp(who), nv=$("#instr").value.trim(); if(!nv||nv===e2.instr){ $("#instrF").firstChild.textContent="ما تغيّر شيء."; return; }
+      if(window.__SIY_REAL__){ siySaveEmployeeInstructions(e2,nv); return; }
       var os=e2.instr.split(/(?<=[.؟!])\s+/), ns=nv.split(/(?<=[.؟!])\s+/), add=ns.filter(function(s){return os.indexOf(s)<0}).join(" "), del=os.filter(function(s){return ns.indexOf(s)<0}).join(" ");
       e2.instr=nv; e2.ver++; siyPatch(e2.n,"instructions",nv);
       list=empThread(who); list.push({me:true,t:"حدّث تعليماتك: «"+(nv.length>90?nv.slice(0,90).replace(/\s\S*$/,"")+"…":nv)+"»",at:now()});
@@ -1148,6 +1156,17 @@ var I = {
       delete siyEmployeeStatePending[id]; if(generation===siyGeneration) siyDraw();
     }
   }
+  async function siySaveEmployeeInstructions(e,instructions){
+    var button=$("#instrSave"),note=$("#instrF").firstChild,previous=e.instr;
+    if(button.disabled)return;
+    button.disabled=true;button.textContent="جارٍ الحفظ…";note.textContent="أحفظها داخل مساحة شركتك وأتحقق من القراءة…";
+    try{
+      var data=await siyRequest({op:'employee_instructions',employee_id:e.id,instructions:instructions});
+      if(!data.instructions_verified||!data.employee||data.employee.recordId!==e.id||data.employee.instructions!==instructions)throw new Error('لم تتطابق قراءة التعليمات بعد الحفظ.');
+      e.instr=data.employee.instructions;e.instrSource=data.employee.instructionSource;e.instrVersion=data.employee.instructionVersion;e.ver+=1;note.textContent="تم الحفظ والتحقق · النسخة "+e.instrVersion+" أصبحت النسخة المعتمدة.";button.textContent="تم الحفظ";
+    }catch(error){e.instr=previous;note.textContent=error.message||"تعذّر حفظ التعليمات.";button.textContent="أعد المحاولة";}
+    finally{button.disabled=false;}
+  }
   async function siyExportCustomer(button){
     if(button.disabled) return;
     button.disabled=true; button.setAttribute('aria-busy','true');
@@ -1167,7 +1186,10 @@ var I = {
       button.disabled=false; button.removeAttribute('aria-busy');
     }
   }
-  function siyReplyHtml(text){ return '<p>'+esc(customerText(text)).replace(/\n/g,"<br>")+'</p>'; }
+  function siyReplyHtml(text){
+    var safe=esc(customerText(text)).replace(/\*\*([^*\n]+)\*\*/g,"<strong>$1</strong>");
+    return '<p>'+safe.replace(/\n/g,"<br>")+'</p>';
+  }
   function siyMessageTime(value){
     if(!value) return "";
     var text=String(value), date=/^\d{4}-\d{2}-\d{2}T/.test(text)?new Date(text):null;
@@ -1304,19 +1326,30 @@ var I = {
     var request={op:"message",message:text,conversation_id:list.siyConversationId||null,employee_id:employeeId||null,request_id:crypto.randomUUID()};
     if(list.siyLatestRequestId) request.prior_request_id=list.siyLatestRequestId;
     list.siyLatestRequestId=request.request_id;
-    var row={me:false,typing:true,at:"",requestId:request.request_id}; list.push(row); siyDraw();
+    var row={me:false,typing:true,at:"",requestId:request.request_id,progress:"أفهم طلبك من سياق شركتك…"}; list.push(row); siyDraw();
     var generation=siyGeneration;
+    var scanTimers=[];
+    function stopExperience(){scanTimers.forEach(clearTimeout);scanTimers=[];}
+    if(!employeeId&&/أبغى|ابي|أبي|أريد|اريد|سو|نفذ|رتب|ارسل|أرسل|تابع|ابحث|حلل|أنشئ|انشئ|موظف|اربط|حدّث|حدث|استخرج|اجمع|اقترح|أهم خطوة|اهم خطوة/i.test(text)){
+      var terms=String(text||"").toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(function(term){return term.length>2;});
+      var businessOrder=['whatsapp','hubspot','google-sheets','google-calendar','slack','notion','airtable','cal-com','wafeq','zendesk','mailchimp','instagram-business','linkedin','google-drive','stripe','shopify','woocommerce','http'];
+      var intentOrder=/حلل|تقرير|بيانات|وضع|مؤشر/.test(text)?['google-sheets','hubspot','notion','airtable','google-drive','slack']:/تسويق|محتوى|نشر|حملة/.test(text)?['linkedin','instagram-business','mailchimp','google-sheets','notion']:/دعم|عميل|رسائل|رد/.test(text)?['whatsapp','zendesk','gmail','hubspot','slack']:/موعد|تقويم|حجز/.test(text)?['google-calendar','cal-com','hubspot','whatsapp']:businessOrder.slice(0,8);
+      var ranked=TOOLS.map(function(tool,index){var hay=(tool.n+' '+tool.d+' '+tool.en+' '+tool.c).toLowerCase(),score=terms.reduce(function(sum,term){return sum+(hay.indexOf(term)>-1?3:0);},0),intent=intentOrder.indexOf(tool.s),preferred=businessOrder.indexOf(tool.s);if(intent>-1)score+=30-intent;return {tool:tool,score:score,index:index,preferred:preferred<0?businessOrder.length+index:preferred};}).sort(function(a,b){return b.score-a.score||a.preferred-b.preferred;}).slice(0,50).map(function(item){return item.tool;});
+      scanTimers.push(setTimeout(function(){if(!row.typing||generation!==siyGeneration)return;row.progress="أفحص الأدوات الأقرب للنتيجة…";row.toolScan={items:ranked.slice(0,10),count:Math.min(18,ranked.length)};siyDraw();},500));
+      scanTimers.push(setTimeout(function(){if(!row.typing||generation!==siyGeneration)return;row.progress="أقارن أفضل مسار قبل التنفيذ…";row.toolScan={items:ranked.slice(10,20),count:Math.min(36,ranked.length)};siyDraw();},1300));
+      scanTimers.push(setTimeout(function(){if(!row.typing||generation!==siyGeneration)return;row.progress="أدقق الخيار الأنسب لشركتك…";row.toolScan={items:ranked.slice(0,6),count:ranked.length};siyDraw();},2200));
+    }
     async function submit(refresh){
       if(row.siyInFlight) return; row.siyInFlight=true; row.typing=true; row.siyRetry=null; siyDraw();
       try{
         var data=await siyRequest(refresh?{op:'work',request_id:request.request_id,conversation_id:request.conversation_id}:request); if(generation!==siyGeneration) return;
         if(data.request_status==='not_observed') throw new Error('لم يظهر سجل الطلب بعد؛ حالته غير معروفة. تحديث الحالة لا يعيد تنفيذه.');
         siyRememberConversation(data,list,employeeId,text); siyMerge(data,false);
-        Object.assign(row,siyResultRow(data)); row.typing=false; row.siyInFlight=false; siyDraw();
+        stopExperience(); Object.assign(row,siyResultRow(data)); row.typing=false; row.siyInFlight=false; siyDraw();
         if(data.work_id&&["queued","running"].includes(data.work_status)) siyPoll(data.work_id,list,row,0);
       }catch(e){
         if(generation!==siyGeneration) return;
-        row.typing=false; row.siyInFlight=false; row.t=siyReplyHtml(e.message||"تعذّر الاتصال")+'<button type="button" class="lnk" data-siy-retry="1">تحقق من حالة الطلب</button>';
+        stopExperience(); row.typing=false; row.siyInFlight=false; row.t=siyReplyHtml(e.message||"تعذّر الاتصال")+'<button type="button" class="lnk" data-siy-retry="1">تحقق من حالة الطلب</button>';
         row.siyRetry=function(){submit(true);}; siyDraw(); // Read-only lookup of the original request; never redispatch after uncertainty.
       }
     }
@@ -1375,7 +1408,7 @@ var I = {
       kpi:[{v:"—",l:"مهام اليوم",t:"—"},{v:"—",l:"قيد التنفيذ",t:"—"},{v:"—",l:"مكتملة",t:"—"},{v:"—",l:"بانتظارك",t:"—"}],
       log:[["—","بيانات الموظف من سجل الشركة. نتائج التنفيذ تظهر في سجل العمل."]], auto:siyAuto(m.autonomy), autonomy:typeof m.autonomy==="string"?m.autonomy:"", tone:siyTone(m.tone), hours:"—",
       rules:rules, tools:(Array.isArray(m.tools)?m.tools:[]).map(function(t){return TOOL_SLUG[t]||String(t);}),
-      instr:m.instructions||"", how:(Array.isArray(m.how)?m.how:[]),
+      instr:m.instructions||"", instrSource:m.instructionSource||'company_profile', instrVersion:Number(m.instructionVersion)||1, instrUpdatedAt:m.instructionUpdatedAt||null, how:(Array.isArray(m.how)?m.how:[]),
       v:{ hi:"أبشر.", q:"أكمّل على نفس النهج؟", ack:"وصلني. أتأكد قبل ما أطبّق:", ackq:"قاعدة دائمة، ولا لهالمرة بس؟",
           why:{ subj:role, act:"اشتغلت حسب تعليماتك وقواعدك", log:0, rule:0, extra:"وكل حركة راجعة لسطر كتبته أنت", retry:"أعيد المحاولة الحين؟" },
           pause:"وقفت. ما أتحرك لين ترجعني.", resume:"رجعت أشتغل." } };

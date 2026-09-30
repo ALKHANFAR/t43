@@ -103,6 +103,43 @@ test('knowledge and employees are always read through the owning company id',asy
   assert.equal(seen.filter(call=>call.text.includes('siyadah_company_knowledge_items')||call.text.includes('siyadah_digital_employees')).every(call=>/company_id=\$1/.test(call.text)),true);
 });
 
+test('owner instruction edits stay company-scoped and advance the stored version',async()=>{
+  const calls=[];
+  const query=async(text,values=[])=>{
+    calls.push({text,values});
+    if(text.startsWith('UPDATE siyadah_digital_employees'))return {rows:[{id:'employee_alpha'}]};
+    if(text.startsWith('SELECT id,activepieces_flow_id'))return {rows:[{id:'employee_alpha',activepieces_flow_id:'F12345678901234567890',name:'سعد',role_title:'المبيعات',prompt:'تابع العملاء',prompt_source:'owner',prompt_version:2,knowledge_topics_json:[],knowledge_version:1,status:'draft',tools_json:[],updated_at:'2026-09-30T00:00:00Z'}]};
+    throw new Error('unexpected query');
+  };
+  const service=createCompanyProfileService({query});
+  const employee=await service.updateEmployeeInstructions({companyId:'company_alpha',employeeId:'employee_alpha',instructions:'تابع العملاء'});
+  const update=calls[0];
+  assert.match(update.text,/company_id=\$1 AND id=\$2/);
+  assert.match(update.text,/prompt_source='owner'/);
+  assert.match(update.text,/prompt_version=prompt_version\+1/);
+  assert.deepEqual(update.values,['company_alpha','employee_alpha','تابع العملاء']);
+  assert.equal(employee.instructionSource,'owner');
+  assert.equal(employee.instructionVersion,2);
+});
+
+test('legacy company flows are adopted into an owned employee record before controls are shown',async()=>{
+  const calls=[];
+  const query=async(text,values=[])=>{
+    calls.push({text,values});
+    if(text.startsWith('SELECT * FROM siyadah_company_profiles'))return {rows:[{company_id:'company_alpha',knowledge_version:3}]};
+    if(text.startsWith('INSERT INTO siyadah_digital_employees'))return {rows:[]};
+    if(text.startsWith('SELECT id FROM siyadah_digital_employees'))return {rows:[{id:'employee_alpha'}]};
+    if(text.startsWith('SELECT id,activepieces_flow_id'))return {rows:[{id:'employee_alpha',activepieces_flow_id:'F12345678901234567890',name:'موظف التسويق',role_title:'موظف',prompt:'تعليمات أولية',prompt_source:'manual_setup',prompt_version:1,knowledge_topics_json:[],knowledge_version:3,status:'draft',tools_json:[]}]};
+    throw new Error('unexpected query');
+  };
+  const service=createCompanyProfileService({query});
+  const employee=await service.adoptEmployeeFlow({companyId:'company_alpha',flow:{id:'F12345678901234567890',version:{displayName:'موظف التسويق'}}});
+  assert.equal(employee.recordId,'employee_alpha');
+  assert.equal(employee.instructionSource,'manual_setup');
+  assert.ok(calls.some(call=>call.text.includes('ON CONFLICT (activepieces_flow_id) DO NOTHING')&&call.values[1]==='company_alpha'));
+  assert.ok(calls.some(call=>call.text.includes('WHERE company_id=$1 AND activepieces_flow_id=$2')));
+});
+
 test('user correction creates a new knowledge version without deleting unrelated website facts',async()=>{
   const calls=[],profile={company_id:'company_alpha',knowledge_version:1,profile_json:{facts:[
     {id:'web-price',topic:'pricing',key:'monthly_price',value:'99 ريال',sourceType:'company_website'},

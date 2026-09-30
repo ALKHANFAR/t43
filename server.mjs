@@ -13,6 +13,8 @@ import {createMailer,MailerError} from './lib/mailer.mjs';
 const root=process.cwd();
 const port=Number(process.env.PORT||3000);
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.ico':'image/x-icon','.woff2':'font/woff2','.xml':'application/xml; charset=utf-8','.txt':'text/plain; charset=utf-8'};
+const publicRootFiles=new Set(['404.html','apple-touch-icon.png','ar.html','auth.html','demo-en.html','demo-en.js','demo.html','demo.js','fonts.css','icon-512.png','index.html','integrations.html','integrations.js','og-ar.jpg','og.jpg','pieces.js','privacy.html','robots.txt','site.js','site.webmanifest','sitemap.xml']);
+const publicDirectories=['/.well-known/','/app/','/assets/','/email-signatures/','/fonts/'];
 let tenantProjectsPromise;
 let companyProfilesPromise;
 let accountAuthPromise;
@@ -236,6 +238,35 @@ function wantsEmployee(message){
   const text=String(message||'');
   return /(?:وظ[ّ]?ف|أنشئ|انشئ|ابن|سو[ِّي]*|أبي|أبغى).{0,80}(?:موظف|فلو|تدفق)|(?:موظف|فلو|تدفق).{0,80}(?:وظ[ّ]?ف|أنشئ|انشئ|ابن|سو[ِّي]*)/i.test(text);
 }
+function wantsEmployeeExecution(message){
+  return /(?:أرسل|ارسل|انشر|نف[ّ]?ذ|شغ[ّ]?ل|حد[ّ]?ث|سج[ّ]?ل|احجز|ألغ|الغ|اربط|افصل|أنشئ|انشئ|راسل|اتصل)/i.test(String(message||''));
+}
+async function deepseekReply({company,settings,knowledge,team,history,message,employee=null}){
+  const key=process.env.DEEPSEEK_API_KEY;
+  if(!key)throw new TenantProjectError('assistant_not_configured','مساعد سيادة غير مهيأ الآن.',503);
+  const facts=(knowledge?.facts||[]).slice(0,40).map(item=>({topic:item.topic,value:item.value,source:item.sourceUrl,certainty:item.certainty}));
+  const selectedEmployee=employee?{id:employee.id,name:employee.name,role:employee.role_title,status:employee.status,instructions:employee.prompt,instructionSource:employee.prompt_source,instructionVersion:Number(employee.prompt_version||1),knowledgeTopics:employee.knowledge_topics_json||[],tools:employee.tools_json||[]}:null;
+  const context={company,selectedEmployee,settings,knowledge:{coverage:knowledge?.coverageScore||0,facts,missing:knowledge?.missingCritical||[]},team:(team||[]).map(item=>({id:item.recordId,name:item.name,role:item.role,status:item.status,tools:item.tools||[]}))};
+  const system=`أنت سيادة، شريك أعمال ذكي.
+أمامك سياق حي عن الشركة ومعرفتها وإعداداتها وفريقها، وعن الموظف المختار وتعليماته إن وُجد.
+افهم هدف المستخدم من المحادثة والسياق، ثم فكّر وتصرّف ورد بالطريقة التي تراها الأنسب.
+سياق العمل الحالي بصيغة JSON:\n${JSON.stringify(context).slice(0,14000)}`;
+  const messages=[{role:'system',content:system}];
+  for(const item of (history||[]).slice(-8))if(['user','assistant'].includes(item.role)&&typeof item.content==='string')messages.push({role:item.role,content:item.content.slice(0,3000)});
+  messages.push({role:'user',content:String(message||'').slice(0,5000)});
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
+  try{
+    const response=await fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-v4-pro',messages,thinking:{type:'enabled'},reasoning_effort:'high',stream:false}),signal:controller.signal});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new TenantProjectError('assistant_unavailable','تعذّر إكمال التفكير الآن.',502);
+    const reply=String(data?.choices?.[0]?.message?.content||'').trim();
+    if(!reply)throw new TenantProjectError('assistant_empty','لم تصل إجابة مكتملة.',502);
+    return reply.slice(0,6000);
+  }catch(error){
+    if(error instanceof TenantProjectError)throw error;
+    throw new TenantProjectError('assistant_unavailable','تعذّر إكمال التفكير الآن.',502);
+  }finally{clearTimeout(timer);}
+}
 async function publicChat(req,res){
   let sessionHeaders={};
   try{
@@ -243,8 +274,10 @@ async function publicChat(req,res){
     if(Object.hasOwn(input,'companyId')||Object.hasOwn(input,'tenantId')||Object.hasOwn(input,'projectId'))throw new TenantProjectError('client_scope_forbidden','نطاق الشركة يحدده الخادم فقط.',400);
     const service=await tenantProjects(),companyId=resolved.session.companyId;
     if(input.op==='hydrate'){
-      const flows=await service.listFlows(companyId),profiles=await companyProfiles(),saved=await profiles.listEmployees(companyId),savedFlows=new Set(saved.map(item=>item.flowId)),profile=await profiles.read(companyId),recentWork=await profiles.recentWork(companyId);
-      return json(res,200,{ok:true,company:profile?.company_name||resolved.account.company_name,company_settings:await profiles.readSettings(companyId),team:saved.concat(flows.filter(flow=>!savedFlows.has(flow.id)).map(employee)),memory:[],owned_knowledge:await profiles.ownedKnowledge(companyId),recent_work:recentWork,work_count:recentWork.length,conversations:await profiles.listConversations(companyId),pending_work:[]},sessionHeaders);
+      const flows=await service.listFlows(companyId),profiles=await companyProfiles();let saved=await profiles.listEmployees(companyId),savedFlows=new Set(saved.map(item=>item.flowId));
+      for(const flow of flows)if(!savedFlows.has(flow.id)){const adopted=await profiles.adoptEmployeeFlow({companyId,flow});saved.push(adopted);savedFlows.add(flow.id);}
+      const profile=await profiles.read(companyId),recentWork=await profiles.recentWork(companyId);
+      return json(res,200,{ok:true,company:profile?.company_name||resolved.account.company_name,company_settings:await profiles.readSettings(companyId),team:saved,memory:[],owned_knowledge:await profiles.ownedKnowledge(companyId),recent_work:recentWork,work_count:recentWork.length,conversations:await profiles.listConversations(companyId),pending_work:[]},sessionHeaders);
     }
     if(input.op==='employee_state'){
       const profiles=await companyProfiles(),saved=await profiles.findEmployee(companyId,input.employee_id);
@@ -254,6 +287,12 @@ async function publicChat(req,res){
       await service.changeFlowStatus({tenantId:companyId,flowId:saved.activepieces_flow_id,status:status==='active'?'ENABLED':'DISABLED'});
       const updated=await profiles.setEmployeeState({companyId,employeeId:saved.id,status});
       return json(res,200,{ok:true,state_verified:true,employee:updated},sessionHeaders);
+    }
+    if(input.op==='employee_instructions'){
+      const instructions=typeof input.instructions==='string'?input.instructions.trim():'';
+      if(!instructions||instructions.length>12_000)throw new CompanyProfileError('invalid_employee_instructions','اكتب تعليمات واضحة لا تتجاوز 12,000 حرف.',400);
+      const profiles=await companyProfiles(),updated=await profiles.updateEmployeeInstructions({companyId,employeeId:input.employee_id,instructions});
+      return json(res,200,{ok:true,instructions_verified:true,employee:updated},sessionHeaders);
     }
     if(input.op==='export'){
       const profiles=await companyProfiles(),profile=await profiles.read(companyId),employees=await profiles.listEmployees(companyId),knowledge=await profiles.ownedKnowledge(companyId),settings=await profiles.readSettings(companyId),recentWork=await profiles.recentWork(companyId);
@@ -266,21 +305,31 @@ async function publicChat(req,res){
         const profiles=await companyProfiles(),saved=await profiles.findEmployee(companyId,input.employee_id);
         if(!saved)throw new CompanyProfileError('employee_not_found','الموظف غير موجود في شركتك.',404);
         const requestId=typeof input.request_id==='string'&&input.request_id?input.request_id:randomUUID();
-        const run=await service.runFlow({tenantId:companyId,flowId:saved.activepieces_flow_id,requestId,message:input.message});
-        const tools=run.tool.pieceName==='@activepieces/piece-http'?['اتصال ويب']:[];
-        const updated=await profiles.recordEmployeeRun({companyId,employeeId:saved.id,flowId:run.flowId,runId:run.runId,result:run.result,tools,conversationId});
-        const proof={recordId:`proof_${run.runId}`,employeeId:saved.id,flowId:run.flowId,runId:run.runId,work_id:`work_${run.runId}`,conversation_id:conversationId,subject:`مهمة ${saved.name}`,message:'اكتملت المهمة ووصل رد الخدمة.',status:'succeeded',proof:`ردت الخدمة برمز ${run.result.status||200}`,at:run.finishedAt};
-        const reply='نفّذت المهمة ووصلت النتيجة بنجاح.';
+        if(saved.status==='active'&&wantsEmployeeExecution(input.message)){
+          const run=await service.runFlow({tenantId:companyId,flowId:saved.activepieces_flow_id,requestId,message:input.message});
+          const tools=run.tool.pieceName==='@activepieces/piece-http'?['اتصال ويب']:[];
+          const updated=await profiles.recordEmployeeRun({companyId,employeeId:saved.id,flowId:run.flowId,runId:run.runId,result:run.result,tools,conversationId});
+          const proof={recordId:`proof_${run.runId}`,employeeId:saved.id,flowId:run.flowId,runId:run.runId,work_id:`work_${run.runId}`,conversation_id:conversationId,subject:`مهمة ${saved.name}`,message:'اكتملت المهمة ووصل رد الخدمة.',status:'succeeded',proof:`ردت الخدمة برمز ${run.result.status||200}`,at:run.finishedAt};
+          const reply='نفّذت المهمة ووصلت النتيجة بنجاح.';
+          await profiles.recordConversation({companyId,conversationId,employeeId:saved.id,requestId,userMessage:input.message,assistantMessage:reply});
+          return json(res,200,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',work_id:proof.work_id,reply,employee:updated,recent_work:[proof]},sessionHeaders);
+        }
+        const profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId),conversations=await profiles.listConversations(companyId),conversation=conversations.find(item=>item.id===conversationId);
+        const reply=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history:conversation?.messages||[],message:input.message,employee:saved});
         await profiles.recordConversation({companyId,conversationId,employeeId:saved.id,requestId,userMessage:input.message,assistantMessage:reply});
-        return json(res,200,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',work_id:proof.work_id,reply,employee:updated,recent_work:[proof]},sessionHeaders);
+        return json(res,200,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',reply,experience:{employee_conversation:true,employee_id:saved.id,instruction_version:Number(saved.prompt_version||1),external_execution:false}},sessionHeaders);
       }
       if(wantsEmployee(input.message)){
         await service.ensure({tenantId:companyId,displayName:`شركة سيادة ${companyId.slice(-8)}`});
         const flow=await service.createFlow({tenantId:companyId,displayName:flowName(input.message),metadata:{source:'siyadah-chat',state:'draft'}});
-        const created=employee(flow);
+        const profiles=await companyProfiles(),created=await profiles.adoptEmployeeFlow({companyId,flow});
         return json(res,201,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',reply:`تم تجهيز ${created.name} داخل مساحة شركتك. لن يبدأ العمل قبل ربط أدواته واختبار أول مهمة.`,employee:created},sessionHeaders);
       }
-      return json(res,200,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',reply:'وصل طلبك. إنشاء الموظفين متاح الآن، أما التنفيذ الخارجي والتشغيل فما زالا متوقفين حتى يكتمل ربط الأدوات.'},sessionHeaders);
+      const profiles=await companyProfiles(),profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId),conversations=await profiles.listConversations(companyId),conversation=conversations.find(item=>item.id===conversationId);
+      const reply=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history:conversation?.messages||[],message:input.message});
+      const requestId=typeof input.request_id==='string'&&input.request_id?input.request_id:randomUUID();
+      await profiles.recordConversation({companyId,conversationId,employeeId:null,requestId,userMessage:input.message,assistantMessage:reply});
+      return json(res,200,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',reply,experience:{understood_company:true,knowledge_version:Number(knowledge?.knowledgeVersion||0),catalog_reviewed:true}},sessionHeaders);
     }
     return json(res,400,{ok:false,error:'unsupported_operation'},sessionHeaders);
   }catch(error){
@@ -303,7 +352,9 @@ async function deepseek(req,res){
 function staticFile(req,res){
   const url=new URL(req.url,'http://localhost');
   const requested=url.pathname;
-  const safe=normalize(decodeURIComponent(requested)).replace(/^(\.\.(\/|\\|$))+/,'');
+  let safe;try{safe=normalize(decodeURIComponent(requested)).replace(/^(\.\.(\/|\\|$))+/,'');}catch{return json(res,404,{error:'not_found'});}
+  const publicPath=publicRootFiles.has(safe.replace(/^\//,''))||publicDirectories.some(prefix=>safe.startsWith(prefix));
+  if(!publicPath)return json(res,404,{error:'not_found'});
   const file=join(root,safe);
   if(!file.startsWith(root))return json(res,403,{error:'forbidden'});
   try{if(!statSync(file).isFile())throw new Error();}catch{return json(res,404,{error:'not_found'});}
