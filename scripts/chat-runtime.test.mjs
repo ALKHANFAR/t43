@@ -43,7 +43,7 @@ test('employee execution proof is scoped to the conversation that produced it',(
   assert.match(serverSource,/const proof=\{[^\n]+conversation_id:conversationId/);
 });
 
-async function page({storage={},hydrate=empty,message,work,approve,employee_state,employee_instructions,add_knowledge,update_company_settings,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد']]}={}){
+async function page({storage={},hydrate=empty,message,work,approve,employee_state,employee_instructions,add_knowledge,update_company_settings,export:exportResponse,integrations={list:{ok:true,connections:[]}},integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد',{pieceName:'@activepieces/piece-gmail'}]]}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
   const w=dom.window,requests=[],alerts=[],polls=[],navigations=[];let hydrateTimer;
   w.matchMedia=()=>({matches:true,addEventListener(){}});
@@ -66,7 +66,7 @@ async function page({storage={},hydrate=empty,message,work,approve,employee_stat
       return {ok:true,status:200,json:async()=>response};
     }
     const body=JSON.parse(options.body);requests.push({url,body,headers:options.headers,credentials:options.credentials});
-    const handler={hydrate,message,work,approve,employee_state,employee_instructions,add_knowledge,update_company_settings,export:exportResponse}[body.op];
+    const handler=String(url).includes('/v1/integrations')?integrations[body.op]:{hydrate,message,work,approve,employee_state,employee_instructions,add_knowledge,update_company_settings,export:exportResponse}[body.op];
     const response=typeof handler==='function'?await handler(body):handler;
     if(response instanceof Error)throw response;
     if(response?.httpStatus)return {ok:false,status:response.httpStatus,json:async()=>response};
@@ -116,10 +116,11 @@ test('real account tools hide legacy demo employees and internal platform labels
   }finally{p.close();}
 });
 test('tool buttons show verified details or prepare a chat request instead of doing nothing',async()=>{
-  const p=await page({hydrate:{...empty,team:[employee]},pieces:[['gmail','Gmail','Email','communication','https://example.test/gmail.png','البريد']]});try{
+  const connection={id:'C'.repeat(21),pieceName:'@activepieces/piece-gmail',displayName:'Gmail',status:'ACTIVE',scope:'PROJECT'};
+  const p=await page({hydrate:{...empty,team:[employee]},integrations:{list:{ok:true,connections:[connection]}},pieces:[['gmail','Gmail','Email','communication','https://example.test/gmail.png','البريد',{pieceName:'@activepieces/piece-gmail'}]]});try{
     p.d.querySelector('#toolsLink').click();await flush();
     const details=p.d.querySelector('[data-tool-details="gmail"]');assert.ok(details);details.click();
-    assert.ok(p.d.querySelector('#modal').classList.contains('on'));assert.match(p.d.querySelector('#mD').textContent,/جاهزة للاستخدام.*سارة/);assert.equal(p.d.querySelector('#mGo').disabled,true);
+    assert.ok(p.d.querySelector('#modal').classList.contains('on'));assert.match(p.d.querySelector('#mD').textContent,/جاهزة للاستخدام.*سارة/);assert.equal(p.d.querySelector('#mGo').hidden,true);
     p.d.querySelector('#mX').click();p.d.querySelector('[data-request-tool]').click();
     assert.equal(p.d.querySelector('#input').value,'أحتاج أداة غير موجودة في القائمة: ');assert.equal(p.d.activeElement,p.d.querySelector('#input'));
   }finally{p.close();}
@@ -154,7 +155,7 @@ test('customer-facing builder proposal hides platform vocabulary and renders pro
 });
 test('browser storage cannot supply company identity or suppress server hydration',async()=>{
   const p=await page({storage:{siyadah_company:'Untrusted',siyadah_token:'attacker-token'}});try{
-    assert.equal(p.w.__SIY_REAL__,true);assert.equal(p.requests.length,1);assert.equal(p.requests[0].credentials,'include');
+    assert.equal(p.w.__SIY_REAL__,true);assert.equal(p.requests.length,2);assert.equal(p.requests[0].credentials,'include');
     assert.ok(!p.d.querySelector('#meBtn').textContent.includes('Untrusted'));
   }finally{p.close();}
 });
@@ -247,12 +248,13 @@ test('stable employee mapping rejects missing IDs and exact active status, no fa
     assert.equal(p.w.EMPS.length,1);assert.equal(p.w.EMPS[0].on,false);assert.equal(p.d.querySelectorAll('#emps img').length,0);
     p.d.querySelector('#emps .emp').click();const toggle=p.d.querySelector('#onSw');toggle.click();assert.equal(toggle.getAttribute('aria-checked'),'false');await flush();
     assert.equal(p.d.querySelector('#renameBtn').disabled,true);
-    assert.match(source,/mGo[^\n]+disabled=!!window\.__SIY_REAL__/);assert.match(source,/غير متاحة للربط بعد/);
-    assert.equal(p.requests.length,2);
+    assert.match(source,/op:"connect"/);assert.match(source,/op:"revalidate"/);assert.match(source,/op:"disconnect"/);
+    assert.equal(p.requests.length,3);
   }finally{p.close();}
 });
-test('a tool appears ready only when the owned employee record contains it',async()=>{
-  const p=await page({hydrate:{...empty,team:[{...employee,tools:['اتصال ويب']}]},pieces:[['http','طلب ويب','تنفيذ','developer','https://example.test/http.png','إرسال طلب إلى خدمة خارجية']]});try{
+test('an employee tool appears ready only with a project connection readback',async()=>{
+  const connection={id:'C'.repeat(21),pieceName:'@activepieces/piece-http',displayName:'طلب ويب',status:'ACTIVE',scope:'PROJECT'};
+  const p=await page({hydrate:{...empty,team:[{...employee,tools:['اتصال ويب']}]},integrations:{list:{ok:true,connections:[connection]}},pieces:[['http','طلب ويب','تنفيذ','developer','https://example.test/http.png','إرسال طلب إلى خدمة خارجية',{pieceName:'@activepieces/piece-http'}]]});try{
     p.d.querySelector('#emps .emp').click();assert.ok(p.d.querySelector('.chip:not(.chip--off) .chip__n'));assert.match(p.d.querySelector('.chip:not(.chip--off)').textContent,/اتصال ويب/);assert.equal(p.d.querySelector('.chip:not(.chip--off) [data-c]'),null);
   }finally{p.close();}
 });
@@ -402,7 +404,7 @@ test('company voice settings load and save without browser-supplied company scop
 
 test('company knowledge panel shows owned facts with source time and partial coverage without demo data',async()=>{
  const p=await page({hydrate:{...empty,owned_knowledge:{schemaVersion:1,companyId:'owner-1',knowledgeVersion:3,coverage:'partial',coverageScore:40,lastSuccessAt:'2026-09-09T10:00:00Z',lastError:null,facts:[{key:'price',topic:'السعر',value:'1200 <img src=x>',sourceKind:'user',certainty:'user_confirmed',observedAt:'2026-09-09T09:00:00Z'},{key:'service',topic:'خدمة',value:'الصيانة',sourceKind:'company_website',sourceUrl:'https://company.test/service',certainty:'observed',observedAt:'2026-09-08T09:00:00Z'}]}}});try{
-  p.d.querySelector('#memTgl').click();const panel=p.d.querySelector('#memList');assert.match(panel.textContent,/1200 <img src=x>/);assert.match(panel.textContent,/من رسائلك/);assert.match(panel.textContent,/https:\/\/company.test\/service/);assert.match(panel.textContent,/تغطية جزئية 40٪/);assert.match(panel.textContent,/الإصدار 3/);assert.match(panel.textContent,/آخر تحديث ناجح/);assert.ok(!panel.querySelector('img,script,[data-mdel]'));assert.equal(panel.querySelectorAll('[data-kedit]').length,2);assert.ok(panel.querySelector('#kbAdd'));assert.equal(p.requests.length,1);
+  p.d.querySelector('#memTgl').click();const panel=p.d.querySelector('#memList');assert.match(panel.textContent,/1200 <img src=x>/);assert.match(panel.textContent,/من رسائلك/);assert.match(panel.textContent,/https:\/\/company.test\/service/);assert.match(panel.textContent,/تغطية جزئية 40٪/);assert.match(panel.textContent,/الإصدار 3/);assert.match(panel.textContent,/آخر تحديث ناجح/);assert.ok(!panel.querySelector('img,script,[data-mdel]'));assert.equal(panel.querySelectorAll('[data-kedit]').length,2);assert.ok(panel.querySelector('#kbAdd'));assert.equal(p.requests.length,2);
  }finally{p.close();}
 });
 test('company owner can add knowledge without sending company identity from the browser',async()=>{
@@ -450,8 +452,8 @@ test('unavailable actions cannot mutate and hiring opens central composer withou
   p.d.querySelector('#emps .emp').click();p.d.querySelector('[data-open="plan"]').click();
   const unavailable=[p.d.querySelector('#attachBtn'),p.d.querySelector('#deleteAccountBtn'),...p.d.querySelectorAll('#pane-plan button[disabled]')];
   assert.equal(unavailable.length,4);for(const button of unavailable){assert.equal(button.disabled,true);button.click();}
-  assert.match(p.d.querySelector('#attachBtn').getAttribute('aria-label'),/غير متاح/);assert.equal(p.requests.length,1);
-  p.d.querySelector('#hireFromPlan').click();assert.equal(p.d.activeElement.id,'input');assert.match(p.d.querySelector('#input').placeholder,/مهمة الموظف/);assert.equal(p.requests.length,1);assert.equal(p.d.querySelector('#thread').classList.contains('thread--emp'),false);
+  assert.match(p.d.querySelector('#attachBtn').getAttribute('aria-label'),/غير متاح/);assert.equal(p.requests.length,2);
+  p.d.querySelector('#hireFromPlan').click();assert.equal(p.d.activeElement.id,'input');assert.match(p.d.querySelector('#input').placeholder,/مهمة الموظف/);assert.equal(p.requests.length,2);assert.equal(p.d.querySelector('#thread').classList.contains('thread--emp'),false);
   assert.equal(p.d.querySelector('#exportBtn').disabled,false);
  }finally{p.close();}
 });
@@ -464,7 +466,7 @@ test('historical demo keeps its original plan and controls separate from real ac
 test('real deep link say prefills central composer and cannot submit without explicit user send',async()=>{
  const text='أنشئ موظفًا ثم شغله';
  const p=await page({hash:'#e=employee-record-1&say='+encodeURIComponent(text),hydrate:{...empty,team:[employee]},message:{ok:true,conversation_id:'explicit',reply:'وصل طلبك'}});try{
-  await new Promise(resolve=>setTimeout(resolve,240));assert.equal(p.requests.length,1);assert.equal(p.requests[0].body.op,'hydrate');assert.equal(p.d.querySelector('#input').value,text);assert.equal(p.d.activeElement.id,'input');assert.equal(p.d.querySelector('#thread').classList.contains('thread--emp'),false);
+  await new Promise(resolve=>setTimeout(resolve,240));assert.equal(p.requests.length,2);assert.equal(p.requests[0].body.op,'hydrate');assert.equal(p.d.querySelector('#input').value,text);assert.equal(p.d.activeElement.id,'input');assert.equal(p.d.querySelector('#thread').classList.contains('thread--emp'),false);
   p.d.querySelector('#send').click();await flush();const req=p.requests.find(r=>r.body.op==='message');assert.equal(req.body.message,text);assert.equal(req.body.employee_id,null);assert.equal(p.requests.filter(r=>r.body.op==='message').length,1);
  }finally{p.close();}
 });
@@ -474,7 +476,7 @@ test('real notifications are unavailable without channel or scheduled delivery c
   const control=p.d.querySelector('#notificationSwitch'),row=control.closest('.srow');
   assert.equal(control.disabled,true);assert.equal(control.getAttribute('aria-checked'),'false');assert.match(row.textContent,/الإشعارات غير متاحة/);
   for(const claim of ['واتساب + بريد','ملخص يومي','تنبيه عند'])assert.ok(!row.textContent.includes(claim));
-  control.click();assert.equal(p.requests.length,1);assert.equal(control.getAttribute('aria-checked'),'false');
+  control.click();assert.equal(p.requests.length,2);assert.equal(control.getAttribute('aria-checked'),'false');
  }finally{p.close();}
  const demo=await page({storage:{},hash:'',real:false});try{assert.equal(demo.d.querySelector('#notificationSwitch').disabled,false);assert.equal(demo.d.querySelector('#notificationSwitch').getAttribute('aria-checked'),'true');}finally{demo.close();}
 });

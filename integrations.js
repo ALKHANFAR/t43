@@ -56,8 +56,8 @@ window.addEventListener("DOMContentLoaded",function(){
   }
   function card(p){
     var ini=p.n.replace(/[^A-Za-z0-9\u0600-\u06FF]/g,"").slice(0,2)||"•";
-    return '<div class="card"><span class="card__i"><img src="'+p.logo+'" alt="" loading="lazy" crossorigin="anonymous" referrerpolicy="no-referrer" data-fb="1"></span>'+
-      '<div><div class="card__n">'+p.n+'</div><div class="card__d" dir="'+(lang==="ar"?"rtl":"ltr")+'" title="'+(desc(p)||"").replace(/"/g,"&quot;")+'">'+(desc(p)||"")+'</div><div class="card__c">'+catLabel(p.c)+'</div></div></div>';
+    return '<a class="card" href="/app/chat.html#tools=1&tool='+encodeURIComponent(p.s)+'"><span class="card__i"><img src="'+p.logo+'" alt="" loading="lazy" crossorigin="anonymous" referrerpolicy="no-referrer" data-fb="1"></span>'+
+      '<div><div class="card__n">'+p.n+'</div><div class="card__d" dir="'+(lang==="ar"?"rtl":"ltr")+'" title="'+(desc(p)||"").replace(/"/g,"&quot;")+'">'+(desc(p)||"")+'</div><div class="card__c">'+catLabel(p.c)+'</div></div></a>';
   }
   function render(){
     var f=P.filter(function(p){ return (cat==="all"||p.c===cat) && (!q||(p.n+" "+p.d+" "+p.da+" "+p.s).toLowerCase().indexOf(q)>-1); });

@@ -872,13 +872,13 @@ var I = {
   /* الكتالوج الحقيقي من pieces.js: [slug, name, description EN, category, logo, description AR] */
   var ON ={"gmail":"سعد · نورة · فهد","google-sheets":"نورة","google-calendar":"سعد","whatsapp":"سعد · فهد"};
   var SUG={"linkedin":"تحتاجه ريم","hubspot":"يحتاجه سعد","wafeq":"تحتاجه نورة","cal-com":"يحتاجه سعد","instagram-business":"تحتاجه ريم","google-docs":"تحتاجه ريم"};
-  var TOOLS=(window.PIECES||[]).map(function(p){ return {s:p[0],n:p[1],d:p[5]||p[2],en:p[2],c:p[3],logo:p[4],on:!!ON[p[0]],by:ON[p[0]]||"",sug:window.SIYADAH_REAL_ACCOUNT===true?"":(SUG[p[0]]||"")}; });
+  var TOOLS=(window.PIECES||[]).map(function(p){ return {s:p[0],n:p[1],d:p[5]||p[2],en:p[2],c:p[3],logo:p[4],piece:(p[6]||{}).pieceName||"@activepieces/piece-"+p[0],on:!!ON[p[0]],by:ON[p[0]]||"",connection:null,sug:window.SIYADAH_REAL_ACCOUNT===true?"":(SUG[p[0]]||"")}; });
   var SOON=["سلة","زد","فودكس","ميسر","Unifonic","تابي","دفترة"];
   var tq="", tshown=24, picked=null, allOpen=false; /* allOpen: قسم «الكل» مطوي افتراضيًا */
   /* مين يستخدم الأداة: من أدوات الموظفين، وإلا من الاقتراحات */
   function usersOf(s){ var u=EMPS.filter(function(e){return e.tools.indexOf(s)>-1}).map(function(e){return e.n}); if(u.length) return u.join(" · "); if(window.__SIY_REAL__) return "بانتظار تعيين موظف"; var g=SUG[s]; return g?g.replace(/^(يحتاجه|تحتاجه)\s+/,""):"بانتظار تعيين موظف"; }
   function tcard(t){
-    var st=t.on?'<span class="st"><i></i>مربوطة</span>':(t.sug?'<span class="st st--w">'+t.sug+'</span>':'');
+    var state=t.connection?(t.connection.status==='ACTIVE'?'جاهزة':t.connection.status==='ERROR'?'فيها خطأ':'محفوظة'):"",st=t.on?'<span class="st"><i></i>'+state+'</span>':(t.sug?'<span class="st st--w">'+t.sug+'</span>':'');
     return '<div class="tl'+(t.on?' tl--on':'')+'"><span class="tl__i"><img src="'+t.logo+'" alt="" loading="lazy" crossorigin="anonymous" referrerpolicy="no-referrer" data-fb="1"></span><div><div class="tl__n">'+t.n+'</div>'+
       '<div class="tl__d">'+(t.d||t.c)+(t.on?'<br><span class="who">يستخدمها: '+t.by+'</span>':'')+'</div>'+
       '<div class="tl__f">'+(t.on?'<button type="button" class="lnk" data-tool-details="'+esc(t.s)+'">التفاصيل</button>':'<button type="button" class="lnk lnk--fill" data-c="'+t.s+'">اربط</button>')+st+'</div></div></div>';
@@ -910,27 +910,68 @@ var I = {
   var modalOpener=null;
   function openConnect(slug){ picked=TOOLS.filter(function(x){return x.s===slug})[0]; if(!picked) return;
     $("#mI").innerHTML='<img src="'+picked.logo+'" alt="" crossorigin="anonymous" referrerpolicy="no-referrer" style="width:26px;height:26px;object-fit:contain">'; $("#mN").textContent=picked.n; $("#mD").textContent="بعد الربط يقدر موظفوك يستخدمون "+picked.n+". "+picked.d+".";
-    $("#mGo").disabled=!!window.__SIY_REAL__; $("#mGo").textContent=window.__SIY_REAL__?"الربط قريبًا":"اربط";
-    if(window.__SIY_REAL__) $("#mD").textContent="هذه الأداة غير متاحة للربط بعد. لن نعرضها كمربوطة حتى تنجح تجربة حقيقية.";
-    openModal(); }
+    $("#mF").hidden=true; $("#mF").innerHTML=""; $("#mGo").hidden=false; $("#mGo").disabled=false; $("#mGo").textContent="اربط";
+    openModal(); if(window.__SIY_REAL__) realConnect(picked); }
   function openToolDetails(slug){ picked=TOOLS.filter(function(x){return x.s===slug&&x.on;})[0]; if(!picked) return;
     $("#mI").innerHTML='<img src="'+picked.logo+'" alt="" crossorigin="anonymous" referrerpolicy="no-referrer" style="width:26px;height:26px;object-fit:contain">'; $("#mN").textContent=picked.n;
-    $("#mD").textContent="جاهزة للاستخدام · يستخدمها: "+usersOf(picked.s); $("#mGo").disabled=true; $("#mGo").textContent="جاهزة"; openModal(); }
+    if(window.__SIY_REAL__){ var c=picked.connection,status=c&&c.status==='ACTIVE'?"جاهزة للاستخدام":c&&c.status==='ERROR'?"الاتصال فيه خطأ":"الاتصال محفوظ";
+      $("#mD").textContent=status+" · يستخدمها: "+usersOf(picked.s); $("#mGo").hidden=true; $("#mF").hidden=false; $("#mF").innerHTML='<p class="mf__m">'+esc(c&&c.displayName||picked.n)+'</p><p class="mf__e" id="mE" role="alert" hidden></p><div class="mbox__a"><button type="button" class="lnk" data-revalidate="1">اختبر الاتصال</button><button type="button" class="lnk" data-disconnect="1">افصل</button></div>'; }
+    else { $("#mF").hidden=true; $("#mGo").hidden=false; $("#mGo").disabled=true; $("#mGo").textContent="جاهزة"; } openModal(); }
   function openModal(){ modalOpener=document.activeElement; $("#modal").classList.add("on"); var f=$("#mGo")||$("#mX"); if(f) f.focus(); }
-  function closeModal(){ $("#modal").classList.remove("on"); var back=(modalOpener&&document.contains(modalOpener))?modalOpener:($("#tq")||$("#input")); if(back&&back.focus) back.focus(); modalOpener=null; }
+  function closeModal(){ if(oauthOff)oauthOff(); rc=null; $("#modal").classList.remove("on"); var back=(modalOpener&&document.contains(modalOpener))?modalOpener:($("#tq")||$("#input")); if(back&&back.focus) back.focus(); modalOpener=null; }
   $("#mX").addEventListener("click",closeModal);
   $("#modal").addEventListener("click",function(e){ if(e.target===this) closeModal(); });
   /* shared Tab trap for dialogs */
   function trapTab(e,root){ if(e.key!=="Tab") return; var f=$$("button,[href],input,textarea,select,[tabindex]:not([tabindex=\"-1\"])",root).filter(function(x){return !x.disabled&&x.offsetParent!==null}); if(!f.length) return; var a=f[0],z=f[f.length-1]; if(e.shiftKey&&document.activeElement===a){ e.preventDefault(); z.focus(); } else if(!e.shiftKey&&document.activeElement===z){ e.preventDefault(); a.focus(); } }
   $("#modal").addEventListener("keydown",function(e){ trapTab(e,$("#modal")); });
   $("#mGo").addEventListener("click",function(){
-    if(window.__SIY_REAL__){ $("#mD").textContent="لم يتم ربط الحساب. الربط الفعلي غير متاح لهذه الأداة بعد."; return; }
+    if(window.__SIY_REAL__){ realConnect(picked); return; }
     if(picked){ picked.on=true; picked.by=usersOf(picked.s); picked.sug="";
       /* ربط من بطاقة ريم «اربط لينكدإن» يحسم البطاقة */
       if(who==="reem"&&picked.s==="linkedin"){ var e=emp(who), list=empThread(who), i=-1; list.forEach(function(m,k){ if(i<0&&m.wait&&!m.done&&/^اربط/.test(m.wait.a[0])) i=k; });
         if(i>-1){ e.on=true; e.since="شغّالة منذ الحين"; resolveWait(e,list,i,"اربط لينكدإن",list[i].wait.r[0]); } }
     }
     closeModal(); $("#toolsCnt").textContent=TOOLS.filter(function(t){return t.on}).length+" مربوطة"; renderThread(); });
+
+  var rc=null,oauthOff=null;
+  function toolsCount(){ var count=TOOLS.filter(function(t){return t.on}).length; $("#toolsCnt").textContent=count+(count===1?" أداة جاهزة":" أدوات جاهزة"); }
+  function integration(body){ return siyPost("/siyadah-api/v1/integrations",body); }
+  function rcMsg(message){ var e=$("#mE"); if(e){e.textContent=message||"";e.hidden=!message;} }
+  function rcBox(html){ $("#mF").hidden=false; $("#mF").innerHTML=html; $("#mGo").hidden=true; }
+  async function realTools(){
+    if(!window.__SIY_REAL__)return; TOOLS.forEach(function(t){t.on=false;t.connection=null;t.by="";});
+    try{ var data=await integration({op:"list"}); (data.connections||[]).forEach(function(c){var t=TOOLS.find(function(x){return x.piece===c.pieceName;});if(t){t.connection=c;t.on=true;t.by=usersOf(t.s);t.sug="";}}); }
+    catch(error){ window.__SIY_TOOLS_ERROR__=error.message||"تعذّر تحميل الاتصالات."; }
+    toolsCount(); if(who==="tools")renderThread();
+  }
+  function rcField(field,index){
+    var id="mf"+index,a=' id="'+id+'"'+(field.required?' aria-required="true"':'')+(field.description?' aria-describedby="'+id+'d"':''),label=esc(field.label||field.name)+(field.required?' *':''),description=field.description?'<small id="'+id+'d">'+esc(field.description)+'</small>':'';
+    if(field.type==="checkbox")return '<div class="mf__f"><label class="mf__c"><input type="checkbox"'+a+(field.defaultValue?' checked':'')+'> '+label+'</label>'+description+'</div>';
+    var control=field.type==="dropdown"?'<select'+a+'><option value="">اختر…</option>'+(field.options||[]).map(function(option,j){return '<option value="'+j+'">'+esc(option.label)+'</option>';}).join("")+'</select>':field.type==="textarea"?'<textarea rows="3"'+a+'></textarea>':'<input type="'+(field.type==="password"?'password':field.type==="number"?'number':'text')+'" autocomplete="off" dir="ltr"'+a+' value="'+esc(field.defaultValue==null?'':field.defaultValue)+'">';
+    return '<div class="mf__f"><label for="'+id+'">'+label+'</label>'+control+description+'</div>';
+  }
+  function rcRender(focusTabs){
+    var method=rc.methods[rc.index],off=method.available===false,html="";
+    if(rc.methods.length>1)html+='<div class="mf__seg" role="group" aria-label="طريقة الربط">'+rc.methods.map(function(item,index){return '<button type="button" class="lnk'+(index===rc.index?' lnk--fill':'')+'" data-method="'+index+'" aria-pressed="'+(index===rc.index)+'">'+esc(item.displayName||item.type)+'</button>';}).join("")+'</div>';
+    if(method.description)html+='<p class="mf__m">'+esc(method.description)+'</p>'; if(off)html+='<p class="mf__e">'+esc(method.message||"طريقة الربط غير متاحة حاليًا.")+'</p>';else html+=(method.fields||[]).map(rcField).join("");
+    html+='<p class="mf__e" id="mE" role="alert" hidden></p><div class="mbox__a"><button type="submit" class="lnk lnk--fill" id="mOk"'+(off?' disabled':'')+'>'+(method.type==="OAUTH2"?'سجّل الدخول عبر '+esc(rc.tool.n):'احفظ واختبر')+'</button></div>';rcBox('<form novalidate>'+html+'</form>');
+    var focus=focusTabs?$("[data-method=\""+rc.index+"\"]",$("#mF")):$("[id^=mf]",$("#mF"));if(focus)focus.focus();
+  }
+  async function realConnect(tool){
+    rc={tool:tool,methods:[],index:0};rcBox('<p class="mf__m">أجهّز طرق الربط الآمنة…</p>');
+    try{var data=await integration({op:"methods",piece:tool.s});if(!rc||rc.tool!==tool)return;if(data.noAuth){rcBox('<p class="mf__m">هذه الأداة لا تحتاج حسابًا أو مفتاحًا. تصبح جاهزة عند استخدامها داخل مهمة.</p>');return;}rc.methods=data.methods||[];if(!rc.methods.length)throw new Error("لا توجد طريقة ربط لهذه الأداة.");rcRender();}catch(error){if(rc&&rc.tool===tool)rcBox('<p class="mf__e" role="alert">'+esc(error.message||"تعذّر تجهيز الربط.")+'</p>');}
+  }
+  function rcValues(method){var values={};for(var i=0;i<(method.fields||[]).length;i++){var field=method.fields[i],el=$("#mf"+i),value=field.type==="checkbox"?el.checked:field.type==="dropdown"?(el.value===""?"":field.options[+el.value].value):field.type==="number"?(el.value===""?"":Number(el.value)):el.value.trim();if(field.required&&(value===""||value==null)){rcMsg("أكمل «"+(field.label||field.name)+"» أولًا.");el.focus();return null;}if(value!=="")values[field.name]=value;}return values;}
+  async function rcPost(payload){var tool=rc.tool,button=$("#mOk");button.disabled=true;rcMsg("");try{var data=await integration(payload);tool.connection=data.connection;tool.on=true;tool.by=usersOf(tool.s);tool.sug="";rc=null;closeModal();toolsCount();renderThread();}catch(error){button=$("#mOk");if(button)button.disabled=false;rcMsg(error.message||"تعذّر الربط. راجع البيانات وحاول مرة ثانية.");}}
+  function oauthResult(data){if(data&&typeof data==="object"&&data.data)data=data.data;if(data&&typeof data==="object"&&data.code)return {code:String(data.code),state:String(data.state||"")};if(data&&typeof data==="object")data=data.url;var code=typeof data==="string"&&/[?&#]code=([^&#]+)/.exec(data),state=typeof data==="string"&&/[?&#]state=([^&#]+)/.exec(data);return {code:code?decodeURIComponent(code[1].replace(/\+/g," ")):"",state:state?decodeURIComponent(state[1].replace(/\+/g," ")):""};}
+  async function rcOAuth(values){
+    var tool=rc.tool,button=$("#mOk");button.disabled=true;rcMsg("أجهّز صفحة الدخول…");try{var started=await integration({op:"oauth_start",piece:tool.s,values:values}),popup=window.open(started.authorizationUrl,"siyadah_oauth","width=520,height=680");if(!popup)throw new Error("المتصفح منع نافذة الدخول. اسمح بها وحاول مرة ثانية.");rcMsg("أكمل تسجيل الدخول في النافذة المنبثقة…");if(oauthOff)oauthOff();var timer=setTimeout(function(){if(oauthOff)oauthOff();rcMsg("استغرقت العملية وقتًا طويلًا. أعد المحاولة.");},10*60*1000);function on(event){if(event.origin!==started.allowedOrigin)return;var result=oauthResult(event.data);if(!result.code||result.state!==started.attempt)return;oauthOff();try{popup.close();}catch(ignore){}rcPost({op:"oauth_finish",attempt:started.attempt,code:result.code,state:result.state});}window.addEventListener("message",on);oauthOff=function(){clearTimeout(timer);window.removeEventListener("message",on);oauthOff=null;};}catch(error){button=$("#mOk");if(button)button.disabled=false;rcMsg(error.message||"تعذّر بدء تسجيل الدخول.");}
+  }
+  $("#mF").addEventListener("click",async function(event){
+    var method=event.target.closest("[data-method]");if(method&&rc){rc.index=+method.dataset.method;rcRender(true);return;}
+    var test=event.target.closest("[data-revalidate]"),disconnect=event.target.closest("[data-disconnect]");if(!picked||!picked.connection||(!test&&!disconnect))return;event.target.disabled=true;rcMsg("");try{if(test){var data=await integration({op:"revalidate",connection_id:picked.connection.id});picked.connection=data.connection;picked.on=true;$("#mD").textContent=(data.connection.status==='ACTIVE'?"جاهزة للاستخدام":"تم الاختبار: "+data.connection.status)+" · يستخدمها: "+usersOf(picked.s);event.target.disabled=false;}else{await integration({op:"disconnect",connection_id:picked.connection.id});picked.connection=null;picked.on=false;closeModal();toolsCount();renderThread();}}catch(error){event.target.disabled=false;rcMsg(error.message||"لم يتم تأكيد العملية.");}
+  });
+  $("#mF").addEventListener("submit",function(event){event.preventDefault();var method=rc&&rc.methods[rc.index],values=method&&rcValues(method);if(!method||values===null)return;if(method.type==="OAUTH2")rcOAuth(values);else rcPost({op:"connect",piece:rc.tool.s,type:method.type,values:values});});
   function openTools(){ allOpen=false; tshown=24; go("tools"); }
   $("#toolsLink").addEventListener("click",openTools);
 
@@ -1198,7 +1239,7 @@ var I = {
   function siyMerge(data, restore){
     if(Array.isArray(data.team)){
       var mapped=data.team.map(mapEmployee).filter(Boolean); EMPS.length=0; mapped.forEach(function(e){EMPS.push(e);});
-      TOOLS.forEach(function(t){ var users=EMPS.filter(function(e){return e.tools.indexOf(t.s)>-1;}); t.on=users.length>0; t.by=users.map(function(e){return e.n;}); });
+      if(!window.__SIY_REAL__) TOOLS.forEach(function(t){ var users=EMPS.filter(function(e){return e.tools.indexOf(t.s)>-1;}); t.on=users.length>0; t.by=users.map(function(e){return e.n;}); });
     }
     if(data.employee){ var employee=mapEmployee(data.employee,EMPS.length); if(employee){ var ix=EMPS.findIndex(function(e){return e.id===employee.id;}); if(ix<0) EMPS.push(employee); else EMPS[ix]=employee; } }
     if(Array.isArray(data.memory)){ MEM.length=0; data.memory.forEach(function(m){MEM.push({k:m.topic,v:m.fact,src:m.source||m.added_at||""});}); }
@@ -1466,6 +1507,7 @@ var I = {
   function route(){ var h=location.hash.slice(1); if(!h) return; var q=new URLSearchParams(h);
     if(!window.__SIY_REAL__ && q.get("plan")){ PLAN.state=q.get("plan"); renderPlan(); openSheet("plan"); }
     if(q.get("tools")) openTools();
+    if(window.__SIY_REAL__&&q.get("tool")){openTools();setTimeout(function(){openConnect(q.get("tool"));},0);}
     if(q.get("e")&&emp(q.get("e"))) go(q.get("e"));
     if(q.get("say")){ if(window.__SIY_REAL__){ go("siyadah"); $("#input").value=q.get("say"); $("#input").focus(); } else setTimeout(function(){ send(q.get("say")); },200); }
     if(q.get("pal")){ $("#hq").value=q.get("pal")==="1"?"":q.get("pal"); $("#hq").focus(); openPal(); }
@@ -1488,7 +1530,7 @@ var I = {
         t:"<p>أهلًا بك في <b>"+esc(co||"سيادة")+"</b> 👋</p><p>فريقك لسه فاضٍ. عطني موقع شركتك أو وصف قصير لخدماتكم، وأبني لك موظفين يعرفون شركتك ويشتغلون داخل أدواتك.</p><p>اكتب مثلًا: «موقعنا example.com، نبي موظف متابعة مبيعات وموظف دعم».</p>",
         why:"ما فيه بيانات وهمية — كل شي تشوفه يُبنى من معلومات شركتك أنت."}];
     }
-    renderSide(); renderBar(); renderThread(); renderPlan();
+    renderSide(); renderBar(); renderThread(); renderPlan(); if(window.__SIY_REAL__)realTools();
     route(); window.addEventListener("hashchange",route);
     /* المبادرة التلقائية للعرض التجريبي فقط — الحساب الحقيقي لا يُظهر مبادرات وهمية */
     if(!window.__SIY_REAL__) setTimeout(function(){ triggerProactive(false); }, reduced()?0:6000);

@@ -4,6 +4,7 @@ import {createServer} from 'node:http';
 import {randomUUID,timingSafeEqual} from 'node:crypto';
 import pg from 'pg';
 import {createTenantProjectService,TenantProjectError} from './lib/tenant-projects.mjs';
+import {createToolConnectionService} from './lib/tool-connections.mjs';
 import {SESSION_COOKIE,cookieValue,createTenantSession,readTenantSession,sessionCookie} from './lib/tenant-session.mjs';
 import {createFirecrawlClient,FirecrawlError} from './lib/firecrawl.mjs';
 import {createCompanyProfileService,CompanyProfileError} from './lib/company-profile.mjs';
@@ -17,6 +18,7 @@ const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=
 const publicRootFiles=new Set(['404.html','apple-touch-icon.png','ar.html','auth.html','demo-en.html','demo-en.js','demo.html','demo.js','fonts.css','icon-512.png','index.html','integrations.html','integrations.js','og-ar.jpg','og.jpg','pieces.js','privacy.html','robots.txt','site.js','site.webmanifest','sitemap.xml']);
 const publicDirectories=['/.well-known/','/app/','/assets/','/email-signatures/','/fonts/'];
 let tenantProjectsPromise;
+let toolConnectionsPromise;
 let companyProfilesPromise;
 let accountAuthPromise;
 let databasePromise;
@@ -37,6 +39,13 @@ async function tenantProjects(){
     await service.init();return service;
   })().catch(error=>{tenantProjectsPromise=null;throw error;});
   return tenantProjectsPromise;
+}
+async function toolConnections(){
+  if(!toolConnectionsPromise)toolConnectionsPromise=(async()=>{
+    const projects=await tenantProjects();
+    return createToolConnectionService({requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY,attemptSecret:process.env.SIYADAH_SESSION_SECRET});
+  })().catch(error=>{toolConnectionsPromise=null;throw error;});
+  return toolConnectionsPromise;
 }
 async function database(){
   if(!databasePromise)databasePromise=(async()=>{
@@ -144,6 +153,25 @@ async function onboarding(req,res){
   }catch(error){
     if(error instanceof TenantProjectError||error instanceof CompanyProfileError||error instanceof FirecrawlError)return json(res,error.status,{ok:false,error:error.code,message:error.message},sessionHeaders);
     console.error('company onboarding failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error'},sessionHeaders);
+  }
+}
+
+async function integrations(req,res){
+  try{
+    const input=await body(req),resolved=await tenantSession(req);
+    if(['companyId','tenantId','projectId','scope'].some(key=>Object.hasOwn(input,key)))throw new TenantProjectError('client_scope_forbidden','نطاق الشركة يحدده الخادم فقط.',400);
+    const service=await toolConnections(),tenantId=resolved.session.companyId;
+    if(input.op==='list')return json(res,200,{ok:true,connections:await service.list(tenantId)});
+    if(input.op==='methods')return json(res,200,{ok:true,...await service.methods({tenantId,piece:input.piece})});
+    if(input.op==='connect')return json(res,201,{ok:true,connection:await service.connect({tenantId,piece:input.piece,type:input.type,values:input.values})});
+    if(input.op==='oauth_start')return json(res,200,{ok:true,...await service.oauthStart({tenantId,piece:input.piece,values:input.values})});
+    if(input.op==='oauth_finish')return json(res,201,{ok:true,connection:await service.oauthFinish({tenantId,attempt:input.attempt,code:input.code,state:input.state})});
+    if(input.op==='revalidate')return json(res,200,{ok:true,connection:await service.revalidate({tenantId,id:input.connection_id})});
+    if(input.op==='disconnect')return json(res,200,{ok:true,...await service.disconnect({tenantId,id:input.connection_id})});
+    return json(res,400,{ok:false,error:'unsupported_operation'});
+  }catch(error){
+    if(error instanceof TenantProjectError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
+    console.error('tool connection failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error'});
   }
 }
 
@@ -379,6 +407,7 @@ createServer((req,res)=>{
   if(req.method==='POST'&&req.url==='/internal/v1/tenant-flows/create')return createTenantFlow(req,res);
   if(req.method==='POST'&&req.url==='/internal/v1/web/scrape')return scrapeWeb(req,res);
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/onboarding')return onboarding(req,res);
+  if(req.method==='POST'&&req.url==='/siyadah-api/v1/integrations')return integrations(req,res);
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/chat')return publicChat(req,res);
   if(req.method==='POST'&&req.url==='/deepseek/v1/chat/completions')return deepseek(req,res);
   if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{error:'method_not_allowed'});
