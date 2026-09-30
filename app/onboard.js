@@ -19,25 +19,36 @@
   }
   function noSiteOn(){return $('#alts').classList.contains('on');}
   function step1Ready(){return noSiteOn()?!!$('#lines3').value.trim():!!PROFILE;}
-  function setBusy(value,label){busy=value;$('#next').disabled=value;if(label){$('#next').textContent=label;$('#live').textContent=label;}}
+  function setBusy(value,label){busy=value;$('#next').disabled=value;$('#site').disabled=value;$('#noSite').disabled=value;if(label){$('#next').textContent=label;$('#live').textContent=label;}}
 
   function siteState(kind,title,detail){
     var st=$('#siteSt');st.style.display='flex';st.className='site '+kind;
     st.innerHTML='<span class="drop"></span><div><b>'+esc(title)+'</b><small>'+esc(detail)+'</small></div>';
   }
+  async function finishEnrichment(data){
+    for(var attempt=0;data.status==='processing'&&attempt<100;attempt++){
+      await wait(attempt<2?2000:3000);data=await api({op:'check_company_enrichment'});
+      siteState('busy','نتحقق من كل معلومة',data.creditsUsed?'استخدم البحث '+data.creditsUsed+' رصيدًا حتى الآن':'نطابق الاقتباسات مع صفحاتها الأصلية');
+    }
+    if(data.status!=='ready'||!data.profile)throw new Error('البحث العميق ما زال مستمرًا. أعد المحاولة بعد قليل.');
+    PROFILE=data.profile;SUGGESTIONS=data.suggestions||[];
+    return data;
+  }
   async function readSite(value){
     var url;try{url=normalizeUrl(value);}catch(error){siteState('',error.message,'');PROFILE=null;show();return;}
     PROFILE=null;SUGGESTIONS=[];SELECTED=null;setBusy(true,'نبحث بعمق…');siteState('busy','نبحث في '+new URL(url).hostname,'لن نحفظ معلومة بلا مصدر واقتباس واضح');
     try{
-      var data=await api({op:'enrich_company',website_url:url});
-      for(var attempt=0;data.status==='processing'&&attempt<100;attempt++){
-        await wait(attempt<2?2000:3000);data=await api({op:'check_company_enrichment'});
-        siteState('busy','نتحقق من كل معلومة',data.creditsUsed?'استخدم البحث '+data.creditsUsed+' رصيدًا حتى الآن':'نطابق الاقتباسات مع صفحاتها الأصلية');
-      }
-      if(data.status!=='ready'||!data.profile)throw new Error('البحث العميق ما زال مستمرًا. أعد المحاولة بعد قليل.');
-      PROFILE=data.profile;SUGGESTIONS=data.suggestions||[];
+      await finishEnrichment(await api({op:'enrich_company',website_url:url}));
       siteState('ok',PROFILE.companyName||new URL(url).hostname,PROFILE.factCount+' حقائق مثبتة من '+PROFILE.pagesRead+' صفحات · لم نعتمد '+PROFILE.rejectedClaims+' ادعاءات بلا دليل كافٍ');
     }catch(error){PROFILE=null;siteState('',error.message,'لم نحفظ نتيجة غير مكتملة.');}
+    finally{setBusy(false);show();}
+  }
+  async function resumeExistingCompany(){
+    setBusy(true,'نراجع تقدمك…');
+    try{
+      await finishEnrichment(await api({op:'check_company_enrichment'}));
+      step=2;show();
+    }catch(error){/* لا يوجد ملف جاهز بعد؛ ابدأ من رابط الموقع أو الوصف. */}
     finally{setBusy(false);show();}
   }
   async function readLines(){
@@ -101,4 +112,5 @@
   $('#back').addEventListener('click',function(){if(!busy&&step>1){step--;show();}});
   document.addEventListener('keydown',function(event){if(event.key==='Enter'&&document.activeElement.tagName!=='TEXTAREA'&&!$('#next').disabled){event.preventDefault();$('#next').click();}});
   show();
+  resumeExistingCompany();
 })();

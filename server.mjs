@@ -248,7 +248,8 @@ async function authRoute(req,res,operation){
       return json(res,200,{ok:true,message:'تم تغيير كلمة المرور. سجّل دخولك من جديد.'},{'set-cookie':authCookie('',1,0)});
     }
     const account=await service.login(input);
-    return json(res,200,{ok:true,message:'أهلًا بك.',account:{companyId:account.company_id,companyName:account.company_name,email:account.email,status:account.status}},{'set-cookie':authCookie(account.company_id,account.session_version)});
+    const onboardingRequired=(await (await companyProfiles()).listEmployees(account.company_id)).length===0;
+    return json(res,200,{ok:true,message:'أهلًا بك.',onboardingRequired,account:{companyId:account.company_id,companyName:account.company_name,email:account.email,status:account.status}},{'set-cookie':authCookie(account.company_id,account.session_version)});
   }catch(error){
     if(error instanceof AccountAuthError||error instanceof TenantProjectError||error instanceof MailerError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
     console.error('account auth failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error',message:'تعذّر إكمال الدخول.'});

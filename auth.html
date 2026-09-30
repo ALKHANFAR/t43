@@ -97,6 +97,7 @@ function setMode(m){mode=m;
   $("tg").innerHTML=m==="login"?'ما عندك حساب؟ <a id="sw">أنشئ حسابًا</a>':'<a id="sw">العودة لتسجيل الدخول</a>';
   $("sw").onclick=function(){setMode(m==="login"?"signup":"login");$("msg").className="msg";};
 }
+function nextAfterLogin(data){return data.onboardingRequired?"app/onboard.html":"app/chat.html";}
 $("forgot").onclick=function(){setMode("forgot");$("msg").className="msg";};
 $("go").onclick=function(){
   var email=$("email").value.trim(),pw=$("password").value,co=$("company").value.trim();
@@ -111,7 +112,7 @@ $("go").onclick=function(){
     $("go").disabled=false;setMode(action);
     if(d&&(d.ok===true||d.ok==="true")){
       show("ok",d.message||"تم");
-      if(action==="login")setTimeout(function(){location.href="app/chat.html";},600);
+      if(action==="login")setTimeout(function(){location.href=nextAfterLogin(d);},600);
       if(action==="reset")setTimeout(function(){history.replaceState({},"",location.pathname);resetToken="";setMode("login");show("ok","تم التغيير. سجّل دخولك بكلمة المرور الجديدة.");},700);
     }else show("err",(d&&d.message)||"تعذّر — تأكد من بياناتك");
   }).catch(function(){$("go").disabled=false;setMode(action);show("err","خطأ اتصال، حاول مرة ثانية");});

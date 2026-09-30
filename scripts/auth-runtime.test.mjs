@@ -60,3 +60,12 @@ test('verification link is exchanged once then returns to login',async()=>{
   assert.match(w.document.querySelector('#msg').textContent,/تم تأكيد بريدك/);
   dom.window.close();
 });
+
+test('login sends companies without an employee through the existing onboarding journey',()=>{
+  const dom=new JSDOM(auth,{url:'https://siyadah.test/auth.html',runScripts:'outside-only'}),w=dom.window;
+  w.eval(inlineScript);
+  assert.equal(w.nextAfterLogin({onboardingRequired:true}),'app/onboard.html');
+  assert.equal(w.nextAfterLogin({onboardingRequired:false}),'app/chat.html');
+  assert.match(server,/const onboardingRequired=[^\n]*listEmployees/);
+  dom.window.close();
+});
