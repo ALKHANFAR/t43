@@ -86,3 +86,40 @@ test('without a website, onboarding asks for company name and description before
   assert.equal(w.document.querySelector('#live').textContent,'');
   dom.window.close();
 });
+
+test('English onboarding keeps its labels, role choices, and draft status in LTR',async()=>{
+  const [html,js]=await Promise.all([
+    readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),
+    readFile(new URL('../app/onboard.js',import.meta.url),'utf8'),
+  ]);
+  const suggestion={id:'marketing',roleKey:'marketing',name:'ريم',title:'موظف التسويق',goal:'يجهز محتوى',reason:'السبب',confidence:80,knowledgeTopics:['services','brand']};
+  const profile={companyName:'Example',pagesRead:2,factCount:1,coverageScore:30,knowledgeVersion:2,knowledgeAreas:['services']};
+  const dom=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html?lang=en',runScripts:'outside-only'}),w=dom.window;
+  w.scrollTo=()=>{};
+  w.fetch=async(_url,options)=>{
+    const {op}=JSON.parse(options.body);
+    if(op==='check_company_enrichment')return {ok:true,json:async()=>({ok:true,status:'ready',profile,suggestions:[suggestion]})};
+    if(op==='recommend_employees')return {ok:true,json:async()=>({ok:true,suggestions:[suggestion]})};
+    if(op==='select_employee')return {ok:true,json:async()=>({ok:true,employee:{initial:'ر',knowledgeVersion:2}})};
+    throw new Error(op);
+  };
+  w.eval(js);await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(w.document.documentElement.lang,'en');
+  assert.equal(w.document.documentElement.dir,'ltr');
+  assert.equal(w.document.querySelector('#stepLbl').textContent,'2 of 4');
+  assert.match(w.document.querySelector('#companyRead').textContent,/From your website/);
+  assert.match(w.document.querySelector('#companyRead').textContent,/Saved facts/);
+  w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(w.document.querySelector('#stepLbl').textContent,'3 of 4');
+  assert.match(w.document.querySelector('#plan').textContent,/Reem · Marketing employee/);
+  w.document.querySelector('[data-suggestion="marketing"]').click();
+  assert.match(w.document.querySelector('#plan').textContent,/Suggested because your company covers Services/);
+  w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(w.document.querySelector('#stepLbl').textContent,'4 of 4');
+  assert.match(w.document.querySelector('[data-step="4"]').textContent,/Tools are not connected/);
+  assert.match(w.document.querySelector('[data-step="4"]').textContent,/Not connected/);
+  w.document.querySelector('#langAr').click();
+  assert.equal(w.document.documentElement.dir,'rtl');
+  assert.match(w.document.querySelector('[data-step="4"]').textContent,/أدواته غير متصلة/);
+  dom.window.close();
+});

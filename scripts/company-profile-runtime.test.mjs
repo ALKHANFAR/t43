@@ -40,6 +40,12 @@ test('returns exactly three evidence-ranked employees and feeds prompt plus know
   assert.ok(!prompt.includes('حلول توصيل للمطاعم'));
 });
 
+test('English task descriptions influence employee recommendations',()=>{
+  const profile={companyName:'Example',summary:'A restaurant service',facts:[{topic:'company_profile'}]};
+  const suggestions=recommendEmployees(profile,'Build me a social media employee');
+  assert.equal(suggestions[0].roleKey,'marketing');
+});
+
 test('deep profile accepts only claims backed by an exact quote on an allowed page',()=>{
   const url='https://example.com/about';
   const profile=normalizeAgentProfile({claims:[

@@ -34,6 +34,9 @@ button{cursor:pointer}
 .top .logo{width:104px}
 .top small{font-family:var(--f-display);font-size:.8rem;color:var(--ash);font-variant-numeric:tabular-nums}
 .top__actions{display:flex;align-items:center;gap:14px}
+.lang-switch{display:flex;align-items:center;border:1px solid var(--hair);border-radius:var(--radius-control);padding:2px;gap:2px;direction:ltr}
+.lang-switch button{border:0;background:transparent;color:var(--ash);font-size:.75rem;line-height:1;padding:7px 8px;border-radius:7px}
+.lang-switch button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 .top__logout{border:0;background:transparent;color:var(--ash);font-size:.8rem;padding:8px 0}
 .top__logout:hover{color:var(--accent)}
 .logout-status{position:absolute;inset-block-start:65px;inset-inline-end:clamp(20px,4vw,48px);margin:0;font-size:.75rem;color:var(--error)}
@@ -107,6 +110,7 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 .fit i{display:block;height:3px;background:var(--hair);overflow:hidden}
 .fit i::after{content:"";display:block;height:100%;width:var(--fit);background:var(--accent);transform-origin:right;animation:grow .55s var(--ease)}
 @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+html[dir="ltr"] .fit i::after{transform-origin:left}
 .choice{border:1px solid var(--accent-edge);background:var(--accent-wash);padding:14px 16px;margin-block-end:18px;animation:in .3s var(--ease)}
 .choice b{display:block;font-family:var(--f-display);font-size:.78rem;font-weight:400;color:var(--accent);margin-block-end:4px}
 .choice p{margin:0;color:var(--ink);font-size:.875rem;line-height:1.65}
@@ -137,65 +141,65 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 .btn--ghost:hover:not(:disabled){color:var(--ink);background:none;border-color:transparent;transform:none}
 .bar .sp{margin-inline-start:auto;font-size:.8rem;color:var(--ash)}
 @media(max-width:600px){.top{padding-block:18px}.wrap{padding-block-start:48px}.bar__in{justify-content:space-between}.bar .sp{display:none}.btn--ghost{padding-inline:8px}.receipt__row{grid-template-columns:18px minmax(0,1fr);gap:8px}.receipt__row small{grid-column:2}.kb__h{flex-wrap:wrap}}
-@media(max-width:380px){.wrap{padding-inline:20px}.bar{padding-inline:20px}h1{font-size:1.8rem}.btn{padding-inline:14px}}
+@media(max-width:380px){.wrap{padding-inline:20px}.bar{padding-inline:20px}h1{font-size:1.8rem}.btn{padding-inline:14px}.top__actions{gap:8px}.top .logo{width:92px}}
 
 @media (prefers-reduced-motion:reduce){ *{animation:none !important;transition:none !important} }
 </style>
 </head>
 <body>
-<a class="skip" href="#main">تجاوز إلى المحتوى</a>
+<a class="skip" href="#main" data-en="Skip to content">تجاوز إلى المحتوى</a>
 
-<header class="top"><span class="logo" role="img" aria-label="سيادة"></span><div class="top__actions"><small id="stepLbl">1 من 4</small><button class="top__logout" id="logoutBtn" type="button">خروج</button></div><p class="logout-status" id="logoutStatus" role="alert"></p></header>
+<header class="top"><span class="logo" role="img" aria-label="سيادة" data-en-aria-label="Siyadah"></span><div class="top__actions"><small id="stepLbl">1 من 4</small><div class="lang-switch" role="group" aria-label="اللغة" data-en-aria-label="Language"><button type="button" id="langAr" aria-pressed="true">عربي</button><button type="button" id="langEn" aria-pressed="false">EN</button></div><button class="top__logout" id="logoutBtn" type="button" data-en="Log out">خروج</button></div><p class="logout-status" id="logoutStatus" role="alert"></p></header>
 <div class="prog"><i id="prog"></i></div>
 
 <main class="wrap" id="main">
 
   <!-- 1 — موقعك -->
   <section class="step on" data-step="1">
-    <div class="k"><span class="drop"></span>البداية</div>
+    <div class="k"><span class="drop"></span><span data-en="Start">البداية</span></div>
     <h1 id="startTitle">ابدأ من موقع شركتك.</h1>
     <p class="sub" id="startSub">نستخرج ما يحتاجه موظفك الأول، مع مصدر كل معلومة.</p>
-    <div class="field"><div id="siteEntry"><label for="site">رابط موقع الشركة</label><input class="in" id="site" type="url" dir="ltr" style="text-align:left" placeholder="ufuq.sa" autofocus>
+    <div class="field"><div id="siteEntry"><label for="site" data-en="Company website">رابط موقع الشركة</label><input class="in" id="site" type="url" dir="ltr" style="text-align:left" placeholder="ufuq.sa" autofocus>
       <div class="site" id="siteSt" role="status" aria-live="polite" style="display:none"><span class="drop"></span><div id="siteTx"></div></div>
       </div>
       <button class="nosite" id="noSite" type="button" aria-expanded="false" aria-controls="alts">ما عندي موقع</button>
       <div class="alts" id="alts">
-        <div class="field"><label for="lines3">ماذا تقدم؟</label>
-          <textarea class="in" id="lines3" rows="3" placeholder="نوصّل طلبات المطاعم في الرياض وجدة. عملاؤنا مطاعم متوسطة. أكثر سؤال: كم عمولتكم وكم يوم التفعيل؟"></textarea></div>
-        <div class="field"><label for="co">اسم الشركة</label><input class="in" id="co" type="text" placeholder="شركة الأفق"></div>
+        <div class="field"><label for="lines3" data-en="What do you offer?">ماذا تقدم؟</label>
+          <textarea class="in" id="lines3" rows="3" placeholder="نوصّل طلبات المطاعم في الرياض وجدة. عملاؤنا مطاعم متوسطة. أكثر سؤال: كم عمولتكم وكم يوم التفعيل؟" data-en-placeholder="We deliver restaurant orders in Riyadh and Jeddah. Our customers are mid-sized restaurants."></textarea></div>
+        <div class="field"><label for="co" data-en="Company name">اسم الشركة</label><input class="in" id="co" type="text" placeholder="شركة الأفق" data-en-placeholder="Your company"></div>
       </div>
     </div>
   </section>
 
   <!-- 2 — أولويتك -->
   <section class="step" data-step="2">
-    <div class="k"><span class="drop"></span>ملف شركتك</div>
-    <h1>هذه شركتك كما فهمناها.</h1>
-    <p class="sub">راجع المعلومات، ثم اختر ما يبدأ به موظفك.</p>
+    <div class="k"><span class="drop"></span><span data-en="Your company">ملف شركتك</span></div>
+    <h1 data-en="Your company, as we understand it.">هذه شركتك كما فهمناها.</h1>
+    <p class="sub" data-en="Review what we found. Then choose your employee's first task.">راجع المعلومات، ثم اختر ما يبدأ به موظفك.</p>
     <div id="companyRead"></div>
-    <div class="field"><label for="brief">ما أول مهمة تريدها؟ <span class="optional">اختياري</span></label><textarea class="in" id="brief" placeholder="مثلًا: ابنِ لي موظف سوشيال ميديا."></textarea></div>
+    <div class="field"><label for="brief"><span data-en="What's the first task?">ما أول مهمة تريدها؟</span> <span class="optional" data-en="Optional">اختياري</span></label><textarea class="in" id="brief" placeholder="مثلًا: ابنِ لي موظف سوشيال ميديا." data-en-placeholder="For example: Build me a social media employee."></textarea></div>
   </section>
 
   <!-- 3 — الخطة -->
   <section class="step" data-step="3">
-    <div class="k"><span class="drop"></span>اقتراحاتك</div>
-    <h1 id="h3">اختر أول موظف.</h1>
-    <p class="sub" id="s3">اختر اقتراحًا لترى سبب ملاءمته.</p>
+    <div class="k"><span class="drop"></span><span data-en="Suggestions">اقتراحاتك</span></div>
+    <h1 id="h3" data-en="Choose your first employee.">اختر أول موظف.</h1>
+    <p class="sub" id="s3" data-en="Select a role to see why it fits.">اختر اقتراحًا لترى سبب ملاءمته.</p>
     <div id="plan"></div>
   </section>
 
   <!-- 4 — شغّل -->
   <section class="step done" data-step="4">
     <div class="av" id="doneAv">س</div>
-    <h1 id="doneH">مسودة موظفك جاهزة.</h1>
-    <p class="sub" id="doneP">دوره ومعرفته جاهزان للمراجعة. أدواته غير متصلة.</p>
-    <div class="receipt" role="group" aria-label="حالة الموظف"><div class="receipt__h">حالة الموظف</div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span>معرفة الشركة</span><small id="doneKnowledge">الإصدار 1</small></div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span>الدور والتعليمات</span><small>جاهزة</small></div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span>الأدوات والتنفيذ</span><small>بانتظار الربط</small></div></div>
+    <h1 id="doneH" data-en="Your employee draft is ready.">مسودة موظفك جاهزة.</h1>
+    <p class="sub" id="doneP" data-en="Review the role and company knowledge. Tools are not connected.">دوره ومعرفته جاهزان للمراجعة. أدواته غير متصلة.</p>
+    <div class="receipt" role="group" aria-label="حالة الموظف" data-en-aria-label="Employee status"><div class="receipt__h" data-en="Employee status">حالة الموظف</div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span data-en="Company knowledge">معرفة الشركة</span><small id="doneKnowledge">الإصدار 1</small></div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span data-en="Role and instructions">الدور والتعليمات</span><small data-en="Ready to review">جاهزة</small></div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span data-en="Tools and execution">الأدوات والتنفيذ</span><small data-en="Not connected">بانتظار الربط</small></div></div>
   </section>
 
 </main>
 
 <footer class="bar"><div class="bar__in">
-  <button type="button" class="btn btn--ghost" id="back" style="visibility:hidden">رجوع</button>
+  <button type="button" class="btn btn--ghost" id="back" style="visibility:hidden" data-en="Back">رجوع</button>
   <span class="sp" id="sp"></span>
   <button type="button" class="btn" id="next">التالي <span class="drop"></span></button>
 </div></footer>
