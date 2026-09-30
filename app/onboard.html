@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html data-theme="siyadah" lang="ar" dir="rtl">
 <head><script>document.documentElement.style.visibility="hidden";fetch("/siyadah-api/v1/auth/session",{credentials:"same-origin"}).then(function(r){if(!r.ok)throw 0;document.documentElement.style.visibility="";}).catch(function(){location.replace("../auth.html");});</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,24 +10,21 @@
 <link rel="preload" href="../fonts/ibm-plex-sans-arabic-400-arabic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="../assets/wordmark.png" as="image" crossorigin>
 <link rel="stylesheet" href="../fonts.css">
+<link rel="stylesheet" href="../siyadah-theme.css">
 <style>
 /* ==========================================================================
    سيادة — الإعداد الأول
    أربع لحظات: موقعك، أولويتك، ثلاثة اقتراحات، وتجهيز موظف واحد.
    الأدوات تُربط لاحقًا وقت الحاجة من داخل المحادثة — ما فيه خطوة ربط هنا.
    ========================================================================== */
-:root{
-  --paper:#FFFFFF; --wash:#F7F7FB; --ink:#0A0A0A; --ash:#6E6E6C; --ash-2:#6F6F6D; --hair:#E0E1E8;
-  --accent:#0B844B; --accent-lt:#40E799; --accent-wash:#F2FAF6; --ok:#12784F;
-  --f-display:"Readex Pro", system-ui, sans-serif; --f-body:"IBM Plex Sans Arabic", system-ui, sans-serif;
-  --ease:cubic-bezier(.16,1,.3,1);
-}
 *,*::before,*::after{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
 button,input,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
-:focus-visible{outline:1.5px solid var(--accent);outline-offset:3px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.skip{position:absolute;z-index:10;inset-block-start:-80px;inset-inline-start:18px;padding:8px 14px;background:var(--ink);color:var(--paper)}
+.skip:focus{inset-block-start:12px}
 ::selection{background:var(--accent);color:#fff}
 .logo{display:block;background:currentColor;aspect-ratio:802/99;-webkit-mask:url(../assets/wordmark.png) center/contain no-repeat;mask:url(../assets/wordmark.png) center/contain no-repeat}
 .drop{display:inline-block;background:currentColor;color:var(--accent);aspect-ratio:150/84;width:11px;flex:none;-webkit-mask:url(../assets/icon.png) center/contain no-repeat;mask:url(../assets/icon.png) center/contain no-repeat}
@@ -35,11 +32,11 @@ button{cursor:pointer}
 
 .top{display:flex;align-items:center;justify-content:space-between;padding:22px clamp(20px,4vw,48px)}
 .top .logo{width:104px}
-.top small{font-family:var(--f-display);font-size:.8rem;color:var(--ash)}
+.top small{font-family:var(--f-display);font-size:.8rem;color:var(--ash);font-variant-numeric:tabular-nums}
 .prog{height:1.5px;background:var(--hair);margin:0 clamp(20px,4vw,48px)}
 .prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .6s var(--ease)}
 
-.wrap{max-width:680px;margin:0 auto;padding:clamp(40px,8vh,90px) 22px 120px}
+.wrap{max-width:680px;margin:0 auto;padding:clamp(40px,8vh,90px) 22px calc(132px + env(safe-area-inset-bottom))}
 .step{display:none;animation:in .45s var(--ease)}
 .step.on{display:block}
 @keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -49,10 +46,10 @@ h1{font-family:var(--f-display);font-weight:300;font-size:clamp(1.7rem,4vw,2.5re
 
 .field{margin-block-end:18px}
 .field label{display:block;font-family:var(--f-display);font-size:.8rem;color:var(--ash);margin-block-end:8px}
-.in{width:100%;padding:13px 0;border:0;border-block-end:1px solid #8A8A88;background:none;font-size:1.05rem;transition:border-color .2s}
+.in{width:100%;padding:13px 0;border:0;border-block-end:1px solid var(--field-edge);background:none;font-size:1.05rem;transition:border-color .2s}
 .in:focus{outline:none;border-block-end-color:var(--accent)}
 .in::placeholder{color:#757575}
-textarea.in{resize:none;min-height:120px;line-height:1.8;border:1px solid var(--hair);padding:14px 16px;font-size:1.02rem}
+textarea.in{resize:vertical;min-height:120px;line-height:1.8;border:1px solid var(--field-edge);padding:14px 16px;font-size:1.02rem}
 textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-wash)}
 
 
@@ -64,7 +61,7 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 @keyframes pulse{50%{opacity:.2}}
 .site.busy::after{content:"";position:absolute;inset-block-end:0;inset-inline-start:0;width:38%;height:2px;background:var(--accent);animation:scan 1.25s var(--ease) infinite}
 @keyframes scan{from{transform:translateX(260%)}to{transform:translateX(-360%)}}
-.site.ok{border-color:rgba(11,132,75,.3);background:var(--accent-wash);color:var(--ink)}
+.site.ok{border-color:var(--accent-edge);background:var(--accent-wash);color:var(--ink)}
 .site b{font-weight:500}
 .site small{display:block;color:var(--ash);font-size:.8rem}
 .discover{display:flex;flex-wrap:wrap;gap:8px;margin-block-start:14px;color:var(--ash);font-size:.78rem}
@@ -101,7 +98,7 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 .prow b{font-family:var(--f-display);font-weight:400;font-size:1.02rem;display:block}
 .prow p{margin:3px 0 5px;color:var(--ash);font-size:.84rem;line-height:1.55}
 .rolepick{width:100%;border:0;background:var(--paper);text-align:start;color:inherit;cursor:pointer}
-.rolepick:hover{background:#FBFCFB}
+.rolepick:hover{background:var(--wash)}
 .rolepick[aria-pressed="true"]{background:var(--accent-wash);box-shadow:inset 0 0 0 1px var(--accent)}
 .rolepick[aria-pressed="true"] .av{border-color:var(--accent);background:var(--accent);color:#fff}
 .rank{display:inline-block;margin-inline-start:8px;font-family:var(--f-body);font-size:.68rem;color:var(--accent);background:var(--accent-wash);padding:2px 7px;vertical-align:2px}
@@ -109,7 +106,7 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 .fit i{display:block;height:3px;background:var(--hair);overflow:hidden}
 .fit i::after{content:"";display:block;height:100%;width:var(--fit);background:var(--accent);transform-origin:right;animation:grow .55s var(--ease)}
 @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
-.choice{border:1px solid rgba(11,132,75,.28);background:var(--accent-wash);padding:14px 16px;margin-block-end:18px;animation:in .3s var(--ease)}
+.choice{border:1px solid var(--accent-edge);background:var(--accent-wash);padding:14px 16px;margin-block-end:18px;animation:in .3s var(--ease)}
 .choice b{display:block;font-family:var(--f-display);font-size:.78rem;font-weight:400;color:var(--accent);margin-block-end:4px}
 .choice p{margin:0;color:var(--ink);font-size:.875rem;line-height:1.65}
 .choice small{display:block;color:var(--ash);margin-block-start:6px;font-size:.75rem}
@@ -130,26 +127,29 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 .live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
 /* الأزرار */
-.bar{position:fixed;inset-block-end:0;inset-inline:0;background:linear-gradient(to top,var(--paper) 70%,transparent);padding:18px 22px 26px}
+.bar{position:fixed;inset-block-end:0;inset-inline:0;background:linear-gradient(to top,var(--paper) 70%,transparent);padding:18px 22px calc(20px + env(safe-area-inset-bottom))}
 .bar__in{max-width:680px;margin:0 auto;display:flex;align-items:center;gap:12px}
-.btn{display:inline-flex;align-items:center;gap:10px;padding:14px 26px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font-family:var(--f-display);font-weight:300;font-size:1rem;transition:.25s}
-.btn:hover{background:var(--paper);color:var(--ink)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:49px;padding:10px 22px;border:1px solid var(--ink);border-radius:var(--radius-control);background:var(--ink);color:var(--paper);font-family:var(--f-display);font-weight:400;font-size:.94rem;transition:background .18s,border-color .18s,transform .18s}
+.btn:hover:not(:disabled){background:var(--accent);border-color:var(--accent);transform:translateY(-1px)}
 .btn:disabled{opacity:.35;cursor:not-allowed}
 .btn .drop{color:var(--accent-lt);transform:scaleX(-1)}
-.btn:hover .drop{color:var(--accent)}
+.btn:hover .drop{color:var(--paper)}
 .btn--ghost{background:none;color:var(--ash);border-color:transparent;padding-inline:12px}
-.btn--ghost:hover{color:var(--ink);background:none}
-.bar .sp{margin-inline-start:auto;font-size:.8rem;color:var(--ash-2)}
+.btn--ghost:hover:not(:disabled){color:var(--ink);background:none;border-color:transparent;transform:none}
+.bar .sp{margin-inline-start:auto;font-size:.8rem;color:var(--ash)}
+@media(max-width:600px){.top{padding-block:18px}.wrap{padding-block-start:48px}.bar__in{justify-content:space-between}.bar .sp{display:none}.btn--ghost{padding-inline:8px}.receipt__row{grid-template-columns:18px minmax(0,1fr);gap:8px}.receipt__row small{grid-column:2}.kb__h{flex-wrap:wrap}}
+@media(max-width:380px){.wrap{padding-inline:20px}.bar{padding-inline:20px}h1{font-size:1.8rem}.btn{padding-inline:14px}}
 
 @media (prefers-reduced-motion:reduce){ *{animation:none !important;transition:none !important} }
 </style>
 </head>
 <body>
+<a class="skip" href="#main">تجاوز إلى المحتوى</a>
 
-<header class="top"><span class="logo"></span><small id="stepLbl">1 من 4</small></header>
+<header class="top"><span class="logo" role="img" aria-label="سيادة"></span><small id="stepLbl">1 من 4</small></header>
 <div class="prog"><i id="prog"></i></div>
 
-<main class="wrap">
+<main class="wrap" id="main">
 
   <!-- 1 — موقعك -->
   <section class="step on" data-step="1">
@@ -157,7 +157,7 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
     <h1>أعطنا رابطك. والباقي علينا.</h1>
     <p class="sub">سيادة تقرأ الصفحات المهمة وتحوّلها إلى معرفة جاهزة لأول موظف في شركتك.</p>
     <div class="field"><label for="site">موقعك — نقرأه ونعبّي الباقي عنك</label><input class="in" id="site" type="url" dir="ltr" style="text-align:left" placeholder="ufuq.sa" autofocus>
-      <div class="site" id="siteSt" style="display:none"><span class="drop"></span><div id="siteTx"></div></div>
+      <div class="site" id="siteSt" role="status" aria-live="polite" style="display:none"><span class="drop"></span><div id="siteTx"></div></div>
       <div class="discover" role="group" aria-label="ما سنستخرجه من الموقع"><span>الخدمات والمنتجات</span><span>الأسئلة والسياسات</span><span>صوت الشركة</span></div>
       <button class="nosite" id="noSite" type="button" aria-expanded="false" aria-controls="alts">ما عندي موقع</button>
       <div class="alts" id="alts">

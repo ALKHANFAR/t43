@@ -65,7 +65,7 @@
     var meta=[PROFILE.industry,PROFILE.brandTone].filter(Boolean).map(function(value){return '<span>'+esc(value)+'</span>';}).join('')+areas;
     return '<div class="kb"><div class="kb__h"><span class="drop"></span><b>'+esc(PROFILE.companyName||'شركتك')+'</b><span>بصمة مثبتة قابلة للتعديل</span></div>'+
       '<div class="kb__body"><div class="coverage" style="--coverage:'+Number(PROFILE.coverageScore||0)+'"><strong>'+esc(PROFILE.coverageScore||0)+'٪</strong></div><div><p class="kb__summary">'+esc(PROFILE.summary||'يمكنك إكمال معلومات الشركة وتصحيحها لاحقًا من قاعدة المعرفة.')+'</p><div class="kb__meta">'+meta+'</div></div></div>'+
-      '<div class="kb__g"><div><div class="kb__v">'+esc(PROFILE.pagesRead||0)+'</div><div class="kb__l">صفحات راجعناها</div></div><div><div class="kb__v">'+esc(PROFILE.factCount||1)+'</div><div class="kb__l">حقائق مثبتة</div></div><div><div class="kb__v">v'+esc(PROFILE.knowledgeVersion||1)+'</div><div class="kb__l">إصدار المعرفة</div></div></div>'+
+      '<div class="kb__g"><div><div class="kb__v">'+esc(PROFILE.pagesRead||0)+'</div><div class="kb__l">صفحات راجعناها</div></div><div><div class="kb__v">'+esc(PROFILE.factCount||0)+'</div><div class="kb__l">حقائق مثبتة</div></div><div><div class="kb__v">v'+esc(PROFILE.knowledgeVersion||1)+'</div><div class="kb__l">إصدار المعرفة</div></div></div>'+
       '<div class="kb__f"><span class="drop"></span>كل حقيقة معها مصدر واقتباس. استبعدنا '+esc(PROFILE.rejectedClaims||0)+' بلا دليل كافٍ.</div></div>';
   }
   function renderSuggestions(){

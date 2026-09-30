@@ -31,12 +31,13 @@ test('onboarding restores an existing company profile instead of restarting webs
   w.scrollTo=()=>{};
   w.fetch=async(_url,options)=>{
     requests.push(JSON.parse(options.body).op);
-    return {ok:true,json:async()=>({ok:true,status:'ready',profile:{companyName:'شركة اختبار',coverageScore:70,pagesRead:4,factCount:12,knowledgeVersion:2},suggestions:[]})};
+    return {ok:true,json:async()=>({ok:true,status:'ready',profile:{companyName:'شركة اختبار',coverageScore:70,pagesRead:4,factCount:0,knowledgeVersion:2},suggestions:[]})};
   };
   w.eval(js);
   await new Promise(resolve=>setImmediate(resolve));
   assert.deepEqual(requests,['check_company_enrichment']);
   assert.equal(w.document.querySelector('#stepLbl').textContent,'2 من 4');
   assert.match(w.document.querySelector('#companyRead').textContent,/شركة اختبار/);
+  assert.equal(w.document.querySelectorAll('#companyRead .kb__v')[1].textContent,'0');
   dom.window.close();
 });

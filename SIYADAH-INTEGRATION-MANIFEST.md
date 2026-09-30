@@ -11,6 +11,7 @@ This repository has one delivery-candidate branch:
 - Working Siyadah chat route and server-derived company scope.
 - Account authentication and branded transactional email assets.
 - Bilingual Siyadah account layout using the existing wordmark and mark, with RTL/LTR field states and a restrained split-screen story.
+- Shared Siyadah appearance tokens across public and customer pages; page layouts stay separate so future themes can replace visual values without changing customer flows.
 - Firecrawl company enrichment, sourced knowledge, corrections, and versions.
 - Three employee recommendations and company-scoped employee records.
 - Company settings, employee conversations, and execution-proof surfaces.
