@@ -121,6 +121,12 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 
 .thread{flex:1;overflow-y:auto;padding:24px 20px 0}
 .col{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:26px;padding-block-end:24px}
+.col--draft{min-height:100%}
+.emp-start{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;min-height:180px;color:var(--ash);font-size:.875rem}
+.col--draft .emp-start{flex:1}
+.emp-start .drop{width:13px}
+.emp-start button{border:0;background:none;color:var(--accent);padding:6px 2px;font-size:.875rem;text-decoration:underline;text-underline-offset:4px}
+.emp-start button:hover{color:var(--ink)}
 
 /* الحالة الفارغة */
 .empty{max-width:760px;margin:auto;padding:0 20px;text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center}
@@ -405,6 +411,10 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
   .pin__c{margin-inline-start:0;width:100%;justify-content:flex-start}
   .pin__meta{white-space:normal}
   .soon{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  .thread--emp .pin__r1>.av,.thread--emp .pin__n{display:none}
+  .thread--emp .pin__t{flex-basis:100%}
 }
 /* ==========================  محرك التنفيذ الحي  ==========================
    .tr- التتبع (خطوات، تسليم، قرار، نتيجة) · .pv- معاينة الرسالة الصادرة · .rc- إيصال الأثر */

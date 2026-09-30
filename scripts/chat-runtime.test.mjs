@@ -33,6 +33,24 @@ test('customer shell hides implementation brands and forbidden legacy dependency
   assert.doesNotMatch(onboardingHtml,/مسودة الموظف|<small>مسودة<\/small>/);
 });
 
+test('selected real employee opens without placeholder metrics or invented activity',async()=>{
+  const draft={...employee,status:'disabled',tools:[]};
+  const p=await page({hash:'#e='+encodeURIComponent(draft.recordId),hydrate:{...empty,team:[draft]}});try{
+    assert.equal(p.d.querySelector('#whoN').textContent,'سارة · تسجيل الفرص');
+    assert.equal(p.d.querySelector('#kpiTgl'),null);
+    assert.doesNotMatch(thread(p),/بيانات الموظف من سجل الشركة/);
+    assert.match(p.d.querySelector('.pin__s').textContent,/مسودة محفوظة/);
+    assert.equal(p.d.querySelector('#onSw').disabled,true);
+    p.d.querySelector('#reviewStart').click();
+    assert.equal(p.d.querySelector('#instrWrap').hidden,false);
+    assert.equal(p.d.querySelector('#reviewStart').getAttribute('aria-expanded'),'true');
+    assert.equal(p.d.querySelector('#instrTgl'),null);
+    assert.equal(p.d.querySelector('#draftTools')?.textContent,'الأدوات والربط');
+    p.d.querySelector('#draftTools').click();
+    assert.equal(p.d.querySelector('#whoN').textContent,'الأدوات');
+  }finally{p.close();}
+});
+
 test('routine draft work skips approval while severe final actions require it',()=>{
   assert.match(serverSource,/state:'draft'/);
   assert.match(serverSource,/لن يبدأ العمل قبل ربط أدواته واختبار أول مهمة/);

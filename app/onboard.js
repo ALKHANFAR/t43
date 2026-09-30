@@ -129,7 +129,7 @@
   $('#plan').addEventListener('click',function(event){var button=event.target.closest('[data-suggestion]');if(!button)return;SELECTED=button.dataset.suggestion;show();});
   $('#next').addEventListener('click',async function(){
     if(busy)return;
-    if(step===4){window.location.href='chat.html';return;}
+    if(step===4){window.location.href='chat.html'+(CREATED&&CREATED.recordId?'#e='+encodeURIComponent(CREATED.recordId):'');return;}
     if(step===1){if(noSiteOn()&&!await readLines())return;step=2;show();return;}
     if(step===2){
       setBusy(true,t('arranging'));

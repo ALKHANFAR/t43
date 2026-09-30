@@ -322,7 +322,7 @@ var I = {
     if(who==="tools"){ t.innerHTML=toolsHtml(); bindTools(); return; }
     var list, w;
     if(isEmp()){ var e=emp(who); list=empThread(who); w=who;
-      t.innerHTML='<div class="col">'+pinHtml(e)+'<div id="instrWrap" hidden>'+instrHtml(e)+'</div>'+list.map(function(m,i){return msgHtml(m,who,i)}).join("")+siyEmployeeProofHtml(e,list)+'</div>';
+      t.innerHTML='<div class="col'+(window.__SIY_REAL__&&e.draft&&!list.length?' col--draft':'')+'">'+pinHtml(e)+'<div id="instrWrap" hidden>'+instrHtml(e)+'</div>'+list.map(function(m,i){return msgHtml(m,who,i)}).join("")+(window.__SIY_REAL__&&e.draft&&!list.length?'<div class="emp-start"><span class="drop" aria-hidden="true"></span><button type="button" id="reviewStart" aria-expanded="false" aria-controls="instrWrap">راجع التعليمات</button></div>':'')+siyEmployeeProofHtml(e,list)+'</div>';
     } else {
       list = chatId ? CHATS[chatId].msgs : (live.siyadah||[]); w = chatId? CHATS[chatId].with : who;
       if(!list.length){ /* افتتاحية «اليوم»: سيادة تبدأ الكلام — كل أرقامها محسوبة من البيانات لحظتها */
@@ -370,17 +370,18 @@ var I = {
   }
   function pinHtml(e){
     var f=e.f;
-    return '<div class="pin"><div class="pin__r1"><span class="av">'+esc(e.ini)+'</span><div class="pin__t"><p class="pin__n">'+esc(e.n)+' <span>· '+esc(e.r)+'</span> <button type="button" class="pinbtn tip" id="renameBtn" data-tip="'+(window.__SIY_REAL__?'قريبًا':'إعادة تسمية')+'" aria-label="إعادة تسمية '+esc(e.n)+'"'+(window.__SIY_REAL__?' disabled':'')+'><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1L18 7l-3-3L5 15l-1 5z"/><path d="M13 6l3 3"/></svg></button></p><div class="pin__s">'+esc(e.since)+'</div>'+siyRefsHtml([['الموظف',e.id],['طريقة العمل',e.flowId]])+'</div>'+
-      '<div class="pin__c">'+(e.wait?'<span class="pill">ينتظر قرارك '+e.wait+'</span>':'')+
-      '<span class="swl" style="font-size:.8rem;color:var(--ash)"><span id="onLbl">'+(window.__SIY_REAL__?(siyEmployeeStatePending[e.id]?'جارٍ التحقق من تغيير الحالة…':(e.on?'نشط في السجل':'متوقف في السجل')):(e.on?(f?'شغّالة':'شغّال'):(f?'متوقفة':'متوقف')))+'</span><button type="button" class="sw" id="onSw" role="switch"'+(siyEmployeeStatePending[e.id]?' disabled aria-busy="true"':'')+' aria-checked="'+e.on+'" aria-label="تشغيل '+esc(e.n)+'"></button></span></div></div>'+
-      /* الأرقام مطوية افتراضيًا: سطر ملخص من قيم الـ kpi + «التفاصيل» يفتح المربعات الأربعة */
+    var metrics=window.__SIY_REAL__?'':
       '<div class="kline"><span>اليوم: '+e.kpi.map(function(k){ return k.l.replace(/اليوم/,"").trim()+' <b class="num">'+k.v+'</b>'; }).join(' · ')+'</span>'+
       '<button type="button" class="link" id="kpiTgl" aria-expanded="'+(kpiOpen===e.id)+'" aria-controls="kpiWrap">التفاصيل</button></div>'+
-      '<div class="kpis" id="kpiWrap"'+(kpiOpen===e.id?'':' hidden')+'>'+e.kpi.map(function(k){ return '<div class="kpi"><span class="kpi__v num">'+k.v+'</span><span class="kpi__l">'+k.l+'<span class="kpi__t'+(k.ok?' kpi__t--ok':'')+'" title="عن الأسبوع الماضي">'+k.t+'</span></span></div>'; }).join("")+'</div>'+
-      '<div class="pin__r3"><span class="pin__k">'+(f?'أدواتها':'أدواته')+'</span>'+e.tools.map(chipHtml).join("")+
+      '<div class="kpis" id="kpiWrap"'+(kpiOpen===e.id?'':' hidden')+'>'+e.kpi.map(function(k){ return '<div class="kpi"><span class="kpi__v num">'+k.v+'</span><span class="kpi__l">'+k.l+'<span class="kpi__t'+(k.ok?' kpi__t--ok':'')+'" title="عن الأسبوع الماضي">'+k.t+'</span></span></div>'; }).join("")+'</div>';
+    return '<div class="pin"><div class="pin__r1"><span class="av">'+esc(e.ini)+'</span><div class="pin__t"><p class="pin__n">'+esc(e.n)+' <span>· '+esc(e.r)+'</span> <button type="button" class="pinbtn tip" id="renameBtn" data-tip="'+(window.__SIY_REAL__?'قريبًا':'إعادة تسمية')+'" aria-label="إعادة تسمية '+esc(e.n)+'"'+(window.__SIY_REAL__?' disabled':'')+'><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1L18 7l-3-3L5 15l-1 5z"/><path d="M13 6l3 3"/></svg></button></p><div class="pin__s">'+esc(e.since)+'</div>'+(e.draft?'':siyRefsHtml([['الموظف',e.id],['طريقة العمل',e.flowId]]))+'</div>'+
+      '<div class="pin__c">'+(e.wait?'<span class="pill">ينتظر قرارك '+e.wait+'</span>':'')+
+      '<span class="swl" style="font-size:.8rem;color:var(--ash)"><span id="onLbl">'+(window.__SIY_REAL__?(siyEmployeeStatePending[e.id]?'جارٍ التحقق من تغيير الحالة…':(e.draft?'بانتظار الربط':e.on?'نشط في السجل':'متوقف في السجل')):(e.on?(f?'شغّالة':'شغّال'):(f?'متوقفة':'متوقف')))+'</span><button type="button" class="sw" id="onSw" role="switch"'+(siyEmployeeStatePending[e.id]?' disabled aria-busy="true"':e.draft?' disabled title="اربط الأدوات واختبرها قبل التشغيل"':'')+' aria-checked="'+e.on+'" aria-label="'+(e.draft?'التشغيل متاح بعد ربط الأدوات واختبارها':'تشغيل '+esc(e.n))+'"></button></span></div></div>'+
+      metrics+
+      (e.draft?'<div class="pin__r3"><button type="button" class="link" id="draftTools">الأدوات والربط</button></div>':'<div class="pin__r3"><span class="pin__k">'+(f?'أدواتها':'أدواته')+'</span>'+e.tools.map(chipHtml).join("")+
       '<span class="mchip tip" data-tip="ساعات العمل'+(e.hours&&e.hours!=="—"?": "+e.hours:"")+'"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l3 2"/></svg>'+(e.hours&&e.hours!=="—"?'<span>'+e.hours+'</span>':'')+'</span>'+
       '<span class="mchip tip" data-tip="'+(window.__SIY_REAL__?'الصلاحيات المسجلة؛ تطبيقها أثناء التشغيل غير مؤكد':(f?'تستأذنك':'يستأذنك')+' في القرارات الحساسة')+'"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span>'+
-      '<button type="button" class="link" id="instrTgl" aria-expanded="false" aria-controls="instrWrap">التعليمات</button></div></div>';
+      '<button type="button" class="link" id="instrTgl" aria-expanded="false" aria-controls="instrWrap">التعليمات</button></div>')+'</div>';
   }
   function toolNames(e){ return e.tools.map(function(s){return TN[s]||s}).join("، "); }
   function promptOf(e){
@@ -425,7 +426,7 @@ var I = {
         '<div class="card__b"><p>الصلاحية المسجلة: '+esc(e.auto===null?'غير محددة':AUTON[e.auto])+'.</p>'+
         '<p>القيود المسجلة: '+(savedRules.length?savedRules.join('، '):'غير محددة')+'.</p>'+
         '<p>الأدوات المذكورة في السجل: '+esc(toolNames(e)||'غير محددة')+'.</p>'+
-        '<p>هذه إعدادات محفوظة؛ تطبيق الاستئذان والقيود أثناء التشغيل لم يُتحقق منه هنا.</p></div></div>';
+        '<p>هذه إعدادات محفوظة؛ تطبيق الاستئذان والقيود أثناء التشغيل لم يُتحقق منه هنا.</p></div></div>'+(e.draft?siyRefsHtml([['الموظف',e.id],['طريقة العمل',e.flowId]]):'');
     }
     return '<div class="card"><div class="card__h">'+I.pen+'<b>تعليماته</b><span class="cnt">بكلماتك</span></div>'+
       '<div class="card__b"><textarea class="instr" id="instr" aria-label="تعليمات '+esc(e.n)+'">'+esc(e.instr)+'</textarea>'+
@@ -844,6 +845,8 @@ var I = {
       renderThread(); typeReply(es,list,{t:'<p>حفظت. تسري من الرسالة الجاية — وحفظتها في الذاكرة.</p>', why:"النسخة "+es.ver+" من تعليماتي — تقدر ترجع للي قبلها من «التعليمات»، والقاعدة صارت في الإعدادات › الذاكرة."}); return; }
     /* «التفاصيل»: يفتح مربعات الأرقام الأربعة بدون إعادة رسم — ويرجع مطويًا مع كل زيارة */
     if(t.closest("#kpiTgl")){ var kw=$("#kpiWrap"), kb=$("#kpiTgl"); kw.hidden=!kw.hidden; kb.setAttribute("aria-expanded",String(!kw.hidden)); kpiOpen=kw.hidden?null:who; return; }
+    if(t.closest("#draftTools")){ openTools(); return; }
+    if(t.closest("#reviewStart")){ var draftWrap=$("#instrWrap"), review=$("#reviewStart");draftWrap.hidden=!draftWrap.hidden;review.setAttribute('aria-expanded',String(!draftWrap.hidden));if(!draftWrap.hidden){$("#thread").scrollTop=0;$("#instr").focus();}return; }
     if(t.closest("#instrTgl")){ var w=$("#instrWrap"), b=$("#instrTgl"); w.hidden=!w.hidden; b.setAttribute("aria-expanded",String(!w.hidden)); if(!w.hidden){ $("#thread").scrollTop=0; $("#instr").focus(); } return; }
     if(t.closest("#onSw")){ if(window.__SIY_REAL__){ siySetEmployeeState(emp(who)); return; } var sw=$("#onSw"), eo=emp(who), v=sw.getAttribute("aria-checked")==="true"; sw.setAttribute("aria-checked",String(!v)); eo.on=!v; $("#onLbl").textContent=eo.on?(eo.f?"شغّالة":"شغّال"):(eo.f?"متوقفة":"متوقف"); renderSide(); siyPatch(eo.n,"status",eo.on?"نشط":"متوقف"); return; }
     if(t.closest("#instrSave")){ var e2=emp(who), nv=$("#instr").value.trim(); if(!nv||nv===e2.instr){ $("#instrF").firstChild.textContent="ما تغيّر شيء."; return; }
@@ -1264,7 +1267,7 @@ var I = {
           typeof r.runId==='string' && /^[A-Za-z0-9_-]+$/.test(r.runId) &&
           typeof r.recordId==='string' && /^[A-Za-z0-9_-]+$/.test(r.recordId);
       });
-      if(verified) e.since=(e.on?'':'متوقف — ')+'آخر تشغيل ناجح ونتيجته محفوظة';
+      if(verified){ e.draft=false; e.since=(e.on?'':'متوقف — ')+'آخر تشغيل ناجح ونتيجته محفوظة'; }
     });
     if(typeof data.work_count==="number") dash.work_count=data.work_count;
     if(data.brain!==undefined){dash.brain=data.brain; window.__SIY_BRAIN__=data.brain;}
@@ -1445,12 +1448,12 @@ var I = {
   function mapEmployee(m,i){
     if(!m||typeof m.recordId!=="string"||!m.recordId) return null;
     var rules=(Array.isArray(m.rules)?m.rules:[]).map(function(r){return [String(r),true];}); if(!rules.length&&!window.__SIY_REAL__) rules=[["يشتغل ضمن تعليماتك",true]];
-    var role=String(m.role||"موظف"), displayName=String(m.name||"موظف");
+    var role=String(m.role||"موظف"), displayName=String(m.name||"موظف"), draft=window.__SIY_REAL__&&m.status==='disabled'&&(!Array.isArray(m.tools)||m.tools.length===0)&&!m.lastRunId;
     return { id:m.recordId, flowId:m.flowId||null, n:displayName, r:role, ini:String(m.initial||displayName.slice(0,1)),
-      f:i%2===1, on:/^(نشط|active)$/i.test(String(m.status||"").trim()), wait:0, waits:[],
-      since:(/^(نشط|active)$/i.test(String(m.status||"").trim())?"مسجل كنشط — التشغيل لم يُتحقق منه":"مسجل كمتوقف"), ver:Number(m.knowledgeVersion)||1,
+      f:i%2===1, on:/^(نشط|active)$/i.test(String(m.status||"").trim()), draft:draft, wait:0, waits:[],
+      since:(draft?'مسودة محفوظة · الأدوات غير متصلة':/^(نشط|active)$/i.test(String(m.status||"").trim())?"مسجل كنشط — التشغيل لم يُتحقق منه":"مسجل كمتوقف"), ver:Number(m.knowledgeVersion)||1,
       kpi:[{v:"—",l:"مهام اليوم",t:"—"},{v:"—",l:"قيد التنفيذ",t:"—"},{v:"—",l:"مكتملة",t:"—"},{v:"—",l:"بانتظارك",t:"—"}],
-      log:[["—","بيانات الموظف من سجل الشركة. نتائج التنفيذ تظهر في سجل العمل."]], auto:siyAuto(m.autonomy), autonomy:typeof m.autonomy==="string"?m.autonomy:"", tone:siyTone(m.tone), hours:"—",
+      log:window.__SIY_REAL__?[]:[["—","بيانات الموظف من سجل الشركة. نتائج التنفيذ تظهر في سجل العمل."]], auto:siyAuto(m.autonomy), autonomy:typeof m.autonomy==="string"?m.autonomy:"", tone:siyTone(m.tone), hours:"—",
       rules:rules, tools:(Array.isArray(m.tools)?m.tools:[]).map(function(t){return TOOL_SLUG[t]||String(t);}),
       instr:m.instructions||"", instrSource:m.instructionSource||'company_profile', instrVersion:Number(m.instructionVersion)||1, instrUpdatedAt:m.instructionUpdatedAt||null, how:(Array.isArray(m.how)?m.how:[]),
       v:{ hi:"أبشر.", q:"أكمّل على نفس النهج؟", ack:"وصلني. أتأكد قبل ما أطبّق:", ackq:"قاعدة دائمة، ولا لهالمرة بس؟",

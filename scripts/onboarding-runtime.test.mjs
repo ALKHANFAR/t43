@@ -16,6 +16,7 @@ test('onboarding uses live company enrichment and prepares one employee safely',
   assert.match(html,/أدواته غير متصلة/);
   assert.match(html,/هذه شركتك كما فهمناها/);
   assert.match(html,/حالة الموظف/);
+  assert.match(js,/chat\.html'\+\(CREATED&&CREATED\.recordId\?'#e='\+encodeURIComponent\(CREATED\.recordId\)/);
   assert.match(js,/أفضل بداية/);
   assert.match(js,/معلومات محفوظة/);
   assert.match(server,/factCount:Array\.isArray\(profile\.facts\)/);
