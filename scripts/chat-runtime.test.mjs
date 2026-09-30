@@ -125,6 +125,15 @@ test('tool buttons show saved connection details without claiming a provider run
     assert.equal(p.d.querySelector('#input').value,'أحتاج أداة غير موجودة في القائمة: ');assert.equal(p.d.activeElement,p.d.querySelector('#input'));
   }finally{p.close();}
 });
+test('tools page distinguishes a saved connection from one assigned to an employee flow',async()=>{
+  const flowId='F'.repeat(21),connection={id:'C'.repeat(21),pieceName:'@activepieces/piece-gmail',displayName:'Gmail',status:'ACTIVE',scope:'PROJECT',flowIds:[flowId]};
+  const p=await page({hydrate:{...empty,team:[{...employee,flowId,tools:[]}]},integrations:{list:{ok:true,connections:[connection]}}});try{
+    p.d.querySelector('#toolsLink').click();await flush();
+    assert.match(thread(p),/ضمن موظف/);
+    assert.match(thread(p),/سارة/);
+    assert.doesNotMatch(thread(p),/اكتمل اختبار فعلي/);
+  }finally{p.close();}
+});
 test('real employee shows natural instructions without exposing a compiled prompt',async()=>{
   const changed='تابعي الفرص الجديدة وأرسلي ملخصًا واضحًا.';
   const p=await page({hydrate:{...empty,team:[{...employee,instructions:'تابعي الفرص الجديدة واكتبي ملخصًا واضحًا.',instructionSource:'company_profile',instructionVersion:1}]},employee_instructions:body=>({ok:true,instructions_verified:true,employee:{...employee,instructions:body.instructions,instructionSource:'owner',instructionVersion:2}})});try{

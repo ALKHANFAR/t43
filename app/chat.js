@@ -878,9 +878,9 @@ var I = {
   var tq="", tshown=24, picked=null, allOpen=false; /* allOpen: قسم «الكل» مطوي افتراضيًا */
   function hasConnection(t){ return window.__SIY_REAL__?!!t.connection:t.on; }
   /* مين يستخدم الأداة: من أدوات الموظفين، وإلا من الاقتراحات */
-  function usersOf(s){ var u=EMPS.filter(function(e){return e.tools.indexOf(s)>-1}).map(function(e){return e.n}); if(u.length) return u.join(" · "); if(window.__SIY_REAL__) return "بانتظار تعيين موظف"; var g=SUG[s]; return g?g.replace(/^(يحتاجه|تحتاجه)\s+/,""):"بانتظار تعيين موظف"; }
+  function usersOf(s){ var tool=TOOLS.find(function(t){return t.s===s}),flowIds=tool&&tool.connection&&tool.connection.flowIds||[]; var u=EMPS.filter(function(e){return e.tools.indexOf(s)>-1||flowIds.includes(e.flowId)}).map(function(e){return e.n}); if(u.length) return u.join(" · "); if(window.__SIY_REAL__) return "بانتظار تعيين موظف"; var g=SUG[s]; return g?g.replace(/^(يحتاجه|تحتاجه)\s+/,""):"بانتظار تعيين موظف"; }
   function tcard(t){
-    var linked=hasConnection(t),state=t.connection?(t.connection.status==='ERROR'?'فيها خطأ':'محفوظة'):(linked?'جاهزة':''),st=linked?'<span class="st"><i></i>'+state+'</span>':(t.sug?'<span class="st st--w">'+t.sug+'</span>':'');
+    var linked=hasConnection(t),assigned=t.connection&&EMPS.some(function(e){return (t.connection.flowIds||[]).includes(e.flowId)}),state=t.connection?(t.connection.status==='ERROR'?'فيها خطأ':assigned?'ضمن موظف':'محفوظة'):(linked?'جاهزة':''),st=linked?'<span class="st"><i></i>'+state+'</span>':(t.sug?'<span class="st st--w">'+t.sug+'</span>':'');
     return '<div class="tl'+(t.on?' tl--on':'')+'"><span class="tl__i"><img src="'+t.logo+'" alt="" loading="lazy" crossorigin="anonymous" referrerpolicy="no-referrer" data-fb="1"></span><div><div class="tl__n">'+t.n+'</div>'+
       '<div class="tl__d">'+(t.d||t.c)+(linked?'<br><span class="who">يستخدمها: '+t.by+'</span>':'')+'</div>'+
       '<div class="tl__f">'+(linked?'<button type="button" class="lnk" data-tool-details="'+esc(t.s)+'">التفاصيل</button>':'<button type="button" class="lnk lnk--fill" data-c="'+t.s+'">اربط</button>')+st+'</div></div></div>';

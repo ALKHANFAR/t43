@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createToolConnectionService} from '../lib/tool-connections.mjs';
 
-const PROJECT='P'.repeat(21),OTHER='Q'.repeat(21),CONNECTION='C'.repeat(21);
+const PROJECT='P'.repeat(21),OTHER='Q'.repeat(21),CONNECTION='C'.repeat(21),FLOW='F'.repeat(21);
 const stripe={name:'@activepieces/piece-stripe',displayName:'Stripe',version:'0.7.0',auth:{type:'SECRET_TEXT',displayName:'Secret API Key',required:true}};
 const whatsapp={name:'@activepieces/piece-whatsapp',displayName:'WhatsApp',version:'1.0.0',auth:{type:'CUSTOM_AUTH',required:true,props:{access_token:{displayName:'Access token',required:true,type:'SECRET_TEXT'},businessAccountId:{displayName:'Business ID',required:true,type:'SHORT_TEXT'}}}};
 const gmail={name:'@activepieces/piece-gmail',displayName:'Gmail',version:'0.17.0',auth:[{type:'OAUTH2',displayName:'Google',authUrl:'https://accounts.google.com/o/oauth2/auth',scope:['gmail.send','email'],props:{}},{type:'CUSTOM_AUTH',displayName:'Service account',props:{json:{displayName:'JSON',required:true,type:'LONG_TEXT'}}}]};
@@ -20,7 +20,7 @@ function harness(overrides={}){
     if(url.includes('/revalidate'))return response(200,{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:[PROJECT]});
     if(options.method==='DELETE')return response(204,{});
     if(url.includes(`/app-connections/${CONNECTION}`))return response(200,{id:CONNECTION,pieceName:'@activepieces/piece-stripe',scope:'PROJECT',projectIds:[PROJECT]});
-    if(url.includes('/app-connections?'))return response(200,{data:overrides.foreign?[{id:CONNECTION,pieceName:'@activepieces/piece-stripe',scope:'PROJECT',projectIds:[OTHER]}]:[{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:[PROJECT]}]});
+    if(url.includes('/app-connections?'))return response(200,{data:overrides.foreign?[{id:CONNECTION,pieceName:'@activepieces/piece-stripe',scope:'PROJECT',projectIds:[OTHER]}]:[{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:[PROJECT],flowIds:[FLOW,'invalid']}]});
     if(url.endsWith('/api/v1/app-connections')){const b=JSON.parse(options.body);return response(201,{id:CONNECTION,pieceName:b.pieceName,pieceVersion:b.pieceVersion,displayName:b.displayName,status:'ACTIVE',scope:'PROJECT',projectIds:[PROJECT]});}
     throw new Error(`unexpected ${url}`);
   };
@@ -32,6 +32,13 @@ test('reads live auth schema and keeps secrets out of the response',async()=>{
   assert.equal(methods.methods[0].fields[0].type,'password');
   const connected=await service.connect({tenantId:'company-a',piece:'stripe',type:'SECRET_TEXT',values:{secret_text:'sk_live_secret'}});
   assert.equal(connected.scope,'PROJECT');assert.equal(JSON.stringify(connected).includes('sk_live_secret'),false);
+});
+
+test('shows only valid flow references from a project-owned connection',async()=>{
+  const {service}=harness();
+  const connection=(await service.list('company-a'))[0];
+  assert.equal(connection.scope,'PROJECT');
+  assert.deepEqual(connection.flowIds,[FLOW]);
 });
 
 test('builds custom auth only from authoritative fields',async()=>{
