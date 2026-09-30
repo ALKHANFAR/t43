@@ -13,7 +13,7 @@ function harness(overrides={}){
   const calls=[];
   const fetchImpl=async(url,options={})=>{
     calls.push({url,options,body:options.body?JSON.parse(options.body):null});
-    if(url.startsWith('https://cloud.example/apps'))return response(200,{'@activepieces/piece-gmail':{clientId:'google-client'},'@activepieces/piece-slack':{clientId:'slack-client'}});
+    if(url.startsWith('https://cloud.example/apps'))return response(200,overrides.noCloudApps?{}:{'@activepieces/piece-gmail':{clientId:'google-client'},'@activepieces/piece-slack':{clientId:'slack-client'}});
     if(url.includes('/api/v1/pieces')){
       const name=new URL(url).searchParams.get('searchQuery');return response(200,[name==='stripe'?stripe:name==='whatsapp'?whatsapp:name==='slack'?slack:gmail]);
     }
@@ -25,7 +25,7 @@ function harness(overrides={}){
     if(url.endsWith('/api/v1/app-connections')){const b=JSON.parse(options.body);return response(201,{id:CONNECTION,pieceName:b.pieceName,pieceVersion:b.pieceVersion,displayName:b.displayName,status:'ACTIVE',scope:'PROJECT',projectIds:[PROJECT]});}
     throw new Error(`unexpected ${url}`);
   };
-  return {calls,service:createToolConnectionService({requireProject:async tenant=>tenant==='company-a'?PROJECT:OTHER,fetchImpl,activepiecesUrl:'https://ap.example',apiKey:'platform-key',attemptSecret:'s'.repeat(48),cloudAppsUrl:'https://cloud.example/apps'})};
+  return {calls,service:createToolConnectionService({requireProject:async tenant=>tenant==='company-a'?PROJECT:OTHER,fetchImpl,activepiecesUrl:'https://ap.example',apiKey:'platform-key',attemptSecret:'s'.repeat(48),cloudAppsUrl:'https://cloud.example/apps',googleOAuth:overrides.googleOAuth})};
 }
 
 test('reads live auth schema and keeps secrets out of the response',async()=>{
@@ -59,6 +59,32 @@ test('starts and finishes cloud OAuth inside the tenant project',async()=>{
   assert.equal(finished.status,'ACTIVE');
   const request=calls.filter(call=>call.url.endsWith('/api/v1/app-connections')).at(-1).body;
   assert.equal(request.projectId,PROJECT);assert.equal(request.type,'CLOUD_OAUTH2');assert.equal(request.value.client_id,'google-client');assert.equal(request.value.scope,'gmail.send email');assert.equal(request.value.authorization_method,'BODY');
+});
+
+test('Siyadah-owned Google OAuth stays server-side and saves only to its company project',async()=>{
+  const googleOAuth={clientId:'siyadah-google-client',clientSecret:'server-only-secret',redirectUrl:'https://accounts.siyadah-ai.com/siyadah-api/v1/integrations/oauth/callback'};
+  const {service,calls}=harness({googleOAuth,noCloudApps:true});
+  assert.equal((await service.methods({tenantId:'company-a',piece:'gmail'})).methods[0].available,true);
+  const started=await service.oauthStart({tenantId:'company-a',piece:'gmail'});
+  const url=new URL(started.authorizationUrl);
+  assert.equal(url.searchParams.get('client_id'),googleOAuth.clientId);
+  assert.equal(url.searchParams.get('redirect_uri'),googleOAuth.redirectUrl);
+  assert.equal(url.searchParams.get('state'),started.attempt);
+  assert.equal(url.searchParams.get('code_challenge_method'),'S256');
+  assert.equal(url.searchParams.get('access_type'),'offline');
+  assert.equal(started.allowedOrigin,'https://accounts.siyadah-ai.com');
+  assert.equal(started.pkceStateOptional,false);
+  assert.doesNotMatch(JSON.stringify(started),/server-only-secret/);
+  await assert.rejects(()=>service.oauthFinish({tenantId:'company-b',attempt:started.attempt,state:started.attempt,code:'oauth-code'}),error=>error.code==='expired_oauth_attempt');
+  await assert.rejects(()=>service.oauthFinish({tenantId:'company-a',attempt:started.attempt,state:'wrong',code:'oauth-code'}),error=>error.code==='invalid_oauth_state');
+  const saved=await service.oauthFinish({tenantId:'company-a',attempt:started.attempt,state:started.attempt,code:'oauth-code'});
+  assert.equal(saved.scope,'PROJECT');
+  const request=calls.find(call=>call.url.endsWith('/api/v1/app-connections')).body;
+  assert.equal(request.projectId,PROJECT);
+  assert.equal(request.type,'OAUTH2');
+  assert.equal(request.value.client_secret,googleOAuth.clientSecret);
+  assert.equal(request.value.redirect_url,googleOAuth.redirectUrl);
+  assert.equal(request.value.grant_type,'authorization_code');
 });
 
 test('rejects tampered attempts and non-Google OAuth without returned state',async()=>{
