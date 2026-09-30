@@ -97,7 +97,7 @@ var EMPS = [
 ];
 
 /* أسماء الأدوات بالعربي حسب المعرّف — شات الموقع أداة مدمجة (بدون كتالوج) */
-var TN={ "whatsapp":"واتساب", "hubspot":"HubSpot", "google-calendar":"التقويم", "wafeq":"قيود/Wafeq", "google-sheets":"Google Sheets",
+var TN={ "whatsapp":"واتساب", "hubspot":"HubSpot", "google-calendar":"التقويم", "wafeq":"قيود/Wafeq", "google-sheets":"Google Sheets", "http":"اتصال ويب",
          "gmail":"Gmail", "linkedin":"لينكدإن", "instagram-business":"إنستغرام", "google-docs":"Google Docs", "site-chat":"شات الموقع" };
 
 /* ==========================================================================

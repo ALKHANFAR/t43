@@ -235,7 +235,7 @@ test('stable employee mapping rejects missing IDs and exact active status, no fa
 });
 test('a tool appears ready only when the owned employee record contains it',async()=>{
   const p=await page({hydrate:{...empty,team:[{...employee,tools:['اتصال ويب']}]},pieces:[['http','طلب ويب','تنفيذ','developer','https://example.test/http.png','إرسال طلب إلى خدمة خارجية']]});try{
-    p.d.querySelector('#emps .emp').click();assert.ok(p.d.querySelector('.chip:not(.chip--off) .chip__n'));assert.match(p.d.querySelector('.chip:not(.chip--off)').textContent,/طلب ويب/);assert.equal(p.d.querySelector('.chip:not(.chip--off) [data-c]'),null);
+    p.d.querySelector('#emps .emp').click();assert.ok(p.d.querySelector('.chip:not(.chip--off) .chip__n'));assert.match(p.d.querySelector('.chip:not(.chip--off)').textContent,/اتصال ويب/);assert.equal(p.d.querySelector('.chip:not(.chip--off) [data-c]'),null);
   }finally{p.close();}
 });
 test('hydrate resumes pending work by work ID without resending the original message',async()=>{
