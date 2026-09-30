@@ -88,6 +88,59 @@ test('without a website, onboarding asks for company name and description before
   dom.window.close();
 });
 
+test('company description failure stays in the step and restores the next action',async()=>{
+  const [html,js]=await Promise.all([readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),readFile(new URL('../app/onboard.js',import.meta.url),'utf8')]);
+  const dom=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html',runScripts:'outside-only'}),w=dom.window;
+  let alerts=0;w.alert=()=>{alerts++};w.scrollTo=()=>{};
+  w.fetch=async(_url,options)=>{
+    const {op}=JSON.parse(options.body);
+    if(op==='check_company_enrichment')throw new Error('no profile');
+    return {ok:false,json:async()=>({ok:false,message:'تعذّر حفظ الوصف.'})};
+  };
+  w.eval(js);await new Promise(resolve=>setImmediate(resolve));
+  w.document.querySelector('#noSite').click();
+  w.document.querySelector('#co').value='شركة مثال';w.document.querySelector('#lines3').value='نخدم المطاعم';
+  w.document.querySelector('#co').dispatchEvent(new w.Event('input'));
+  w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(w.document.querySelector('#stepLbl').textContent,'1 من 4');
+  assert.equal(w.document.querySelector('#stepError').hidden,false);
+  assert.match(w.document.querySelector('#stepError').textContent,/تعذّر حفظ الوصف/);
+  assert.equal(w.document.querySelector('#next').disabled,false);
+  assert.match(w.document.querySelector('#next').textContent,/التالي/);
+  assert.equal(alerts,0);
+  dom.window.close();
+});
+
+test('suggestion and employee preparation failures remain visible and retryable',async()=>{
+  const [html,js]=await Promise.all([readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),readFile(new URL('../app/onboard.js',import.meta.url),'utf8')]);
+  const dom=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html',runScripts:'outside-only'}),w=dom.window;
+  const profile={companyName:'شركة مثال',pagesRead:1,factCount:1,coverageScore:30,knowledgeVersion:1};
+  const suggestion={id:'marketing',roleKey:'marketing',name:'ريم',title:'التسويق',goal:'المحتوى',confidence:80,knowledgeTopics:[]};
+  let alerts=0,recommendAttempts=0,selectAttempts=0;w.alert=()=>{alerts++};w.scrollTo=()=>{};
+  w.fetch=async(_url,options)=>{
+    const {op}=JSON.parse(options.body);
+    if(op==='check_company_enrichment')return {ok:true,json:async()=>({ok:true,status:'ready',profile})};
+    if(op==='recommend_employees'&&++recommendAttempts===1)return {ok:false,json:async()=>({ok:false,message:'تعذّر جلب الاقتراحات.'})};
+    if(op==='recommend_employees')return {ok:true,json:async()=>({ok:true,suggestions:[suggestion]})};
+    if(op==='select_employee'&&++selectAttempts===1)return {ok:false,json:async()=>({ok:false,message:'تعذّر تجهيز الموظف.'})};
+    return {ok:true,json:async()=>({ok:true,employee:{initial:'ر',knowledgeVersion:1}})};
+  };
+  w.eval(js);await new Promise(resolve=>setImmediate(resolve));
+  w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(w.document.querySelector('#stepLbl').textContent,'2 من 4');
+  assert.match(w.document.querySelector('#stepError').textContent,/تعذّر جلب الاقتراحات/);
+  assert.equal(w.document.querySelector('#next').disabled,false);
+  w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(w.document.querySelector('#stepLbl').textContent,'3 من 4');
+  w.document.querySelector('[data-suggestion="marketing"]').click();
+  w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(w.document.querySelector('#stepLbl').textContent,'3 من 4');
+  assert.match(w.document.querySelector('#stepError').textContent,/تعذّر تجهيز الموظف/);
+  assert.equal(w.document.querySelector('#next').disabled,false);
+  assert.equal(alerts,0);
+  dom.window.close();
+});
+
 test('English onboarding keeps its labels, role choices, and draft status in LTR',async()=>{
   const [html,js]=await Promise.all([
     readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),

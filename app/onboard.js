@@ -15,6 +15,8 @@
   };
   var ROLE_EN={sales_leads:{name:'Saad',title:'Lead specialist',goal:'Captures leads, follows up, and flags qualified opportunities.'},customer_support:{name:'Fahad',title:'Customer support',goal:'Answers from company knowledge and escalates unanswered requests.'},marketing:{name:'Reem',title:'Marketing employee',goal:'Drafts content in your company voice, grounded in its offers.'},operations:{name:'Layan',title:'Operations employee',goal:'Organizes incoming requests and recurring operational work.'}};
   function t(key){return COPY[locale][key];}
+  function clearStepError(){var node=$('#stepError');node.hidden=true;node.textContent='';}
+  function showStepError(error){var node=$('#stepError');node.textContent=error&&error.message||t('genericError');node.hidden=false;}
   function topic(topicKey){return TOPIC_LABELS[locale][topicKey]||topicKey;}
   function role(item,field){return locale==='en'&&ROLE_EN[item.roleKey]&&ROLE_EN[item.roleKey][field]||item[field]||'';}
   function applyLocale(){
@@ -25,6 +27,7 @@
     $$('[data-en-aria-label]').forEach(function(el){if(!el.dataset.arAriaLabel)el.dataset.arAriaLabel=el.getAttribute('aria-label');el.setAttribute('aria-label',locale==='en'?el.dataset.enAriaLabel:el.dataset.arAriaLabel);});
     $('#langAr').setAttribute('aria-pressed',String(locale==='ar'));$('#langEn').setAttribute('aria-pressed',String(locale==='en'));
     var alternative=noSiteOn();$('#siteEntry').hidden=alternative;$('#startTitle').textContent=t(alternative?'startNoSite':'startSite');$('#startSub').textContent=t(alternative?'startNoSiteSub':'startSiteSub');$('#noSite').textContent=t(alternative?'hasSite':'noSite');
+    if(!$('#stepError').hidden)$('#stepError').textContent=t('genericError');
     if(PROFILE&&$('#siteSt').style.display!=='none'&&step===1)siteState('ok',PROFILE.companyName||$('#site').value,PROFILE.factCount+' '+(locale==='en'?'facts from ':'معلومات من ')+PROFILE.pagesRead+' '+(locale==='en'?'pages':'صفحات'));
     show();
   }
@@ -79,8 +82,8 @@
     setBusy(true,t('preparingProfile'));
     try{
       var data=await api({op:'describe_company',name:$('#co').value.trim(),description:$('#lines3').value.trim()});PROFILE=data.profile;SUGGESTIONS=data.suggestions||[];return true;
-    }catch(error){window.alert(error.message);return false;}
-    finally{setBusy(false);}
+    }catch(error){showStepError(error);return false;}
+    finally{setBusy(false);show();}
   }
 
   function companySummary(){
@@ -120,29 +123,32 @@
   $('#site').addEventListener('change',function(){if(this.value.trim().length>3)readSite(this.value);});
   $('#site').addEventListener('keydown',function(event){if(event.key==='Enter'){event.preventDefault();this.dispatchEvent(new Event('change'));}});
   $('#noSite').addEventListener('click',function(){
+    clearStepError();
     var alternatives=$('#alts'),on=!alternatives.classList.contains('on');alternatives.classList.toggle('on',on);this.setAttribute('aria-expanded',String(on));this.textContent=t(on?'hasSite':'noSite');
     $('#siteEntry').hidden=on;$('#startTitle').textContent=t(on?'startNoSite':'startSite');$('#startSub').textContent=t(on?'startNoSiteSub':'startSiteSub');
     if(on){$('#siteSt').style.display='none';PROFILE=null;SUGGESTIONS=[];$('#lines3').focus();}else{$('#site').focus();}show();
   });
-  $('#lines3').addEventListener('input',show);
-  $('#co').addEventListener('input',show);
-  $('#plan').addEventListener('click',function(event){var button=event.target.closest('[data-suggestion]');if(!button)return;SELECTED=button.dataset.suggestion;show();});
+  $('#lines3').addEventListener('input',function(){clearStepError();show();});
+  $('#co').addEventListener('input',function(){clearStepError();show();});
+  $('#brief').addEventListener('input',clearStepError);
+  $('#plan').addEventListener('click',function(event){var button=event.target.closest('[data-suggestion]');if(!button)return;clearStepError();SELECTED=button.dataset.suggestion;show();});
   $('#next').addEventListener('click',async function(){
     if(busy)return;
+    clearStepError();
     if(step===4){window.location.href='chat.html'+(CREATED&&CREATED.recordId?'#e='+encodeURIComponent(CREATED.recordId):'');return;}
     if(step===1){if(noSiteOn()&&!await readLines())return;step=2;show();return;}
     if(step===2){
       setBusy(true,t('arranging'));
       try{var data=await api({op:'recommend_employees',goal:$('#brief').value.trim()});SUGGESTIONS=data.suggestions||SUGGESTIONS;SELECTED=null;step=3;}
-      catch(error){window.alert(error.message);}finally{setBusy(false);show();}return;
+      catch(error){showStepError(error);}finally{setBusy(false);show();}return;
     }
     if(step===3){
       setBusy(true,t('preparingEmployee'));
       try{var selected=await api({op:'select_employee',suggestion_id:SELECTED});CREATED=selected.employee;step=4;}
-      catch(error){window.alert(error.message);}finally{setBusy(false);show();}
+      catch(error){showStepError(error);}finally{setBusy(false);show();}
     }
   });
-  $('#back').addEventListener('click',function(){if(!busy&&step>1){step--;show();}});
+  $('#back').addEventListener('click',function(){if(!busy&&step>1){clearStepError();step--;show();}});
   $('#logoutBtn').addEventListener('click',async function(){
     var button=this;if(button.disabled)return;button.disabled=true;button.setAttribute('aria-busy','true');$('#logoutStatus').textContent='';
     try{

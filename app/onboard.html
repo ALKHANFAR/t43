@@ -116,6 +116,7 @@ html[dir="ltr"] .fit i::after{transform-origin:left}
 .choice p{margin:0;color:var(--ink);font-size:.875rem;line-height:1.65}
 .choice small{display:block;color:var(--ash);margin-block-start:6px;font-size:.75rem}
 .note{font-size:.8rem;color:var(--ash);display:flex;align-items:center;gap:8px;margin-block-end:22px}
+.step-error{margin:20px 0 0;padding:12px 16px;border:1px solid var(--error);border-radius:var(--radius-control);background:var(--error-wash);color:var(--error-ink);font-size:var(--type-label);line-height:var(--leading-note)}
 
 
 /* النهاية */
@@ -211,6 +212,7 @@ html[data-session="error"] .session-gate__actions{display:flex}
     <div class="receipt" role="group" aria-label="حالة الموظف" data-en-aria-label="Employee status"><div class="receipt__h" data-en="Employee status">حالة الموظف</div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span data-en="Company knowledge">معرفة الشركة</span><small id="doneKnowledge">الإصدار 1</small></div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span data-en="Role and instructions">الدور والتعليمات</span><small data-en="Ready to review">جاهزة</small></div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg><span data-en="Tools and execution">الأدوات والتنفيذ</span><small data-en="Not connected">بانتظار الربط</small></div></div>
   </section>
 
+  <p class="step-error" id="stepError" role="alert" hidden></p>
 </main>
 
 <footer class="bar"><div class="bar__in">
