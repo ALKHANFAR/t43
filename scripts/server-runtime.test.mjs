@@ -39,6 +39,13 @@ test('root hides the broken duplicate and redirects to the working chat',async()
     assert.match(await chat.text(),/chat\.js\?v=1\.11\.0/);
     assert.equal((await fetch(`http://127.0.0.1:${port}/app/chat.js?v=1.11.0`)).status,200);
     assert.equal((await fetch(`http://127.0.0.1:${port}/chat.js?v=1.11.0`)).status,404);
+    const oauth=await fetch(`http://127.0.0.1:${port}/siyadah-api/v1/integrations/oauth/callback?code=private-code&state=private-state`);
+    assert.equal(oauth.status,400);
+    assert.match(oauth.headers.get('content-security-policy'),/default-src 'none'/);
+    const oauthPage=await oauth.text();
+    assert.doesNotMatch(oauthPage,/private-code|private-state/);
+    assert.match(oauthPage,/data-oauth-connection=""/);
+    assert.equal((await fetch(`http://127.0.0.1:${port}/app/oauth-callback.js`)).status,200);
     for(const path of ['/server.mjs','/package.json','/lib/account-auth.mjs','/scripts/server-runtime.test.mjs','/developer-lab/index.html']){
       const response=await fetch(`http://127.0.0.1:${port}${path}`);
       assert.equal(response.status,404,`${path} must not be publicly served`);
