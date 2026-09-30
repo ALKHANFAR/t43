@@ -1530,7 +1530,7 @@ var I = {
     if(window.__SIY_REAL__ && window.__SIY_EMPTY__){
       var co=(window.__SIY_DASH__&&window.__SIY_DASH__.company)||"";
       live.siyadah=[{me:false,at:now(),reveal:true,
-        t:"<p>أهلًا بك في <b>"+esc(co||"سيادة")+"</b> 👋</p><p>فريقك لسه فاضٍ. عطني موقع شركتك أو وصف قصير لخدماتكم، وأبني لك موظفين يعرفون شركتك ويشتغلون داخل أدواتك.</p><p>اكتب مثلًا: «موقعنا example.com، نبي موظف متابعة مبيعات وموظف دعم».</p>",
+        t:"<p>أهلًا بك في <b>"+esc(co||"سيادة")+"</b> 👋</p><p>ابدأ بملف شركتك: نقرأ موقعك أو وصفك، ثم نقترح أول ثلاثة موظفين مناسبين لك.</p><p><a href=\"onboard.html\">ابدأ تجهيز شركتك ←</a></p>",
         why:"ما فيه بيانات وهمية — كل شي تشوفه يُبنى من معلومات شركتك أنت."}];
     }
     renderSide(); renderBar(); renderThread(); renderPlan(); if(window.__SIY_REAL__)realTools();

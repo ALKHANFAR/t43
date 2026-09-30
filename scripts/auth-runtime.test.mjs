@@ -69,3 +69,9 @@ test('login sends companies without an employee through the existing onboarding 
   assert.match(server,/const onboardingRequired=[^\n]*listEmployees/);
   dom.window.close();
 });
+
+test('empty company chat links to website onboarding instead of promising chat enrichment',()=>{
+  assert.match(chat,/<a href=/);
+  assert.match(chat,/onboard\.html/);
+  assert.doesNotMatch(chat,/عطني موقع شركتك أو وصف قصير/);
+});
