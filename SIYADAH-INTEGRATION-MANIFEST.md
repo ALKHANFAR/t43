@@ -22,6 +22,7 @@ This repository has one delivery-candidate branch:
 - Shared typography, measure, and spacing roles in `siyadah-theme.css`, documented in `SIYADAH-TYPOGRAPHY.md`; the account page applies the full scale in Arabic and English.
 - The workspace now uses shared body and note sizes for its primary reading and employee status, with larger focusable icon and message controls. Account mode changes move keyboard focus to the new heading, and onboarding's Enter shortcut applies only to the company-name field.
 - Onboarding shows a bilingual session-check state, loads its application script only after a successful session response, and offers retry or sign-in when verification fails.
+- The workspace now has an independent Arabic/English interface switch with RTL/LTR layout and translated core controls, tools, employee status, account loading feedback, and account menu. Company values, saved conversations, and employee reply-language settings do not change when the interface switches. Remaining execution and settings detail copy still needs a separate bilingual review before calling the workspace fully localized.
 - Cloudlight-inspired bilingual public story showing company context, permission, and proof as selectable illustrative stages.
 - Product-wide interaction language documented in `INTERACTION-LANGUAGE.md`; visible states distinguish a proposal from a run and a verified result.
 - Public hero and role list now use short, scannable states; the hero is explicitly illustrative and no longer presents a fake live session or timer.

@@ -2,6 +2,8 @@
 
 This applies to public pages and the customer product. It describes how information is presented. It does not change the assistant's answer content or permission rules.
 
+Interface language is independent of the employee's reply language. Switching Arabic or English changes labels, direction, controls, and system status copy; saved company facts, user messages, employee instructions, and assistant replies keep their original content. Mixed-language conversation text uses its own direction.
+
 ## First glance
 
 Each surface should answer three questions within a few seconds: What is this? What is its current state? What can I do next? Use one headline, one primary action, and at most three immediately visible supporting signals. Reveal reasons, sources, and settings when requested.

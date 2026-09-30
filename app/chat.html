@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>سيادة</title>
+<title data-en="Siyadah">سيادة</title>
 <meta name="robots" content="noindex">
 <link rel="icon" href="../assets/icon.png">
 <link rel="preload" href="../fonts/readex-pro-arabic.woff2" as="font" type="font/woff2" crossorigin>
@@ -99,6 +99,7 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 .pill{display:inline-block;font-family:var(--f-display);font-size:.7rem;line-height:1.6;background:var(--warn-wash);color:var(--warn);border:1px solid rgba(138,110,44,.35);padding:0 7px;border-radius:2px;white-space:nowrap}
 .me .pill{margin-block-start:3px}
 .keys__b{font-family:var(--f-display);font-size:.9rem;flex:none}
+.locale__b{font-family:var(--f-display);font-size:.76rem;font-weight:600;flex:none}
 .keys{border:1px solid var(--hair);background:var(--paper);padding:8px 10px;margin-block-end:8px;animation:in .2s var(--ease)}
 .keys ul{list-style:none;margin:0;padding:0}
 .keys li{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.8rem;color:var(--ash);padding:4px 0}
@@ -274,7 +275,7 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 .adv summary::-webkit-details-marker{display:none}
 .adv summary:hover{color:var(--ink)}
 .adv summary .ic{width:13px;height:13px}
-.prompt{background:var(--wash);border:1px solid var(--hair);padding:14px 16px;font-family:ui-monospace,Menlo,monospace;font-size:.8rem;line-height:1.75;white-space:pre-wrap;direction:rtl;color:#2A2A2A;max-height:320px;overflow:auto}
+.prompt{background:var(--wash);border:1px solid var(--hair);padding:14px 16px;font-family:ui-monospace,Menlo,monospace;font-size:.8rem;line-height:1.75;white-space:pre-wrap;direction:inherit;text-align:start;color:#2A2A2A;max-height:320px;overflow:auto}
 .prompt .k{color:var(--accent)}
 .vers{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-block-start:12px;font-size:.8rem;color:var(--ash)}
 .warn{font-size:.8rem;color:var(--warn);background:var(--warn-wash);border:1px solid rgba(138,110,44,.3);padding:8px 12px;margin-block-start:10px}
@@ -400,6 +401,7 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 @media (max-width:820px){
   .app,.app.closed{grid-template-columns:1fr}
   .side{position:fixed;inset-block:0;inset-inline-start:0;width:min(var(--side),86vw);z-index:40;transform:translateX(100%);transition:transform .3s var(--ease)}
+  [dir="ltr"] .side{transform:translateX(-100%)}
   .side__in{width:100%}
   .app.open .side{transform:none}
   .app.open .scrim{display:block}
@@ -512,46 +514,47 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 <div class="app" id="app">
 
   <!-- ==================== القائمة الجانبية ==================== -->
-  <button type="button" class="scrim" id="scrim" aria-label="إغلاق القائمة" tabindex="-1"></button>
-<aside class="side" id="side" aria-label="القائمة"><div class="side__in">
+  <button type="button" class="scrim" id="scrim" aria-label="إغلاق القائمة" data-en-aria-label="Close menu" tabindex="-1"></button>
+<aside class="side" id="side" aria-label="القائمة" data-en-aria-label="Menu"><div class="side__in">
     <div class="side__top">
       <span class="logo"></span>
-      <button class="ico" id="closeSide" type="button" aria-label="إخفاء القائمة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M9 4v16"/></svg></button>
+      <button class="ico" id="closeSide" type="button" aria-label="إخفاء القائمة" data-en-aria-label="Hide menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M9 4v16"/></svg></button>
     </div>
-    <button type="button" class="newc" id="newChat"><span class="plus">+</span> محادثة جديدة</button>
+    <button type="button" class="newc" id="newChat"><span class="plus">+</span> <span data-en="New chat">محادثة جديدة</span></button>
 
     <div class="side__scroll">
-      <div class="lbl"><span>فريقك</span></div>
+      <div class="lbl"><span data-en="Your team">فريقك</span></div>
       <div id="emps"></div>
-      <button type="button" class="hist" id="toolsLink" style="color:var(--ash);font-size:.82rem;margin-block-start:4px">الأدوات <small id="toolsCnt">4 مربوطة</small></button>
+      <button type="button" class="hist" id="toolsLink" style="color:var(--ash);font-size:.82rem;margin-block-start:4px"><span data-en="Tools">الأدوات</span> <small id="toolsCnt">4 مربوطة</small></button>
 
-      <input class="hq" id="hq" type="search" placeholder="ابحث أو اكتب أمرًا" aria-label="ابحث في المحادثات أو اكتب أمرًا" autocomplete="off" aria-controls="pal">
+      <input class="hq" id="hq" type="search" placeholder="ابحث أو اكتب أمرًا" data-en-placeholder="Search or enter a command" aria-label="ابحث في المحادثات أو اكتب أمرًا" data-en-aria-label="Search chats or enter a command" autocomplete="off" aria-controls="pal">
       <div class="pal" id="pal" hidden></div>
-      <div id="hgToday"><div class="lbl"><span>اليوم</span></div><div id="histToday"></div></div>
-      <div id="hgYest"><div class="lbl"><span>أمس</span></div><div id="histYest"></div></div>
-      <div id="hgWeek"><div class="lbl"><span>الأسبوع الماضي</span></div><div id="histWeek"></div></div>
-      <div class="hq__none" id="hqNone" hidden>ما فيه محادثة بهذا الاسم.</div>
+      <div id="hgToday"><div class="lbl"><span data-en="Today">اليوم</span></div><div id="histToday"></div></div>
+      <div id="hgYest"><div class="lbl"><span data-en="Yesterday">أمس</span></div><div id="histYest"></div></div>
+      <div id="hgWeek"><div class="lbl"><span data-en="Last week">الأسبوع الماضي</span></div><div id="histWeek"></div></div>
+      <div class="hq__none" id="hqNone" data-en="No chats match that name." hidden>ما فيه محادثة بهذا الاسم.</div>
     </div>
 
     <div class="side__foot">
       <div class="pop" id="pop">
-        <button type="button" id="builderConnectBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M8 12h8M12 8v8"/><circle cx="12" cy="12" r="9"/></svg><span>الأدوات والربط</span><small class="apstate" id="builderConnectState">مساحة شركتك</small></button>
-        <button type="button" data-open="settings"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>الإعدادات</button>
-        <button type="button" data-open="plan"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/></svg>الخطة</button>
+        <button type="button" id="builderConnectBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M8 12h8M12 8v8"/><circle cx="12" cy="12" r="9"/></svg><span data-en="Tools and connections">الأدوات والربط</span><small class="apstate" id="builderConnectState">مساحة شركتك</small></button>
+        <button type="button" data-open="settings"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg><span data-en="Settings">الإعدادات</span></button>
+        <button type="button" data-open="plan"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/></svg><span data-en="Plan">الخطة</span></button>
         <div class="sep"></div>
-        <button type="button" id="logoutBtn" style="color:var(--ash)"><svg class="ic" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M21 4v16"/></svg>تسجيل الخروج</button><p class="pop__status" id="logoutStatus" role="alert"></p>
+        <button type="button" id="logoutBtn" style="color:var(--ash)"><svg class="ic" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M21 4v16"/></svg><span data-en="Log out">تسجيل الخروج</span></button><p class="pop__status" id="logoutStatus" role="alert"></p>
       </div>
       <div class="keys" id="keys" hidden>
         <ul>
-          <li><span>الأوامر والبحث</span><kbd>⌘ K</kbd></li>
-          <li><span>محادثة جديدة</span><kbd>⌘ ⇧ O</kbd></li>
-          <li><span>الأدوات</span><kbd>/</kbd></li>
-          <li><span>إغلاق</span><kbd>Esc</kbd></li>
+          <li><span data-en="Commands and search">الأوامر والبحث</span><kbd>⌘ K</kbd></li>
+          <li><span data-en="New chat">محادثة جديدة</span><kbd>⌘ ⇧ O</kbd></li>
+          <li><span data-en="Tools">الأدوات</span><kbd>/</kbd></li>
+          <li><span data-en="Close">إغلاق</span><kbd>Esc</kbd></li>
         </ul>
       </div>
       <div class="foot__r">
         <button type="button" class="me" id="meBtn"><span class="av">أ</span><span class="me__n">أنس<small>شركة الأفق · نسخة الوصول المبكر</small><span class="pill" id="mePill" hidden></span></span></button>
-        <button type="button" class="ico keys__b" id="keysBtn" aria-expanded="false" aria-controls="keys" aria-label="اختصارات لوحة المفاتيح">?</button>
+        <button type="button" class="ico locale__b" id="localeToggle" aria-label="التحويل إلى الإنجليزية" data-en-aria-label="Switch to Arabic" data-en="عربي">EN</button>
+        <button type="button" class="ico keys__b" id="keysBtn" aria-expanded="false" aria-controls="keys" aria-label="اختصارات لوحة المفاتيح" data-en-aria-label="Keyboard shortcuts">?</button>
       </div>
     </div>
   </div></aside>
@@ -559,7 +562,7 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
   <!-- ==================== المحادثة ==================== -->
   <main class="main">
     <div class="bar">
-      <button type="button" class="ico" id="openSide" aria-label="إظهار القائمة" aria-expanded="false" aria-controls="side"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M9 4v16"/></svg></button>
+      <button type="button" class="ico" id="openSide" aria-label="إظهار القائمة" data-en-aria-label="Show menu" aria-expanded="false" aria-controls="side"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M9 4v16"/></svg></button>
       <span class="who" id="whoBtn"><span class="av" id="whoAv"><span class="drop"></span></span><span id="whoN">سيادة</span></span>
       <span class="tr-live" id="whoLive" hidden>يشتغل الآن…</span>
     </div>
@@ -570,17 +573,17 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 
     <div class="comp"><div class="comp__in">
       <div class="box">
-        <button type="button" class="ico" id="attachBtn" aria-label="إرفاق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12l-8.5 8.5a5 5 0 01-7-7L14 5a3.5 3.5 0 015 5l-8.5 8.5a2 2 0 01-3-3L15 8"/></svg></button>
-        <textarea id="input" rows="1" placeholder="اكتب لسيادة…" aria-label="اكتب رسالة"></textarea>
-        <button type="button" class="send" id="send" aria-label="إرسال"><span class="drop"></span></button>
+        <button type="button" class="ico" id="attachBtn" aria-label="إرفاق" data-en-aria-label="Attach"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12l-8.5 8.5a5 5 0 01-7-7L14 5a3.5 3.5 0 015 5l-8.5 8.5a2 2 0 01-3-3L15 8"/></svg></button>
+        <textarea id="input" rows="1" placeholder="اكتب لسيادة…" data-en-placeholder="Message Siyadah…" aria-label="اكتب رسالة" data-en-aria-label="Write a message"></textarea>
+        <button type="button" class="send" id="send" aria-label="إرسال" data-en-aria-label="Send"><span class="drop"></span></button>
       </div>
       <div class="comp__f">ما يتحرك شيء بدون موافقتك.</div>
     </div></div>
   </main>
 </div>
 
-<div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="ربط أداة"><div class="mbox">
-  <button type="button" class="ico" id="mX" aria-label="إغلاق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="ربط أداة" data-en-aria-label="Connect a tool"><div class="mbox">
+  <button type="button" class="ico" id="mX" aria-label="إغلاق" data-en-aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   <h2><span class="tl__i" id="mI">W</span><span id="mN"></span></h2>
   <p id="mD"></p>
   <div class="mf" id="mF" hidden></div>
@@ -588,23 +591,23 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 </div></div>
 
 <!-- ==================== الإعدادات + الخطة — لوحة منزلقة ==================== -->
-<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="الإعدادات">
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="الإعدادات" data-en-aria-label="Settings">
   <div class="sheet__in">
     <div class="sheet__h">
-      <button type="button" class="tab" data-pane="settings" aria-current="true">الإعدادات</button>
-      <button type="button" class="tab" data-pane="plan" aria-current="false">الخطة والاستخدام</button>
-      <button type="button" class="ico" id="sheetX" aria-label="إغلاق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <button type="button" class="tab" data-pane="settings" aria-current="true" data-en="Settings">الإعدادات</button>
+      <button type="button" class="tab" data-pane="plan" aria-current="false" data-en="Plan and usage">الخطة والاستخدام</button>
+      <button type="button" class="ico" id="sheetX" aria-label="إغلاق" data-en-aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="sheet__b">
 
       <div class="pane on" id="pane-settings">
-        <div class="srow"><div>الشركة<small>موظفوك يعرّفون أنفسهم بهذا</small></div><div><input class="ctrl" type="text" value="شركة الأفق" aria-label="اسم الشركة"><input class="ctrl" type="text" value="حلول توصيل للمطاعم في الرياض وجدة" aria-label="وش تقدمون — سطر واحد"></div></div>
-        <div class="srow"><div>أسلوب الشركة<small>كيف يتحدث موظفوك مع العملاء</small></div><div><textarea class="ctrl" id="companyVoice" rows="2" maxlength="240" placeholder="مثال: مباشر، هادئ، بلا مبالغة"></textarea><select class="ctrl" id="companyLanguage" aria-label="لغة الرد"><option value="ar">العربية</option><option value="auto">بلغة العميل</option><option value="en">الإنجليزية</option></select><input class="ctrl" id="companyDialect" type="text" maxlength="80" placeholder="اللهجة — مثال: سعودية بيضاء"></div></div>
-        <div class="srow"><div>الكلمات<small>ما نفضله وما لا نستخدمه</small></div><div><textarea class="ctrl" id="preferredWords" rows="2" placeholder="كلمات مفضلة — افصل بينها بفاصلة"></textarea><textarea class="ctrl" id="forbiddenWords" rows="2" placeholder="كلمات ممنوعة — افصل بينها بفاصلة"></textarea><div class="acts"><button type="button" class="lnk lnk--fill" id="settingsSave">احفظ الإعدادات</button></div><p class="msrc" id="settingsStatus" role="status"></p></div></div>
-        <div class="srow"><div>الذاكرة وقاعدة المعرفة<small>من هنا يجاوب فهد — والقواعد اللي حفظتها من محادثاتك</small></div><div style="font-size:.85rem;color:var(--ash)">3 ملفات · رابطان &nbsp;<button type="button" class="lnk" id="memTgl" aria-expanded="false" aria-controls="memList">إدارة</button><div id="memList" hidden></div></div></div>
-        <div class="srow"><div>الإشعارات<small>واتساب + بريد</small></div><div class="swl"><button type="button" class="swm" id="notificationSwitch" role="switch" aria-checked="true" aria-label="الإشعارات"></button>ملخص يومي + تنبيه عند «ينتظر قرارك»</div></div>
-        <div class="srow"><div>الخطة والاستخدام</div><div style="font-size:.85rem;color:var(--ash)"><span id="setPlanSum"></span> &nbsp;<button type="button" class="lnk" data-open="plan">عرض</button></div></div>
-        <div class="srow"><div>البيانات<small id="dataDescription">ما تدرّب أي نموذج</small></div><div class="acts" style="margin:0"><button type="button" class="lnk" id="exportBtn">تصدير</button><button type="button" class="lnk" id="deleteAccountBtn" style="color:var(--bad);border-color:var(--bad)">حذف الحساب</button></div></div>
+        <div class="srow"><div><span data-en="Company">الشركة</span><small data-en="How your employees introduce themselves">موظفوك يعرّفون أنفسهم بهذا</small></div><div><input class="ctrl" id="companyNameField" type="text" value="شركة الأفق" aria-label="اسم الشركة" data-en-aria-label="Company name"><input class="ctrl" id="companyDescriptionField" type="text" value="حلول توصيل للمطاعم في الرياض وجدة" aria-label="وش تقدمون — سطر واحد" data-en-aria-label="What you offer in one line"></div></div>
+        <div class="srow"><div><span data-en="Company voice">أسلوب الشركة</span><small data-en="How your employees speak with customers">كيف يتحدث موظفوك مع العملاء</small></div><div><textarea class="ctrl" id="companyVoice" rows="2" maxlength="240" placeholder="مثال: مباشر، هادئ، بلا مبالغة" data-en-placeholder="For example: direct, calm, no exaggeration"></textarea><select class="ctrl" id="companyLanguage" aria-label="لغة الرد" data-en-aria-label="Reply language"><option value="ar" data-en="Arabic">العربية</option><option value="auto" data-en="Customer's language">بلغة العميل</option><option value="en" data-en="English">الإنجليزية</option></select><input class="ctrl" id="companyDialect" type="text" maxlength="80" placeholder="اللهجة — مثال: سعودية بيضاء" data-en-placeholder="Dialect — for example: neutral Saudi Arabic"></div></div>
+        <div class="srow"><div><span data-en="Words">الكلمات</span><small data-en="What we use and avoid">ما نفضله وما لا نستخدمه</small></div><div><textarea class="ctrl" id="preferredWords" rows="2" placeholder="كلمات مفضلة — افصل بينها بفاصلة" data-en-placeholder="Preferred words — separate with commas"></textarea><textarea class="ctrl" id="forbiddenWords" rows="2" placeholder="كلمات ممنوعة — افصل بينها بفاصلة" data-en-placeholder="Words to avoid — separate with commas"></textarea><div class="acts"><button type="button" class="lnk lnk--fill" id="settingsSave" data-en="Save settings">احفظ الإعدادات</button></div><p class="msrc" id="settingsStatus" role="status"></p></div></div>
+        <div class="srow"><div><span data-en="Memory and knowledge">الذاكرة وقاعدة المعرفة</span><small data-en="Knowledge your team can use">من هنا يجاوب فهد — والقواعد اللي حفظتها من محادثاتك</small></div><div style="font-size:.85rem;color:var(--ash)">3 ملفات · رابطان &nbsp;<button type="button" class="lnk" id="memTgl" aria-expanded="false" aria-controls="memList" data-en="Manage">إدارة</button><div id="memList" hidden></div></div></div>
+        <div class="srow"><div><span data-en="Notifications">الإشعارات</span><small data-en="WhatsApp + email">واتساب + بريد</small></div><div class="swl"><button type="button" class="swm" id="notificationSwitch" role="switch" aria-checked="true" aria-label="الإشعارات" data-en-aria-label="Notifications"></button>ملخص يومي + تنبيه عند «ينتظر قرارك»</div></div>
+        <div class="srow"><div data-en="Plan and usage">الخطة والاستخدام</div><div style="font-size:.85rem;color:var(--ash)"><span id="setPlanSum"></span> &nbsp;<button type="button" class="lnk" data-open="plan" data-en="View">عرض</button></div></div>
+        <div class="srow"><div><span data-en="Data">البيانات</span><small id="dataDescription">ما تدرّب أي نموذج</small></div><div class="acts" style="margin:0"><button type="button" class="lnk" id="exportBtn" data-en="Export">تصدير</button><button type="button" class="lnk" id="deleteAccountBtn" style="color:var(--bad);border-color:var(--bad)">حذف الحساب</button></div></div>
       </div>
 
       <div class="pane" id="pane-plan"></div>

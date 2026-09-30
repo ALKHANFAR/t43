@@ -61,13 +61,14 @@ test('employee execution proof is scoped to the conversation that produced it',(
   assert.match(serverSource,/const proof=\{[^\n]+conversation_id:conversationId/);
 });
 
-async function page({storage={},hydrate=empty,message,work,approve,employee_state,employee_instructions,add_knowledge,update_company_settings,export:exportResponse,integrations={list:{ok:true,connections:[]}},integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد',{pieceName:'@activepieces/piece-gmail'}]]}={}){
+async function page({storage={},locale,hydrate=empty,message,work,approve,employee_state,employee_instructions,add_knowledge,update_company_settings,export:exportResponse,integrations={list:{ok:true,connections:[]}},integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد',{pieceName:'@activepieces/piece-gmail'}]]}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
   const w=dom.window,requests=[],alerts=[],polls=[],navigations=[];let hydrateTimer;
   w.matchMedia=()=>({matches:true,addEventListener(){}});
   w.PIECES=pieces;
   w.SIYADAH_REAL_ACCOUNT=real;
   w.SIYADAH_CHAT_GATEWAY='https://gateway.test/sync';
+  if(locale)w.sessionStorage.setItem('siyadah_locale',locale);
   Object.entries(storage).forEach(([k,v])=>w.localStorage.setItem(k,v));
   const realTimeout=w.setTimeout.bind(w);
   w.setTimeout=(cb,ms)=>{
@@ -95,6 +96,34 @@ async function page({storage={},hydrate=empty,message,work,approve,employee_stat
 }
 function send(p,text){p.d.querySelector('#input').value=text;p.d.querySelector('#send').click();}
 function thread(p){return p.d.querySelector('#thread').textContent;}
+
+test('interface language follows the account choice without changing company data or reply language',async()=>{
+  const saved={id:'saved-locale',title:'خطة النمو',messages:[{role:'user',content:'Build a sales assistant',at:'09:00'},{role:'assistant',content:'هذه خطتك',at:'09:01'}]};
+  const p=await page({locale:'en',hydrate:{...empty,company:'شركة مدار',team:[employee],conversations:[saved]},hash:''});try{
+    assert.equal(p.d.documentElement.lang,'en');assert.equal(p.d.documentElement.dir,'ltr');
+    assert.match(p.d.querySelector('#newChat').textContent,/New chat/);
+    assert.match(p.d.querySelector('#meBtn').textContent,/شركة مدار/);
+    assert.equal(p.d.querySelector('#companyNameField').value,'شركة مدار');
+    assert.equal(p.d.querySelector('#companyNameField').getAttribute('aria-label'),'Company name');
+    assert.equal(p.d.querySelector('#companyLanguage').value,'ar');
+    p.d.querySelector('[data-chat="saved-locale"]').click();
+    assert.match(thread(p),/Build a sales assistant/);assert.match(thread(p),/هذه خطتك/);
+    assert.equal(p.d.querySelector('.m--ai .m__c').getAttribute('dir'),'auto');
+    p.d.querySelector('#localeToggle').click();
+    assert.equal(p.d.documentElement.lang,'ar');assert.equal(p.d.documentElement.dir,'rtl');
+    assert.match(p.d.querySelector('#meBtn').textContent,/شركة مدار/);
+    assert.equal(p.d.querySelector('#companyNameField').value,'شركة مدار');
+    assert.equal(p.d.querySelector('#companyLanguage').value,'ar');
+    assert.match(thread(p),/Build a sales assistant/);assert.match(thread(p),/هذه خطتك/);
+  }finally{p.close();}
+});
+test('account loading error follows interface language without changing a saved conversation',async()=>{
+  const p=await page({locale:'en',hydrate:new Error('offline'),hash:''});try{
+    assert.match(thread(p),/Could not load your account/);
+    p.d.querySelector('#localeToggle').click();
+    assert.match(thread(p),/تعذّر تحميل بيانات حسابك/);
+  }finally{p.close();}
+});
 
 test('offline authenticated boot clears demo data, billing and fake connections',async()=>{
   const p=await page({hydrate:Error('offline')});try{
