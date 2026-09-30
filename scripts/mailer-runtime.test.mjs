@@ -29,3 +29,12 @@ test('mailer sends an email verification link through the same guarded channel',
   assert.deepEqual(payload.tags,[{name:'category',value:'email_verification'}]);
   assert.match(payload.html,/one%26two/);assert.doesNotMatch(payload.html,/one&two/);
 });
+
+test('mailer follows the requested interface language with one shared branded layout',async()=>{
+  const requests=[];
+  const mailer=createMailer({apiKey:'re_test',from:'Siyadah <support@example.com>',fetchImpl:async(url,options)=>{requests.push(JSON.parse(options.body));return {ok:true,json:async()=>({id:'email_localized'})};}});
+  await mailer.sendPasswordReset({to:'user@example.com',url:'https://siyadah.example/reset',locale:'en-US'});
+  await mailer.sendEmailVerification({to:'user@example.com',url:'https://siyadah.example/verify',locale:'ar-SA'});
+  assert.equal(requests[0].subject,'Reset your Siyadah password');assert.match(requests[0].html,/dir="ltr"/);assert.match(requests[0].html,/SIYADAH|Siyadah/i);
+  assert.equal(requests[1].subject,'أكد بريدك في سيادة');assert.match(requests[1].html,/dir="rtl"/);assert.match(requests[1].html,/siyadah-ai\.com/);
+});

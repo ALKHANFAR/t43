@@ -45,7 +45,7 @@ test('signup waits for email confirmation instead of entering onboarding',async(
   w.document.querySelector('#company').value='شركة اختبار';w.document.querySelector('#email').value='qa@example.com';w.document.querySelector('#password').value='strong-password';
   w.document.querySelector('#go').click();await flush();await flush();
   assert.equal(requests[0].url,'/siyadah-api/v1/auth/signup');assert.equal(requests[0].options.credentials,'include');
-  assert.deepEqual(JSON.parse(requests[0].options.body),{email:'qa@example.com',password:'strong-password',company_name:'شركة اختبار'});
+  assert.deepEqual(JSON.parse(requests[0].options.body),{email:'qa@example.com',password:'strong-password',company_name:'شركة اختبار',locale:'ar'});
   assert.match(w.document.querySelector('#msg').textContent,/أرسلنا رابط التأكيد/);assert.equal(w.location.pathname,'/auth.html');
   dom.window.close();
 });

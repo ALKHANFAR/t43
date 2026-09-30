@@ -164,6 +164,12 @@ function publicOrigin(){
   const railway=String(process.env.RAILWAY_PUBLIC_DOMAIN||'').trim();
   return railway?`https://${railway}`:'';
 }
+function mailLocale(req,input){
+  const requested=String(input?.locale||'').trim().toLowerCase();
+  if(requested.startsWith('en'))return 'en';
+  if(requested.startsWith('ar'))return 'ar';
+  return String(req.headers['accept-language']||'').toLowerCase().startsWith('en')?'en':'ar';
+}
 async function authRoute(req,res,operation){
   try{
     const service=await accountAuth();
@@ -191,7 +197,7 @@ async function authRoute(req,res,operation){
         verification=await service.createEmailVerification(input.email);status=202;
         if(!verification)throw error;
       }
-      const sent=await mailer.sendEmailVerification({to:verification.email,url:`${publicOrigin()}/auth.html?verify=${encodeURIComponent(verification.token)}`});
+      const sent=await mailer.sendEmailVerification({to:verification.email,url:`${publicOrigin()}/auth.html?verify=${encodeURIComponent(verification.token)}`,locale:mailLocale(req,input)});
       await service.markEmailVerificationSent(verification.token,sent.id);
       return json(res,status,{ok:true,message:'أرسلنا رابط تأكيد إلى بريدك. افتحه لإكمال التسجيل.'},{'set-cookie':authCookie('',1,0)});
     }
@@ -200,7 +206,7 @@ async function authRoute(req,res,operation){
       const reset=await service.createPasswordReset(input.email);
       if(reset){
         try{
-          const sent=await mailer.sendPasswordReset({to:reset.email,url:`${publicOrigin()}/auth.html?reset=${encodeURIComponent(reset.token)}`});
+          const sent=await mailer.sendPasswordReset({to:reset.email,url:`${publicOrigin()}/auth.html?reset=${encodeURIComponent(reset.token)}`,locale:mailLocale(req,input)});
           await service.markPasswordResetSent(reset.token,sent.id);
         }catch(error){await service.cancelPasswordReset(reset.token);throw error;}
       }

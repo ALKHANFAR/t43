@@ -104,7 +104,8 @@ $("go").onclick=function(){
   var action=mode;
   $("go").disabled=true;$("go").textContent="لحظة…";
   var routes={login:"/v1/auth/login",signup:"/v1/auth/signup",forgot:"/v1/auth/forgot-password",reset:"/v1/auth/reset-password"};
-  var bodies={login:{email:email,password:pw},signup:{email:email,password:pw,company_name:co},forgot:{email:email},reset:{token:resetToken,password:pw}};
+  var locale=document.documentElement.lang||navigator.language||"ar";
+  var bodies={login:{email:email,password:pw},signup:{email:email,password:pw,company_name:co,locale:locale},forgot:{email:email,locale:locale},reset:{token:resetToken,password:pw}};
   fetch(API+routes[action],{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(bodies[action])})
   .then(function(r){return r.json()}).then(function(d){
     $("go").disabled=false;setMode(action);
