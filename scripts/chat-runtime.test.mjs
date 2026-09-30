@@ -115,12 +115,12 @@ test('real account tools hide legacy demo employees and internal platform labels
     assert.doesNotMatch(visible,/محرك التنفيذ|بوابة سيادة متصلة/);
   }finally{p.close();}
 });
-test('tool buttons show verified details or prepare a chat request instead of doing nothing',async()=>{
+test('tool buttons show saved connection details without claiming a provider run',async()=>{
   const connection={id:'C'.repeat(21),pieceName:'@activepieces/piece-gmail',displayName:'Gmail',status:'ACTIVE',scope:'PROJECT'};
   const p=await page({hydrate:{...empty,team:[employee]},integrations:{list:{ok:true,connections:[connection]}},pieces:[['gmail','Gmail','Email','communication','https://example.test/gmail.png','البريد',{pieceName:'@activepieces/piece-gmail'}]]});try{
     p.d.querySelector('#toolsLink').click();await flush();
     const details=p.d.querySelector('[data-tool-details="gmail"]');assert.ok(details);details.click();
-    assert.ok(p.d.querySelector('#modal').classList.contains('on'));assert.match(p.d.querySelector('#mD').textContent,/جاهزة للاستخدام.*سارة/);assert.equal(p.d.querySelector('#mGo').hidden,true);
+    assert.ok(p.d.querySelector('#modal').classList.contains('on'));assert.match(p.d.querySelector('#mD').textContent,/الاتصال محفوظ.*مهمة فعلية.*سارة/);assert.equal(p.d.querySelector('#mGo').hidden,true);
     p.d.querySelector('#mX').click();p.d.querySelector('[data-request-tool]').click();
     assert.equal(p.d.querySelector('#input').value,'أحتاج أداة غير موجودة في القائمة: ');assert.equal(p.d.activeElement,p.d.querySelector('#input'));
   }finally{p.close();}

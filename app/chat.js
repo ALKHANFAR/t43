@@ -776,6 +776,7 @@ var I = {
   $("#thread").addEventListener("click",function(e){
     var t=e.target, list, mEl=t.closest(".m"), mi=mEl?+mEl.dataset.mi:-1;
     if(t.closest("[data-siy-retry]")){ var retryList=curList(); if(retryList&&retryList[mi]&&retryList[mi].siyRetry) retryList[mi].siyRetry(); return; }
+    if(t.closest("[data-retry-tools]")){ realTools(); return; }
     if(t.closest("[data-siy-approval]")){ var approvalList=curList(), approvalRow=approvalList&&approvalList[mi]; siyDecideBuilder(approvalRow,t.closest("[data-siy-approval]").dataset.siyApproval); return; }
     if(window.__SIY_REAL__ && t.closest("#instrPrev,[data-save],[data-approve],[data-decide],[data-opt],[data-pv],[data-hcancel],[data-undo]")){ siyUnsupported(); return; }
     if(t.closest("#renameBtn")){ renameEmp(); return; }
@@ -875,22 +876,24 @@ var I = {
   var TOOLS=(window.PIECES||[]).map(function(p){ return {s:p[0],n:p[1],d:p[5]||p[2],en:p[2],c:p[3],logo:p[4],piece:(p[6]||{}).pieceName||"@activepieces/piece-"+p[0],on:!!ON[p[0]],by:ON[p[0]]||"",connection:null,sug:window.SIYADAH_REAL_ACCOUNT===true?"":(SUG[p[0]]||"")}; });
   var SOON=["سلة","زد","فودكس","ميسر","Unifonic","تابي","دفترة"];
   var tq="", tshown=24, picked=null, allOpen=false; /* allOpen: قسم «الكل» مطوي افتراضيًا */
+  function hasConnection(t){ return window.__SIY_REAL__?!!t.connection:t.on; }
   /* مين يستخدم الأداة: من أدوات الموظفين، وإلا من الاقتراحات */
   function usersOf(s){ var u=EMPS.filter(function(e){return e.tools.indexOf(s)>-1}).map(function(e){return e.n}); if(u.length) return u.join(" · "); if(window.__SIY_REAL__) return "بانتظار تعيين موظف"; var g=SUG[s]; return g?g.replace(/^(يحتاجه|تحتاجه)\s+/,""):"بانتظار تعيين موظف"; }
   function tcard(t){
-    var state=t.connection?(t.connection.status==='ACTIVE'?'جاهزة':t.connection.status==='ERROR'?'فيها خطأ':'محفوظة'):"",st=t.on?'<span class="st"><i></i>'+state+'</span>':(t.sug?'<span class="st st--w">'+t.sug+'</span>':'');
+    var linked=hasConnection(t),state=t.connection?(t.connection.status==='ERROR'?'فيها خطأ':'محفوظة'):(linked?'جاهزة':''),st=linked?'<span class="st"><i></i>'+state+'</span>':(t.sug?'<span class="st st--w">'+t.sug+'</span>':'');
     return '<div class="tl'+(t.on?' tl--on':'')+'"><span class="tl__i"><img src="'+t.logo+'" alt="" loading="lazy" crossorigin="anonymous" referrerpolicy="no-referrer" data-fb="1"></span><div><div class="tl__n">'+t.n+'</div>'+
-      '<div class="tl__d">'+(t.d||t.c)+(t.on?'<br><span class="who">يستخدمها: '+t.by+'</span>':'')+'</div>'+
-      '<div class="tl__f">'+(t.on?'<button type="button" class="lnk" data-tool-details="'+esc(t.s)+'">التفاصيل</button>':'<button type="button" class="lnk lnk--fill" data-c="'+t.s+'">اربط</button>')+st+'</div></div></div>';
+      '<div class="tl__d">'+(t.d||t.c)+(linked?'<br><span class="who">يستخدمها: '+t.by+'</span>':'')+'</div>'+
+      '<div class="tl__f">'+(linked?'<button type="button" class="lnk" data-tool-details="'+esc(t.s)+'">التفاصيل</button>':'<button type="button" class="lnk lnk--fill" data-c="'+t.s+'">اربط</button>')+st+'</div></div></div>';
   }
   function tgrid(a,e){ return a.length?'<div class="tgrid">'+a.map(tcard).join("")+'</div>':'<div class="tempty">'+e+'</div>'; }
   function toolsHtml(){
     var f=TOOLS.filter(function(t){return !tq||(t.n+" "+t.d+" "+t.en+" "+t.s+" "+t.c).toLowerCase().indexOf(tq)>-1});
     var h='<div class="tools"><h1>الأدوات</h1><p class="sub">'+TOOLS.length+' أداة. اربط اللي تستخدمه، وموظفوك يشتغلون فيه — ولا يوصل موظف لأداة ما ربطتها أنت.</p>'+
-      '<div class="tsearch"><span class="drop"></span><input id="tq" placeholder="ابحث… واتساب، قيود، HubSpot" aria-label="ابحث في الأدوات" value="'+tq+'"><kbd>/</kbd></div>';
+      '<div class="tsearch"><span class="drop"></span><input id="tq" placeholder="ابحث… واتساب، قيود، HubSpot" aria-label="ابحث في الأدوات" value="'+esc(tq)+'"><kbd>/</kbd></div>';
+    if(window.__SIY_TOOLS_ERROR__)h+='<p class="mf__e" role="alert">تعذّر تحميل حالة الاتصالات. <button type="button" class="lnk" data-retry-tools="1">أعد المحاولة</button></p>';
     if(!tq){
-      var on=f.filter(function(t){return t.on}),sug=f.filter(function(t){return t.sug&&!t.on}),rest=f.filter(function(t){return !t.on&&!t.sug});
-      h+='<div class="tsec"><b>المربوطة</b>'+on.length+'</div>'+tgrid(on,"ما ربطت شيئًا بعد");
+      var on=f.filter(hasConnection),sug=f.filter(function(t){return t.sug&&!hasConnection(t)}),rest=f.filter(function(t){return !hasConnection(t)&&!t.sug});
+      h+='<div class="tsec"><b>الاتصالات المحفوظة</b>'+on.length+'</div>'+tgrid(on,"ما حفظت اتصالًا بعد");
       if(sug.length) h+='<div class="tsec"><b>مقترحة لك</b>حسب فريقك الحالي</div>'+tgrid(sug,"—");
       h+='<div class="tsec"><b>الكل</b>'+TOOLS.length+'</div>';
       if(allOpen){ h+=tgrid(rest.slice(0,tshown),"—");
@@ -898,7 +901,7 @@ var I = {
       else h+='<button type="button" class="more" id="allTgl">اعرض الكل (<span class="num">'+TOOLS.length+'</span>)</button>';
       h+='<div class="soon"><div><b>أدوات سعودية نبنيها لك</b>مو في الكتالوج بعد — نضيفها لك على الطلب.<div class="chips">'+SOON.map(function(x){return '<span>'+x+'</span>'}).join("")+'</div></div><button type="button" class="lnk" data-request-tool="1">اطلب أداة</button></div>';
     } else {
-      h+='<div class="tsec"><b>نتائج «'+tq+'»</b>'+f.length+'</div>'+tgrid(f.slice(0,tshown),"ما لقيناها في الكتالوج — اطلبها ونبنيها لك.");
+      h+='<div class="tsec"><b>نتائج «'+esc(tq)+'»</b>'+f.length+'</div>'+tgrid(f.slice(0,tshown),"ما لقيناها في الكتالوج — اطلبها ونبنيها لك.");
       if(f.length>tshown) h+='<button type="button" class="more" id="more">اعرض المزيد — باقي '+(f.length-tshown)+'</button>';
     }
     return h+'</div>';
@@ -912,9 +915,9 @@ var I = {
     $("#mI").innerHTML='<img src="'+picked.logo+'" alt="" crossorigin="anonymous" referrerpolicy="no-referrer" style="width:26px;height:26px;object-fit:contain">'; $("#mN").textContent=picked.n; $("#mD").textContent="بعد الربط يقدر موظفوك يستخدمون "+picked.n+". "+picked.d+".";
     $("#mF").hidden=true; $("#mF").innerHTML=""; $("#mGo").hidden=false; $("#mGo").disabled=false; $("#mGo").textContent="اربط";
     openModal(); if(window.__SIY_REAL__) realConnect(picked); }
-  function openToolDetails(slug){ picked=TOOLS.filter(function(x){return x.s===slug&&x.on;})[0]; if(!picked) return;
+  function openToolDetails(slug){ picked=TOOLS.filter(function(x){return x.s===slug&&hasConnection(x);})[0]; if(!picked) return;
     $("#mI").innerHTML='<img src="'+picked.logo+'" alt="" crossorigin="anonymous" referrerpolicy="no-referrer" style="width:26px;height:26px;object-fit:contain">'; $("#mN").textContent=picked.n;
-    if(window.__SIY_REAL__){ var c=picked.connection,status=c&&c.status==='ACTIVE'?"جاهزة للاستخدام":c&&c.status==='ERROR'?"الاتصال فيه خطأ":"الاتصال محفوظ";
+    if(window.__SIY_REAL__){ var c=picked.connection,status=c&&c.status==='ERROR'?"الاتصال فيه خطأ":"الاتصال محفوظ؛ اختبر مهمة فعلية للتأكد من النتيجة";
       $("#mD").textContent=status+" · يستخدمها: "+usersOf(picked.s); $("#mGo").hidden=true; $("#mF").hidden=false; $("#mF").innerHTML='<p class="mf__m">'+esc(c&&c.displayName||picked.n)+'</p><p class="mf__e" id="mE" role="alert" hidden></p><div class="mbox__a"><button type="button" class="lnk" data-revalidate="1">اختبر الاتصال</button><button type="button" class="lnk" data-disconnect="1">افصل</button></div>'; }
     else { $("#mF").hidden=true; $("#mGo").hidden=false; $("#mGo").disabled=true; $("#mGo").textContent="جاهزة"; } openModal(); }
   function openModal(){ modalOpener=document.activeElement; $("#modal").classList.add("on"); var f=$("#mGo")||$("#mX"); if(f) f.focus(); }
@@ -934,13 +937,13 @@ var I = {
     closeModal(); $("#toolsCnt").textContent=TOOLS.filter(function(t){return t.on}).length+" مربوطة"; renderThread(); });
 
   var rc=null,oauthOff=null;
-  function toolsCount(){ var count=TOOLS.filter(function(t){return t.on}).length; $("#toolsCnt").textContent=count+(count===1?" أداة جاهزة":" أدوات جاهزة"); }
+  function toolsCount(){ if(window.__SIY_TOOLS_ERROR__){$("#toolsCnt").textContent="حالة الربط غير متاحة";return;} var count=TOOLS.filter(function(t){return !!t.connection}).length; $("#toolsCnt").textContent=count+(count===1?" اتصال محفوظ":" اتصالات محفوظة"); }
   function integration(body){ return siyPost("/siyadah-api/v1/integrations",body); }
   function rcMsg(message){ var e=$("#mE"); if(e){e.textContent=message||"";e.hidden=!message;} }
   function rcBox(html){ $("#mF").hidden=false; $("#mF").innerHTML=html; $("#mGo").hidden=true; }
   async function realTools(){
-    if(!window.__SIY_REAL__)return; TOOLS.forEach(function(t){t.on=false;t.connection=null;t.by="";});
-    try{ var data=await integration({op:"list"}); (data.connections||[]).forEach(function(c){var t=TOOLS.find(function(x){return x.piece===c.pieceName;});if(t){t.connection=c;t.on=true;t.by=usersOf(t.s);t.sug="";}}); }
+    if(!window.__SIY_REAL__)return;
+    try{ var data=await integration({op:"list"}); window.__SIY_TOOLS_ERROR__=""; TOOLS.forEach(function(t){t.on=false;t.connection=null;t.by="";}); (data.connections||[]).forEach(function(c){var t=TOOLS.find(function(x){return x.piece===c.pieceName;});if(t){t.connection=c;t.on=c.status==='ACTIVE';t.by=usersOf(t.s);t.sug="";}}); }
     catch(error){ window.__SIY_TOOLS_ERROR__=error.message||"تعذّر تحميل الاتصالات."; }
     toolsCount(); if(who==="tools")renderThread();
   }
@@ -954,7 +957,7 @@ var I = {
     var method=rc.methods[rc.index],off=method.available===false,html="";
     if(rc.methods.length>1)html+='<div class="mf__seg" role="group" aria-label="طريقة الربط">'+rc.methods.map(function(item,index){return '<button type="button" class="lnk'+(index===rc.index?' lnk--fill':'')+'" data-method="'+index+'" aria-pressed="'+(index===rc.index)+'">'+esc(item.displayName||item.type)+'</button>';}).join("")+'</div>';
     if(method.description)html+='<p class="mf__m">'+esc(method.description)+'</p>'; if(off)html+='<p class="mf__e">'+esc(method.message||"طريقة الربط غير متاحة حاليًا.")+'</p>';else html+=(method.fields||[]).map(rcField).join("");
-    html+='<p class="mf__e" id="mE" role="alert" hidden></p><div class="mbox__a"><button type="submit" class="lnk lnk--fill" id="mOk"'+(off?' disabled':'')+'>'+(method.type==="OAUTH2"?'سجّل الدخول عبر '+esc(rc.tool.n):'احفظ واختبر')+'</button></div>';rcBox('<form novalidate>'+html+'</form>');
+    html+='<p class="mf__e" id="mE" role="alert" hidden></p><div class="mbox__a"><button type="submit" class="lnk lnk--fill" id="mOk"'+(off?' disabled':'')+'>'+(method.type==="OAUTH2"?'سجّل الدخول عبر '+esc(rc.tool.n):'احفظ الاتصال')+'</button></div>';rcBox('<form novalidate>'+html+'</form>');
     var focus=focusTabs?$("[data-method=\""+rc.index+"\"]",$("#mF")):$("[id^=mf]",$("#mF"));if(focus)focus.focus();
   }
   async function realConnect(tool){
@@ -962,14 +965,14 @@ var I = {
     try{var data=await integration({op:"methods",piece:tool.s});if(!rc||rc.tool!==tool)return;if(data.noAuth){rcBox('<p class="mf__m">هذه الأداة لا تحتاج حسابًا أو مفتاحًا. تصبح جاهزة عند استخدامها داخل مهمة.</p>');return;}rc.methods=data.methods||[];if(!rc.methods.length)throw new Error("لا توجد طريقة ربط لهذه الأداة.");rcRender();}catch(error){if(rc&&rc.tool===tool)rcBox('<p class="mf__e" role="alert">'+esc(error.message||"تعذّر تجهيز الربط.")+'</p>');}
   }
   function rcValues(method){var values={};for(var i=0;i<(method.fields||[]).length;i++){var field=method.fields[i],el=$("#mf"+i),value=field.type==="checkbox"?el.checked:field.type==="dropdown"?(el.value===""?"":field.options[+el.value].value):field.type==="number"?(el.value===""?"":Number(el.value)):el.value.trim();if(field.required&&(value===""||value==null)){rcMsg("أكمل «"+(field.label||field.name)+"» أولًا.");el.focus();return null;}if(value!=="")values[field.name]=value;}return values;}
-  async function rcPost(payload){var tool=rc.tool,button=$("#mOk");button.disabled=true;rcMsg("");try{var data=await integration(payload);tool.connection=data.connection;tool.on=true;tool.by=usersOf(tool.s);tool.sug="";rc=null;closeModal();toolsCount();renderThread();}catch(error){button=$("#mOk");if(button)button.disabled=false;rcMsg(error.message||"تعذّر الربط. راجع البيانات وحاول مرة ثانية.");}}
+  async function rcPost(payload){var tool=rc.tool,button=$("#mOk");button.disabled=true;rcMsg("");try{var data=await integration(payload);tool.connection=data.connection;tool.on=data.connection.status==='ACTIVE';tool.by=usersOf(tool.s);tool.sug="";rc=null;closeModal();toolsCount();renderThread();}catch(error){button=$("#mOk");if(button)button.disabled=false;rcMsg(error.message||"تعذّر الربط. راجع البيانات وحاول مرة ثانية.");}}
   function oauthResult(data){if(data&&typeof data==="object"&&data.data)data=data.data;if(data&&typeof data==="object"&&data.code)return {code:String(data.code),state:String(data.state||"")};if(data&&typeof data==="object")data=data.url;var code=typeof data==="string"&&/[?&#]code=([^&#]+)/.exec(data),state=typeof data==="string"&&/[?&#]state=([^&#]+)/.exec(data);return {code:code?decodeURIComponent(code[1].replace(/\+/g," ")):"",state:state?decodeURIComponent(state[1].replace(/\+/g," ")):""};}
   async function rcOAuth(values){
     var tool=rc.tool,button=$("#mOk");button.disabled=true;rcMsg("أجهّز صفحة الدخول…");try{var started=await integration({op:"oauth_start",piece:tool.s,values:values}),popup=window.open(started.authorizationUrl,"siyadah_oauth","width=520,height=680");if(!popup)throw new Error("المتصفح منع نافذة الدخول. اسمح بها وحاول مرة ثانية.");rcMsg("أكمل تسجيل الدخول في النافذة المنبثقة…");if(oauthOff)oauthOff();var timer=setTimeout(function(){if(oauthOff)oauthOff();rcMsg("استغرقت العملية وقتًا طويلًا. أعد المحاولة.");},10*60*1000);function on(event){if(event.origin!==started.allowedOrigin)return;var result=oauthResult(event.data);if(!result.code||result.state!==started.attempt)return;oauthOff();try{popup.close();}catch(ignore){}rcPost({op:"oauth_finish",attempt:started.attempt,code:result.code,state:result.state});}window.addEventListener("message",on);oauthOff=function(){clearTimeout(timer);window.removeEventListener("message",on);oauthOff=null;};}catch(error){button=$("#mOk");if(button)button.disabled=false;rcMsg(error.message||"تعذّر بدء تسجيل الدخول.");}
   }
   $("#mF").addEventListener("click",async function(event){
     var method=event.target.closest("[data-method]");if(method&&rc){rc.index=+method.dataset.method;rcRender(true);return;}
-    var test=event.target.closest("[data-revalidate]"),disconnect=event.target.closest("[data-disconnect]");if(!picked||!picked.connection||(!test&&!disconnect))return;event.target.disabled=true;rcMsg("");try{if(test){var data=await integration({op:"revalidate",connection_id:picked.connection.id});picked.connection=data.connection;picked.on=true;$("#mD").textContent=(data.connection.status==='ACTIVE'?"جاهزة للاستخدام":"تم الاختبار: "+data.connection.status)+" · يستخدمها: "+usersOf(picked.s);event.target.disabled=false;}else{await integration({op:"disconnect",connection_id:picked.connection.id});picked.connection=null;picked.on=false;closeModal();toolsCount();renderThread();}}catch(error){event.target.disabled=false;rcMsg(error.message||"لم يتم تأكيد العملية.");}
+    var test=event.target.closest("[data-revalidate]"),disconnect=event.target.closest("[data-disconnect]");if(!picked||!picked.connection||(!test&&!disconnect))return;event.target.disabled=true;rcMsg("");try{if(test){var data=await integration({op:"revalidate",connection_id:picked.connection.id});picked.connection=data.connection;picked.on=data.connection.status==='ACTIVE';$("#mD").textContent=(data.connection.status==='ERROR'?"الاتصال فيه خطأ":"تم التحقق من بيانات الربط؛ نتيجة الاستخدام تحتاج مهمة فعلية")+" · يستخدمها: "+usersOf(picked.s);event.target.disabled=false;}else{await integration({op:"disconnect",connection_id:picked.connection.id});picked.connection=null;picked.on=false;closeModal();toolsCount();renderThread();}}catch(error){event.target.disabled=false;rcMsg(error.message||"لم يتم تأكيد العملية.");}
   });
   $("#mF").addEventListener("submit",function(event){event.preventDefault();var method=rc&&rc.methods[rc.index],values=method&&rcValues(method);if(!method||values===null)return;if(method.type==="OAUTH2")rcOAuth(values);else rcPost({op:"connect",piece:rc.tool.s,type:method.type,values:values});});
   function openTools(){ allOpen=false; tshown=24; go("tools"); }
