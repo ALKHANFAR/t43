@@ -115,6 +115,15 @@ test('real account tools hide legacy demo employees and internal platform labels
     assert.doesNotMatch(visible,/محرك التنفيذ|بوابة سيادة متصلة/);
   }finally{p.close();}
 });
+test('tool buttons show verified details or prepare a chat request instead of doing nothing',async()=>{
+  const p=await page({hydrate:{...empty,team:[employee]},pieces:[['gmail','Gmail','Email','communication','https://example.test/gmail.png','البريد']]});try{
+    p.d.querySelector('#toolsLink').click();await flush();
+    const details=p.d.querySelector('[data-tool-details="gmail"]');assert.ok(details);details.click();
+    assert.ok(p.d.querySelector('#modal').classList.contains('on'));assert.match(p.d.querySelector('#mD').textContent,/جاهزة للاستخدام.*سارة/);assert.equal(p.d.querySelector('#mGo').disabled,true);
+    p.d.querySelector('#mX').click();p.d.querySelector('[data-request-tool]').click();
+    assert.equal(p.d.querySelector('#input').value,'أحتاج أداة غير موجودة في القائمة: ');assert.equal(p.d.activeElement,p.d.querySelector('#input'));
+  }finally{p.close();}
+});
 test('real employee shows natural instructions without exposing a compiled prompt',async()=>{
   const p=await page({hydrate:{...empty,team:[{...employee,instructions:'تابعي الفرص الجديدة واكتبي ملخصًا واضحًا.'}]}});try{
     p.d.querySelector('#emps .emp').click();await flush();

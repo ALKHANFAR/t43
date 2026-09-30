@@ -772,6 +772,8 @@ var I = {
     if(t.closest("[data-siy-approval]")){ var approvalList=curList(), approvalRow=approvalList&&approvalList[mi]; siyDecideBuilder(approvalRow,t.closest("[data-siy-approval]").dataset.siyApproval); return; }
     if(window.__SIY_REAL__ && t.closest("#instrSave,#instrPrev,[data-save],[data-approve],[data-decide],[data-opt],[data-pv],[data-hcancel],[data-undo]")){ siyUnsupported(); return; }
     if(t.closest("#renameBtn")){ renameEmp(); return; }
+    var toolDetails=t.closest("[data-tool-details]"); if(toolDetails){ openToolDetails(toolDetails.dataset.toolDetails); return; }
+    if(t.closest("[data-request-tool]")){ newChat(); var requestInput=$("#input"); requestInput.value="أحتاج أداة غير موجودة في القائمة: "; requestInput.focus(); return; }
     var c=t.closest(".cardq"); if(c){ send(c.lastChild.textContent); return; }
     /* رقاقتا الافتتاحية: «شوف اللي ينتظرني» تفتح صاحب أكثر الانتظارات · «وش صار أمس؟» رد قصير من السجلات */
     var opb=t.closest(".opch");
@@ -871,7 +873,7 @@ var I = {
     var st=t.on?'<span class="st"><i></i>مربوطة</span>':(t.sug?'<span class="st st--w">'+t.sug+'</span>':'');
     return '<div class="tl'+(t.on?' tl--on':'')+'"><span class="tl__i"><img src="'+t.logo+'" alt="" loading="lazy" crossorigin="anonymous" referrerpolicy="no-referrer" data-fb="1"></span><div><div class="tl__n">'+t.n+'</div>'+
       '<div class="tl__d">'+(t.d||t.c)+(t.on?'<br><span class="who">يستخدمها: '+t.by+'</span>':'')+'</div>'+
-      '<div class="tl__f">'+(t.on?'<button type="button" class="lnk">إدارة</button>':'<button type="button" class="lnk lnk--fill" data-c="'+t.s+'">اربط</button>')+st+'</div></div></div>';
+      '<div class="tl__f">'+(t.on?'<button type="button" class="lnk" data-tool-details="'+esc(t.s)+'">التفاصيل</button>':'<button type="button" class="lnk lnk--fill" data-c="'+t.s+'">اربط</button>')+st+'</div></div></div>';
   }
   function tgrid(a,e){ return a.length?'<div class="tgrid">'+a.map(tcard).join("")+'</div>':'<div class="tempty">'+e+'</div>'; }
   function toolsHtml(){
@@ -886,7 +888,7 @@ var I = {
       if(allOpen){ h+=tgrid(rest.slice(0,tshown),"—");
         if(rest.length>tshown) h+='<button type="button" class="more" id="more">اعرض المزيد — باقي '+(rest.length-tshown)+'</button>'; }
       else h+='<button type="button" class="more" id="allTgl">اعرض الكل (<span class="num">'+TOOLS.length+'</span>)</button>';
-      h+='<div class="soon"><div><b>أدوات سعودية نبنيها لك</b>مو في الكتالوج بعد — نضيفها لك على الطلب.<div class="chips">'+SOON.map(function(x){return '<span>'+x+'</span>'}).join("")+'</div></div><button type="button" class="lnk">اطلب أداة</button></div>';
+      h+='<div class="soon"><div><b>أدوات سعودية نبنيها لك</b>مو في الكتالوج بعد — نضيفها لك على الطلب.<div class="chips">'+SOON.map(function(x){return '<span>'+x+'</span>'}).join("")+'</div></div><button type="button" class="lnk" data-request-tool="1">اطلب أداة</button></div>';
     } else {
       h+='<div class="tsec"><b>نتائج «'+tq+'»</b>'+f.length+'</div>'+tgrid(f.slice(0,tshown),"ما لقيناها في الكتالوج — اطلبها ونبنيها لك.");
       if(f.length>tshown) h+='<button type="button" class="more" id="more">اعرض المزيد — باقي '+(f.length-tshown)+'</button>';
@@ -903,6 +905,9 @@ var I = {
     $("#mGo").disabled=!!window.__SIY_REAL__; $("#mGo").textContent=window.__SIY_REAL__?"الربط قريبًا":"اربط";
     if(window.__SIY_REAL__) $("#mD").textContent="هذه الأداة غير متاحة للربط بعد. لن نعرضها كمربوطة حتى تنجح تجربة حقيقية.";
     openModal(); }
+  function openToolDetails(slug){ picked=TOOLS.filter(function(x){return x.s===slug&&x.on;})[0]; if(!picked) return;
+    $("#mI").innerHTML='<img src="'+picked.logo+'" alt="" crossorigin="anonymous" referrerpolicy="no-referrer" style="width:26px;height:26px;object-fit:contain">'; $("#mN").textContent=picked.n;
+    $("#mD").textContent="جاهزة للاستخدام · يستخدمها: "+usersOf(picked.s); $("#mGo").disabled=true; $("#mGo").textContent="جاهزة"; openModal(); }
   function openModal(){ modalOpener=document.activeElement; $("#modal").classList.add("on"); var f=$("#mGo")||$("#mX"); if(f) f.focus(); }
   function closeModal(){ $("#modal").classList.remove("on"); var back=(modalOpener&&document.contains(modalOpener))?modalOpener:($("#tq")||$("#input")); if(back&&back.focus) back.focus(); modalOpener=null; }
   $("#mX").addEventListener("click",closeModal);
