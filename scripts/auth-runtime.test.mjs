@@ -73,14 +73,17 @@ test('account creation works in English with RTL/LTR and field feedback',async()
 test('the account story reveals three concise stages in both languages',()=>{
   const dom=new JSDOM(auth,{url:'https://siyadah.test/auth.html',runScripts:'outside-only'}),w=dom.window;
   w.eval(inlineScript);
+  assert.match(w.document.querySelector('#exampleRequest').textContent,/موظف سوشيال ميديا/);
   const step=w.document.querySelector('[data-story-step="1"]');step.click();
   assert.equal(step.getAttribute('aria-pressed'),'true');
   assert.equal(w.document.querySelector('#exampleIndex').textContent,'02 / 03');
-  assert.match(w.document.querySelector('#exampleRequest').textContent,/خطة العمل/);
+  assert.match(w.document.querySelector('#exampleRequest').textContent,/خطة موظفك/);
   w.document.querySelector('#langEn').click();
-  assert.match(w.document.querySelector('#exampleRequest').textContent,/A plan/);
+  assert.match(w.document.querySelector('#exampleRequest').textContent,/employee's plan/);
   w.document.querySelector('[data-story-step="2"]').click();
-  assert.match(w.document.querySelector('#exampleDetail').textContent,/source/);
+  assert.equal(w.document.querySelector('#step3').textContent,'Result');
+  assert.match(w.document.querySelector('#exampleRequest').textContent,/draft is ready/);
+  assert.match(w.document.querySelector('#exampleDetail').textContent,/before connecting tools/);
   dom.window.close();
 });
 

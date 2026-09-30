@@ -12,6 +12,7 @@ This repository has one delivery-candidate branch:
 - Account authentication and branded transactional email assets.
 - Bilingual Siyadah account layout using the existing wordmark and mark, with RTL/LTR field states and a restrained split-screen story.
 - Account story has three selectable illustrative stages and a quiet password-length cue; email confirmation keeps its token and offers retry after a connection failure.
+- The account example now starts with a specific social media employee request, reveals the role and publishing limits, and ends at a reviewable draft before tools are connected. Stage labels are Request, Plan, and Result in both languages.
 - Account copy now leaves login and signup at one heading and their fields; the selectable story reveals detail only when chosen. The original mark is white without a surrounding box, while recovery retains its necessary instruction.
 - Onboarding offers a visible exit. Chat and onboarding report logout failure in place and redirect only after the server confirms logout.
 - Shared Siyadah appearance tokens across public and customer pages; page layouts stay separate so future themes can replace visual values without changing customer flows.
