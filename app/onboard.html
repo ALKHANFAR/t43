@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<html data-theme="siyadah" lang="ar" dir="rtl">
-<head><script>document.documentElement.style.visibility="hidden";fetch("/siyadah-api/v1/auth/session",{credentials:"same-origin"}).then(function(r){if(!r.ok)throw 0;document.documentElement.style.visibility="";}).catch(function(){location.replace("../auth.html");});</script>
+<html data-theme="siyadah" data-session="checking" lang="ar" dir="rtl">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>سيادة — أول موظف لك</title>
@@ -144,9 +144,24 @@ html[dir="ltr"] .fit i::after{transform-origin:left}
 @media(max-width:380px){.wrap{padding-inline:20px}.bar{padding-inline:20px}h1{font-size:1.8rem}.btn{padding-inline:14px}.top__actions{gap:8px}.top .logo{width:92px}}
 
 @media (prefers-reduced-motion:reduce){ *{animation:none !important;transition:none !important} }
+html:not([data-session="ready"]) #onboardApp{display:none!important}
+html[data-session="ready"] #sessionGate{display:none!important}
+.session-gate{min-height:100svh;display:grid;place-items:center;padding:24px;background:var(--paper);color:var(--ink)}
+.session-gate__inner{width:min(100%,360px)}
+.session-gate__mark{display:block;width:32px;height:32px;margin-block-end:32px;background:var(--ink);-webkit-mask:url(../assets/icon.png) center/contain no-repeat;mask:url(../assets/icon.png) center/contain no-repeat}
+.session-gate h1{font-size:var(--type-section);font-weight:450;margin:0 0 8px}
+.session-gate p{margin:0;color:var(--ash);font-size:var(--type-body)}
+.session-gate__actions{display:none;gap:12px;flex-wrap:wrap;margin-block-start:24px}
+html[data-session="error"] .session-gate__actions{display:flex}
+.session-gate__actions button,.session-gate__actions a{display:inline-flex;align-items:center;min-height:44px;padding:8px 16px;border:1px solid var(--ink);border-radius:var(--radius-control);background:var(--ink);color:var(--paper);font-size:var(--type-label)}
+.session-gate__actions a{background:var(--paper);color:var(--ink)}
 </style>
 </head>
 <body>
+<div class="session-gate" id="sessionGate" role="status" aria-live="polite">
+  <div class="session-gate__inner"><span class="session-gate__mark" aria-hidden="true"></span><h1 id="sessionTitle">نفتح مساحة عملك</h1><p id="sessionMessage">نتحقق من جلستك…</p><div class="session-gate__actions"><button type="button" id="sessionRetry">أعد المحاولة</button><a href="../auth.html" id="sessionLogin">تسجيل الدخول</a></div></div>
+</div>
+<div id="onboardApp">
 <a class="skip" href="#main" data-en="Skip to content">تجاوز إلى المحتوى</a>
 
 <header class="top"><span class="logo" role="img" aria-label="سيادة" data-en-aria-label="Siyadah"></span><div class="top__actions"><small id="stepLbl">1 من 4</small><div class="lang-switch" role="group" aria-label="اللغة" data-en-aria-label="Language"><button type="button" id="langAr" aria-pressed="true">عربي</button><button type="button" id="langEn" aria-pressed="false">EN</button></div><button class="top__logout" id="logoutBtn" type="button" data-en="Log out">خروج</button></div><p class="logout-status" id="logoutStatus" role="alert"></p></header>
@@ -205,7 +220,35 @@ html[dir="ltr"] .fit i::after{transform-origin:left}
 </div></footer>
 
 <div class="live" id="live" aria-live="polite"></div>
+</div>
 
-<script src="onboard.js?v=1.9.0" defer></script>
+<script>
+(function(){
+  var root=document.documentElement,title=document.getElementById('sessionTitle'),message=document.getElementById('sessionMessage'),retry=document.getElementById('sessionRetry'),login=document.getElementById('sessionLogin');
+  var requested=new URLSearchParams(location.search).get('lang');
+  var locale=requested==='en'||requested==='ar'?requested:(sessionStorage.getItem('siyadah_locale')==='en'?'en':'ar');
+  if(locale==='en'){
+    root.lang='en';root.dir='ltr';title.textContent='Opening your workspace';message.textContent='Checking your session…';retry.textContent='Try again';login.textContent='Sign in';
+  }
+  async function checkSession(){
+    root.dataset.session='checking';
+    message.textContent=locale==='en'?'Checking your session…':'نتحقق من جلستك…';
+    retry.disabled=true;
+    var controller=new AbortController(),timer=setTimeout(function(){controller.abort();},12000);
+    try{
+      var response=await fetch('/siyadah-api/v1/auth/session',{credentials:'same-origin',signal:controller.signal});
+      if(!response.ok)throw new Error(response.status===401?'expired':'unavailable');
+      root.dataset.session='ready';
+      var script=document.createElement('script');script.src='onboard.js?v=1.9.0';document.body.appendChild(script);
+    }catch(error){
+      title.textContent=locale==='en'?'We could not open your workspace':'تعذّر فتح مساحة عملك';
+      message.textContent=error.message==='expired'?(locale==='en'?'Your session has ended. Sign in to continue.':'انتهت جلستك. سجّل الدخول للمتابعة.'):(locale==='en'?'We could not verify your session. Try again.':'تعذّر التحقق من جلستك. أعد المحاولة.');
+      root.dataset.session='error';retry.disabled=false;
+    }finally{clearTimeout(timer);}
+  }
+  retry.addEventListener('click',checkSession);
+  checkSession();
+})();
+</script>
 </body>
 </html>

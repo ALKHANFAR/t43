@@ -15,7 +15,7 @@
   </section>
   <section class="card" aria-labelledby="ttl">
     <div class="card-top"><a class="mobile-logo" id="mobileHome" href="ar.html" aria-label="سيادة، الصفحة الرئيسية"><span class="siyadah-logo" role="img" aria-label="Siyadah AI"></span></a><div class="languages" role="group" aria-label="اللغة"><button type="button" id="langAr" aria-pressed="true" lang="ar">عربي</button><button type="button" id="langEn" aria-pressed="false" lang="en">EN</button></div></div>
-    <div class="card-body"><h1 id="ttl">تسجيل الدخول</h1><p class="sub hide" id="sub"></p>
+    <div class="card-body"><h1 id="ttl" tabindex="-1">تسجيل الدخول</h1><p class="sub hide" id="sub"></p>
       <form id="authForm" novalidate>
         <div class="field hide" id="coRow"><label id="companyLabel" for="company">اسم الشركة</label><div class="ip"><input id="company" name="company" type="text" autocomplete="organization" maxlength="120" placeholder="اسم شركتك" aria-describedby="companyError"></div><p class="field-error" id="companyError"></p></div>
         <div class="field" id="emailRow"><label id="emailLabel" for="email">البريد الإلكتروني</label><div class="ip"><input id="email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@company.com" aria-describedby="emailError"></div><p class="field-error" id="emailError"></p></div>
@@ -85,7 +85,7 @@ function applyCopy(){
  $("tg").innerHTML=mode==="login"?t.loginPrompt+' <button id="sw" type="button">'+t.signupLink+'</button>':'<button id="sw" type="button">'+t.returnLogin+'</button>';
  $("sw").onclick=function(){setMode(mode==="login"?"signup":"login")};
 }
-function setMode(next){mode=next;clearErrors();clearMessage();applyCopy()}
+function setMode(next){mode=next;clearErrors();clearMessage();applyCopy();$("ttl").focus()}
 function setLanguage(next){locale=next;sessionStorage.setItem("siyadah_locale",locale);clearErrors();clearMessage();applyCopy()}
 function fieldError(id,message){$(id+"Error").textContent=message;$(id).setAttribute("aria-invalid","true");return $(id)}
 function validate(){

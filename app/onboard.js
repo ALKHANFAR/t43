@@ -153,7 +153,9 @@
   });
   $('#langAr').addEventListener('click',function(){locale='ar';sessionStorage.setItem('siyadah_locale',locale);applyLocale();});
   $('#langEn').addEventListener('click',function(){locale='en';sessionStorage.setItem('siyadah_locale',locale);applyLocale();});
-  document.addEventListener('keydown',function(event){if(event.key==='Enter'&&document.activeElement.tagName!=='TEXTAREA'&&!$('#next').disabled){event.preventDefault();$('#next').click();}});
+  $('#co').addEventListener('keydown',function(event){
+    if(event.key==='Enter'&&!event.isComposing&&!$('#next').disabled){event.preventDefault();$('#next').click();}
+  });
   applyLocale();
   resumeExistingCompany();
 })();

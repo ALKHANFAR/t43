@@ -20,6 +20,8 @@ This repository has one delivery-candidate branch:
 - Finishing onboarding now opens the selected employee in the company workspace. A new disabled employee shows a concise review state with tools disconnected; activation stays unavailable until tools are present. Real accounts no longer show placeholder metrics or invented activity in that employee view.
 - Shared Siyadah appearance tokens across public and customer pages; page layouts stay separate so future themes can replace visual values without changing customer flows.
 - Shared typography, measure, and spacing roles in `siyadah-theme.css`, documented in `SIYADAH-TYPOGRAPHY.md`; the account page applies the full scale in Arabic and English.
+- The workspace now uses shared body and note sizes for its primary reading and employee status, with larger focusable icon and message controls. Account mode changes move keyboard focus to the new heading, and onboarding's Enter shortcut applies only to the company-name field.
+- Onboarding shows a bilingual session-check state, loads its application script only after a successful session response, and offers retry or sign-in when verification fails.
 - Cloudlight-inspired bilingual public story showing company context, permission, and proof as selectable illustrative stages.
 - Product-wide interaction language documented in `INTERACTION-LANGUAGE.md`; visible states distinguish a proposal from a run and a verified result.
 - Public hero and role list now use short, scannable states; the hero is explicitly illustrative and no longer presents a fake live session or timer.
