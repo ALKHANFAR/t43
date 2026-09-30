@@ -12,9 +12,7 @@ var CONFIG = {
   // 3) اختياري: إشعار بريد إضافي عبر web3forms.com/#start
   web3formsKey: "",
 
-  fallbackEmail: "info@siyadah-ai.com",
   countryCode: "+966",                     // fixed prefix shown in the form and sent with the payload
-  seatsClaimed: null,                      // real number from the backend; null hides the queue position
 
   // Pricing — the only place numbers live. Markup holds labels; site.js fills the numbers.
   //   starter: null hides the Starter card. Set { price, early, employees, actions } to show it (2 → 3 cards).
@@ -35,11 +33,10 @@ var CONFIG = {
   "use strict";
   var AR = document.documentElement.lang === "ar";
   var L = AR ? {
-    brief: "أبي أحد يتابع كل عميل جديد خلال خمس دقائق، ويطالب بالفواتير اللي تأخرت أكثر من سبعة أيام، ويرد على أسئلة الدعم المتكررة على طول.",
+    brief: "تابع العملاء الجدد. ورّني الرسالة قبل الإرسال.",
     typeMs: 26,
-    reserving: "جاري الحجز…",
-    mailSubject: "حجز مقعد — ",
-    mailBody: ["طلب حجز مقعد", "الاسم", "البريد", "الجوال", "الشركة"],
+    reserving: "جاري الإرسال…",
+    requestFailed: "تعذّر إرسال الطلب. تقدر تراسلنا بالبريد.",
     notifySubject: "تسجيل جديد - ",
     billMonth: "تُدفع شهريًا",
     billYear: function (total) { return "تُدفع سنويًا: " + total + " ر.س (شهران مجانًا)"; },
@@ -48,11 +45,10 @@ var CONFIG = {
     actions: function (n) { return n + " إجراء / شهر"; },
     actionsAllowance: "رصيد شهري من الإجراءات"
   } : {
-    brief: "Follow up with every new lead within five minutes, chase invoices more than seven days late, and answer the support questions we get over and over.",
+    brief: "Follow up with new leads. Show me the message before sending.",
     typeMs: 22,
-    reserving: "Reserving…",
-    mailSubject: "Seat request - ",
-    mailBody: ["Seat request", "Name", "Email", "Phone", "Company"],
+    reserving: "Sending…",
+    requestFailed: "Could not send the request. You can email us instead.",
     notifySubject: "New seat request - ",
     billMonth: "Billed monthly",
     billYear: function (total) { return "Billed yearly: " + total + " SAR (2 months free)"; },
@@ -100,22 +96,15 @@ var CONFIG = {
   $$(".rv, .fade").forEach(function (el) { io.observe(el); });
   setTimeout(function () { $$(".hero .rv, .hero .fade").forEach(function (el) { el.classList.add("in"); }); }, 120);
 
-  /* live console */
+  /* Illustrative request-to-plan sequence */
   var BRIEF = L.brief;
-  var typed = $("#typed"), caret = $("#caret"), status = $("#status"), cfoot = $("#cfoot"), clock = $("#clock");
-  var units = $$(".unit"), timers = [], tick = null, sec = 0;
-
-  function two(n) { return (n < 10 ? "0" : "") + n; }
-  function startClock() {
-    sec = 0; clearInterval(tick);
-    tick = setInterval(function () { sec++; clock.textContent = two(Math.floor(sec / 60)) + ":" + two(sec % 60); }, 1000);
-  }
+  var typed = $("#typed"), caret = $("#caret"), status = $("#status"), cfoot = $("#cfoot");
+  var units = $$(".unit"), timers = [];
   function play() {
     timers.forEach(clearTimeout); timers = [];
     typed.textContent = ""; caret.classList.remove("off");
     status.classList.remove("on"); cfoot.classList.remove("on");
     units.forEach(function (u) { u.classList.remove("on"); });
-    startClock();
 
     if (reduce) {
       typed.textContent = BRIEF; caret.classList.add("off");
@@ -209,9 +198,6 @@ var CONFIG = {
     });
   });
 
-  /* queue position (only when the backend reports a real number) */
-  var hasSeats = typeof CONFIG.seatsClaimed === "number";
-  if (!hasSeats) $(".done__no").hidden = true;
   $("#yr").textContent = new Date().getFullYear();
 
   /* form */
@@ -233,21 +219,12 @@ var CONFIG = {
   function succeed() {
     card.classList.add("sent");
     $("#done").classList.add("on");
-    if (hasSeats) $("#rank").textContent = "#" + (CONFIG.seatsClaimed + 1);
     $("#done").scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
-  }
-  function mailtoFallback(d) {
-    var M = L.mailBody;
-    var body = M[0] + "%0D%0A%0D%0A"
-      + M[1] + ": " + d.name + "%0D%0A"
-      + M[2] + ": " + d.email + "%0D%0A"
-      + M[3] + ": " + d.country_code + " " + d.phone + "%0D%0A"
-      + M[4] + ": " + (d.company || "-");
-    window.location.href = "mailto:" + CONFIG.fallbackEmail
-      + "?subject=" + encodeURIComponent(L.mailSubject + d.name) + "&body=" + body;
   }
   form.addEventListener("submit", function (e) {
     e.preventDefault();
+    var sendError = $("#sendError");
+    sendError.hidden = true;
     if ($("#website").value) return;
     if (!validate()) {
       var bad = $(".field.bad");
@@ -264,7 +241,11 @@ var CONFIG = {
       ref: document.referrer || "",
       ts: new Date().toISOString()
     };
-    if (!CONFIG.sheetUrl && !CONFIG.endpoint && !CONFIG.web3formsKey) { mailtoFallback(data); succeed(); return; }
+    if (!CONFIG.sheetUrl && !CONFIG.endpoint && !CONFIG.web3formsKey) {
+      sendError.hidden = false;
+      $("#sendErrorText").textContent = L.requestFailed;
+      return;
+    }
 
     btn.disabled = true;
     var label = btn.innerHTML;
@@ -281,7 +262,7 @@ var CONFIG = {
       });
     }
 
-    var jobs = [];
+    var jobs = [], primary = null;
 
     // أ) Google Sheet — نرسل بنوع text/plain عشان نتفادى preflight الذي يرفضه Apps Script
     if (CONFIG.sheetUrl) {
@@ -306,7 +287,7 @@ var CONFIG = {
     }
 
     // ب) الحفظ على سيرفرك (leads.csv)
-    if (CONFIG.endpoint) { jobs.push(post(CONFIG.endpoint, data)); }
+    if (CONFIG.endpoint) { primary = post(CONFIG.endpoint, data); jobs.push(primary); }
 
     // ج) إشعار بريد إضافي — يشتغل من أي استضافة
     if (CONFIG.web3formsKey) {
@@ -325,9 +306,10 @@ var CONFIG = {
     }
 
     Promise.allSettled(jobs).then(function (res) {
-      var anyOk = res.some(function (r) { return r.status === "fulfilled"; });
-      if (!anyOk) { mailtoFallback(data); }
-      succeed();
+      var primaryResult = primary ? res[jobs.indexOf(primary)] : null;
+      var anyOk = primaryResult ? primaryResult.status === "fulfilled" : res.some(function (r) { return r.status === "fulfilled" && !r.value?.opaque; });
+      if (anyOk) succeed();
+      else { sendError.hidden = false; $("#sendErrorText").textContent = L.requestFailed; }
       btn.disabled = false; btn.innerHTML = label;
     });
   });

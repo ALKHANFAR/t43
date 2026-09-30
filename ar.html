@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>سيادة — اكتب جملة وحدة، وخلّ شركتك تشتغل بدونك</title>
-<meta name="description" content="سيادة تبني لك فريق تشغيل بالذكاء الاصطناعي من محادثة واحدة: متابعة العملاء المحتملين، تحصيل الفواتير، دعم فوري، وتسويق مستمر. بيتا خاصة لـ 500 شركة.">
+<title>سيادة — طلب واحد. طريق واضح للنتيجة.</title>
+<meta name="description" content="سيادة توضّح العمل والصلاحية والنتيجة في كل خطوة. تبدأ من معرفة شركتك، وتعرض ما يحتاج قرارك، ثم دليل ما حدث فعلًا.">
 <meta name="theme-color" content="#FFFFFF">
 <meta name="color-scheme" content="light">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -16,8 +16,8 @@
 <link rel="icon" href="assets/icon.png">
 
 <meta property="og:type" content="website">
-<meta property="og:title" content="سيادة — جملة وحدة. فريق يشتغل داخل أدواتك.">
-<meta property="og:description" content="الفريق اللي ما تقدر توظفه، داخل محادثة واحدة. بيتا خاصة لـ 500 شركة.">
+<meta property="og:title" content="سيادة — طلب واحد. طريق واضح للنتيجة.">
+<meta property="og:description" content="معرفة شركتك، والصلاحية، والدليل في رحلة واحدة واضحة.">
 <meta property="og:url" content="https://siyadah-ai.com/ar.html">
 <meta property="og:image" content="https://siyadah-ai.com/og-ar.jpg">
 <meta property="og:locale" content="ar_SA">
@@ -177,7 +177,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
    الموظفون
    ========================================================================== */
 .emp{list-style:none;margin:clamp(38px,5vw,60px) 0 0;padding:0;border-block-start:1px solid var(--hair)}
-.emp li{display:grid;grid-template-columns:.75fr 1.5fr .75fr;gap:clamp(18px,3vw,48px);padding:clamp(24px,3vw,34px) 0;border-block-end:1px solid var(--hair);align-items:baseline}
+.emp li{display:grid;grid-template-columns:minmax(180px,.75fr) minmax(0,1.5fr);gap:clamp(18px,3vw,48px);padding:clamp(24px,3vw,34px) 0;border-block-end:1px solid var(--hair);align-items:baseline}
 .emp__n{font-family:var(--f-display);font-weight:300;font-size:clamp(1.1rem,1.9vw,1.4rem);line-height:1.45;margin:0}
 .emp__p{margin:0;color:var(--ash);max-width:54ch}
 .emp__t{margin:0;font-family:var(--f-display);font-size:.8rem;color:var(--ash)}
@@ -238,12 +238,13 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
 .hp{position:absolute;inset-inline-start:-9999px;opacity:0;height:0}
 .form__fine{margin:16px 0 0;font-size:.8rem;color:var(--ash);line-height:1.7}
 .form__fine a{text-decoration:underline;text-underline-offset:2px}
+.form__send-error{margin:12px 0 0;padding:10px 12px;background:var(--error-wash);color:var(--error);font-size:.85rem}
+.form__send-error a{text-decoration:underline;text-underline-offset:2px;font-weight:600}
 .done{display:none}
 .done.on{display:block;animation:in .6s var(--ease)}
 .done .drop{width:26px;margin-block-end:24px}
 .done h3{margin-block-end:12px}
 .done p{color:var(--ash);font-size:.95rem;max-width:38ch;margin:0 0 22px}
-.done__no{font-family:var(--f-display);font-size:.875rem;border:1px solid var(--hair);display:inline-block;padding:9px 18px;color:var(--ash)}
 .form.sent .form__body{display:none}
 
 /* ==========================================================================
@@ -314,7 +315,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
  {"@type":"Organization","@id":"https://siyadah-ai.com/#org","name":"Siyadah AI","url":"https://siyadah-ai.com/ar.html","logo":"https://siyadah-ai.com/og.jpg","email":"info@siyadah-ai.com","sameAs":[]},
- {"@type":"SoftwareApplication","name":"Siyadah AI","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://siyadah-ai.com/","description":"AI employees run from a single chat: lead follow-up, invoice collection, customer support and marketing, working inside the tools you already use.","offers":{"@type":"Offer","price":"499","priceCurrency":"SAR","description":"Business plan, private beta price per month, excluding VAT. Free to reserve."},"publisher":{"@id":"https://siyadah-ai.com/#org"}},
+ {"@type":"SoftwareApplication","name":"Siyadah AI","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://siyadah-ai.com/","description":"Siyadah helps companies prepare AI employees with company knowledge, clear permissions, and evidence of real work.","offers":{"@type":"Offer","price":"499","priceCurrency":"SAR","description":"Business plan, private beta price per month, excluding VAT. Free to reserve."},"publisher":{"@id":"https://siyadah-ai.com/#org"}},
  {"@type":"FAQPage","inLanguage":"ar","mainEntity":[
   {"@type":"Question","name":"وش الفرق بينها وبين ChatGPT أو Claude؟","acceptedAnswer":{"@type":"Answer","text":"أدوات المحادثة تعطيك جوابًا. سيادة تنفّذ داخل أدواتك: ترسل الرسالة، تحدّث سجل العميل، تشغّل سلسلة المتابعة، وتلاحق الفاتورة."}},
   {"@type":"Question","name":"هل أحتاج خلفية تقنية؟","acceptedAnswer":{"@type":"Answer","text":"لا. لو تقدر تشرح مهمة لموظف جديد، تقدر تشغّل سيادة. تكتب طلبك بلغة عادية، وهي تبني الموظفين وتربط الأدوات وتعرض عليك الخطة قبل التنفيذ."}},
@@ -347,41 +348,40 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
 <!-- ============================== البطل ============================== -->
 <section class="hero">
   <div class="wrap">
-    <p class="idx fade">بيتا خاصة — 500 شركة فقط</p>
+    <p class="idx fade">سيادة · بيتا خاصة</p>
     <h1 class="d1">
-      <span class="rv"><span>اكتب جملة وحدة.</span></span>
-      <span class="rv" data-d="1"><span>وخلّ شركتك تشتغل بدونك.</span></span>
+      <span class="rv"><span>طلب واحد.</span></span>
+      <span class="rv" data-d="1"><span>طريق واضح للنتيجة.</span></span>
     </h1>
 
     <div class="hero__row">
       <div>
-        <p class="lead">سيادة تعطيك موظفين بالذكاء الاصطناعي يشتغلون داخل أدواتك نفسها. واحد يتابع كل عميل محتمل خلال دقائق، وموظفة تطارد الفواتير اللي محد يبي يطاردها، وواحد يرد على عملائك على مدار الساعة. وأنت تديرهم كلهم من محادثة وحدة.</p>
         <div class="hero__cta">
-          <a href="#join" class="btn">احجز مقعدك <span class="drop" aria-hidden="true"></span></a>
-          <a href="demo.html" class="btn btn--line">شوف الديمو · 2:00</a>
+          <a href="#join" class="btn">اطلب الوصول <span class="drop" aria-hidden="true"></span></a>
+          <a href="#proof" class="btn btn--line">استكشف الرحلة</a>
         </div>
-        <p class="hero__fine"><span>الحجز مجاني.</span><span>بدون بطاقة بنكية.</span><span>السعر المبكر يثبت لك مدى الحياة.</span></p>
+        <p class="hero__fine"><span>بيتا خاصة.</span><span>لا تحتاج بطاقة لطلب الوصول.</span></p>
       </div>
 
       <div class="console" id="console">
         <div class="console__bar">
-          <span class="drop" aria-hidden="true"></span> جلسة حيّة
-          <span class="t" id="clock">00:00</span>
+          <span class="drop" aria-hidden="true"></span> مثال توضيحي
+          <span class="t">الطلب ← الخطة</span>
         </div>
         <div class="console__body">
           <p class="brief">
             <span class="brief__l">أنت</span>
             <span id="typed"></span><span class="caret" id="caret"></span>
           </p>
-          <div class="status" id="status"><span class="drop" aria-hidden="true"></span> سيادة تجهّز فريقك</div>
+          <div class="status" id="status"><span class="drop" aria-hidden="true"></span> تجهيز اقتراح</div>
           <ul class="units" id="units">
-            <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">متابعة المبيعات</span><span class="unit__s">شغّال</span></li>
-            <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">تحصيل الفواتير</span><span class="unit__s">شغّال</span></li>
-            <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">دعم العملاء</span><span class="unit__s">شغّال</span></li>
-            <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">التسويق</span><span class="unit__s">شغّال</span></li>
+            <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">معرفة الشركة</span><span class="unit__s">مراجعة</span></li>
+            <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">الموظف</span><span class="unit__s">مسودة</span></li>
+            <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">الأدوات</span><span class="unit__s">تحتاج ربطًا</span></li>
+            <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">أول إجراء</span><span class="unit__s">بانتظارك</span></li>
           </ul>
           <div class="console__foot" id="cfoot">
-            أربعة موظفين بالذكاء الاصطناعي. ولا اسم على كشف الرواتب.
+            خطة للمراجعة. لم يُنفذ أي إجراء.
             <button class="replay" id="replay" type="button">إعادة التشغيل</button>
           </div>
         </div>
@@ -394,35 +394,30 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
 <section class="sect" id="how">
   <div class="wrap">
     <p class="idx">01 — كيف تشتغل</p>
-    <h2 class="d2 rv" style="max-width:20ch"><span>ثلاث دقائق من الفوضى إلى فريق شغّال.</span></h2>
-    <p class="lead" style="margin-block-start:24px">ما فيه تكاملات تعدّها. ما فيه مخططات ترسمها. تكلم سيادة مثل ما تكلم موظفًا جديدًا في أول يوم.</p>
+    <h2 class="d2 rv" style="max-width:20ch"><span>من الطلب إلى أول موظف.</span></h2>
 
     <div class="steps">
       <div class="step">
         <div class="step__n">الخطوة 01</div>
         <div>
           <h3 class="d3 step__h">قول لها وش تبي</h3>
-          <p class="step__p">بلغتك العادية. بدون مصطلحات تقنية، وبدون ما تشرح كيف أنظمتك مربوطة ببعض.</p>
-          <blockquote class="said">
-            <cite>جملة وحدة تكفي</cite>
-            «أبي أحد يتابع كل عميل جديد خلال خمس دقائق، ويطالب بالفواتير اللي تأخرت أكثر من سبعة أيام، ويرد على أسئلة الدعم المتكررة على طول.»
-          </blockquote>
+          <p class="step__p">جملة واحدة تكفي للبداية.</p>
         </div>
       </div>
 
       <div class="step">
         <div class="step__n">الخطوة 02</div>
         <div>
-          <h3 class="d3 step__h">سيادة تقرأ شركتك، تبني الفريق، وتوريك الخطة</h3>
-          <p class="step__p">أعطها موقعك أو إنستغرامك. تقرأ خدماتك وأسعارك وسياساتك ونبرتك، توظّف لك موظفًا لكل قسم، تربطه بأدواتك، وتعرض عليك الخطة قبل ما تسوي أي شيء. أنت توافق، أو تعدّل بجملة وحدة.</p>
+          <h3 class="d3 step__h">اربطه بمعرفة شركتك</h3>
+          <p class="step__p">راجع المصادر والموظف المقترح.</p>
         </div>
       </div>
 
       <div class="step">
         <div class="step__n">الخطوة 03</div>
         <div>
-          <h3 class="d3 step__h">شغّل… وروّح</h3>
-          <p class="step__p">الفريق يشتغل من نفس اللحظة: موظف يتابع عملاءك، وموظفة تطالب بفواتيرك، وموظف يرد على الدعم. وأنت ترجع للشغل اللي ما يسويه إلا أنت، وترجع لك أمسياتك.</p>
+          <h3 class="d3 step__h">اربط، اختبر، ثم نفّذ</h3>
+          <p class="step__p">امنح الصلاحية عند الحاجة، ثم افحص النتيجة ودليلها.</p>
         </div>
       </div>
     </div>
@@ -432,30 +427,25 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
 <!-- ============================== الموظفون ============================== -->
 <section class="sect" id="dept" style="padding-block-start:0">
   <div class="wrap">
-    <p class="idx">02 — الموظفون</p>
-    <h2 class="d2 rv" style="max-width:20ch"><span>أربعة موظفين. محادثة وحدة.</span></h2>
-    <p class="lead" style="margin-block-start:24px">كل موظف يمسك وظيفة وحدة ويشتغل داخل الأدوات اللي تستخدمها أصلًا. وأنت توجّه الأربعة من نفس المحادثة.</p>
+    <p class="idx">02 — أدوار مقترحة</p>
+    <h2 class="d2 rv" style="max-width:20ch"><span>ابدأ بواحد. وأضف ما تحتاجه.</span></h2>
 
     <ul class="emp">
       <li>
         <h3 class="emp__n">متابعة العملاء المحتملين</h3>
-        <p class="emp__p">يرد على كل عميل محتمل خلال دقائق، يسأله أسئلة التأهيل، ويحجز الجاهز في تقويمك مباشرة.</p>
-        <p class="emp__t">واتساب · نظام العملاء · التقويم</p>
+        <p class="emp__p">تأهيل · متابعة · حجز</p>
       </li>
       <li>
         <h3 class="emp__n">تحصيل الفواتير</h3>
-        <p class="emp__p">يتابع كل فاتورة مستحقة، يرسل تذكيرات تتصاعد نبرتها مع كل أسبوع تأخير، ويتوقف لحظة وصول السداد.</p>
-        <p class="emp__t">الفوترة · الجداول · واتساب</p>
+        <p class="emp__p">رصد · تذكير · تأكيد</p>
       </li>
       <li>
         <h3 class="emp__n">دعم العملاء</h3>
-        <p class="emp__p">يجاوب على الأسئلة المتكررة من أسعارك وسياساتك أنت على مدار الساعة، ويصعّد لك الحالات الحساسة مع ملخص جاهز.</p>
-        <p class="emp__t">واتساب · البريد · شات الموقع</p>
+        <p class="emp__p">إجابة · تصعيد</p>
       </li>
       <li>
         <h3 class="emp__n">التسويق</h3>
-        <p class="emp__p">يخلي تقويم المحتوى الشهري شغّالًا بصوت علامتك، يجدول النشر، ويقول لك بالأرقام وش يستاهل التكرار.</p>
-        <p class="emp__t">لينكدإن · إنستغرام · القوائم البريدية</p>
+        <p class="emp__p">صياغة · جدولة · تعلّم</p>
       </li>
     </ul>
   </div>
@@ -467,7 +457,6 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
     <p class="idx">03 — رحلة واضحة</p>
     <div class="journey__top">
       <h2 class="d2" id="proof-title">من طلبك إلى نتيجة تقدر تفحصها.</h2>
-      <p class="lead">تعرف وش فهمت سيادة، ومتى تحتاج قرارك، ووش حصل بعد تنفيذ الإجراء.</p>
     </div>
     <div class="journey__choices" role="group" aria-label="استكشف الرحلة">
       <button class="journey__choice" type="button" id="journey-choice-context" data-journey-choice="context" aria-controls="journey-context" aria-pressed="true">01 · المعرفة</button>
@@ -475,15 +464,15 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
       <button class="journey__choice" type="button" id="journey-choice-proof" data-journey-choice="proof" aria-controls="journey-proof" aria-pressed="false">03 · الدليل</button>
     </div>
     <section class="journey__panel" id="journey-context" aria-labelledby="journey-choice-context" data-journey-panel="context">
-      <div class="journey__copy"><span class="journey__n">01 / المعرفة</span><h3>تبدأ من معلومات شركتك المثبتة.</h3><p>الإجابة تستند إلى معرفة راجعتها. المعلومة الناقصة أو المتعارضة تبقى واضحة لتصححها.</p></div>
+      <div class="journey__copy"><span class="journey__n">01 / المعرفة</span><h3>شركتك مفهومة.</h3><p>معرفة بمصدر. ونقص واضح.</p></div>
       <div class="journey__sample"><p class="journey__sample-label">مثال توضيحي</p><div class="journey__sample-row"><span>السؤال</span><b>كم مدة التفعيل عندنا؟</b></div><div class="journey__sample-row"><span>المصدر</span><b>سياسة الشركة مع رابط ومقتطف</b></div><div class="journey__sample-row"><span>إن لم تتضح</span><b>تسأل قبل أن تعد العميل</b></div></div>
     </section>
     <section class="journey__panel" id="journey-permission" aria-labelledby="journey-choice-permission" data-journey-panel="permission" hidden>
-      <div class="journey__copy"><span class="journey__n">02 / الصلاحية</span><h3>حدود واضحة قبل الفعل.</h3><p>تعمل سيادة ضمن الصلاحية الممنوحة. وإذا احتاج الإجراء قرارك، يظهر نطاقه وأثره قبل الموافقة.</p></div>
+      <div class="journey__copy"><span class="journey__n">02 / الصلاحية</span><h3>الحد واضح قبل الفعل.</h3><p>ضمن الصلاحية تنفّذ. وخارجها تسألك.</p></div>
       <div class="journey__sample"><p class="journey__sample-label">مثال توضيحي</p><div class="journey__sample-row"><span>الإجراء المقترح</span><b>متابعة عميل محتمل جديد</b></div><div class="journey__sample-row"><span>الحد</span><b>فحص الأدوات المخصصة للموظف وصلاحياته</b></div><div class="journey__sample-row"><span>خارج الحد</span><b>طلب موافقتك</b></div></div>
     </section>
     <section class="journey__panel" id="journey-proof" aria-labelledby="journey-choice-proof" data-journey-panel="proof" hidden>
-      <div class="journey__copy"><span class="journey__n">03 / الدليل</span><h3>النتيجة أولًا، ودليلها بعدها.</h3><p>لا يكتمل الإجراء حتى تظهر نتيجته الحقيقية. المسودة والربط لكل منهما حالته الواضحة.</p></div>
+      <div class="journey__copy"><span class="journey__n">03 / الدليل</span><h3>النتيجة. ثم دليلها.</h3><p>كل حالة باسمها الحقيقي.</p></div>
       <div class="journey__sample"><p class="journey__sample-label">مثال توضيحي</p><div class="journey__sample-row"><span>الإجراء</span><b>رسالة متابعة</b></div><div class="journey__sample-row"><span>الدليل</span><b>سجل التشغيل، ورد الأداة، والنتيجة التي يراها العميل</b></div><div class="journey__sample-row"><span>الحالة</span><b>تُعرض من النتيجة الفعلية</b></div></div>
     </section>
     <p class="journey__foot">الأمثلة تشرح التجربة، وليست سجلات لتنفيذ عند عميل.</p>
@@ -565,21 +554,19 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
 <section class="sect" id="join">
   <div class="wrap join">
     <div>
-      <p class="idx">04 — احجز مقعدك</p>
-      <h2 class="d2 rv"><span>احجز مقعدك، جرّب، وبعدين قرر.</span></h2>
-      <p class="lead" style="margin-block-start:24px">الحجز مجاني. تدخل القائمة، ونتواصل معك أول ما تفتح دفعتك، تجرّب بالسعر المبكر، وبعدين تقرر.</p>
+      <p class="idx">05 — الوصول</p>
+      <h2 class="d2 rv"><span>جاهز تبدأ؟</span></h2>
+      <p class="lead" style="margin-block-start:24px">أرسل طلبك، ونتواصل معك بشأن الوصول.</p>
       <ul class="assure">
-        <li><span class="drop" aria-hidden="true"></span> بدون بطاقة، بدون التزام، وما فيه شيء تلغيه</li>
-        <li><span class="drop" aria-hidden="true"></span> نرسلها عبر HTTPS، ونحفظها عندنا فقط، ونحذفها لحظة ما تطلب. وما ندرّب عليها أي نموذج</li>
-        <li><span class="drop" aria-hidden="true"></span> رسالة واحدة فقط: لما يجي دورك</li>
+        <li><span class="drop" aria-hidden="true"></span> الطلب مجاني</li>
+        <li><span class="drop" aria-hidden="true"></span> بلا بطاقة بنكية</li>
       </ul>
     </div>
 
     <div class="form" id="formCard">
       <form id="waitlist" novalidate aria-describedby="formFine">
         <div class="form__body">
-          <h3 class="d3 form__h">احجز مقعدك</h3>
-          <p class="form__s">دقيقة وحدة. أربع خانات.</p>
+          <h3 class="d3 form__h">اطلب الوصول</h3>
 
           <div class="field" id="f-name">
             <label for="name">الاسم الكامل</label>
@@ -609,16 +596,16 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
 
           <input class="hp" type="text" tabindex="-1" autocomplete="off" id="website" name="website" placeholder="اتركه فارغًا">
 
-          <button class="btn btn--wide" type="submit" id="submitBtn">احجز مقعدي <span class="drop" aria-hidden="true"></span></button>
+          <button class="btn btn--wide" type="submit" id="submitBtn">أرسل الطلب <span class="drop" aria-hidden="true"></span></button>
+          <p id="sendError" class="form__send-error" role="alert" hidden><span id="sendErrorText"></span> <a href="mailto:info@siyadah-ai.com">راسلنا</a></p>
           <p class="form__fine" id="formFine">بالتسجيل توافق على تواصلنا معك بخصوص البيتا الخاصة فقط. تقدر تلغي في أي وقت. <a href="privacy.html#ar">سياسة الخصوصية</a>.</p>
         </div>
       </form>
 
       <div class="done" id="done" role="status" aria-live="polite">
         <span class="drop" aria-hidden="true"></span>
-        <h3 class="d3">تم حجز مقعدك</h3>
-        <p>وصلنا طلبك. بتسمع منا مرة وحدة بالضبط، لما تفتح دفعتك.</p>
-        <div class="done__no">ترتيبك في القائمة <span id="rank">—</span></div>
+        <h3 class="d3">تم إرسال الطلب</h3>
+        <p>نتواصل معك بشأن الوصول.</p>
       </div>
     </div>
   </div>
@@ -627,7 +614,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
 <!-- ============================== الأسئلة ============================== -->
 <section class="sect" id="faq" style="padding-block-start:0">
   <div class="wrap">
-    <p class="idx">05 — أسئلة</p>
+    <p class="idx">06 — أسئلة</p>
     <h2 class="d2 rv"><span>إجابات مباشرة.</span></h2>
 
     <div class="faq">

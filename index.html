@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Siyadah AI — Write one sentence. Your operations run themselves.</title>
-<meta name="description" content="Siyadah AI builds the operations team you can't afford to hire, inside a single chat. It follows up with leads, chases unpaid invoices and answers customers.">
+<title>Siyadah AI — One request. A clear path to a result.</title>
+<meta name="description" content="Direct AI employees from one conversation. Siyadah grounds the work in your company knowledge, shows the required permissions, and keeps the result and its evidence together.">
 <meta name="theme-color" content="#FFFFFF">
 <meta name="color-scheme" content="light">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -21,8 +21,8 @@
 <meta property="og:locale" content="en_US">
 <meta property="og:locale:alternate" content="ar_SA">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Siyadah AI — One sentence. A team that works inside your tools.">
-<meta property="og:description" content="The team you can't afford to hire, inside a single chat. Private beta, 500 companies.">
+<meta property="og:title" content="Siyadah AI — One request. A clear path to a result.">
+<meta property="og:description" content="Company context, permissions, and proof in one conversation.">
 <meta property="og:url" content="https://siyadah-ai.com/">
 <meta property="og:image" content="https://siyadah-ai.com/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
@@ -184,7 +184,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
    employees
    ========================================================================== */
 .emp{list-style:none;margin:clamp(38px,5vw,60px) 0 0;padding:0;border-top:1px solid var(--hair)}
-.emp li{display:grid;grid-template-columns:.75fr 1.5fr .75fr;gap:clamp(18px,3vw,48px);padding:clamp(24px,3vw,34px) 0;border-bottom:1px solid var(--hair);align-items:baseline}
+.emp li{display:grid;grid-template-columns:minmax(180px,.75fr) minmax(0,1.5fr);gap:clamp(18px,3vw,48px);padding:clamp(24px,3vw,34px) 0;border-bottom:1px solid var(--hair);align-items:baseline}
 .emp__n{font-family:var(--f-display);font-weight:300;font-size:clamp(1.15rem,2vw,1.5rem);letter-spacing:-.015em;line-height:1.3;margin:0}
 .emp__p{margin:0;color:var(--ash);max-width:54ch}
 .emp__t{margin:0;font-family:var(--f-display);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ash)}
@@ -244,12 +244,13 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
 .hp{position:absolute;left:-9999px;opacity:0;height:0}
 .form__fine{margin:16px 0 0;font-size:.8rem;color:var(--ash);line-height:1.6}
 .form__fine a{text-decoration:underline;text-underline-offset:2px}
+.form__send-error{margin:12px 0 0;padding:10px 12px;background:var(--error-wash);color:var(--error);font-size:.85rem}
+.form__send-error a{text-decoration:underline;text-underline-offset:2px;font-weight:600}
 .done{display:none}
 .done.on{display:block;animation:in .6s var(--ease)}
 .done .drop{width:26px;margin-bottom:24px}
 .done h3{margin-bottom:12px}
 .done p{color:var(--ash);font-size:.95rem;max-width:36ch;margin:0 0 22px}
-.done__no{font-family:var(--f-display);font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--hair);display:inline-block;padding:9px 18px;color:var(--ash)}
 .form.sent .form__body{display:none}
 
 /* ==========================================================================
@@ -319,7 +320,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
  {"@type":"Organization","@id":"https://siyadah-ai.com/#org","name":"Siyadah AI","url":"https://siyadah-ai.com/","logo":"https://siyadah-ai.com/og.jpg","email":"info@siyadah-ai.com","sameAs":[]},
- {"@type":"SoftwareApplication","name":"Siyadah AI","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://siyadah-ai.com/","description":"AI employees run from a single chat: lead follow-up, invoice collection, customer support and marketing, working inside the tools you already use.","offers":{"@type":"Offer","price":"499","priceCurrency":"SAR","description":"Business plan, private beta price per month, excluding VAT. Free to reserve."},"publisher":{"@id":"https://siyadah-ai.com/#org"}},
+ {"@type":"SoftwareApplication","name":"Siyadah AI","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://siyadah-ai.com/","description":"Siyadah helps companies prepare AI employees with company knowledge, clear permissions, and evidence of real work.","offers":{"@type":"Offer","price":"499","priceCurrency":"SAR","description":"Business plan, private beta price per month, excluding VAT. Free to reserve."},"publisher":{"@id":"https://siyadah-ai.com/#org"}},
  {"@type":"FAQPage","mainEntity":[
   {"@type":"Question","name":"How is this different from ChatGPT or Claude?","acceptedAnswer":{"@type":"Answer","text":"Chat tools give you an answer. Siyadah takes action inside your tools: it sends the message, updates the customer record, triggers the follow-up sequence, and pursues the invoice."}},
   {"@type":"Question","name":"Do I need to be technical?","acceptedAnswer":{"@type":"Answer","text":"No. If you can explain a task to a new hire, you can run Siyadah. You describe what you want in plain language; it builds the AI employees, connects the tools, and shows you the plan before executing."}},
@@ -353,43 +354,42 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
 <section class="hero">
   <div class="wrap hero__grid">
     <div>
-      <p class="idx fade">Private beta — 500 companies</p>
+      <p class="idx fade">Siyadah AI · Private beta</p>
       <h1 class="d1">
-        <span class="rv"><span>Write one sentence.</span></span>
-        <span class="rv" data-d="1"><span>Your operations</span></span>
-        <span class="rv" data-d="2"><span>run themselves.</span></span>
+        <span class="rv"><span>One request.</span></span>
+        <span class="rv" data-d="1"><span>A clear path</span></span>
+        <span class="rv" data-d="2"><span>to a result.</span></span>
       </h1>
 
       <div class="hero__row">
         <div>
-          <p class="lead">Siyadah AI gives you AI employees that work inside the tools you already use. One follows up every lead within minutes. One chases the invoices nobody wants to chase. One answers your customers around the clock. You run all of them from a single chat.</p>
           <div class="hero__cta">
-            <a href="#join" class="btn">Reserve your seat <span class="drop" aria-hidden="true"></span></a>
-            <a href="demo-en.html" class="btn btn--line">Watch the demo · 2:00</a>
+            <a href="#join" class="btn">Request access <span class="drop" aria-hidden="true"></span></a>
+            <a href="#proof" class="btn btn--line">Explore the journey</a>
           </div>
-          <p class="hero__fine"><span>Free to reserve.</span><span>No card required.</span><span>Early pricing locked for life.</span></p>
+          <p class="hero__fine"><span>Private beta.</span><span>No card required to request access.</span></p>
         </div>
 
-        <!-- live console: the product introduces itself -->
+        <!-- Explicitly illustrative product sequence; no live run is implied. -->
         <div class="console" id="console">
           <div class="console__bar">
-            <span class="drop" aria-hidden="true"></span> Live session
-            <span class="t" id="clock">00:00</span>
+            <span class="drop" aria-hidden="true"></span> Illustrative example
+            <span class="t">Request → plan</span>
           </div>
           <div class="console__body">
             <p class="brief">
               <span class="brief__l">You</span>
               <span id="typed"></span><span class="caret" id="caret"></span>
             </p>
-            <div class="status" id="status"><span class="drop" aria-hidden="true"></span> Assembling your team</div>
+            <div class="status" id="status"><span class="drop" aria-hidden="true"></span> Preparing a proposal</div>
             <ul class="units" id="units">
-              <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">Sales follow-up</span><span class="unit__s">Live</span></li>
-              <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">Invoice collection</span><span class="unit__s">Live</span></li>
-              <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">Customer support</span><span class="unit__s">Live</span></li>
-              <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">Marketing</span><span class="unit__s">Live</span></li>
+              <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">Company context</span><span class="unit__s">Reviewed</span></li>
+              <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">Employee</span><span class="unit__s">Draft</span></li>
+              <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">Tool access</span><span class="unit__s">Needed</span></li>
+              <li class="unit"><span class="drop" aria-hidden="true"></span><span class="unit__n">First action</span><span class="unit__s">Pending</span></li>
             </ul>
             <div class="console__foot" id="cfoot">
-              Four AI employees. Nobody on payroll.
+              A plan to review. No action has run.
               <button class="replay" id="replay" type="button">Replay</button>
             </div>
           </div>
@@ -403,35 +403,30 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
 <section class="sect" id="how">
   <div class="wrap">
     <p class="idx">01 — How it works</p>
-    <h2 class="d2 rv" style="max-width:18ch"><span>Three minutes from overwhelmed to operational.</span></h2>
-    <p class="lead" style="margin-top:24px">No integrations to configure. No workflows to map. You talk to Siyadah the way you'd talk to someone joining on their first day.</p>
+    <h2 class="d2 rv" style="max-width:18ch"><span>From request to first employee.</span></h2>
 
     <div class="steps">
       <div class="step">
         <div class="step__n">Step 01</div>
         <div>
           <h3 class="d3 step__h">Tell it what you need</h3>
-          <p class="step__p">In plain language. No technical vocabulary, no explaining how your systems are wired together.</p>
-          <blockquote class="said">
-            <cite>One sentence is enough</cite>
-            “Follow up with every new lead within five minutes, chase invoices more than seven days late, and answer the support questions we get over and over.”
-          </blockquote>
+          <p class="step__p">One sentence is enough to begin.</p>
         </div>
       </div>
 
       <div class="step">
         <div class="step__n">Step 02</div>
         <div>
-          <h3 class="d3 step__h">Siyadah reads your company, builds the team, and shows you the plan</h3>
-          <p class="step__p">Give it your website or Instagram. It reads your services, prices, policies and tone, builds one AI employee per department, connects the tools you already use, and shows you the plan before doing anything. You approve, or adjust it with a sentence.</p>
+          <h3 class="d3 step__h">Ground it in your company</h3>
+          <p class="step__p">Review sourced knowledge and the proposed employee.</p>
         </div>
       </div>
 
       <div class="step">
         <div class="step__n">Step 03</div>
         <div>
-          <h3 class="d3 step__h">Go live, then go home</h3>
-          <p class="step__p">The team starts immediately. Leads get followed up. Invoices get chased. Customers get answers. You go back to the work only you can do, and you get your evenings back.</p>
+          <h3 class="d3 step__h">Connect, test, then act</h3>
+          <p class="step__p">Grant access when needed. See the result and its evidence.</p>
         </div>
       </div>
     </div>
@@ -441,30 +436,25 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
 <!-- ============================== employees ============================== -->
 <section class="sect" id="dept" style="padding-top:0">
   <div class="wrap">
-    <p class="idx">02 — Employees</p>
-    <h2 class="d2 rv" style="max-width:16ch"><span>Four AI employees. One chat.</span></h2>
-    <p class="lead" style="margin-top:24px">Each one owns a function and works inside the tools you already use. You brief all four from the same conversation.</p>
+    <p class="idx">02 — Possible roles</p>
+    <h2 class="d2 rv" style="max-width:16ch"><span>Start with one. Add what you need.</span></h2>
 
     <ul class="emp">
       <li>
         <h3 class="emp__n">Lead follow-up</h3>
-        <p class="emp__p">Replies to every new lead within minutes, asks the qualifying questions, and books the ready ones straight into your calendar.</p>
-        <p class="emp__t">WhatsApp · CRM · Calendar</p>
+        <p class="emp__p">Qualify → follow up → book</p>
       </li>
       <li>
         <h3 class="emp__n">Invoice collection</h3>
-        <p class="emp__p">Tracks every unpaid invoice, sends reminders that firm up with each week of delay, and stops the moment payment lands.</p>
-        <p class="emp__t">Invoicing · Sheets · WhatsApp</p>
+        <p class="emp__p">Track → remind → confirm</p>
       </li>
       <li>
         <h3 class="emp__n">Customer support</h3>
-        <p class="emp__p">Answers repeat questions from your own pricing and policies around the clock, and escalates sensitive cases to you with a summary.</p>
-        <p class="emp__t">WhatsApp · Email · Site chat</p>
+        <p class="emp__p">Answer → escalate</p>
       </li>
       <li>
         <h3 class="emp__n">Marketing</h3>
-        <p class="emp__p">Keeps a monthly content calendar running in your brand's voice, schedules publishing, and reports what is worth repeating.</p>
-        <p class="emp__t">LinkedIn · Instagram · Newsletter</p>
+        <p class="emp__p">Draft → schedule → learn</p>
       </li>
     </ul>
   </div>
@@ -476,7 +466,6 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
     <p class="idx">03 — A visible process</p>
     <div class="journey__top">
       <h2 class="d2" id="proof-title">From your request to a result you can inspect.</h2>
-      <p class="lead">See what Siyadah knows, where your decision matters, and what happened after an action.</p>
     </div>
     <div class="journey__choices" role="group" aria-label="Explore the process">
       <button class="journey__choice" type="button" id="journey-choice-context" data-journey-choice="context" aria-controls="journey-context" aria-pressed="true">01 · Context</button>
@@ -484,15 +473,15 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
       <button class="journey__choice" type="button" id="journey-choice-proof" data-journey-choice="proof" aria-controls="journey-proof" aria-pressed="false">03 · Proof</button>
     </div>
     <section class="journey__panel" id="journey-context" aria-labelledby="journey-choice-context" data-journey-panel="context">
-      <div class="journey__copy"><span class="journey__n">01 / Context</span><h3>Start with what your company actually says.</h3><p>Answers draw from your reviewed company knowledge. Missing or conflicting details stay visible for correction.</p></div>
+      <div class="journey__copy"><span class="journey__n">01 / Context</span><h3>Your company, understood.</h3><p>Sourced knowledge. Visible gaps.</p></div>
       <div class="journey__sample"><p class="journey__sample-label">Illustrative example</p><div class="journey__sample-row"><span>Question</span><b>What is our setup time?</b></div><div class="journey__sample-row"><span>Source</span><b>Company policy, with a link and excerpt</b></div><div class="journey__sample-row"><span>If unclear</span><b>Ask before making a promise</b></div></div>
     </section>
     <section class="journey__panel" id="journey-permission" aria-labelledby="journey-choice-permission" data-journey-panel="permission" hidden>
-      <div class="journey__copy"><span class="journey__n">02 / Permission</span><h3>A clear boundary before action.</h3><p>Work within permissions already given. Ask when an action needs a decision, with the scope and consequence in view.</p></div>
+      <div class="journey__copy"><span class="journey__n">02 / Permission</span><h3>Clear before action.</h3><p>Within scope, proceed. Outside it, ask.</p></div>
       <div class="journey__sample"><p class="journey__sample-label">Illustrative example</p><div class="journey__sample-row"><span>Proposed action</span><b>Follow up with a new lead</b></div><div class="journey__sample-row"><span>Boundary</span><b>Check the employee's assigned tools and scope</b></div><div class="journey__sample-row"><span>If outside scope</span><b>Request approval</b></div></div>
     </section>
     <section class="journey__panel" id="journey-proof" aria-labelledby="journey-choice-proof" data-journey-panel="proof" hidden>
-      <div class="journey__copy"><span class="journey__n">03 / Proof</span><h3>Show the result, then its evidence.</h3><p>An action is complete only when its actual outcome can be read back. A draft or connection has its own status.</p></div>
+      <div class="journey__copy"><span class="journey__n">03 / Proof</span><h3>Result. Then evidence.</h3><p>Every state keeps its real name.</p></div>
       <div class="journey__sample"><p class="journey__sample-label">Illustrative example</p><div class="journey__sample-row"><span>Action</span><b>Follow-up message</b></div><div class="journey__sample-row"><span>Evidence</span><b>Run, provider response, customer-visible outcome</b></div><div class="journey__sample-row"><span>Status</span><b>Reported from the real result</b></div></div>
     </section>
     <p class="journey__foot">Examples explain the experience; they are not records of a customer run.</p>
@@ -574,21 +563,19 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
 <section class="sect" id="join">
   <div class="wrap join">
     <div>
-      <p class="idx">04 — Reserve a seat</p>
-      <h2 class="d2 rv"><span>Reserve your seat, try it, then decide.</span></h2>
-      <p class="lead" style="margin-top:24px">Reserving is free. You join the queue, we reach out when your wave opens, you try it with the early price, and then you decide.</p>
+      <p class="idx">05 — Access</p>
+      <h2 class="d2 rv"><span>Ready to begin?</span></h2>
+      <p class="lead" style="margin-top:24px">Send a request. We’ll contact you about access.</p>
       <ul class="assure">
-        <li><span class="drop" aria-hidden="true"></span> No card, no commitment, nothing to cancel</li>
-        <li><span class="drop" aria-hidden="true"></span> Sent over HTTPS, stored privately, deleted on request. We never train models on your data</li>
-        <li><span class="drop" aria-hidden="true"></span> One email, and only one: when it's your turn</li>
+        <li><span class="drop" aria-hidden="true"></span> Free to request</li>
+        <li><span class="drop" aria-hidden="true"></span> No card required</li>
       </ul>
     </div>
 
     <div class="form" id="formCard">
       <form id="waitlist" novalidate aria-describedby="formFine">
         <div class="form__body">
-          <h3 class="d3 form__h">Reserve your seat</h3>
-          <p class="form__s">One minute. Four fields.</p>
+          <h3 class="d3 form__h">Request access</h3>
 
           <div class="field" id="f-name">
             <label for="name">Full name</label>
@@ -618,16 +605,16 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
 
           <input class="hp" type="text" tabindex="-1" autocomplete="off" id="website" name="website" placeholder="Leave empty">
 
-          <button class="btn btn--wide" type="submit" id="submitBtn">Reserve my seat <span class="drop" aria-hidden="true"></span></button>
+          <button class="btn btn--wide" type="submit" id="submitBtn">Send request <span class="drop" aria-hidden="true"></span></button>
+          <p id="sendError" class="form__send-error" role="alert" hidden><span id="sendErrorText"></span> <a href="mailto:info@siyadah-ai.com">Email us</a></p>
           <p class="form__fine" id="formFine">By signing up you agree to be contacted about early access only. Unsubscribe any time. <a href="privacy.html">Privacy</a>.</p>
         </div>
       </form>
 
       <div class="done" id="done" role="status" aria-live="polite">
         <span class="drop" aria-hidden="true"></span>
-        <h3 class="d3">Your seat is reserved</h3>
-        <p>We've got it. You'll hear from us exactly once, when your wave opens.</p>
-        <div class="done__no">Queue position <span id="rank">—</span></div>
+        <h3 class="d3">Request sent</h3>
+        <p>We'll contact you about access.</p>
       </div>
     </div>
   </div>
@@ -636,7 +623,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
 <!-- ============================== faq ============================== -->
 <section class="sect" id="faq" style="padding-top:0">
   <div class="wrap">
-    <p class="idx">05 — Questions</p>
+    <p class="idx">06 — Questions</p>
     <h2 class="d2 rv"><span>Straight answers.</span></h2>
 
     <div class="faq">

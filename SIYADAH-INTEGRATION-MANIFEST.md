@@ -13,6 +13,9 @@ This repository has one delivery-candidate branch:
 - Bilingual Siyadah account layout using the existing wordmark and mark, with RTL/LTR field states and a restrained split-screen story.
 - Shared Siyadah appearance tokens across public and customer pages; page layouts stay separate so future themes can replace visual values without changing customer flows.
 - Cloudlight-inspired bilingual public story showing company context, permission, and proof as selectable illustrative stages.
+- Product-wide interaction language documented in `INTERACTION-LANGUAGE.md`; visible states distinguish a proposal from a run and a verified result.
+- Public hero and role list now use short, scannable states; the hero is explicitly illustrative and no longer presents a fake live session or timer.
+- Public access form reports delivery failure without claiming a reserved seat; sent state appears only after a successful HTTP response.
 - Firecrawl company enrichment, sourced knowledge, corrections, and versions.
 - Three employee recommendations and company-scoped employee records.
 - Company settings, employee conversations, and execution-proof surfaces.
