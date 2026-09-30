@@ -58,7 +58,7 @@ test('starts and finishes cloud OAuth inside the tenant project',async()=>{
   const finished=await service.oauthFinish({tenantId:'company-a',attempt:started.attempt,state:'',code:'oauth-code'});
   assert.equal(finished.status,'ACTIVE');
   const request=calls.filter(call=>call.url.endsWith('/api/v1/app-connections')).at(-1).body;
-  assert.equal(request.projectId,PROJECT);assert.equal(request.type,'CLOUD_OAUTH2');assert.equal(request.value.client_id,'google-client');assert.equal(request.value.scope,'gmail.send email');
+  assert.equal(request.projectId,PROJECT);assert.equal(request.type,'CLOUD_OAUTH2');assert.equal(request.value.client_id,'google-client');assert.equal(request.value.scope,'gmail.send email');assert.equal(request.value.authorization_method,'BODY');
 });
 
 test('rejects tampered attempts and non-Google OAuth without returned state',async()=>{
