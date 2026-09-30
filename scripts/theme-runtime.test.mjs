@@ -16,3 +16,15 @@ test('customer pages share one appearance contract without local brand palette o
     assert.doesNotMatch(html,/:root\{[^}]*--accent:/,page);
   }
 });
+
+test('account typography uses the shared bilingual type and measure roles',async()=>{
+  const [theme,authCss]=await Promise.all([
+    readFile(new URL('../siyadah-theme.css',import.meta.url),'utf8'),
+    readFile(new URL('../auth-design.css',import.meta.url),'utf8'),
+  ]);
+  for(const font of ['Readex Pro','IBM Plex Sans Arabic','Jost','Inter'])assert.ok(theme.includes(font));
+  for(const role of ['--type-display','--type-page','--type-body','--type-label','--space-4','--measure-form','--control-height'])assert.ok(theme.includes(role),role);
+  assert.match(authCss,/\.story h2\{[^}]*var\(--type-display\)/);
+  assert.match(authCss,/h1\{[^}]*var\(--type-page\)/);
+  assert.match(authCss,/\.field input\{[^}]*var\(--type-control\)/);
+});

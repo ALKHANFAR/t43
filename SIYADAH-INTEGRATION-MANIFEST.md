@@ -15,6 +15,7 @@ This repository has one delivery-candidate branch:
 - Account copy now leaves login and signup at one heading and their fields; the selectable story reveals detail only when chosen. The original mark is white without a surrounding box, while recovery retains its necessary instruction.
 - Onboarding offers a visible exit. Chat and onboarding report logout failure in place and redirect only after the server confirms logout.
 - Shared Siyadah appearance tokens across public and customer pages; page layouts stay separate so future themes can replace visual values without changing customer flows.
+- Shared typography, measure, and spacing roles in `siyadah-theme.css`, documented in `SIYADAH-TYPOGRAPHY.md`; the account page applies the full scale in Arabic and English.
 - Cloudlight-inspired bilingual public story showing company context, permission, and proof as selectable illustrative stages.
 - Product-wide interaction language documented in `INTERACTION-LANGUAGE.md`; visible states distinguish a proposal from a run and a verified result.
 - Public hero and role list now use short, scannable states; the hero is explicitly illustrative and no longer presents a fake live session or timer.
