@@ -69,6 +69,34 @@ test('account creation works in English with RTL/LTR and field feedback',async()
   dom.window.close();
 });
 
+test('the account story reveals three concise stages in both languages',()=>{
+  const dom=new JSDOM(auth,{url:'https://siyadah.test/auth.html',runScripts:'outside-only'}),w=dom.window;
+  w.eval(inlineScript);
+  const step=w.document.querySelector('[data-story-step="1"]');step.click();
+  assert.equal(step.getAttribute('aria-pressed'),'true');
+  assert.equal(w.document.querySelector('#exampleIndex').textContent,'02 / 03');
+  assert.match(w.document.querySelector('#exampleRequest').textContent,/خطة واضحة/);
+  w.document.querySelector('#langEn').click();
+  assert.match(w.document.querySelector('#exampleRequest').textContent,/A plan/);
+  w.document.querySelector('[data-story-step="2"]').click();
+  assert.match(w.document.querySelector('#exampleDetail').textContent,/evidence/);
+  dom.window.close();
+});
+
+test('signup gives a quiet, accessible cue for the password length requirement',()=>{
+  const dom=new JSDOM(auth,{url:'https://siyadah.test/auth.html',runScripts:'outside-only'}),w=dom.window;
+  w.eval(inlineScript);w.document.querySelector('#sw').click();
+  const meter=w.document.querySelector('#passwordProgress'),password=w.document.querySelector('#password');
+  assert.equal(meter.classList.contains('hide'),false);
+  password.value='12345';password.dispatchEvent(new w.Event('input'));
+  assert.equal(meter.value,5);
+  password.value='1234567890';password.dispatchEvent(new w.Event('input'));
+  assert.equal(meter.classList.contains('complete'),true);
+  w.document.querySelector('#langEn').click();
+  assert.match(meter.getAttribute('aria-label'),/minimum password length/);
+  dom.window.close();
+});
+
 test('verification link is exchanged once then returns to login',async()=>{
   const dom=new JSDOM(auth,{url:'https://siyadah.test/auth.html?verify=one-time-token-value-that-is-long-enough',runScripts:'outside-only'}),w=dom.window,requests=[];
   w.fetch=async(url,options)=>{requests.push({url,options});return {json:async()=>({ok:true,message:'تم تأكيد بريدك. سجّل الدخول للمتابعة.'})};};
@@ -77,6 +105,25 @@ test('verification link is exchanged once then returns to login',async()=>{
   assert.equal(JSON.parse(requests[0].options.body).token,'one-time-token-value-that-is-long-enough');
   assert.equal(w.location.search,'');assert.equal(w.document.querySelector('#ttl').textContent,'تسجيل الدخول');
   assert.match(w.document.querySelector('#msg').textContent,/تم تأكيد بريدك/);
+  dom.window.close();
+});
+
+test('confirmation can be retried after a connection failure without losing its token',async()=>{
+  const dom=new JSDOM(auth,{url:'https://siyadah.test/auth.html?verify=retry-token',runScripts:'outside-only'}),w=dom.window,requests=[];
+  w.fetch=async(url,options)=>{
+    requests.push({url,options});
+    if(requests.length===1)throw new Error('offline');
+    return {json:async()=>({ok:true})};
+  };
+  w.eval(inlineScript);await flush();await flush();
+  assert.equal(w.location.search,'?verify=retry-token');
+  assert.equal(w.document.querySelector('#ttl').textContent,'تأكيد البريد');
+  assert.match(w.document.querySelector('#msg').textContent,/تعذر الاتصال/);
+  w.document.querySelector('#go').click();await flush();await flush();
+  assert.equal(requests.length,2);
+  assert.equal(JSON.parse(requests[1].options.body).token,'retry-token');
+  assert.equal(w.location.search,'');
+  assert.equal(w.document.querySelector('#ttl').textContent,'تسجيل الدخول');
   dom.window.close();
 });
 

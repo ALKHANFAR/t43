@@ -110,6 +110,14 @@
     }
   });
   $('#back').addEventListener('click',function(){if(!busy&&step>1){step--;show();}});
+  $('#logoutBtn').addEventListener('click',async function(){
+    var button=this;if(button.disabled)return;button.disabled=true;button.setAttribute('aria-busy','true');$('#logoutStatus').textContent='';
+    try{
+      var response=await fetch('/siyadah-api/v1/auth/logout',{method:'POST',credentials:'same-origin'});
+      if(!response.ok)throw new Error('logout_failed');
+      window.location.replace('../auth.html');
+    }catch(error){button.disabled=false;button.removeAttribute('aria-busy');$('#logoutStatus').textContent='تعذّر تسجيل الخروج. حاول مرة أخرى.';}
+  });
   document.addEventListener('keydown',function(event){if(event.key==='Enter'&&document.activeElement.tagName!=='TEXTAREA'&&!$('#next').disabled){event.preventDefault();$('#next').click();}});
   show();
   resumeExistingCompany();

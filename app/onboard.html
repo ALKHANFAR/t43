@@ -33,6 +33,10 @@ button{cursor:pointer}
 .top{display:flex;align-items:center;justify-content:space-between;padding:22px clamp(20px,4vw,48px)}
 .top .logo{width:104px}
 .top small{font-family:var(--f-display);font-size:.8rem;color:var(--ash);font-variant-numeric:tabular-nums}
+.top__actions{display:flex;align-items:center;gap:14px}
+.top__logout{border:0;background:transparent;color:var(--ash);font-size:.8rem;padding:8px 0}
+.top__logout:hover{color:var(--accent)}
+.logout-status{position:absolute;inset-block-start:65px;inset-inline-end:clamp(20px,4vw,48px);margin:0;font-size:.75rem;color:var(--error)}
 .prog{height:1.5px;background:var(--hair);margin:0 clamp(20px,4vw,48px)}
 .prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .6s var(--ease)}
 
@@ -146,7 +150,7 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 <body>
 <a class="skip" href="#main">تجاوز إلى المحتوى</a>
 
-<header class="top"><span class="logo" role="img" aria-label="سيادة"></span><small id="stepLbl">1 من 4</small></header>
+<header class="top"><span class="logo" role="img" aria-label="سيادة"></span><div class="top__actions"><small id="stepLbl">1 من 4</small><button class="top__logout" id="logoutBtn" type="button">خروج</button></div><p class="logout-status" id="logoutStatus" role="alert"></p></header>
 <div class="prog"><i id="prog"></i></div>
 
 <main class="wrap" id="main">

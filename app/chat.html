@@ -286,6 +286,9 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 .pop button .apstate{margin-inline-start:auto;color:var(--ash);font-size:.72rem}
 .pop button .apstate--ok{color:var(--ok)}
 .pop .sep{height:1px;background:var(--hair);margin:6px 4px}
+.pop__status{margin:6px 10px;color:var(--error);font-size:.78rem;line-height:1.5}
+.pop__status:empty{display:none}
+.pop button:disabled{opacity:.6;cursor:wait}
 
 /* لوحة الإعدادات — تنزل فوق كل شيء بدون ما تنقلك */
 .sheet{position:fixed;inset:0;background:rgba(10,10,10,.35);display:none;z-index:80;justify-content:center;align-items:flex-start;padding:5vh 16px}
@@ -526,7 +529,7 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
         <button type="button" data-open="settings"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>الإعدادات</button>
         <button type="button" data-open="plan"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/></svg>الخطة</button>
         <div class="sep"></div>
-        <button type="button" id="logoutBtn" style="color:var(--ash)"><svg class="ic" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M21 4v16"/></svg>تسجيل الخروج</button>
+        <button type="button" id="logoutBtn" style="color:var(--ash)"><svg class="ic" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M21 4v16"/></svg>تسجيل الخروج</button><p class="pop__status" id="logoutStatus" role="alert"></p>
       </div>
       <div class="keys" id="keys" hidden>
         <ul>

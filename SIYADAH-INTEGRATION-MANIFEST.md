@@ -11,6 +11,8 @@ This repository has one delivery-candidate branch:
 - Working Siyadah chat route and server-derived company scope.
 - Account authentication and branded transactional email assets.
 - Bilingual Siyadah account layout using the existing wordmark and mark, with RTL/LTR field states and a restrained split-screen story.
+- Account story has three selectable illustrative stages and a quiet password-length cue; email confirmation keeps its token and offers retry after a connection failure.
+- Onboarding offers a visible exit. Chat and onboarding report logout failure in place and redirect only after the server confirms logout.
 - Shared Siyadah appearance tokens across public and customer pages; page layouts stay separate so future themes can replace visual values without changing customer flows.
 - Cloudlight-inspired bilingual public story showing company context, permission, and proof as selectable illustrative stages.
 - Product-wide interaction language documented in `INTERACTION-LANGUAGE.md`; visible states distinguish a proposal from a run and a verified result.

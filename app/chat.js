@@ -984,10 +984,10 @@ var I = {
   var builderConnectBtn=$("#builderConnectBtn");
   if(builderConnectBtn) builderConnectBtn.addEventListener("click",function(){ pop.classList.remove("on"); openTools(); });
   var lo=$("#logoutBtn"); if(lo) lo.addEventListener("click",function(){
-    siyStopPolling();
+    if(lo.disabled)return;lo.disabled=true;lo.setAttribute("aria-busy","true");$("#logoutStatus").textContent="";
     fetch((window.SIYADAH_AUTH_BASE||"/siyadah-api")+"/v1/auth/logout",{method:"POST",credentials:"include"})
-      .catch(function(){})
-      .finally(function(){ location.replace("../auth.html"); });
+      .then(function(response){if(!response.ok)throw new Error("logout_failed");siyStopPolling();location.replace("../auth.html");})
+      .catch(function(){lo.disabled=false;lo.removeAttribute("aria-busy");$("#logoutStatus").textContent="تعذّر تسجيل الخروج. حاول مرة أخرى.";pop.classList.add("on");});
   });
   document.addEventListener("click",function(e){ pop.classList.remove("on");
     if(palOpen&&!e.target.closest("#hq,#pal")) closePal();

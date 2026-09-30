@@ -41,3 +41,24 @@ test('onboarding restores an existing company profile instead of restarting webs
   assert.equal(w.document.querySelectorAll('#companyRead .kb__v')[1].textContent,'0');
   dom.window.close();
 });
+
+test('onboarding keeps logout available when the server request fails',async()=>{
+  const [html,js]=await Promise.all([
+    readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),
+    readFile(new URL('../app/onboard.js',import.meta.url),'utf8'),
+  ]);
+  const dom=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html',runScripts:'outside-only'}),w=dom.window,requests=[];
+  w.scrollTo=()=>{};
+  w.fetch=async(url,options)=>{
+    requests.push({url,options});
+    if(url.endsWith('/auth/logout'))return {ok:false};
+    return {ok:true,json:async()=>({ok:true,status:'ready',profile:{companyName:'Example',coverageScore:30,pagesRead:1,factCount:1,knowledgeVersion:1},suggestions:[]})};
+  };
+  w.eval(js);await new Promise(resolve=>setImmediate(resolve));
+  w.document.querySelector('#logoutBtn').click();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(requests.at(-1).url,'/siyadah-api/v1/auth/logout');
+  assert.equal(requests.at(-1).options.credentials,'same-origin');
+  assert.equal(w.document.querySelector('#logoutBtn').disabled,false);
+  assert.match(w.document.querySelector('#logoutStatus').textContent,/تعذّر تسجيل الخروج/);
+  dom.window.close();
+});
