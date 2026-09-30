@@ -263,7 +263,7 @@ async function publicChat(req,res){
         const run=await service.runFlow({tenantId:companyId,flowId:saved.activepieces_flow_id,requestId,message:input.message});
         const tools=run.tool.pieceName==='@activepieces/piece-http'?['اتصال ويب']:[];
         const updated=await profiles.recordEmployeeRun({companyId,employeeId:saved.id,flowId:run.flowId,runId:run.runId,result:run.result,tools});
-        const proof={recordId:`proof_${run.runId}`,employeeId:saved.id,flowId:run.flowId,runId:run.runId,work_id:`work_${run.runId}`,subject:`مهمة ${saved.name}`,message:'اكتملت المهمة ووصل رد الخدمة.',status:'succeeded',proof:`ردت الخدمة برمز ${run.result.status||200}`,at:run.finishedAt};
+        const proof={recordId:`proof_${run.runId}`,employeeId:saved.id,flowId:run.flowId,runId:run.runId,work_id:`work_${run.runId}`,conversation_id:conversationId,subject:`مهمة ${saved.name}`,message:'اكتملت المهمة ووصل رد الخدمة.',status:'succeeded',proof:`ردت الخدمة برمز ${run.result.status||200}`,at:run.finishedAt};
         return json(res,200,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',work_id:proof.work_id,reply:`نفّذت المهمة ووصلت النتيجة بنجاح.`,employee:updated,recent_work:[proof]},sessionHeaders);
       }
       if(wantsEmployee(input.message)){

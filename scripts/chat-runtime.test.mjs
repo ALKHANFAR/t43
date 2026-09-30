@@ -39,6 +39,10 @@ test('routine draft work skips approval while severe final actions require it',(
   assert.ok(!serverSource.includes("input.op==='approve'"));
 });
 
+test('employee execution proof is scoped to the conversation that produced it',()=>{
+  assert.match(serverSource,/const proof=\{[^\n]+conversation_id:conversationId/);
+});
+
 async function page({storage={},hydrate=empty,message,work,approve,employee_state,add_knowledge,update_company_settings,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد']]}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
   const w=dom.window,requests=[],alerts=[],polls=[],navigations=[];let hydrateTimer;
