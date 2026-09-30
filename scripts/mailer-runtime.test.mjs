@@ -10,12 +10,13 @@ test('mailer fails closed without credentials',async()=>{
 
 test('mailer sends the one-time link through Resend HTTPS API',async()=>{
   let request;
-  const mailer=createMailer({apiKey:'re_test',from:'سيادة <support@example.com>',fetchImpl:async(url,options)=>{request={url,options};return {ok:true,json:async()=>({id:'email_123'})};}});
+  const mailer=createMailer({apiKey:'re_test',from:'Siyadah AI <auth@example.com>',replyTo:'info@example.com',fetchImpl:async(url,options)=>{request={url,options};return {ok:true,json:async()=>({id:'email_123'})};}});
   const result=await mailer.sendPasswordReset({to:'user@example.com',url:'https://siyadah.example/auth.html?reset=a%26b'});
   assert.equal(result.id,'email_123');assert.equal(request.url,'https://api.resend.com/emails');
   assert.equal(request.options.headers.Authorization,'Bearer re_test');
   const payload=JSON.parse(request.options.body);
   assert.deepEqual(payload.to,['user@example.com']);
+  assert.deepEqual(payload.reply_to,['info@example.com']);
   assert.match(payload.html,/a%26b/);assert.doesNotMatch(payload.html,/a&b/);
 });
 
