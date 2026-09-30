@@ -13,6 +13,7 @@ This repository has one delivery-candidate branch:
 - Bilingual Siyadah account layout using the existing wordmark and mark, with RTL/LTR field states and a restrained split-screen story.
 - Account story has three selectable illustrative stages and a quiet password-length cue; email confirmation keeps its token and offers retry after a connection failure.
 - Account requests retain their pending state when the interface language changes and report the result in the selected language. Moving between account modes hides and clears the password, ignores late results from the previous mode, and removes an abandoned reset token from the URL.
+- The account tab title follows the active form. Chrome preview inspection covered Arabic and English signup and recovery at 360px, English signup at 320px, and desktop layouts, with no horizontal overflow observed; this is layout proof, not a delivered email or completed account journey.
 - The account example now starts with a specific social media employee request, reveals the role and publishing limits, and ends at a reviewable draft before tools are connected. Stage labels are Request, Plan, and Result in both languages.
 - Account copy now leaves login and signup at one heading and their fields; the selectable story reveals detail only when chosen. The original mark is white without a surrounding box, while recovery retains its necessary instruction.
 - Onboarding offers a visible exit. Chat and onboarding report logout failure in place and redirect only after the server confirms logout.
@@ -59,7 +60,7 @@ Useful behavior from these branches may be ported as a reviewed change with curr
 - Implement the current Siyadah-owned connection broker and project-scoped OAuth callback.
 - Prove two-company isolation through project, connection, employee, flow, run, provider result, and customer-visible result.
 - Finish the password-reset journey by using the delivered link and logging in with the new password.
-- Visually inspect account creation and recovery in Arabic and English at 360px and desktop size; verify the real confirmation and reset journeys before release.
+- Verify the real email confirmation and password-reset journeys before release; the layout checks above do not establish email delivery or credential changes.
 - Audit every customer-facing button for an API call, stored state, failure state, and readback evidence.
 
 ## Merge policy

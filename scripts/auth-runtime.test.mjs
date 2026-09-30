@@ -58,6 +58,7 @@ test('account creation works in English with RTL/LTR and field feedback',async()
   assert.equal(w.document.documentElement.lang,'en');assert.equal(w.document.documentElement.dir,'ltr');
   assert.equal(w.document.querySelector('#mobileHome').getAttribute('href'),'index.html');
   assert.equal(w.document.querySelector('#ttl').textContent,'Create an account');
+  assert.equal(w.document.title,'Create an account — Siyadah');
   assert.equal(w.document.querySelector('#sub').classList.contains('hide'),true);
   w.document.querySelector('#go').click();
   assert.equal(requests.length,0);
@@ -128,6 +129,7 @@ test('recovery keeps its necessary guidance when the account form omits repeated
   w.document.querySelector('#forgot').click();
   assert.equal(w.document.querySelector('#sub').classList.contains('hide'),false);
   assert.match(w.document.querySelector('#sub').textContent,/رابط الاستعادة/);
+  assert.equal(w.document.title,'استعادة كلمة المرور — سيادة');
   dom.window.close();
 });
 
