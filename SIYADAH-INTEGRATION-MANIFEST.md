@@ -10,6 +10,7 @@ This repository has one delivery-candidate branch:
 
 - Working Siyadah chat route and server-derived company scope.
 - Account authentication and branded transactional email assets.
+- Bilingual Siyadah account layout using the existing wordmark and mark, with RTL/LTR field states and a restrained split-screen story.
 - Firecrawl company enrichment, sourced knowledge, corrections, and versions.
 - Three employee recommendations and company-scoped employee records.
 - Company settings, employee conversations, and execution-proof surfaces.
@@ -41,6 +42,7 @@ Useful behavior from these branches may be ported as a reviewed change with curr
 - Implement the current Siyadah-owned connection broker and project-scoped OAuth callback.
 - Prove two-company isolation through project, connection, employee, flow, run, provider result, and customer-visible result.
 - Finish the password-reset journey by using the delivered link and logging in with the new password.
+- Visually inspect account creation and recovery in Arabic and English at 360px and desktop size; verify the real confirmation and reset journeys before release.
 - Audit every customer-facing button for an API call, stored state, failure state, and readback evidence.
 
 ## Merge policy
