@@ -33,10 +33,11 @@ var API=window.SIYADAH_AUTH_BASE||"/siyadah-api";
 var params=new URLSearchParams(location.search),resetToken=params.get("reset")||"",verifyToken=params.get("verify")||"";
 var mode=verifyToken?"verify":(resetToken?"reset":"login");
 var locale=params.get("lang")==="en"?"en":(params.get("lang")==="ar"?"ar":(sessionStorage.getItem("siyadah_locale")==="en"?"en":"ar"));
+var authGeneration=0,authPending=false;
 var $=function(id){return document.getElementById(id)};
 var i18n={
- ar:{title:"سيادة — الدخول",skip:"تجاوز إلى النموذج",home:"سيادة، الصفحة الرئيسية",kicker:"رحلة عمل",storyTitle:"من طلبك إلى موظفك.",exampleTag:"مثال توضيحي",steps:["الطلب","الخطة","النتيجة"],language:"اللغة",company:"اسم الشركة",email:"البريد الإلكتروني",password:"كلمة المرور",companyPlaceholder:"اسم شركتك",passwordPlaceholder:"كلمة المرور",newPasswordPlaceholder:"10 أحرف على الأقل",forgot:"نسيت كلمة المرور؟",show:"إظهار",hide:"إخفاء",loginPrompt:"ما عندك حساب؟",signupLink:"أنشئ حسابًا",returnLogin:"العودة لتسجيل الدخول",busy:"جارٍ الإرسال…",verifyBusy:"جارٍ تأكيد البريد…",verifyRetry:"أعد المحاولة",verifyFailed:"تعذّر تأكيد البريد. أعد المحاولة.",required:"أكمل هذا الحقل.",badEmail:"أدخل بريدًا إلكترونيًا صحيحًا.",shortPassword:"استخدم 10 أحرف على الأقل.",connection:"تعذر الاتصال. حاول مرة أخرى.",generic:"تعذر إكمال الطلب. حاول مرة أخرى.",verified:"تم تأكيد بريدك. سجّل الدخول للمتابعة.",resetDone:"تم التغيير. سجّل دخولك بكلمة المرور الجديدة.",signupDone:"أرسلنا رابط تأكيد إلى بريدك. افتحه لإكمال التسجيل.",forgotDone:"إذا كان البريد مسجلًا فسيصلك رابط الاستعادة.",modes:{login:["تسجيل الدخول","","دخول"],signup:["إنشاء حساب","","إنشاء حساب"],forgot:["استعادة كلمة المرور","سنرسل رابط الاستعادة إلى بريدك.","إرسال الرابط"],reset:["كلمة مرور جديدة","سيُنهي التغيير جلساتك السابقة لحماية حسابك.","حفظ كلمة المرور"],verify:["تأكيد البريد","نتحقق من رابط التأكيد الآن…",""]}},
- en:{title:"Siyadah — Sign in",skip:"Skip to form",home:"Siyadah, home",kicker:"How it works",storyTitle:"From request to employee.",exampleTag:"Illustrative example",steps:["Request","Plan","Result"],language:"Language",company:"Company name",email:"Email address",password:"Password",companyPlaceholder:"Your company",passwordPlaceholder:"Password",newPasswordPlaceholder:"At least 10 characters",forgot:"Forgot password?",show:"Show",hide:"Hide",loginPrompt:"New to Siyadah?",signupLink:"Create an account",returnLogin:"Back to sign in",busy:"Sending…",verifyBusy:"Verifying your email…",verifyRetry:"Try again",verifyFailed:"We couldn't confirm your email. Try again.",required:"Complete this field.",badEmail:"Enter a valid email address.",shortPassword:"Use at least 10 characters.",connection:"Connection failed. Try again.",generic:"We couldn't complete this request. Try again.",verified:"Email confirmed. Sign in to continue.",resetDone:"Password updated. Sign in with your new password.",signupDone:"We sent a confirmation link to your email. Open it to finish signing up.",forgotDone:"If this email is registered, you'll receive a reset link.",modes:{login:["Sign in","","Sign in"],signup:["Create an account","","Create account"],forgot:["Reset your password","We'll email you a password reset link.","Send reset link"],reset:["New password","Changing it will end your previous sessions.","Save password"],verify:["Confirm your email","We're checking your confirmation link…",""]}}
+ ar:{title:"سيادة — الدخول",skip:"تجاوز إلى النموذج",home:"سيادة، الصفحة الرئيسية",kicker:"رحلة عمل",storyTitle:"من طلبك إلى موظفك.",exampleTag:"مثال توضيحي",steps:["الطلب","الخطة","النتيجة"],language:"اللغة",company:"اسم الشركة",email:"البريد الإلكتروني",password:"كلمة المرور",companyPlaceholder:"اسم شركتك",passwordPlaceholder:"كلمة المرور",newPasswordPlaceholder:"10 أحرف على الأقل",forgot:"نسيت كلمة المرور؟",show:"إظهار",hide:"إخفاء",loginPrompt:"ما عندك حساب؟",signupLink:"أنشئ حسابًا",returnLogin:"العودة لتسجيل الدخول",busy:"جارٍ الإرسال…",verifyBusy:"جارٍ تأكيد البريد…",verifyRetry:"أعد المحاولة",verifyFailed:"تعذّر تأكيد البريد. أعد المحاولة.",required:"أكمل هذا الحقل.",badEmail:"أدخل بريدًا إلكترونيًا صحيحًا.",shortPassword:"استخدم 10 أحرف على الأقل.",connection:"تعذر الاتصال. حاول مرة أخرى.",generic:"تعذر إكمال الطلب. حاول مرة أخرى.",loginDone:"أهلًا بعودتك.",verified:"تم تأكيد بريدك. سجّل الدخول للمتابعة.",resetDone:"تم التغيير. سجّل دخولك بكلمة المرور الجديدة.",signupDone:"أرسلنا رابط تأكيد إلى بريدك. افتحه لإكمال التسجيل.",forgotDone:"إذا كان البريد مسجلًا فسيصلك رابط الاستعادة.",modes:{login:["تسجيل الدخول","","دخول"],signup:["إنشاء حساب","","إنشاء حساب"],forgot:["استعادة كلمة المرور","سنرسل رابط الاستعادة إلى بريدك.","إرسال الرابط"],reset:["كلمة مرور جديدة","سيُنهي التغيير جلساتك السابقة لحماية حسابك.","حفظ كلمة المرور"],verify:["تأكيد البريد","نتحقق من رابط التأكيد الآن…",""]}},
+ en:{title:"Siyadah — Sign in",skip:"Skip to form",home:"Siyadah, home",kicker:"How it works",storyTitle:"From request to employee.",exampleTag:"Illustrative example",steps:["Request","Plan","Result"],language:"Language",company:"Company name",email:"Email address",password:"Password",companyPlaceholder:"Your company",passwordPlaceholder:"Password",newPasswordPlaceholder:"At least 10 characters",forgot:"Forgot password?",show:"Show",hide:"Hide",loginPrompt:"New to Siyadah?",signupLink:"Create an account",returnLogin:"Back to sign in",busy:"Sending…",verifyBusy:"Verifying your email…",verifyRetry:"Try again",verifyFailed:"We couldn't confirm your email. Try again.",required:"Complete this field.",badEmail:"Enter a valid email address.",shortPassword:"Use at least 10 characters.",connection:"Connection failed. Try again.",generic:"We couldn't complete this request. Try again.",loginDone:"Welcome back.",verified:"Email confirmed. Sign in to continue.",resetDone:"Password updated. Sign in with your new password.",signupDone:"We sent a confirmation link to your email. Open it to finish signing up.",forgotDone:"If this email is registered, you'll receive a reset link.",modes:{login:["Sign in","","Sign in"],signup:["Create an account","","Create account"],forgot:["Reset your password","We'll email you a password reset link.","Send reset link"],reset:["New password","Changing it will end your previous sessions.","Save password"],verify:["Confirm your email","We're checking your confirmation link…",""]}}
 };
 var storyStep=0;
 var storyScenes={
@@ -85,8 +86,16 @@ function applyCopy(){
  $("tg").innerHTML=mode==="login"?t.loginPrompt+' <button id="sw" type="button">'+t.signupLink+'</button>':'<button id="sw" type="button">'+t.returnLogin+'</button>';
  $("sw").onclick=function(){setMode(mode==="login"?"signup":"login")};
 }
-function setMode(next){mode=next;clearErrors();clearMessage();applyCopy();$("ttl").focus()}
-function setLanguage(next){locale=next;sessionStorage.setItem("siyadah_locale",locale);clearErrors();clearMessage();applyCopy()}
+function setMode(next){
+ if(mode==="reset"&&next!=="reset"){resetToken="";history.replaceState({},"",location.pathname);}
+ authGeneration++;authPending=false;mode=next;$("go").disabled=false;
+ $("password").value="";$("password").type="password";$("showPassword").setAttribute("aria-pressed","false");
+ clearErrors();clearMessage();applyCopy();$("ttl").focus();
+}
+function setLanguage(next){
+ locale=next;sessionStorage.setItem("siyadah_locale",locale);clearErrors();if(!authPending)clearMessage();applyCopy();
+ if(authPending){$("go").textContent=mode==="verify"?i18n[locale].verifyBusy:i18n[locale].busy;if(mode==="verify")show("ok",i18n[locale].verifyBusy);}
+}
 function fieldError(id,message){$(id+"Error").textContent=message;$(id).setAttribute("aria-invalid","true");return $(id)}
 function validate(){
  var t=i18n[locale],first=null,email=$("email").value.trim(),password=$("password").value,company=$("company").value.trim();clearErrors();
@@ -107,28 +116,29 @@ $("password").addEventListener("input",updatePasswordProgress);
 $("authForm").onsubmit=function(event){
   event.preventDefault();if(mode==="verify"){if(!$("go").disabled)confirmEmail();return;}if($("go").disabled||!validate())return;
   var email=$("email").value.trim(),pw=$("password").value,co=$("company").value.trim();
-  var action=mode,t=i18n[locale];clearMessage();$("go").disabled=true;$("go").textContent=t.busy;
+  var action=mode,generation=++authGeneration;authPending=true;clearMessage();$("go").disabled=true;$("go").textContent=i18n[locale].busy;
   var routes={login:"/v1/auth/login",signup:"/v1/auth/signup",forgot:"/v1/auth/forgot-password",reset:"/v1/auth/reset-password"};
   var bodies={login:{email:email,password:pw},signup:{email:email,password:pw,company_name:co,locale:locale},forgot:{email:email,locale:locale},reset:{token:resetToken,password:pw}};
   fetch(API+routes[action],{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(bodies[action])})
   .then(function(r){return r.json()}).then(function(d){
-    $("go").disabled=false;applyCopy();
+    if(generation!==authGeneration)return;
+    authPending=false;$("go").disabled=false;applyCopy();var copy=i18n[locale];
     if(d&&(d.ok===true||d.ok==="true")){
-      show("ok",locale==="en"?({login:"Welcome back.",signup:t.signupDone,forgot:t.forgotDone,reset:t.resetDone})[action]:(d.message||"تم"));
-      if(action==="login")setTimeout(function(){location.href=nextAfterLogin(d);},600);
-      if(action==="reset")setTimeout(function(){history.replaceState({},"",location.pathname);resetToken="";setMode("login");show("ok",i18n[locale].resetDone);},700);
+      show("ok",({login:copy.loginDone,signup:copy.signupDone,forgot:copy.forgotDone,reset:copy.resetDone})[action]);
+      if(action==="login")setTimeout(function(){if(generation===authGeneration)location.href=nextAfterLogin(d);},600);
+      if(action==="reset")setTimeout(function(){if(generation!==authGeneration)return;history.replaceState({},"",location.pathname);resetToken="";setMode("login");show("ok",i18n[locale].resetDone);},700);
     }else{
       var englishErrors={invalid_login:"Incorrect email or password.",email_not_verified:"Confirm your email before signing in.",login_rate_limited:"Too many attempts. Try again in 15 minutes.",invalid_credentials:"Check your company name, email, and password.",invalid_password:"Use a password with at least 10 characters.",email_exists:"This email is already registered.",email_not_configured:"Email delivery is unavailable right now.",invalid_reset:"This reset link is invalid or expired."};
-      show("err",locale==="en"?(englishErrors[d&&d.error]||t.generic):((d&&d.message)||t.generic));
+      show("err",locale==="en"?(englishErrors[d&&d.error]||copy.generic):((d&&d.message)||copy.generic));
     }
-  }).catch(function(){$("go").disabled=false;applyCopy();show("err",i18n[locale].connection);});
+  }).catch(function(){if(generation!==authGeneration)return;authPending=false;$("go").disabled=false;applyCopy();show("err",i18n[locale].connection);});
 };
 function confirmEmail(){
-  var button=$("go");button.disabled=true;button.textContent=i18n[locale].verifyBusy;show("ok",i18n[locale].verifyBusy);
+  var button=$("go");authPending=true;button.disabled=true;button.textContent=i18n[locale].verifyBusy;show("ok",i18n[locale].verifyBusy);
   fetch(API+"/v1/auth/verify-email",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:verifyToken})})
   .then(function(r){return r.json()}).then(function(d){if(d&&d.ok){history.replaceState({},"",location.pathname);verifyToken="";setMode("login");show("ok",i18n[locale].verified);}else{show("err",i18n[locale].verifyFailed);}})
   .catch(function(){show("err",i18n[locale].connection);})
-  .finally(function(){button.disabled=false;if(mode==="verify")button.textContent=i18n[locale].verifyRetry;});
+  .finally(function(){authPending=false;button.disabled=false;if(mode==="verify")button.textContent=i18n[locale].verifyRetry;});
 }
 applyCopy();
 if(verifyToken)confirmEmail();

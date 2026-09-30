@@ -46,7 +46,7 @@ test('signup waits for email confirmation instead of entering onboarding',async(
   w.document.querySelector('#go').click();await flush();await flush();
   assert.equal(requests[0].url,'/siyadah-api/v1/auth/signup');assert.equal(requests[0].options.credentials,'include');
   assert.deepEqual(JSON.parse(requests[0].options.body),{email:'qa@example.com',password:'strong-password',company_name:'شركة اختبار',locale:'ar'});
-  assert.match(w.document.querySelector('#msg').textContent,/أرسلنا رابط التأكيد/);assert.equal(w.location.pathname,'/auth.html');
+  assert.match(w.document.querySelector('#msg').textContent,/أرسلنا رابط تأكيد/);assert.equal(w.location.pathname,'/auth.html');
   dom.window.close();
 });
 
@@ -67,6 +67,40 @@ test('account creation works in English with RTL/LTR and field feedback',async()
   w.document.querySelector('#go').click();await flush();await flush();
   assert.equal(JSON.parse(requests[0].options.body).locale,'en');
   assert.match(w.document.querySelector('#msg').textContent,/confirmation link/);
+  dom.window.close();
+});
+
+test('changing account mode hides the password and ignores a stale request result',async()=>{
+  const dom=new JSDOM(auth,{url:'https://siyadah.test/auth.html',runScripts:'outside-only'}),w=dom.window;
+  let finish;
+  w.fetch=()=>new Promise(resolve=>{finish=resolve});
+  w.eval(inlineScript);
+  w.document.querySelector('#sw').click();
+  w.document.querySelector('#company').value='Example Co';w.document.querySelector('#email').value='qa@example.com';w.document.querySelector('#password').value='strong-password';
+  w.document.querySelector('#showPassword').click();w.document.querySelector('#go').click();
+  w.document.querySelector('#sw').click();
+  assert.equal(w.document.querySelector('#password').type,'password');
+  assert.equal(w.document.querySelector('#password').value,'');
+  assert.equal(w.document.querySelector('#email').value,'qa@example.com');
+  assert.equal(w.document.querySelector('#go').disabled,false);
+  finish({json:async()=>({ok:true})});await flush();await flush();
+  assert.equal(w.document.querySelector('#ttl').textContent,'تسجيل الدخول');
+  assert.equal(w.document.querySelector('#msg').textContent,'');
+  dom.window.close();
+});
+
+test('language switch during signup keeps the request pending and reports its result in the selected language',async()=>{
+  const dom=new JSDOM(auth,{url:'https://siyadah.test/auth.html',runScripts:'outside-only'}),w=dom.window;
+  let finish;
+  w.fetch=()=>new Promise(resolve=>{finish=resolve});
+  w.eval(inlineScript);w.document.querySelector('#sw').click();
+  w.document.querySelector('#company').value='شركة اختبار';w.document.querySelector('#email').value='qa@example.com';w.document.querySelector('#password').value='strong-password';
+  w.document.querySelector('#go').click();w.document.querySelector('#langEn').click();
+  assert.equal(w.document.querySelector('#go').disabled,true);
+  assert.equal(w.document.querySelector('#go').textContent,'Sending…');
+  finish({json:async()=>({ok:true,message:'أرسلنا الرابط'})});await flush();await flush();
+  assert.match(w.document.querySelector('#msg').textContent,/confirmation link/);
+  assert.equal(w.document.querySelector('#go').disabled,false);
   dom.window.close();
 });
 
@@ -97,6 +131,17 @@ test('recovery keeps its necessary guidance when the account form omits repeated
   dom.window.close();
 });
 
+test('leaving password reset clears its link token and hidden password',()=>{
+  const dom=new JSDOM(auth,{url:'https://siyadah.test/auth.html?reset=single-use-token',runScripts:'outside-only'}),w=dom.window;
+  w.eval(inlineScript);w.document.querySelector('#password').value='strong-password';w.document.querySelector('#showPassword').click();
+  w.document.querySelector('#sw').click();
+  assert.equal(w.location.search,'');
+  assert.equal(w.document.querySelector('#password').type,'password');
+  assert.equal(w.document.querySelector('#password').value,'');
+  assert.equal(w.document.querySelector('#ttl').textContent,'تسجيل الدخول');
+  dom.window.close();
+});
+
 test('signup gives a quiet, accessible cue for the password length requirement',()=>{
   const dom=new JSDOM(auth,{url:'https://siyadah.test/auth.html',runScripts:'outside-only'}),w=dom.window;
   w.eval(inlineScript);w.document.querySelector('#sw').click();
@@ -119,6 +164,19 @@ test('verification link is exchanged once then returns to login',async()=>{
   assert.equal(JSON.parse(requests[0].options.body).token,'one-time-token-value-that-is-long-enough');
   assert.equal(w.location.search,'');assert.equal(w.document.querySelector('#ttl').textContent,'تسجيل الدخول');
   assert.match(w.document.querySelector('#msg').textContent,/تم تأكيد بريدك/);
+  dom.window.close();
+});
+
+test('verification stays pending across a language switch and confirms in that language',async()=>{
+  const dom=new JSDOM(auth,{url:'https://siyadah.test/auth.html?verify=one-time-token',runScripts:'outside-only'}),w=dom.window;
+  let finish;
+  w.fetch=()=>new Promise(resolve=>{finish=resolve});
+  w.eval(inlineScript);w.document.querySelector('#langEn').click();
+  assert.equal(w.document.querySelector('#go').disabled,true);
+  assert.equal(w.document.querySelector('#go').textContent,'Verifying your email…');
+  finish({json:async()=>({ok:true})});await flush();await flush();
+  assert.equal(w.document.querySelector('#ttl').textContent,'Sign in');
+  assert.match(w.document.querySelector('#msg').textContent,/Email confirmed/);
   dom.window.close();
 });
 
