@@ -56,8 +56,9 @@ test('account creation works in English with RTL/LTR and field feedback',async()
   w.eval(inlineScript);
   w.document.querySelector('#langEn').click();w.document.querySelector('#sw').click();
   assert.equal(w.document.documentElement.lang,'en');assert.equal(w.document.documentElement.dir,'ltr');
-  assert.equal(w.document.querySelector('#back').getAttribute('href'),'index.html');
+  assert.equal(w.document.querySelector('#mobileHome').getAttribute('href'),'index.html');
   assert.equal(w.document.querySelector('#ttl').textContent,'Create an account');
+  assert.equal(w.document.querySelector('#sub').classList.contains('hide'),true);
   w.document.querySelector('#go').click();
   assert.equal(requests.length,0);
   for(const id of ['company','email','password'])assert.equal(w.document.querySelector(`#${id}`).getAttribute('aria-invalid'),'true');
@@ -75,11 +76,21 @@ test('the account story reveals three concise stages in both languages',()=>{
   const step=w.document.querySelector('[data-story-step="1"]');step.click();
   assert.equal(step.getAttribute('aria-pressed'),'true');
   assert.equal(w.document.querySelector('#exampleIndex').textContent,'02 / 03');
-  assert.match(w.document.querySelector('#exampleRequest').textContent,/خطة واضحة/);
+  assert.match(w.document.querySelector('#exampleRequest').textContent,/خطة العمل/);
   w.document.querySelector('#langEn').click();
   assert.match(w.document.querySelector('#exampleRequest').textContent,/A plan/);
   w.document.querySelector('[data-story-step="2"]').click();
-  assert.match(w.document.querySelector('#exampleDetail').textContent,/evidence/);
+  assert.match(w.document.querySelector('#exampleDetail').textContent,/source/);
+  dom.window.close();
+});
+
+test('recovery keeps its necessary guidance when the account form omits repeated copy',()=>{
+  const dom=new JSDOM(auth,{url:'https://siyadah.test/auth.html',runScripts:'outside-only'}),w=dom.window;
+  w.eval(inlineScript);
+  assert.equal(w.document.querySelector('#sub').classList.contains('hide'),true);
+  w.document.querySelector('#forgot').click();
+  assert.equal(w.document.querySelector('#sub').classList.contains('hide'),false);
+  assert.match(w.document.querySelector('#sub').textContent,/رابط الاستعادة/);
   dom.window.close();
 });
 

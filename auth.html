@@ -9,14 +9,13 @@
 <main class="auth-main"><div class="shell">
   <section class="story" aria-labelledby="storyTitle">
     <div class="story-top"><a id="storyHome" href="ar.html" aria-label="سيادة، الصفحة الرئيسية"><span class="siyadah-logo" role="img" aria-label="Siyadah AI"></span></a><span class="brand-icon" aria-hidden="true"></span></div>
-    <div class="story-body"><p class="story-kicker" id="storyKicker">سيادة للأعمال</p><h2 id="storyTitle">طلب. خطة. دليل.</h2><p class="story-sub" id="storySub">مسار واضح من الفكرة إلى النتيجة.</p>
+    <div class="story-body"><p class="story-kicker" id="storyKicker">سيادة للأعمال</p><h2 id="storyTitle">طلب. خطة. دليل.</h2>
       <div class="story-example"><div class="example-top"><span id="exampleTag">مثال توضيحي</span><span id="exampleIndex" dir="ltr" aria-hidden="true">01 / 03</span></div><div class="example-scene" aria-live="polite"><p id="exampleRequest">«رتّب متابعة العملاء هذا الأسبوع»</p><p id="exampleDetail">طلبك يحدد البداية.</p></div><div class="story-steps" id="storySteps" role="group" aria-label="مراحل المثال"><button type="button" data-story-step="0" aria-pressed="true"><b>01</b><span id="step1">الطلب</span></button><button type="button" data-story-step="1" aria-pressed="false"><b>02</b><span id="step2">الخطة</span></button><button type="button" data-story-step="2" aria-pressed="false"><b>03</b><span id="step3">الدليل</span></button></div></div>
     </div>
-    <p class="story-foot" id="storyFoot">قرارك في كل خطوة.</p>
   </section>
   <section class="card" aria-labelledby="ttl">
     <div class="card-top"><a class="mobile-logo" id="mobileHome" href="ar.html" aria-label="سيادة، الصفحة الرئيسية"><span class="siyadah-logo" role="img" aria-label="Siyadah AI"></span></a><div class="languages" role="group" aria-label="اللغة"><button type="button" id="langAr" aria-pressed="true" lang="ar">عربي</button><button type="button" id="langEn" aria-pressed="false" lang="en">EN</button></div></div>
-    <div class="card-body"><p class="eyebrow" id="eyebrow">مساحة شركتك</p><h1 id="ttl">تسجيل الدخول</h1><p class="sub" id="sub">ادخل إلى مساحة شركتك.</p>
+    <div class="card-body"><h1 id="ttl">تسجيل الدخول</h1><p class="sub hide" id="sub"></p>
       <form id="authForm" novalidate>
         <div class="field hide" id="coRow"><label id="companyLabel" for="company">اسم الشركة</label><div class="ip"><input id="company" name="company" type="text" autocomplete="organization" maxlength="120" placeholder="اسم شركتك" aria-describedby="companyError"></div><p class="field-error" id="companyError"></p></div>
         <div class="field" id="emailRow"><label id="emailLabel" for="email">البريد الإلكتروني</label><div class="ip"><input id="email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@company.com" aria-describedby="emailError"></div><p class="field-error" id="emailError"></p></div>
@@ -27,7 +26,6 @@
       </form>
       <div class="toggle" id="tg">ما عندك حساب؟ <button id="sw" type="button">أنشئ حسابًا</button></div>
     </div>
-    <div class="card-foot"><span id="footLabel">سيادة · مساحة عمل شركتك</span><a id="back" href="ar.html">العودة للرئيسية</a></div>
   </section>
 </div></main>
 <script>
@@ -37,24 +35,24 @@ var mode=verifyToken?"verify":(resetToken?"reset":"login");
 var locale=params.get("lang")==="en"?"en":(params.get("lang")==="ar"?"ar":(sessionStorage.getItem("siyadah_locale")==="en"?"en":"ar"));
 var $=function(id){return document.getElementById(id)};
 var i18n={
- ar:{title:"سيادة — الدخول",skip:"تجاوز إلى النموذج",home:"سيادة، الصفحة الرئيسية",kicker:"سيادة للأعمال",storyTitle:"طلب. خطة. دليل.",storySub:"مسار واضح من الفكرة إلى النتيجة.",exampleTag:"مثال توضيحي",exampleRequest:"«رتّب متابعة العملاء هذا الأسبوع»",steps:["الطلب","الخطة","الدليل"],storyFoot:"قرارك في كل خطوة.",eyebrow:"مساحة شركتك",foot:"سيادة · مساحة عمل شركتك",back:"العودة للرئيسية",language:"اللغة",company:"اسم الشركة",email:"البريد الإلكتروني",password:"كلمة المرور",companyPlaceholder:"اسم شركتك",passwordPlaceholder:"كلمة المرور",newPasswordPlaceholder:"10 أحرف على الأقل",forgot:"نسيت كلمة المرور؟",show:"إظهار",hide:"إخفاء",loginPrompt:"ما عندك حساب؟",signupLink:"أنشئ حسابًا",returnLogin:"العودة لتسجيل الدخول",busy:"جارٍ الإرسال…",verifyBusy:"جارٍ تأكيد البريد…",verifyRetry:"أعد المحاولة",verifyFailed:"تعذّر تأكيد البريد. أعد المحاولة.",required:"أكمل هذا الحقل.",badEmail:"أدخل بريدًا إلكترونيًا صحيحًا.",shortPassword:"استخدم 10 أحرف على الأقل.",connection:"تعذر الاتصال. حاول مرة أخرى.",generic:"تعذر إكمال الطلب. حاول مرة أخرى.",verified:"تم تأكيد بريدك. سجّل الدخول للمتابعة.",resetDone:"تم التغيير. سجّل دخولك بكلمة المرور الجديدة.",signupDone:"أرسلنا رابط تأكيد إلى بريدك. افتحه لإكمال التسجيل.",forgotDone:"إذا كان البريد مسجلًا فسيصلك رابط الاستعادة.",modes:{login:["تسجيل الدخول","ادخل إلى مساحة شركتك.","دخول"],signup:["إنشاء حساب","ابدأ مساحة شركتك من هنا.","إنشاء حساب"],forgot:["استعادة كلمة المرور","سنرسل رابط الاستعادة إلى بريدك.","إرسال الرابط"],reset:["كلمة مرور جديدة","سيُنهي التغيير جلساتك السابقة لحماية حسابك.","حفظ كلمة المرور"],verify:["تأكيد البريد","نتحقق من رابط التأكيد الآن…",""]}},
- en:{title:"Siyadah — Sign in",skip:"Skip to form",home:"Siyadah, home",kicker:"Siyadah for business",storyTitle:"Request. Plan. Proof.",storySub:"A clear path from idea to outcome.",exampleTag:"Illustrative example",exampleRequest:"“Organize customer follow-ups this week”",steps:["Request","Plan","Proof"],storyFoot:"Your decision at every step.",eyebrow:"Your workspace",foot:"Siyadah · Your company workspace",back:"Back to home",language:"Language",company:"Company name",email:"Email address",password:"Password",companyPlaceholder:"Your company",passwordPlaceholder:"Password",newPasswordPlaceholder:"At least 10 characters",forgot:"Forgot password?",show:"Show",hide:"Hide",loginPrompt:"New to Siyadah?",signupLink:"Create an account",returnLogin:"Back to sign in",busy:"Sending…",verifyBusy:"Verifying your email…",verifyRetry:"Try again",verifyFailed:"We couldn't confirm your email. Try again.",required:"Complete this field.",badEmail:"Enter a valid email address.",shortPassword:"Use at least 10 characters.",connection:"Connection failed. Try again.",generic:"We couldn't complete this request. Try again.",verified:"Email confirmed. Sign in to continue.",resetDone:"Password updated. Sign in with your new password.",signupDone:"We sent a confirmation link to your email. Open it to finish signing up.",forgotDone:"If this email is registered, you'll receive a reset link.",modes:{login:["Sign in","Enter your company workspace.","Sign in"],signup:["Create an account","Start your company workspace here.","Create account"],forgot:["Reset your password","We'll email you a password reset link.","Send reset link"],reset:["New password","Changing it will end your previous sessions.","Save password"],verify:["Confirm your email","We're checking your confirmation link…",""]}}
+ ar:{title:"سيادة — الدخول",skip:"تجاوز إلى النموذج",home:"سيادة، الصفحة الرئيسية",kicker:"سيادة للأعمال",storyTitle:"طلب. خطة. دليل.",exampleTag:"مثال توضيحي",steps:["الطلب","الخطة","الدليل"],language:"اللغة",company:"اسم الشركة",email:"البريد الإلكتروني",password:"كلمة المرور",companyPlaceholder:"اسم شركتك",passwordPlaceholder:"كلمة المرور",newPasswordPlaceholder:"10 أحرف على الأقل",forgot:"نسيت كلمة المرور؟",show:"إظهار",hide:"إخفاء",loginPrompt:"ما عندك حساب؟",signupLink:"أنشئ حسابًا",returnLogin:"العودة لتسجيل الدخول",busy:"جارٍ الإرسال…",verifyBusy:"جارٍ تأكيد البريد…",verifyRetry:"أعد المحاولة",verifyFailed:"تعذّر تأكيد البريد. أعد المحاولة.",required:"أكمل هذا الحقل.",badEmail:"أدخل بريدًا إلكترونيًا صحيحًا.",shortPassword:"استخدم 10 أحرف على الأقل.",connection:"تعذر الاتصال. حاول مرة أخرى.",generic:"تعذر إكمال الطلب. حاول مرة أخرى.",verified:"تم تأكيد بريدك. سجّل الدخول للمتابعة.",resetDone:"تم التغيير. سجّل دخولك بكلمة المرور الجديدة.",signupDone:"أرسلنا رابط تأكيد إلى بريدك. افتحه لإكمال التسجيل.",forgotDone:"إذا كان البريد مسجلًا فسيصلك رابط الاستعادة.",modes:{login:["تسجيل الدخول","","دخول"],signup:["إنشاء حساب","","إنشاء حساب"],forgot:["استعادة كلمة المرور","سنرسل رابط الاستعادة إلى بريدك.","إرسال الرابط"],reset:["كلمة مرور جديدة","سيُنهي التغيير جلساتك السابقة لحماية حسابك.","حفظ كلمة المرور"],verify:["تأكيد البريد","نتحقق من رابط التأكيد الآن…",""]}},
+ en:{title:"Siyadah — Sign in",skip:"Skip to form",home:"Siyadah, home",kicker:"Siyadah for business",storyTitle:"Request. Plan. Proof.",exampleTag:"Illustrative example",steps:["Request","Plan","Proof"],language:"Language",company:"Company name",email:"Email address",password:"Password",companyPlaceholder:"Your company",passwordPlaceholder:"Password",newPasswordPlaceholder:"At least 10 characters",forgot:"Forgot password?",show:"Show",hide:"Hide",loginPrompt:"New to Siyadah?",signupLink:"Create an account",returnLogin:"Back to sign in",busy:"Sending…",verifyBusy:"Verifying your email…",verifyRetry:"Try again",verifyFailed:"We couldn't confirm your email. Try again.",required:"Complete this field.",badEmail:"Enter a valid email address.",shortPassword:"Use at least 10 characters.",connection:"Connection failed. Try again.",generic:"We couldn't complete this request. Try again.",verified:"Email confirmed. Sign in to continue.",resetDone:"Password updated. Sign in with your new password.",signupDone:"We sent a confirmation link to your email. Open it to finish signing up.",forgotDone:"If this email is registered, you'll receive a reset link.",modes:{login:["Sign in","","Sign in"],signup:["Create an account","","Create account"],forgot:["Reset your password","We'll email you a password reset link.","Send reset link"],reset:["New password","Changing it will end your previous sessions.","Save password"],verify:["Confirm your email","We're checking your confirmation link…",""]}}
 };
 var storyStep=0;
 var storyScenes={
  ar:[
-  ["«رتّب متابعة العملاء هذا الأسبوع»","طلبك يحدد البداية."],
-  ["خطة واضحة قبل أي تنفيذ","تراجع الخطوة وحدودها."],
-  ["نتيجة يمكن الرجوع إليها","ما حدث، ومعه دليله."]
+  ["«رتّب متابعة العملاء هذا الأسبوع»",""],
+  ["خطة العمل","الخطوات والأدوات وحدودها."],
+  ["نتيجة قابلة للتحقق","الفعل، وقته، ومصدره."]
  ],
  en:[
-  ["“Organize customer follow-ups this week”","Your request sets the direction."],
-  ["A plan before any action","Review the step and its limits."],
-  ["An outcome you can revisit","What happened, with evidence."]
+  ["“Organize customer follow-ups this week”",""],
+  ["A plan of action","Steps, tools, and limits."],
+  ["A verifiable outcome","The action, time, and source."]
  ]
 };
 function renderStory(){
- var scene=storyScenes[locale][storyStep];$("exampleRequest").textContent=scene[0];$("exampleDetail").textContent=scene[1];$("exampleIndex").textContent="0"+(storyStep+1)+" / 03";
+ var scene=storyScenes[locale][storyStep];$("exampleRequest").textContent=scene[0];$("exampleDetail").textContent=scene[1];$("exampleDetail").classList.toggle("hide",!scene[1]);$("exampleIndex").textContent="0"+(storyStep+1)+" / 03";
  document.querySelectorAll("[data-story-step]").forEach(function(button){button.setAttribute("aria-pressed",String(Number(button.getAttribute("data-story-step"))===storyStep));});
 }
 function updatePasswordProgress(){
@@ -68,11 +66,11 @@ function show(type,message){var e=$("msg");e.className="msg "+type;e.textContent
 function applyCopy(){
  var t=i18n[locale],copy=t.modes[mode],home=locale==="ar"?"ar.html":"index.html";
  document.documentElement.lang=locale;document.documentElement.dir=locale==="ar"?"rtl":"ltr";document.title=t.title;
- $("skip").textContent=t.skip;$("storyHome").href=home;$("mobileHome").href=home;$("back").href=home;
+ $("skip").textContent=t.skip;$("storyHome").href=home;$("mobileHome").href=home;
  $("storyHome").setAttribute("aria-label",t.home);$("mobileHome").setAttribute("aria-label",t.home);
- $("storyKicker").textContent=t.kicker;$("storyTitle").textContent=t.storyTitle;$("storySub").textContent=t.storySub;$("exampleTag").textContent=t.exampleTag;
- t.steps.forEach(function(step,index){$("step"+(index+1)).textContent=step});$("storySteps").setAttribute("aria-label",locale==="ar"?"مراحل المثال":"Example stages");$("storyFoot").textContent=t.storyFoot;renderStory();
- $("eyebrow").textContent=t.eyebrow;$("ttl").textContent=copy[0];$("sub").textContent=copy[1];$("go").textContent=copy[2];$("footLabel").textContent=t.foot;$("back").textContent=t.back;
+ $("storyKicker").textContent=t.kicker;$("storyTitle").textContent=t.storyTitle;$("exampleTag").textContent=t.exampleTag;
+ t.steps.forEach(function(step,index){$("step"+(index+1)).textContent=step});$("storySteps").setAttribute("aria-label",locale==="ar"?"مراحل المثال":"Example stages");renderStory();
+ $("ttl").textContent=copy[0];$("sub").textContent=copy[1];$("sub").classList.toggle("hide",!copy[1]);$("go").textContent=copy[2];
  $("companyLabel").textContent=t.company;$("emailLabel").textContent=t.email;$("passwordLabel").textContent=t.password;$("company").placeholder=t.companyPlaceholder;$("password").placeholder=mode==="signup"||mode==="reset"?t.newPasswordPlaceholder:t.passwordPlaceholder;
  $("forgot").textContent=t.forgot;$("showPassword").textContent=$("password").type==="password"?t.show:t.hide;
  $("langAr").setAttribute("aria-pressed",String(locale==="ar"));$("langEn").setAttribute("aria-pressed",String(locale==="en"));$("langAr").parentNode.setAttribute("aria-label",t.language);
