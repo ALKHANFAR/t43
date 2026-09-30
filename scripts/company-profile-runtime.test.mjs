@@ -67,6 +67,16 @@ test('deep profile rejects a real quote that does not prove the claimed value',(
   assert.equal(profile.rejectedClaims,1);
 });
 
+test('deep profile verifies quotes after the first 1,200 page characters',()=>{
+  const url='https://acme.example/services';
+  const quote='خدمة العملاء متاحة طوال أيام الأسبوع';
+  const profile=normalizeAgentProfile({claims:[{
+    topic:'services',key:'support',value:'طوال أيام الأسبوع',evidenceQuote:quote,sourceUrl:url,confidence:'high',
+  }]},[{url,markdown:'مقدمة '.repeat(220)+'\n'+quote}],[url]);
+  assert.equal(profile.facts.length,1);
+  assert.equal(profile.facts[0].evidenceQuote,quote);
+});
+
 test('company voice settings are bounded, deduplicated and separate from knowledge facts',()=>{
   assert.deepEqual(normalizeCompanySettings({voice:' مباشر وواضح ',language:'auto',dialect:'سعودية بيضاء',preferredWords:['أبشر','أبشر','تم'],forbiddenWords:'مستحيل، مضمون'}),{
     voice:'مباشر وواضح',language:'auto',dialect:'سعودية بيضاء',preferredWords:['أبشر','تم'],forbiddenWords:['مستحيل','مضمون'],
