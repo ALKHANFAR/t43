@@ -32,6 +32,7 @@
 <link rel="preload" href="assets/wordmark.png" as="image" crossorigin>
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="siyadah-theme.css">
+<link rel="stylesheet" href="journey.css">
 
 <style>
 .skip{position:absolute;inset-inline-start:-999px;top:12px;z-index:200;background:var(--ink);color:var(--paper);padding:10px 16px;font-family:var(--f-display)}
@@ -336,6 +337,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
     <a href="#top" aria-label="Siyadah AI, home"><span class="logo" role="img" aria-label="Siyadah AI"></span></a>
     <nav class="nav__links" id="nav-links" aria-label="Primary">
       <a href="#how">How it works</a>
+      <a href="#proof">The journey</a>
       <a href="#pricing">Pricing</a>
       <a href="integrations.html">Integrations</a>
       <a href="ar.html" class="nav__lang">AR</a>
@@ -468,10 +470,39 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.025em;lin
   </div>
 </section>
 
+<!-- ============================== request to proof ============================== -->
+<section class="sect journey" id="proof" aria-labelledby="proof-title">
+  <div class="wrap">
+    <p class="idx">03 — A visible process</p>
+    <div class="journey__top">
+      <h2 class="d2" id="proof-title">From your request to a result you can inspect.</h2>
+      <p class="lead">See what Siyadah knows, where your decision matters, and what happened after an action.</p>
+    </div>
+    <div class="journey__choices" role="group" aria-label="Explore the process">
+      <button class="journey__choice" type="button" id="journey-choice-context" data-journey-choice="context" aria-controls="journey-context" aria-pressed="true">01 · Context</button>
+      <button class="journey__choice" type="button" id="journey-choice-permission" data-journey-choice="permission" aria-controls="journey-permission" aria-pressed="false">02 · Permission</button>
+      <button class="journey__choice" type="button" id="journey-choice-proof" data-journey-choice="proof" aria-controls="journey-proof" aria-pressed="false">03 · Proof</button>
+    </div>
+    <section class="journey__panel" id="journey-context" aria-labelledby="journey-choice-context" data-journey-panel="context">
+      <div class="journey__copy"><span class="journey__n">01 / Context</span><h3>Start with what your company actually says.</h3><p>Answers draw from your reviewed company knowledge. Missing or conflicting details stay visible for correction.</p></div>
+      <div class="journey__sample"><p class="journey__sample-label">Illustrative example</p><div class="journey__sample-row"><span>Question</span><b>What is our setup time?</b></div><div class="journey__sample-row"><span>Source</span><b>Company policy, with a link and excerpt</b></div><div class="journey__sample-row"><span>If unclear</span><b>Ask before making a promise</b></div></div>
+    </section>
+    <section class="journey__panel" id="journey-permission" aria-labelledby="journey-choice-permission" data-journey-panel="permission" hidden>
+      <div class="journey__copy"><span class="journey__n">02 / Permission</span><h3>A clear boundary before action.</h3><p>Work within permissions already given. Ask when an action needs a decision, with the scope and consequence in view.</p></div>
+      <div class="journey__sample"><p class="journey__sample-label">Illustrative example</p><div class="journey__sample-row"><span>Proposed action</span><b>Follow up with a new lead</b></div><div class="journey__sample-row"><span>Boundary</span><b>Check the employee's assigned tools and scope</b></div><div class="journey__sample-row"><span>If outside scope</span><b>Request approval</b></div></div>
+    </section>
+    <section class="journey__panel" id="journey-proof" aria-labelledby="journey-choice-proof" data-journey-panel="proof" hidden>
+      <div class="journey__copy"><span class="journey__n">03 / Proof</span><h3>Show the result, then its evidence.</h3><p>An action is complete only when its actual outcome can be read back. A draft or connection has its own status.</p></div>
+      <div class="journey__sample"><p class="journey__sample-label">Illustrative example</p><div class="journey__sample-row"><span>Action</span><b>Follow-up message</b></div><div class="journey__sample-row"><span>Evidence</span><b>Run, provider response, customer-visible outcome</b></div><div class="journey__sample-row"><span>Status</span><b>Reported from the real result</b></div></div>
+    </section>
+    <p class="journey__foot">Examples explain the experience; they are not records of a customer run.</p>
+  </div>
+</section>
+
 <!-- ============================== pricing ============================== -->
 <section class="sect inv" id="pricing">
   <div class="wrap">
-    <p class="idx">03 — Pricing</p>
+    <p class="idx">04 — Pricing</p>
     <h2 class="d2 rv" style="max-width:16ch"><span>Simple pricing. One usage line.</span></h2>
 
     <div class="bill" role="group" aria-label="Billing period">

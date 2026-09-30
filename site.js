@@ -78,6 +78,17 @@ var CONFIG = {
     document.addEventListener("click", function (e) { if (nav.classList.contains("open") && !e.target.closest(".nav")) setMenu(false); });
   }
 
+  /* The public story changes only when the visitor chooses a stage. */
+  var journeyChoices = $$("[data-journey-choice]");
+  var journeyPanels = $$("[data-journey-panel]");
+  journeyChoices.forEach(function (choice) {
+    choice.addEventListener("click", function () {
+      var selected = choice.getAttribute("data-journey-choice");
+      journeyChoices.forEach(function (item) { item.setAttribute("aria-pressed", item === choice ? "true" : "false"); });
+      journeyPanels.forEach(function (panel) { panel.hidden = panel.getAttribute("data-journey-panel") !== selected; });
+    });
+  });
+
   function onScroll() { nav.classList.toggle("stuck", window.scrollY > 20); }
   window.addEventListener("scroll", onScroll, { passive: true });
   onScroll();

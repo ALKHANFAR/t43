@@ -29,6 +29,7 @@
 <link rel="preload" href="assets/wordmark.png" as="image" crossorigin>
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="siyadah-theme.css">
+<link rel="stylesheet" href="journey.css">
 
 <style>
 .skip{position:absolute;inset-inline-start:-999px;top:12px;z-index:200;background:var(--ink);color:var(--paper);padding:10px 16px;font-family:var(--f-display)}
@@ -331,6 +332,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
     <a href="#top" aria-label="سيادة، الصفحة الرئيسية"><span class="logo" role="img" aria-label="Siyadah AI"></span></a>
     <nav class="nav__links" id="nav-links" aria-label="الرئيسية">
       <a href="#how">كيف تشتغل</a>
+      <a href="#proof">الرحلة</a>
       <a href="#pricing">الأسعار</a>
       <a href="integrations.html#ar">التكاملات</a>
       <a href="index.html" class="nav__lang">EN</a>
@@ -459,10 +461,39 @@ h1,h2,h3{font-family:var(--f-display);font-weight:300;letter-spacing:-.01em;line
   </div>
 </section>
 
+<!-- ============================== من الطلب إلى الدليل ============================== -->
+<section class="sect journey" id="proof" aria-labelledby="proof-title">
+  <div class="wrap">
+    <p class="idx">03 — رحلة واضحة</p>
+    <div class="journey__top">
+      <h2 class="d2" id="proof-title">من طلبك إلى نتيجة تقدر تفحصها.</h2>
+      <p class="lead">تعرف وش فهمت سيادة، ومتى تحتاج قرارك، ووش حصل بعد تنفيذ الإجراء.</p>
+    </div>
+    <div class="journey__choices" role="group" aria-label="استكشف الرحلة">
+      <button class="journey__choice" type="button" id="journey-choice-context" data-journey-choice="context" aria-controls="journey-context" aria-pressed="true">01 · المعرفة</button>
+      <button class="journey__choice" type="button" id="journey-choice-permission" data-journey-choice="permission" aria-controls="journey-permission" aria-pressed="false">02 · الصلاحية</button>
+      <button class="journey__choice" type="button" id="journey-choice-proof" data-journey-choice="proof" aria-controls="journey-proof" aria-pressed="false">03 · الدليل</button>
+    </div>
+    <section class="journey__panel" id="journey-context" aria-labelledby="journey-choice-context" data-journey-panel="context">
+      <div class="journey__copy"><span class="journey__n">01 / المعرفة</span><h3>تبدأ من معلومات شركتك المثبتة.</h3><p>الإجابة تستند إلى معرفة راجعتها. المعلومة الناقصة أو المتعارضة تبقى واضحة لتصححها.</p></div>
+      <div class="journey__sample"><p class="journey__sample-label">مثال توضيحي</p><div class="journey__sample-row"><span>السؤال</span><b>كم مدة التفعيل عندنا؟</b></div><div class="journey__sample-row"><span>المصدر</span><b>سياسة الشركة مع رابط ومقتطف</b></div><div class="journey__sample-row"><span>إن لم تتضح</span><b>تسأل قبل أن تعد العميل</b></div></div>
+    </section>
+    <section class="journey__panel" id="journey-permission" aria-labelledby="journey-choice-permission" data-journey-panel="permission" hidden>
+      <div class="journey__copy"><span class="journey__n">02 / الصلاحية</span><h3>حدود واضحة قبل الفعل.</h3><p>تعمل سيادة ضمن الصلاحية الممنوحة. وإذا احتاج الإجراء قرارك، يظهر نطاقه وأثره قبل الموافقة.</p></div>
+      <div class="journey__sample"><p class="journey__sample-label">مثال توضيحي</p><div class="journey__sample-row"><span>الإجراء المقترح</span><b>متابعة عميل محتمل جديد</b></div><div class="journey__sample-row"><span>الحد</span><b>فحص الأدوات المخصصة للموظف وصلاحياته</b></div><div class="journey__sample-row"><span>خارج الحد</span><b>طلب موافقتك</b></div></div>
+    </section>
+    <section class="journey__panel" id="journey-proof" aria-labelledby="journey-choice-proof" data-journey-panel="proof" hidden>
+      <div class="journey__copy"><span class="journey__n">03 / الدليل</span><h3>النتيجة أولًا، ودليلها بعدها.</h3><p>لا يكتمل الإجراء حتى تظهر نتيجته الحقيقية. المسودة والربط لكل منهما حالته الواضحة.</p></div>
+      <div class="journey__sample"><p class="journey__sample-label">مثال توضيحي</p><div class="journey__sample-row"><span>الإجراء</span><b>رسالة متابعة</b></div><div class="journey__sample-row"><span>الدليل</span><b>سجل التشغيل، ورد الأداة، والنتيجة التي يراها العميل</b></div><div class="journey__sample-row"><span>الحالة</span><b>تُعرض من النتيجة الفعلية</b></div></div>
+    </section>
+    <p class="journey__foot">الأمثلة تشرح التجربة، وليست سجلات لتنفيذ عند عميل.</p>
+  </div>
+</section>
+
 <!-- ============================== الأسعار ============================== -->
 <section class="sect inv" id="pricing">
   <div class="wrap">
-    <p class="idx">03 — الأسعار</p>
+    <p class="idx">04 — الأسعار</p>
     <h2 class="d2 rv" style="max-width:20ch"><span>تسعير بسيط. سطر واحد للاستخدام.</span></h2>
 
     <div class="bill" role="group" aria-label="فترة الفوترة">

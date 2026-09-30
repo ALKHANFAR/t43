@@ -15,7 +15,7 @@ import {conversationMemory,employeeRequestMode,flowName} from './lib/chat-intell
 const root=process.cwd();
 const port=Number(process.env.PORT||3000);
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.ico':'image/x-icon','.woff2':'font/woff2','.xml':'application/xml; charset=utf-8','.txt':'text/plain; charset=utf-8'};
-const publicRootFiles=new Set(['404.html','apple-touch-icon.png','ar.html','auth-design.css','auth.html','demo-en.html','demo-en.js','demo.html','demo.js','fonts.css','icon-512.png','index.html','integrations.html','integrations.js','og-ar.jpg','og.jpg','pieces.js','privacy.html','robots.txt','site.js','site.webmanifest','sitemap.xml','siyadah-theme.css']);
+const publicRootFiles=new Set(['404.html','apple-touch-icon.png','ar.html','auth-design.css','auth.html','demo-en.html','demo-en.js','demo.html','demo.js','fonts.css','icon-512.png','index.html','integrations.html','integrations.js','journey.css','og-ar.jpg','og.jpg','pieces.js','privacy.html','robots.txt','site.js','site.webmanifest','sitemap.xml','siyadah-theme.css']);
 const publicDirectories=['/.well-known/','/app/','/assets/','/email-signatures/','/fonts/'];
 let tenantProjectsPromise;
 let toolConnectionsPromise;

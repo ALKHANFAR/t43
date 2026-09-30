@@ -23,4 +23,4 @@ Keep status meanings tied to server state, permissions, and evidence. A color ch
 3. Add a selection control only after the new appearance is complete. Persist the choice and apply it before first paint to avoid a flash.
 4. Keep the original Siyadah wordmark and mark unless a new asset has been explicitly approved. Review logos and illustrations against every surface.
 
-The 21st.dev split layout informed the account composition. [Cloudlight's documentation](https://pro.reactbits.dev/docs/templates/cloudlight-template) informed the public site's future presentation order and theme readiness. Its WebGL and animation code are not dependencies of this implementation.
+[Cloudlight's documentation](https://pro.reactbits.dev/docs/templates/cloudlight-template) is the primary reference for public page sequence, product storytelling, and meaningful interaction. The 21st.dev split layout informed the account composition. Cloudlight's WebGL and animation code are not dependencies of this implementation.
