@@ -15,7 +15,7 @@ import {conversationMemory,employeeRequestMode,flowName} from './lib/chat-intell
 const root=process.cwd();
 const port=Number(process.env.PORT||3000);
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.ico':'image/x-icon','.woff2':'font/woff2','.xml':'application/xml; charset=utf-8','.txt':'text/plain; charset=utf-8'};
-const publicRootFiles=new Set(['404.html','apple-touch-icon.png','ar.html','auth.html','demo-en.html','demo-en.js','demo.html','demo.js','fonts.css','icon-512.png','index.html','integrations.html','integrations.js','og-ar.jpg','og.jpg','pieces.js','privacy.html','robots.txt','site.js','site.webmanifest','sitemap.xml']);
+const publicRootFiles=new Set(['404.html','apple-touch-icon.png','ar.html','auth-design.css','auth.html','demo-en.html','demo-en.js','demo.html','demo.js','fonts.css','icon-512.png','index.html','integrations.html','integrations.js','og-ar.jpg','og.jpg','pieces.js','privacy.html','robots.txt','site.js','site.webmanifest','sitemap.xml']);
 const publicDirectories=['/.well-known/','/app/','/assets/','/email-signatures/','/fonts/'];
 let tenantProjectsPromise;
 let toolConnectionsPromise;
@@ -228,7 +228,8 @@ async function authRoute(req,res,operation){
         verification=await service.createEmailVerification(input.email);status=202;
         if(!verification)throw error;
       }
-      const sent=await mailer.sendEmailVerification({to:verification.email,url:`${publicOrigin()}/auth.html?verify=${encodeURIComponent(verification.token)}`,locale:mailLocale(req,input)});
+      const selectedLocale=mailLocale(req,input);
+      const sent=await mailer.sendEmailVerification({to:verification.email,url:`${publicOrigin()}/auth.html?verify=${encodeURIComponent(verification.token)}&lang=${selectedLocale}`,locale:selectedLocale});
       await service.markEmailVerificationSent(verification.token,sent.id);
       return json(res,status,{ok:true,message:'أرسلنا رابط تأكيد إلى بريدك. افتحه لإكمال التسجيل.'},{'set-cookie':authCookie('',1,0)});
     }
@@ -237,7 +238,8 @@ async function authRoute(req,res,operation){
       const reset=await service.createPasswordReset(input.email);
       if(reset){
         try{
-          const sent=await mailer.sendPasswordReset({to:reset.email,url:`${publicOrigin()}/auth.html?reset=${encodeURIComponent(reset.token)}`,locale:mailLocale(req,input)});
+          const selectedLocale=mailLocale(req,input);
+          const sent=await mailer.sendPasswordReset({to:reset.email,url:`${publicOrigin()}/auth.html?reset=${encodeURIComponent(reset.token)}&lang=${selectedLocale}`,locale:selectedLocale});
           await service.markPasswordResetSent(reset.token,sent.id);
         }catch(error){await service.cancelPasswordReset(reset.token);throw error;}
       }

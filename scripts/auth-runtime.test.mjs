@@ -50,6 +50,25 @@ test('signup waits for email confirmation instead of entering onboarding',async(
   dom.window.close();
 });
 
+test('account creation works in English with RTL/LTR and field feedback',async()=>{
+  const dom=new JSDOM(auth,{url:'https://siyadah.test/auth.html',runScripts:'outside-only'}),w=dom.window,requests=[];
+  w.fetch=async(url,options)=>{requests.push({url,options});return {json:async()=>({ok:true,message:'أرسلنا رابط التأكيد.'})};};
+  w.eval(inlineScript);
+  w.document.querySelector('#langEn').click();w.document.querySelector('#sw').click();
+  assert.equal(w.document.documentElement.lang,'en');assert.equal(w.document.documentElement.dir,'ltr');
+  assert.equal(w.document.querySelector('#back').getAttribute('href'),'index.html');
+  assert.equal(w.document.querySelector('#ttl').textContent,'Create an account');
+  w.document.querySelector('#go').click();
+  assert.equal(requests.length,0);
+  for(const id of ['company','email','password'])assert.equal(w.document.querySelector(`#${id}`).getAttribute('aria-invalid'),'true');
+  w.document.querySelector('#company').value='Example Co';w.document.querySelector('#email').value='qa@example.com';w.document.querySelector('#password').value='strong-password';
+  w.document.querySelector('#showPassword').click();assert.equal(w.document.querySelector('#password').type,'text');
+  w.document.querySelector('#go').click();await flush();await flush();
+  assert.equal(JSON.parse(requests[0].options.body).locale,'en');
+  assert.match(w.document.querySelector('#msg').textContent,/confirmation link/);
+  dom.window.close();
+});
+
 test('verification link is exchanged once then returns to login',async()=>{
   const dom=new JSDOM(auth,{url:'https://siyadah.test/auth.html?verify=one-time-token-value-that-is-long-enough',runScripts:'outside-only'}),w=dom.window,requests=[];
   w.fetch=async(url,options)=>{requests.push({url,options});return {json:async()=>({ok:true,message:'تم تأكيد بريدك. سجّل الدخول للمتابعة.'})};};

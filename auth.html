@@ -1,129 +1,110 @@
 <!DOCTYPE html><html lang="ar" dir="rtl"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
 <title>سيادة — الدخول</title>
+<link rel="icon" href="assets/icon.png" type="image/png">
 <link rel="stylesheet" href="fonts.css">
-<style>
-:root{
-  --paper:#FFFFFF; --wash:#F7F7FB; --ink:#0A0A0A; --ash:#6E6E6C; --hair:#E0E1E8;
-  --accent:#0B844B; --accent-lt:#40E799; --accent-wash:#F2FAF6; --ok:#12784F;
-  --f-display:"Readex Pro", system-ui, sans-serif; --f-body:"IBM Plex Sans Arabic", system-ui, sans-serif;
-  --ease:cubic-bezier(.16,1,.3,1);
-}
-*{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:var(--wash);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:32px 20px}
-.card{width:100%;max-width:420px;background:var(--paper);border:1px solid var(--hair);border-radius:22px;box-shadow:0 1px 2px rgba(10,10,10,.04),0 18px 50px -28px rgba(10,10,10,.22);padding:40px 34px 34px}
-/* الشعار */
-.mark{display:flex;flex-direction:column;align-items:center;gap:12px;margin-block-end:26px}
-.emblem{width:46px;height:46px;border-radius:14px;background:var(--ink);color:var(--accent-lt);display:grid;place-items:center;box-shadow:0 8px 22px -10px rgba(11,132,75,.55)}
-.emblem svg{width:24px;height:24px}
-.wordmark{font-family:var(--f-display);font-weight:600;font-size:1.15rem;letter-spacing:.01em;line-height:1}
-.wordmark small{display:block;font-size:.62rem;letter-spacing:.22em;color:var(--ash);margin-block-start:5px;text-align:center}
-.eyebrow{font-family:var(--f-display);font-size:.72rem;letter-spacing:.06em;color:var(--accent);text-align:center;margin:0}
-h1{font-family:var(--f-display);font-weight:600;font-size:1.55rem;line-height:1.3;text-align:center;margin:.35em 0 .15em}
-.sub{color:var(--ash);text-align:center;font-size:.94rem;margin-block-end:28px}
-.field{margin-block-end:16px}
-.field label{display:block;font-family:var(--f-display);font-size:.8rem;color:var(--ash);margin-block-end:8px}
-.ip{position:relative}
-.ip svg{position:absolute;inset-block-start:50%;inset-inline-start:14px;transform:translateY(-50%);width:17px;height:17px;color:var(--ash);pointer-events:none;transition:color .2s var(--ease)}
-.field input{width:100%;padding:13px 15px;padding-inline-start:42px;border:1px solid var(--hair);border-radius:12px;background:var(--paper);font:inherit;color:inherit;transition:border-color .2s var(--ease),box-shadow .2s var(--ease)}
-.field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-wash)}
-.field input:focus ~ svg{color:var(--accent)}
-.btn{display:inline-flex;width:100%;align-items:center;justify-content:center;gap:10px;padding:14px 26px;margin-block-start:10px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font-family:var(--f-display);font-size:.98rem;font-weight:500;border-radius:12px;cursor:pointer;transition:all .25s var(--ease)}
-.btn:hover{background:var(--paper);color:var(--ink)}
-.btn:disabled{opacity:.55;cursor:default}
-.toggle{text-align:center;margin-block-start:20px;font-size:.92rem;color:var(--ash)}
-.toggle a{color:var(--accent);cursor:pointer;font-weight:500}
-.forgot{display:block;text-align:left;margin-top:-7px;color:var(--accent);font-size:.84rem;cursor:pointer}
-.msg{margin-block-start:16px;padding:11px 14px;border-radius:10px;font-size:.9rem;display:none}
-.msg.err{background:#FCEEEE;color:#B42318;display:block}
-.msg.ok{background:var(--accent-wash);color:var(--ok);display:block}
-.hide{display:none}
-.orbar{display:flex;align-items:center;gap:12px;color:var(--ash);font-size:.8rem;font-family:var(--f-display);margin:22px 0 16px}
-.orbar::before,.orbar::after{content:"";flex:1;height:1px;background:var(--hair)}
-#gbtn{display:flex;justify-content:center}
-/* شريط الأدوات كإثبات */
-.trust{width:100%;max-width:420px;text-align:center}
-.trust p{font-family:var(--f-display);font-size:.72rem;letter-spacing:.04em;color:var(--ash);margin:0 0 12px}
-.logos{display:flex;align-items:center;justify-content:center;gap:22px;flex-wrap:wrap}
-.logos img{width:24px;height:24px;object-fit:contain;filter:grayscale(1);opacity:.6;transition:filter .25s var(--ease),opacity .25s var(--ease)}
-.logos img:hover{filter:none;opacity:1}
-.foot{font-size:.8rem;color:var(--ash);text-align:center}
-.foot a{color:var(--ash)}
-</style></head><body><main>
-<div class="card">
-  <div class="mark">
-    <span class="emblem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span>
-    <span class="wordmark">سيادة<small>SIYADAH AI</small></span>
-  </div>
-  <p class="eyebrow" id="eyebrow">بيتا خاصة — 500 شركة فقط</p>
-  <h1 id="ttl">تسجيل الدخول</h1>
-  <p class="sub" id="sub">ادخل لحسابك، وشوف فريقك يشتغل.</p>
-  <div class="field hide" id="coRow"><label>اسم الشركة</label><div class="ip"><input id="company" type="text" placeholder="شركتك"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M6 21V7l6-4 6 4v14M10 9h.01M14 9h.01M10 13h.01M14 13h.01M10 17h4"/></svg></div></div>
-  <div class="field" id="emailRow"><label>البريد الإلكتروني</label><div class="ip"><input id="email" type="email" placeholder="you@company.com" autocomplete="email"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></div></div>
-  <div class="field" id="passwordRow"><label>كلمة المرور</label><div class="ip"><input id="password" type="password" placeholder="10 أحرف على الأقل" autocomplete="current-password" minlength="10"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></div></div>
-  <a class="forgot" id="forgot">نسيت كلمة المرور؟</a>
-  <button class="btn" id="go" type="button">دخول</button>
-  <div id="msg" class="msg"></div>
-  <div id="gwrap" hidden><div class="orbar">أو المتابعة عبر</div><div id="gbtn"></div></div>
-  <div class="toggle" id="tg">ما عندك حساب؟ <a id="sw">أنشئ حسابًا</a></div>
-</div>
-<div class="trust">
-  <p>يعمل داخل أدواتك التي تستخدمها أصلًا</p>
-  <div class="logos">
-    <img src="https://cdn.activepieces.com/pieces/whatsapp.png" alt="WhatsApp" crossorigin="anonymous" referrerpolicy="no-referrer">
-    <img src="https://cdn.activepieces.com/pieces/gmail.png" alt="Gmail" crossorigin="anonymous" referrerpolicy="no-referrer">
-    <img src="https://cdn.activepieces.com/pieces/google-sheets.png" alt="Google Sheets" crossorigin="anonymous" referrerpolicy="no-referrer">
-    <img src="https://cdn.activepieces.com/pieces/hubspot.png" alt="HubSpot" crossorigin="anonymous" referrerpolicy="no-referrer">
-    <img src="https://cdn.activepieces.com/pieces/slack.png" alt="Slack" crossorigin="anonymous" referrerpolicy="no-referrer">
-    <img src="https://cdn.activepieces.com/pieces/stripe.png" alt="Stripe" crossorigin="anonymous" referrerpolicy="no-referrer">
-  </div>
-</div>
-<p class="foot"><a href="ar.html">← رجوع للصفحة الرئيسية</a></p></main>
+<link rel="stylesheet" href="auth-design.css"></head><body>
+<a class="skip" id="skip" href="#authForm">تجاوز إلى النموذج</a>
+<main class="auth-main"><div class="shell">
+  <section class="story" aria-labelledby="storyTitle">
+    <div class="story-top"><a id="storyHome" href="ar.html" aria-label="سيادة، الصفحة الرئيسية"><span class="siyadah-logo" role="img" aria-label="Siyadah AI"></span></a><span class="brand-icon" aria-hidden="true"></span></div>
+    <div class="story-body"><p class="story-kicker" id="storyKicker">سيادة للأعمال</p><h2 id="storyTitle">من طلب واحد، إلى عمل واضح.</h2><p class="story-sub" id="storySub">تبدأ بالمحادثة. ترى الخطة، ثم تتابع ما حدث ودليله في مكان واحد.</p>
+      <div class="story-example"><div class="example-top"><span id="exampleTag">مثال توضيحي</span><span aria-hidden="true">01 / 03</span></div><p id="exampleRequest">«رتّب متابعة العملاء هذا الأسبوع»</p><div class="story-steps"><span><b>01</b><span id="step1">فهم الطلب</span></span><span><b>02</b><span id="step2">مراجعة الخطة</span></span><span><b>03</b><span id="step3">متابعة النتيجة</span></span></div></div>
+    </div>
+    <p class="story-foot" id="storyFoot">كل خطوة واضحة. وكل نتيجة لها دليل.</p>
+  </section>
+  <section class="card" aria-labelledby="ttl">
+    <div class="card-top"><a class="mobile-logo" id="mobileHome" href="ar.html" aria-label="سيادة، الصفحة الرئيسية"><span class="siyadah-logo" role="img" aria-label="Siyadah AI"></span></a><div class="languages" role="group" aria-label="اللغة"><button type="button" id="langAr" aria-pressed="true" lang="ar">عربي</button><button type="button" id="langEn" aria-pressed="false" lang="en">EN</button></div></div>
+    <div class="card-body"><p class="eyebrow" id="eyebrow">مساحة شركتك</p><h1 id="ttl">تسجيل الدخول</h1><p class="sub" id="sub">ادخل إلى مساحة شركتك.</p>
+      <form id="authForm" novalidate>
+        <div class="field hide" id="coRow"><label id="companyLabel" for="company">اسم الشركة</label><div class="ip"><input id="company" name="company" type="text" autocomplete="organization" maxlength="120" placeholder="اسم شركتك" aria-describedby="companyError"></div><p class="field-error" id="companyError"></p></div>
+        <div class="field" id="emailRow"><label id="emailLabel" for="email">البريد الإلكتروني</label><div class="ip"><input id="email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@company.com" aria-describedby="emailError"></div><p class="field-error" id="emailError"></p></div>
+        <div class="field" id="passwordRow"><label id="passwordLabel" for="password">كلمة المرور</label><div class="ip"><input id="password" name="password" type="password" autocomplete="current-password" maxlength="128" placeholder="كلمة المرور" aria-describedby="passwordError"><button id="showPassword" class="show-password" type="button" aria-pressed="false">إظهار</button></div><p class="field-error" id="passwordError"></p></div>
+        <a class="forgot" id="forgot" href="#">نسيت كلمة المرور؟</a>
+        <button class="btn" id="go" type="submit">دخول</button>
+        <p id="msg" class="msg" role="status" aria-live="polite"></p>
+      </form>
+      <div class="toggle" id="tg">ما عندك حساب؟ <button id="sw" type="button">أنشئ حسابًا</button></div>
+    </div>
+    <div class="card-foot"><span id="footLabel">سيادة · مساحة عمل شركتك</span><a id="back" href="ar.html">العودة للرئيسية</a></div>
+  </section>
+</div></main>
 <script>
 var API=window.SIYADAH_AUTH_BASE||"/siyadah-api";
 var params=new URLSearchParams(location.search),resetToken=params.get("reset")||"",verifyToken=params.get("verify")||"";
 var mode=verifyToken?"verify":(resetToken?"reset":"login");
+var locale=params.get("lang")==="en"?"en":(params.get("lang")==="ar"?"ar":(sessionStorage.getItem("siyadah_locale")==="en"?"en":"ar"));
 var $=function(id){return document.getElementById(id)};
-function setMode(m){mode=m;
-  var copy={login:["تسجيل الدخول","ادخل لحسابك، وشوف فريقك يشتغل.","دخول"],signup:["إنشاء حساب جديد","دقيقة واحدة — ونبدأ نبني فريقك.","إنشاء حساب"],forgot:["استعادة كلمة المرور","سنرسل رابطًا صالحًا لمدة 30 دقيقة.","أرسل رابط الاستعادة"],reset:["كلمة مرور جديدة","سيُنهي التغيير الجلسات السابقة لحماية حسابك.","حفظ كلمة المرور"],verify:["تأكيد البريد","نتحقق من رابطك الآن…",""]}[m];
-  $("ttl").textContent=copy[0];$("sub").textContent=copy[1];$("go").textContent=copy[2];
-  $("coRow").className=m==="signup"?"field":"field hide";
-  $("emailRow").className=(m==="reset"||m==="verify")?"field hide":"field";
-  $("passwordRow").className=(m==="forgot"||m==="verify")?"field hide":"field";
-  $("forgot").className=m==="login"?"forgot":"forgot hide";
-  $("go").className=m==="verify"?"btn hide":"btn";
-  $("password").setAttribute("autocomplete",m==="login"?"current-password":"new-password");
-  $("tg").className=m==="verify"?"toggle hide":"toggle";
-  $("tg").innerHTML=m==="login"?'ما عندك حساب؟ <a id="sw">أنشئ حسابًا</a>':'<a id="sw">العودة لتسجيل الدخول</a>';
-  $("sw").onclick=function(){setMode(m==="login"?"signup":"login");$("msg").className="msg";};
+var i18n={
+ ar:{title:"سيادة — الدخول",skip:"تجاوز إلى النموذج",home:"سيادة، الصفحة الرئيسية",kicker:"سيادة للأعمال",storyTitle:"من طلب واحد، إلى عمل واضح.",storySub:"تبدأ بالمحادثة. ترى الخطة، ثم تتابع ما حدث ودليله في مكان واحد.",exampleTag:"مثال توضيحي",exampleRequest:"«رتّب متابعة العملاء هذا الأسبوع»",steps:["فهم الطلب","مراجعة الخطة","متابعة النتيجة"],storyFoot:"كل خطوة واضحة. وكل نتيجة لها دليل.",eyebrow:"مساحة شركتك",foot:"سيادة · مساحة عمل شركتك",back:"العودة للرئيسية",language:"اللغة",company:"اسم الشركة",email:"البريد الإلكتروني",password:"كلمة المرور",companyPlaceholder:"اسم شركتك",passwordPlaceholder:"كلمة المرور",newPasswordPlaceholder:"10 أحرف على الأقل",forgot:"نسيت كلمة المرور؟",show:"إظهار",hide:"إخفاء",loginPrompt:"ما عندك حساب؟",signupLink:"أنشئ حسابًا",returnLogin:"العودة لتسجيل الدخول",busy:"جارٍ الإرسال…",verifyBusy:"جارٍ تأكيد البريد…",required:"أكمل هذا الحقل.",badEmail:"أدخل بريدًا إلكترونيًا صحيحًا.",shortPassword:"استخدم 10 أحرف على الأقل.",connection:"تعذر الاتصال. حاول مرة أخرى.",generic:"تعذر إكمال الطلب. حاول مرة أخرى.",verified:"تم تأكيد بريدك. سجّل الدخول للمتابعة.",resetDone:"تم التغيير. سجّل دخولك بكلمة المرور الجديدة.",signupDone:"أرسلنا رابط تأكيد إلى بريدك. افتحه لإكمال التسجيل.",forgotDone:"إذا كان البريد مسجلًا فسيصلك رابط الاستعادة.",modes:{login:["تسجيل الدخول","ادخل إلى مساحة شركتك.","دخول"],signup:["إنشاء حساب","ابدأ مساحة شركتك من هنا.","إنشاء حساب"],forgot:["استعادة كلمة المرور","سنرسل رابط الاستعادة إلى بريدك.","إرسال الرابط"],reset:["كلمة مرور جديدة","سيُنهي التغيير جلساتك السابقة لحماية حسابك.","حفظ كلمة المرور"],verify:["تأكيد البريد","نتحقق من رابط التأكيد الآن…",""]}},
+ en:{title:"Siyadah — Sign in",skip:"Skip to form",home:"Siyadah, home",kicker:"Siyadah for business",storyTitle:"One request. Clear work.",storySub:"Start with a conversation. Review the plan, then see what happened and the evidence in one place.",exampleTag:"Illustrative example",exampleRequest:"“Organize customer follow-ups this week”",steps:["Understand the request","Review the plan","See the outcome"],storyFoot:"Clear steps. Evidence for every result.",eyebrow:"Your workspace",foot:"Siyadah · Your company workspace",back:"Back to home",language:"Language",company:"Company name",email:"Email address",password:"Password",companyPlaceholder:"Your company",passwordPlaceholder:"Password",newPasswordPlaceholder:"At least 10 characters",forgot:"Forgot password?",show:"Show",hide:"Hide",loginPrompt:"New to Siyadah?",signupLink:"Create an account",returnLogin:"Back to sign in",busy:"Sending…",verifyBusy:"Verifying your email…",required:"Complete this field.",badEmail:"Enter a valid email address.",shortPassword:"Use at least 10 characters.",connection:"Connection failed. Try again.",generic:"We couldn't complete this request. Try again.",verified:"Email confirmed. Sign in to continue.",resetDone:"Password updated. Sign in with your new password.",signupDone:"We sent a confirmation link to your email. Open it to finish signing up.",forgotDone:"If this email is registered, you'll receive a reset link.",modes:{login:["Sign in","Enter your company workspace.","Sign in"],signup:["Create an account","Start your company workspace here.","Create account"],forgot:["Reset your password","We'll email you a password reset link.","Send reset link"],reset:["New password","Changing it will end your previous sessions.","Save password"],verify:["Confirm your email","We're checking your confirmation link…",""]}}
+};
+function clearErrors(){["company","email","password"].forEach(function(id){$(id+"Error").textContent="";$(id).removeAttribute("aria-invalid")})}
+function clearMessage(){var e=$("msg");e.className="msg";e.textContent="";e.setAttribute("role","status")}
+function show(type,message){var e=$("msg");e.className="msg "+type;e.textContent=message;e.setAttribute("role",type==="err"?"alert":"status")}
+function applyCopy(){
+ var t=i18n[locale],copy=t.modes[mode],home=locale==="ar"?"ar.html":"index.html";
+ document.documentElement.lang=locale;document.documentElement.dir=locale==="ar"?"rtl":"ltr";document.title=t.title;
+ $("skip").textContent=t.skip;$("storyHome").href=home;$("mobileHome").href=home;$("back").href=home;
+ $("storyHome").setAttribute("aria-label",t.home);$("mobileHome").setAttribute("aria-label",t.home);
+ $("storyKicker").textContent=t.kicker;$("storyTitle").textContent=t.storyTitle;$("storySub").textContent=t.storySub;$("exampleTag").textContent=t.exampleTag;$("exampleRequest").textContent=t.exampleRequest;
+ t.steps.forEach(function(step,index){$("step"+(index+1)).textContent=step});$("storyFoot").textContent=t.storyFoot;
+ $("eyebrow").textContent=t.eyebrow;$("ttl").textContent=copy[0];$("sub").textContent=copy[1];$("go").textContent=copy[2];$("footLabel").textContent=t.foot;$("back").textContent=t.back;
+ $("companyLabel").textContent=t.company;$("emailLabel").textContent=t.email;$("passwordLabel").textContent=t.password;$("company").placeholder=t.companyPlaceholder;$("password").placeholder=mode==="signup"||mode==="reset"?t.newPasswordPlaceholder:t.passwordPlaceholder;
+ $("forgot").textContent=t.forgot;$("showPassword").textContent=$("password").type==="password"?t.show:t.hide;
+ $("langAr").setAttribute("aria-pressed",String(locale==="ar"));$("langEn").setAttribute("aria-pressed",String(locale==="en"));$("langAr").parentNode.setAttribute("aria-label",t.language);
+ $("coRow").className=mode==="signup"?"field":"field hide";
+ $("emailRow").className=(mode==="reset"||mode==="verify")?"field hide":"field";
+ $("passwordRow").className=(mode==="forgot"||mode==="verify")?"field hide":"field";
+ $("forgot").className=mode==="login"?"forgot":"forgot hide";
+ $("go").className=mode==="verify"?"btn hide":"btn";
+ $("password").setAttribute("autocomplete",mode==="login"?"current-password":"new-password");
+ $("tg").className=mode==="verify"?"toggle hide":"toggle";
+ $("tg").innerHTML=mode==="login"?t.loginPrompt+' <button id="sw" type="button">'+t.signupLink+'</button>':'<button id="sw" type="button">'+t.returnLogin+'</button>';
+ $("sw").onclick=function(){setMode(mode==="login"?"signup":"login")};
+}
+function setMode(next){mode=next;clearErrors();clearMessage();applyCopy()}
+function setLanguage(next){locale=next;sessionStorage.setItem("siyadah_locale",locale);clearErrors();clearMessage();applyCopy()}
+function fieldError(id,message){$(id+"Error").textContent=message;$(id).setAttribute("aria-invalid","true");return $(id)}
+function validate(){
+ var t=i18n[locale],first=null,email=$("email").value.trim(),password=$("password").value,company=$("company").value.trim();clearErrors();
+ function mark(id,message){var input=fieldError(id,message);if(!first)first=input}
+ if(mode==="signup"&&!company)mark("company",t.required);
+ if(mode!=="reset"&&!email)mark("email",t.required);
+ else if(mode!=="reset"&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))mark("email",t.badEmail);
+ if(mode!=="forgot"&&!password)mark("password",t.required);
+ else if((mode==="signup"||mode==="reset")&&password.length<10)mark("password",t.shortPassword);
+ if(first){first.focus();return false}return true;
 }
 function nextAfterLogin(data){return data.onboardingRequired?"app/onboard.html":"app/chat.html";}
-$("forgot").onclick=function(){setMode("forgot");$("msg").className="msg";};
-$("go").onclick=function(){
+$("langAr").onclick=function(){setLanguage("ar")};$("langEn").onclick=function(){setLanguage("en")};
+$("forgot").onclick=function(event){event.preventDefault();setMode("forgot")};
+$("showPassword").onclick=function(){var input=$("password"),revealed=input.type==="password";input.type=revealed?"text":"password";this.setAttribute("aria-pressed",String(revealed));this.textContent=revealed?i18n[locale].hide:i18n[locale].show;input.focus()};
+$("authForm").onsubmit=function(event){
+  event.preventDefault();if(mode==="verify"||$("go").disabled||!validate())return;
   var email=$("email").value.trim(),pw=$("password").value,co=$("company").value.trim();
-  if((mode!=="reset"&&!email)||(mode!=="forgot"&&!pw)){show("err","أكمل البيانات المطلوبة");return;}
-  var action=mode;
-  $("go").disabled=true;$("go").textContent="لحظة…";
+  var action=mode,t=i18n[locale];clearMessage();$("go").disabled=true;$("go").textContent=t.busy;
   var routes={login:"/v1/auth/login",signup:"/v1/auth/signup",forgot:"/v1/auth/forgot-password",reset:"/v1/auth/reset-password"};
-  var locale=document.documentElement.lang||navigator.language||"ar";
   var bodies={login:{email:email,password:pw},signup:{email:email,password:pw,company_name:co,locale:locale},forgot:{email:email,locale:locale},reset:{token:resetToken,password:pw}};
   fetch(API+routes[action],{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(bodies[action])})
   .then(function(r){return r.json()}).then(function(d){
-    $("go").disabled=false;setMode(action);
+    $("go").disabled=false;applyCopy();
     if(d&&(d.ok===true||d.ok==="true")){
-      show("ok",d.message||"تم");
+      show("ok",locale==="en"?({login:"Welcome back.",signup:t.signupDone,forgot:t.forgotDone,reset:t.resetDone})[action]:(d.message||"تم"));
       if(action==="login")setTimeout(function(){location.href=nextAfterLogin(d);},600);
-      if(action==="reset")setTimeout(function(){history.replaceState({},"",location.pathname);resetToken="";setMode("login");show("ok","تم التغيير. سجّل دخولك بكلمة المرور الجديدة.");},700);
-    }else show("err",(d&&d.message)||"تعذّر — تأكد من بياناتك");
-  }).catch(function(){$("go").disabled=false;setMode(action);show("err","خطأ اتصال، حاول مرة ثانية");});
+      if(action==="reset")setTimeout(function(){history.replaceState({},"",location.pathname);resetToken="";setMode("login");show("ok",i18n[locale].resetDone);},700);
+    }else{
+      var englishErrors={invalid_login:"Incorrect email or password.",email_not_verified:"Confirm your email before signing in.",login_rate_limited:"Too many attempts. Try again in 15 minutes.",invalid_credentials:"Check your company name, email, and password.",invalid_password:"Use a password with at least 10 characters.",email_exists:"This email is already registered.",email_not_configured:"Email delivery is unavailable right now.",invalid_reset:"This reset link is invalid or expired."};
+      show("err",locale==="en"?(englishErrors[d&&d.error]||t.generic):((d&&d.message)||t.generic));
+    }
+  }).catch(function(){$("go").disabled=false;applyCopy();show("err",i18n[locale].connection);});
 };
-function show(t,m){var e=$("msg");e.className="msg "+t;e.textContent=m;}
 function confirmEmail(){
+  show("ok",i18n[locale].verifyBusy);
   fetch(API+"/v1/auth/verify-email",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:verifyToken})})
-  .then(function(r){return r.json()}).then(function(d){history.replaceState({},"",location.pathname);verifyToken="";setMode("login");show(d&&d.ok?"ok":"err",(d&&d.message)||"تعذّر تأكيد البريد.");})
-  .catch(function(){history.replaceState({},"",location.pathname);verifyToken="";setMode("login");show("err","خطأ اتصال، افتح الرابط مرة ثانية.");});
+  .then(function(r){return r.json()}).then(function(d){history.replaceState({},"",location.pathname);verifyToken="";setMode("login");show(d&&d.ok?"ok":"err",locale==="en"?(d&&d.ok?i18n.en.verified:"This confirmation link is invalid or expired."):((d&&d.message)||"تعذّر تأكيد البريد."));})
+  .catch(function(){history.replaceState({},"",location.pathname);verifyToken="";setMode("login");show("err",i18n[locale].connection);});
 }
-$("password").addEventListener("keydown",function(e){if(e.key==="Enter")$("go").click();});
-setMode(mode);
+applyCopy();
 if(verifyToken)confirmEmail();
 </script></body></html>
