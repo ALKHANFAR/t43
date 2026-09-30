@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildEmployeePrompt,createCompanyProfileService,normalizeAgentProfile,normalizeCompanyProfile,recommendEmployees,selectCompanyUrls} from '../lib/company-profile.mjs';
+import {buildEmployeePrompt,createCompanyProfileService,normalizeAgentProfile,normalizeCompanyProfile,normalizeCompanySettings,recommendEmployees,selectCompanyUrls} from '../lib/company-profile.mjs';
 
 test('selects bounded high-value pages from the same company site',()=>{
   const urls=selectCompanyUrls('https://example.com/',[
@@ -65,6 +65,13 @@ test('deep profile rejects a real quote that does not prove the claimed value',(
   }]},[{url,markdown:'We help teams automate repetitive work.'}],[url]);
   assert.equal(profile.facts.length,0);
   assert.equal(profile.rejectedClaims,1);
+});
+
+test('company voice settings are bounded, deduplicated and separate from knowledge facts',()=>{
+  assert.deepEqual(normalizeCompanySettings({voice:' مباشر وواضح ',language:'auto',dialect:'سعودية بيضاء',preferredWords:['أبشر','أبشر','تم'],forbiddenWords:'مستحيل، مضمون'}),{
+    voice:'مباشر وواضح',language:'auto',dialect:'سعودية بيضاء',preferredWords:['أبشر','تم'],forbiddenWords:['مستحيل','مضمون'],
+  });
+  assert.equal(normalizeCompanySettings({language:'invalid'}).language,'ar');
 });
 
 test('knowledge and employees are always read through the owning company id',async()=>{

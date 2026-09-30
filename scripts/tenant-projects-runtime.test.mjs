@@ -143,3 +143,23 @@ test('two companies keep distinct projects and cannot receive each other flows',
   assert.deepEqual(new Set(flowBodies.map(body=>body.projectId)),new Set(Object.values(projects)));
   assert.equal(flowBodies.every(body=>body.metadata.tenantId==='company_alpha'||body.metadata.tenantId==='company_beta'),true);
 });
+
+test('runs only an enabled company-owned flow and matches proof to the request marker',async()=>{
+  const flowId='F12345678901234567890',runId='R12345678901234567890',row={tenant_id:'company_alpha',external_id:'siyadah:company_alpha',activepieces_project_id:projectId,display_name:'شركة ألف',provision_status:'ready'};
+  const calls=[];
+  const service=createTenantProjectService({
+    query:async()=>({rows:[row]}),activepiecesUrl:'https://activepieces.example',apiKey:'secret',
+    fetchImpl:async(url,options={})=>{
+      calls.push({url,options});
+      if(url.endsWith(`/api/v1/flows/${flowId}`))return {ok:true,status:200,json:async()=>({id:flowId,projectId,status:'ENABLED',version:{trigger:{nextAction:{settings:{pieceName:'@activepieces/piece-http',actionName:'send_request'}}}}})};
+      if(url.endsWith(`/api/v1/webhooks/${flowId}`))return {ok:true,status:200,json:async()=>({})};
+      if(url.includes('/api/v1/flow-runs?'))return {ok:true,status:200,json:async()=>({data:[{id:runId,flowId,projectId,created:new Date().toISOString()}]})};
+      if(url.endsWith(`/api/v1/flow-runs/${runId}`))return {ok:true,status:200,json:async()=>({id:runId,flowId,projectId,status:'SUCCEEDED',startTime:'2026-09-30T05:00:00Z',finishTime:'2026-09-30T05:00:01Z',steps:{trigger:{output:{body:{requestId:'request-1'}}},step_1:{output:{status:200,body:{ok:true}}}}})};
+      throw new Error(`unexpected ${url}`);
+    },
+  });
+  const proof=await service.runFlow({tenantId:'company_alpha',flowId,requestId:'request-1',message:'نفذ المهمة'});
+  assert.equal(proof.runId,runId);assert.equal(proof.projectId,projectId);assert.equal(proof.result.status,200);assert.equal(proof.tool.pieceName,'@activepieces/piece-http');
+  const webhook=JSON.parse(calls.find(call=>call.url.includes('/webhooks/')).options.body);assert.deepEqual(webhook,{requestId:'request-1',task:'نفذ المهمة'});
+  assert.equal(calls.find(call=>call.url.includes('/webhooks/')).options.headers.Authorization,undefined);
+});

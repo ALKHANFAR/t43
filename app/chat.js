@@ -365,7 +365,7 @@ var I = {
   }
   function pinHtml(e){
     var f=e.f;
-    return '<div class="pin"><div class="pin__r1"><span class="av">'+esc(e.ini)+'</span><div class="pin__t"><p class="pin__n">'+esc(e.n)+' <span>· '+esc(e.r)+'</span> <button type="button" class="pinbtn tip" id="renameBtn" data-tip="إعادة تسمية" aria-label="إعادة تسمية '+esc(e.n)+'"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1L18 7l-3-3L5 15l-1 5z"/><path d="M13 6l3 3"/></svg></button></p><div class="pin__s">'+esc(e.since)+'</div>'+siyRefsHtml([['الموظف',e.id],['طريقة العمل',e.flowId]])+'</div>'+
+    return '<div class="pin"><div class="pin__r1"><span class="av">'+esc(e.ini)+'</span><div class="pin__t"><p class="pin__n">'+esc(e.n)+' <span>· '+esc(e.r)+'</span> <button type="button" class="pinbtn tip" id="renameBtn" data-tip="'+(window.__SIY_REAL__?'قريبًا':'إعادة تسمية')+'" aria-label="إعادة تسمية '+esc(e.n)+'"'+(window.__SIY_REAL__?' disabled':'')+'><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1L18 7l-3-3L5 15l-1 5z"/><path d="M13 6l3 3"/></svg></button></p><div class="pin__s">'+esc(e.since)+'</div>'+siyRefsHtml([['الموظف',e.id],['طريقة العمل',e.flowId]])+'</div>'+
       '<div class="pin__c">'+(e.wait?'<span class="pill">ينتظر قرارك '+e.wait+'</span>':'')+
       '<span class="swl" style="font-size:.8rem;color:var(--ash)"><span id="onLbl">'+(window.__SIY_REAL__?(siyEmployeeStatePending[e.id]?'جارٍ التحقق من تغيير الحالة…':(e.on?'نشط في السجل':'متوقف في السجل')):(e.on?(f?'شغّالة':'شغّال'):(f?'متوقفة':'متوقف')))+'</span><button type="button" class="sw" id="onSw" role="switch"'+(siyEmployeeStatePending[e.id]?' disabled aria-busy="true"':'')+' aria-checked="'+e.on+'" aria-label="تشغيل '+esc(e.n)+'"></button></span></div></div>'+
       /* الأرقام مطوية افتراضيًا: سطر ملخص من قيم الـ kpi + «التفاصيل» يفتح المربعات الأربعة */
@@ -900,6 +900,8 @@ var I = {
   var modalOpener=null;
   function openConnect(slug){ picked=TOOLS.filter(function(x){return x.s===slug})[0]; if(!picked) return;
     $("#mI").innerHTML='<img src="'+picked.logo+'" alt="" crossorigin="anonymous" referrerpolicy="no-referrer" style="width:26px;height:26px;object-fit:contain">'; $("#mN").textContent=picked.n; $("#mD").textContent="بعد الربط يقدر موظفوك يستخدمون "+picked.n+". "+picked.d+".";
+    $("#mGo").disabled=!!window.__SIY_REAL__; $("#mGo").textContent=window.__SIY_REAL__?"الربط قريبًا":"اربط";
+    if(window.__SIY_REAL__) $("#mD").textContent="هذه الأداة غير متاحة للربط بعد. لن نعرضها كمربوطة حتى تنجح تجربة حقيقية.";
     openModal(); }
   function openModal(){ modalOpener=document.activeElement; $("#modal").classList.add("on"); var f=$("#mGo")||$("#mX"); if(f) f.focus(); }
   function closeModal(){ $("#modal").classList.remove("on"); var back=(modalOpener&&document.contains(modalOpener))?modalOpener:($("#tq")||$("#input")); if(back&&back.focus) back.focus(); modalOpener=null; }
@@ -1012,6 +1014,7 @@ var I = {
   }
   sheet.addEventListener("click",function(e){
     if(window.__SIY_REAL__&&e.target.closest("#hireFromPlan")){ closeSheet(); newChat(); $("#input").placeholder="صف مهمة الموظف الذي تريد إنشاءه…"; return; }
+    if(window.__SIY_REAL__&&e.target.closest("#settingsSave")){ siySaveSettings();return; }
     var exportButton=e.target.closest("#exportBtn"); if(exportButton){ if(window.__SIY_REAL__) siyExportCustomer(exportButton); else siyUnsupported(); return; }
     var tg=e.target.closest("#memTgl");
     if(tg){ var L=$("#memList"); L.hidden=!L.hidden; tg.setAttribute("aria-expanded",String(!L.hidden)); if(!L.hidden) renderMem(); return; }
@@ -1116,6 +1119,15 @@ var I = {
       var data=await siyRequest({op:'hydrate'});siyMerge(data,false);renderMem();status=$("#kbStatus");if(status)status.textContent="تم الحفظ في إصدار جديد.";
     }catch(error){status.textContent=error.message||"تعذّر حفظ المعلومة.";}finally{button=$("#kbSave");if(button)button.disabled=false;}
   }
+  function siySettingsWords(value){ return String(value||"").split(/[،,\n]/).map(function(item){return item.trim();}).filter(Boolean).slice(0,40); }
+  async function siySaveSettings(){
+    var button=$("#settingsSave"),status=$("#settingsStatus");if(!button||button.disabled)return;
+    button.disabled=true;status.textContent="جارٍ الحفظ…";
+    try{
+      var data=await siyPost(SIY_ONBOARDING,{op:'update_company_settings',voice:$("#companyVoice").value,language:$("#companyLanguage").value,dialect:$("#companyDialect").value,preferredWords:siySettingsWords($("#preferredWords").value),forbiddenWords:siySettingsWords($("#forbiddenWords").value)});
+      siyMerge({company_settings:{...data.settings,version:data.version}},false);status=$("#settingsStatus");if(status)status.textContent="تم الحفظ · الإصدار "+data.version;
+    }catch(error){status.textContent=error.message||"تعذّر حفظ الإعدادات.";}finally{button=$("#settingsSave");if(button)button.disabled=false;}
+  }
   async function siySetEmployeeState(e){
     if(!e||typeof e.id!=="string"||!e.id||typeof e.flowId!=="string"||!e.flowId||siyEmployeeStatePending[e.id]) return;
     var id=e.id, flowId=e.flowId, status=e.on?'disabled':'active', generation=siyGeneration;
@@ -1159,6 +1171,7 @@ var I = {
   function siyMerge(data, restore){
     if(Array.isArray(data.team)){
       var mapped=data.team.map(mapEmployee).filter(Boolean); EMPS.length=0; mapped.forEach(function(e){EMPS.push(e);});
+      TOOLS.forEach(function(t){ var users=EMPS.filter(function(e){return e.tools.indexOf(t.s)>-1;}); t.on=users.length>0; t.by=users.map(function(e){return e.n;}); });
     }
     if(data.employee){ var employee=mapEmployee(data.employee,EMPS.length); if(employee){ var ix=EMPS.findIndex(function(e){return e.id===employee.id;}); if(ix<0) EMPS.push(employee); else EMPS[ix]=employee; } }
     if(Array.isArray(data.memory)){ MEM.length=0; data.memory.forEach(function(m){MEM.push({k:m.topic,v:m.fact,src:m.source||m.added_at||""});}); }
@@ -1168,6 +1181,12 @@ var I = {
       dash.owned_knowledge=knowledge&&knowledge.schemaVersion===1&&typeof knowledge.companyId==='string'&&knowledge.companyId&&Array.isArray(knowledge.facts)&&knowledge.facts.every(function(f){return f&&typeof f==='object'&&f.value!==undefined;})?knowledge:null;
     }
     if(Array.isArray(data.recent_work)) dash.recent_work=data.recent_work;
+    if(data.company_settings&&typeof data.company_settings==='object'){
+      dash.company_settings=data.company_settings;
+      var settings=data.company_settings,voice=$("#companyVoice"),language=$("#companyLanguage"),dialect=$("#companyDialect"),preferred=$("#preferredWords"),forbidden=$("#forbiddenWords");
+      if(voice)voice.value=String(settings.voice||"");if(language)language.value=["ar","en","auto"].includes(settings.language)?settings.language:"ar";if(dialect)dialect.value=String(settings.dialect||"");
+      if(preferred)preferred.value=Array.isArray(settings.preferredWords)?settings.preferredWords.join("، "):"";if(forbidden)forbidden.value=Array.isArray(settings.forbiddenWords)?settings.forbiddenWords.join("، "):"";
+    }
     EMPS.forEach(function(e){
       var verified=(dash.recent_work||[]).some(function(r){
         return r.employeeId===e.id && r.flowId===e.flowId && r.status==='succeeded' &&
@@ -1336,7 +1355,7 @@ var I = {
         '<div class="msrc">'+(x.status==='succeeded'&&x.recordId&&x.runId&&x.flowId?'✓ ':'')+esc(siyWorkStatus(x.status))+(x.proof?' · '+esc(customerText(x.proof)):'')+'</div>'+siyRefsHtml([['الطلب',x.work_id||x.workId],['التشغيل',x.runId],['النتيجة',x.recordId],['طريقة العمل',x.flowId]])+'</div>';
     }).join("");
   }
-  var TOOL_SLUG={ "واتساب بزنس":"whatsapp","واتساب":"whatsapp","التقويم":"google-calendar","Wafeq":"wafeq","قيود/Wafeq":"wafeq",
+  var TOOL_SLUG={ "واتساب بزنس":"whatsapp","واتساب":"whatsapp","التقويم":"google-calendar","Wafeq":"wafeq","قيود/Wafeq":"wafeq","HTTP":"http","اتصال ويب":"http",
     "شات الموقع":"site-chat","Gmail":"gmail","لينكدإن":"linkedin","إنستغرام":"instagram-business",
     "Google Sheets":"google-sheets","Google Docs":"google-docs","HubSpot":"hubspot" };
   function siyTone(t){ return /رسمي/.test(t||"")?0:1; }

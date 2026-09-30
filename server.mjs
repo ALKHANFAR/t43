@@ -129,6 +129,7 @@ async function onboarding(req,res){
     }
     if(input.op==='recommend_employees')return json(res,200,{ok:true,suggestions:await profiles.recommend(companyId,input.goal)},sessionHeaders);
     if(input.op==='add_knowledge')return json(res,201,{ok:true,...await profiles.addKnowledge({companyId,topic:input.topic,key:input.key,value:input.value})},sessionHeaders);
+    if(input.op==='update_company_settings')return json(res,200,{ok:true,...await profiles.updateSettings({companyId,voice:input.voice,language:input.language,dialect:input.dialect,preferredWords:input.preferredWords,forbiddenWords:input.forbiddenWords})},sessionHeaders);
     if(input.op==='select_employee'){
       const row=await profiles.read(companyId),suggestions=Array.isArray(row?.suggestions_json)?row.suggestions_json:[],suggestion=suggestions.find(item=>item.id===input.suggestion_id);
       if(!suggestion)throw new CompanyProfileError('invalid_suggestion','اختر موظفًا من الاقتراحات الحالية.',400);
@@ -236,11 +237,35 @@ async function publicChat(req,res){
     if(Object.hasOwn(input,'companyId')||Object.hasOwn(input,'tenantId')||Object.hasOwn(input,'projectId'))throw new TenantProjectError('client_scope_forbidden','نطاق الشركة يحدده الخادم فقط.',400);
     const service=await tenantProjects(),companyId=resolved.session.companyId;
     if(input.op==='hydrate'){
-      const flows=await service.listFlows(companyId),profiles=await companyProfiles(),saved=await profiles.listEmployees(companyId),savedFlows=new Set(saved.map(item=>item.flowId)),profile=await profiles.read(companyId);
-      return json(res,200,{ok:true,company:profile?.company_name||resolved.account.company_name,team:saved.concat(flows.filter(flow=>!savedFlows.has(flow.id)).map(employee)),memory:[],owned_knowledge:await profiles.ownedKnowledge(companyId),recent_work:[],work_count:0,conversations:[],pending_work:[]},sessionHeaders);
+      const flows=await service.listFlows(companyId),profiles=await companyProfiles(),saved=await profiles.listEmployees(companyId),savedFlows=new Set(saved.map(item=>item.flowId)),profile=await profiles.read(companyId),recentWork=await profiles.recentWork(companyId);
+      return json(res,200,{ok:true,company:profile?.company_name||resolved.account.company_name,company_settings:await profiles.readSettings(companyId),team:saved.concat(flows.filter(flow=>!savedFlows.has(flow.id)).map(employee)),memory:[],owned_knowledge:await profiles.ownedKnowledge(companyId),recent_work:recentWork,work_count:recentWork.length,conversations:[],pending_work:[]},sessionHeaders);
+    }
+    if(input.op==='employee_state'){
+      const profiles=await companyProfiles(),saved=await profiles.findEmployee(companyId,input.employee_id);
+      if(!saved)throw new CompanyProfileError('employee_not_found','الموظف غير موجود في شركتك.',404);
+      const status=input.status==='active'?'active':input.status==='disabled'?'disabled':null;
+      if(!status)throw new CompanyProfileError('invalid_employee_status','حالة الموظف غير صالحة.',400);
+      await service.changeFlowStatus({tenantId:companyId,flowId:saved.activepieces_flow_id,status:status==='active'?'ENABLED':'DISABLED'});
+      const updated=await profiles.setEmployeeState({companyId,employeeId:saved.id,status});
+      return json(res,200,{ok:true,state_verified:true,employee:updated},sessionHeaders);
+    }
+    if(input.op==='export'){
+      const profiles=await companyProfiles(),profile=await profiles.read(companyId),employees=await profiles.listEmployees(companyId),knowledge=await profiles.ownedKnowledge(companyId),settings=await profiles.readSettings(companyId),recentWork=await profiles.recentWork(companyId);
+      const name=profile?.company_name||resolved.account.company_name||'company',filename=`${String(name).replace(/[^\p{L}\p{N} _-]/gu,'').trim().slice(0,80)||'company'}-siyadah.json`;
+      return json(res,200,{ok:true,filename,export:{schemaVersion:1,kind:'siyadah_customer_bundle',exportedAt:new Date().toISOString(),company:{name,settings,knowledge},employees,recentWork,manifest:{complete:false,employeeCount:employees.length,knowledgeVersion:Number(knowledge?.knowledgeVersion||0)}}},sessionHeaders);
     }
     if(input.op==='message'){
       const conversationId=typeof input.conversation_id==='string'&&input.conversation_id?input.conversation_id:`chat_${randomUUID()}`;
+      if(typeof input.employee_id==='string'&&input.employee_id){
+        const profiles=await companyProfiles(),saved=await profiles.findEmployee(companyId,input.employee_id);
+        if(!saved)throw new CompanyProfileError('employee_not_found','الموظف غير موجود في شركتك.',404);
+        const requestId=typeof input.request_id==='string'&&input.request_id?input.request_id:randomUUID();
+        const run=await service.runFlow({tenantId:companyId,flowId:saved.activepieces_flow_id,requestId,message:input.message});
+        const tools=run.tool.pieceName==='@activepieces/piece-http'?['HTTP']:[];
+        const updated=await profiles.recordEmployeeRun({companyId,employeeId:saved.id,flowId:run.flowId,runId:run.runId,result:run.result,tools});
+        const proof={recordId:`proof_${run.runId}`,employeeId:saved.id,flowId:run.flowId,runId:run.runId,work_id:`work_${run.runId}`,subject:`مهمة ${saved.name}`,message:'اكتملت المهمة ووصل رد الخدمة.',status:'succeeded',proof:`ردت الخدمة برمز ${run.result.status||200}`,at:run.finishedAt};
+        return json(res,200,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',work_id:proof.work_id,reply:`نفّذت المهمة ووصلت النتيجة بنجاح.`,employee:updated,recent_work:[proof]},sessionHeaders);
+      }
       if(wantsEmployee(input.message)){
         await service.ensure({tenantId:companyId,displayName:`شركة سيادة ${companyId.slice(-8)}`});
         const flow=await service.createFlow({tenantId:companyId,displayName:flowName(input.message),metadata:{source:'siyadah-chat',state:'draft'}});
@@ -251,7 +276,7 @@ async function publicChat(req,res){
     }
     return json(res,400,{ok:false,error:'unsupported_operation'},sessionHeaders);
   }catch(error){
-    if(error instanceof TenantProjectError)return json(res,error.status,{ok:false,error:error.code,message:error.message},sessionHeaders);
+    if(error instanceof TenantProjectError||error instanceof CompanyProfileError)return json(res,error.status,{ok:false,error:error.code,message:error.message},sessionHeaders);
     console.error('public tenant chat failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error'},sessionHeaders);
   }
 }

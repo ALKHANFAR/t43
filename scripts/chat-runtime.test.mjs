@@ -39,7 +39,7 @@ test('routine draft work skips approval while severe final actions require it',(
   assert.ok(!serverSource.includes("input.op==='approve'"));
 });
 
-async function page({storage={},hydrate=empty,message,work,approve,employee_state,add_knowledge,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد']]}={}){
+async function page({storage={},hydrate=empty,message,work,approve,employee_state,add_knowledge,update_company_settings,export:exportResponse,integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد']]}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
   const w=dom.window,requests=[],alerts=[],polls=[],navigations=[];let hydrateTimer;
   w.matchMedia=()=>({matches:true,addEventListener(){}});
@@ -62,7 +62,7 @@ async function page({storage={},hydrate=empty,message,work,approve,employee_stat
       return {ok:true,status:200,json:async()=>response};
     }
     const body=JSON.parse(options.body);requests.push({url,body,headers:options.headers,credentials:options.credentials});
-    const handler={hydrate,message,work,approve,employee_state,add_knowledge,export:exportResponse}[body.op];
+    const handler={hydrate,message,work,approve,employee_state,add_knowledge,update_company_settings,export:exportResponse}[body.op];
     const response=typeof handler==='function'?await handler(body):handler;
     if(response instanceof Error)throw response;
     if(response?.httpStatus)return {ok:false,status:response.httpStatus,json:async()=>response};
@@ -225,11 +225,17 @@ test('rehydration restores saved messages and employee selection sends record ID
   }finally{p.close();}
 });
 test('stable employee mapping rejects missing IDs and exact active status, no false stop/connect',async()=>{
-  const xss='"><img src=x onerror=alert(1)>';const p=await page({hydrate:{...empty,team:[{...employee,name:xss,role:xss,status:'inactive'},{name:'missing ID'}]},employee_state:{httpStatus:403}});try{
+  const xss='"><img src=x onerror=alert(1)>';const p=await page({hydrate:{...empty,team:[{...employee,name:xss,role:xss,status:'inactive',tools:[]},{name:'missing ID'}]},employee_state:{httpStatus:403}});try{
     assert.equal(p.w.EMPS.length,1);assert.equal(p.w.EMPS[0].on,false);assert.equal(p.d.querySelectorAll('#emps img').length,0);
     p.d.querySelector('#emps .emp').click();const toggle=p.d.querySelector('#onSw');toggle.click();assert.equal(toggle.getAttribute('aria-checked'),'false');await flush();
-    p.d.querySelector('[data-c="gmail"]').click();p.d.querySelector('#mGo').click();assert.match(p.d.querySelector('#mD').textContent,/لم يتم ربط/);
+    assert.equal(p.d.querySelector('#renameBtn').disabled,true);
+    assert.match(source,/mGo[^\n]+disabled=!!window\.__SIY_REAL__/);assert.match(source,/غير متاحة للربط بعد/);
     assert.equal(p.requests.length,2);
+  }finally{p.close();}
+});
+test('a tool appears ready only when the owned employee record contains it',async()=>{
+  const p=await page({hydrate:{...empty,team:[{...employee,tools:['اتصال ويب']}]},pieces:[['http','طلب ويب','تنفيذ','developer','https://example.test/http.png','إرسال طلب إلى خدمة خارجية']]});try{
+    p.d.querySelector('#emps .emp').click();assert.ok(p.d.querySelector('.chip:not(.chip--off) .chip__n'));assert.match(p.d.querySelector('.chip:not(.chip--off)').textContent,/طلب ويب/);assert.equal(p.d.querySelector('.chip:not(.chip--off) [data-c]'),null);
   }finally{p.close();}
 });
 test('hydrate resumes pending work by work ID without resending the original message',async()=>{
@@ -362,6 +368,17 @@ test('real settings are read-only and remove demo file counts and unconditional 
   assert.equal(p.d.querySelector('input[aria-label="اسم الشركة"]').readOnly,true);assert.equal(p.d.querySelector('input[aria-label="وش تقدمون — سطر واحد"]').readOnly,true);
   assert.ok(!p.d.querySelector('#pane-settings').textContent.includes('3 ملفات'));assert.ok(!p.d.querySelector('#pane-settings').textContent.includes('من هنا يجاوب فهد'));
   assert.ok(!p.d.querySelector('.comp__f').textContent.includes('ما يتحرك شيء بدون موافقتك'));
+ }finally{p.close();}
+});
+
+test('company voice settings load and save without browser-supplied company scope',async()=>{
+ const initial={voice:'مباشر وهادئ',language:'auto',dialect:'سعودية بيضاء',preferredWords:['أبشر','تم'],forbiddenWords:['مستحيل'],version:2};
+ const p=await page({hydrate:{...empty,company_settings:initial},update_company_settings:{ok:true,settings:{...initial,voice:'مختصر وواضح',preferredWords:['أبشر','واضح']},version:3}});try{
+  assert.equal(p.d.querySelector('#companyVoice').value,'مباشر وهادئ');assert.equal(p.d.querySelector('#companyLanguage').value,'auto');assert.match(p.d.querySelector('#preferredWords').value,/أبشر/);
+  p.d.querySelector('#companyVoice').value='مختصر وواضح';p.d.querySelector('#preferredWords').value='أبشر، واضح';p.d.querySelector('#settingsSave').click();await flush();
+  const save=p.requests.find(r=>r.body.op==='update_company_settings');assert.deepEqual(save.body.preferredWords,['أبشر','واضح']);assert.equal(save.body.voice,'مختصر وواضح');
+  for(const key of ['companyId','company_id','tenantId','projectId'])assert.equal(key in save.body,false);
+  assert.match(p.d.querySelector('#settingsStatus').textContent,/الإصدار 3/);
  }finally{p.close();}
 });
 
