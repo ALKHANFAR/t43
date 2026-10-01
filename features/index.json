@@ -104,7 +104,7 @@
       "name": "ربط أداة الشركة عند الحاجة",
       "aliases": ["ربط الأدوات", "اتصال أداة", "تسجيل دخول الأداة", "OAuth الأداة", "كتالوج الأدوات", "company tool connection", "tool catalog"],
       "state": "gap",
-      "meaning": "كتالوج الأدوات يعرض 762 أداة بأيقونات من نطاق سيادة، وبيانات المحرك محفوظة في الخادم. ربط OAuth الافتراضي محجوب عن العميل حتى يتوفر تطبيق ونطاق عودة مملوكان لسيادة واختبار اتصال ونتيجة فعلية.",
+      "meaning": "كتالوج الأدوات يعرض 762 أداة بأيقونات من نطاق سيادة. يوجد على فرع معزول مسار Gmail OAuth باسم سيادة، ومحاولة واحدة مرتبطة بجلسة الشركة، ورفض لاتصال مشترك. لم ينشأ عميل Google بديل بعد حذف العملاء الثلاثة، ولم تثبت عودة Google أو نتيجة أداة حية؛ بقية OAuth محجوبة.",
       "linear": "ABO-61",
       "pr": "https://github.com/ALKHANFAR/t43/pull/24",
       "locations": [
@@ -115,9 +115,14 @@
         {"role": "customer_action", "path": "app/chat.js", "anchor": "async function rcOAuth(values)"},
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='oauth_start')"},
         {"role": "tenant_scope", "path": "lib/tool-connections.mjs", "anchor": "async function selected({tenantId,piece,type})"},
-        {"role": "blocked_start", "path": "lib/tool-connections.mjs", "anchor": "async function oauthStart()"},
-        {"role": "blocked_finish", "path": "lib/tool-connections.mjs", "anchor": "async function oauthFinish()"},
-        {"role": "test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "customer OAuth is blocked until a Siyadah-owned flow is ready"}
+        {"role": "owned_google_start", "path": "lib/tool-connections.mjs", "anchor": "async function oauthStart({tenantId,sessionBinding,piece,values={}})"},
+        {"role": "owned_google_finish", "path": "lib/tool-connections.mjs", "anchor": "async function oauthFinish({tenantId,sessionBinding,state,code})"},
+        {"role": "single_use_attempt", "path": "lib/google-oauth-attempts.mjs", "anchor": "async consume({state,companyId,sessionBinding})"},
+        {"role": "callback", "path": "server.mjs", "anchor": "async function googleOAuthCallback(req,res,url)"},
+        {"role": "migration", "path": "migrations/0003-google-oauth-attempts.sql", "anchor": "CREATE TABLE IF NOT EXISTS siyadah_google_oauth_attempts"},
+        {"role": "handoff", "path": "GOOGLE-OAUTH-PILOT.md", "anchor": "# Gmail connection under Siyadah"},
+        {"role": "test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "owned Google Gmail OAuth is session-bound, single-use and project-exclusive"},
+        {"role": "ledger_test", "path": "scripts/google-oauth-attempts-runtime.test.mjs", "anchor": "OAuth attempt ledger stores hashes and consumes exactly once"}
       ]
     },
     {

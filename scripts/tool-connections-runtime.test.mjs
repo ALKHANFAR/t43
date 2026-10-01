@@ -6,16 +6,18 @@ const PROJECT='P'.repeat(21),OTHER='Q'.repeat(21),CONNECTION='C'.repeat(21),FLOW
 const stripe={name:'@activepieces/piece-stripe',displayName:'Stripe',version:'0.7.0',auth:{type:'SECRET_TEXT',displayName:'Secret API Key',required:true}};
 const whatsapp={name:'@activepieces/piece-whatsapp',displayName:'WhatsApp',version:'1.0.0',auth:{type:'CUSTOM_AUTH',required:true,props:{access_token:{displayName:'Access token',required:true,type:'SECRET_TEXT'},businessAccountId:{displayName:'Business ID',required:true,type:'SHORT_TEXT'}}}};
 const gmail={name:'@activepieces/piece-gmail',displayName:'Gmail',version:'0.17.0',auth:[{type:'OAUTH2',displayName:'Google',authUrl:'https://accounts.google.com/o/oauth2/auth',scope:['gmail.send','email'],props:{private_hint:{displayName:'Private hint',required:false,type:'SECRET_TEXT'}}},{type:'CUSTOM_AUTH',displayName:'Service account',props:{json:{displayName:'JSON',required:true,type:'LONG_TEXT'}}}]};
+const slack={name:'@activepieces/piece-slack',displayName:'Slack',version:'0.1.0',auth:{type:'OAUTH2',authUrl:'https://slack.com/oauth/v2/authorize',scope:['chat:write'],props:{}}};
 
 function response(status,body){return {ok:status>=200&&status<300,status,json:async()=>body};}
 function harness(overrides={}){
   const calls=[];
+  const pending=new Map(),attemptStore={save:async value=>{pending.set(value.state,value);},consume:async value=>{const prior=pending.get(value.state);if(!prior||prior.companyId!==value.companyId||prior.sessionBinding!==value.sessionBinding||prior.expiresAt<Date.now())return false;pending.delete(value.state);return true;}};
   const projects=stage=>Object.hasOwn(overrides,stage)?overrides[stage]:(overrides.foreign&&stage==='list'?[OTHER]:[PROJECT]);
   const fetchImpl=async(url,options={})=>{
     calls.push({url,options,body:options.body?JSON.parse(options.body):null});
     if(url.startsWith('https://cloud.example/apps'))return response(200,{'@activepieces/piece-gmail':{clientId:'google-client'}});
     if(url.includes('/api/v1/pieces')){
-      const name=new URL(url).searchParams.get('searchQuery');return response(200,[name==='stripe'?stripe:name==='whatsapp'?whatsapp:overrides.gmail||gmail]);
+      const name=new URL(url).searchParams.get('searchQuery');return response(200,[name==='stripe'?stripe:name==='whatsapp'?whatsapp:name==='slack'?slack:overrides.gmail||gmail]);
     }
     if(url.includes('/oauth2/authorization-url'))return response(200,{authorizationUrl:'https://accounts.google.com/o/oauth2/auth?client_id=google-client'});
     if(url.includes('/revalidate'))return response(200,{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:projects('revalidate')});
@@ -25,7 +27,7 @@ function harness(overrides={}){
     if(url.endsWith('/api/v1/app-connections')){const b=JSON.parse(options.body);return response(201,{id:CONNECTION,pieceName:b.pieceName,pieceVersion:b.pieceVersion,displayName:b.displayName,status:'ACTIVE',scope:'PROJECT',projectIds:projects('create')});}
     throw new Error(`unexpected ${url}`);
   };
-  return {calls,service:createToolConnectionService({requireProject:async tenant=>tenant==='company-a'?PROJECT:OTHER,fetchImpl,activepiecesUrl:'https://ap.example',apiKey:'platform-key',attemptSecret:'s'.repeat(48),cloudAppsUrl:'https://cloud.example/apps'})};
+  return {calls,pending,service:createToolConnectionService({requireProject:async tenant=>tenant==='company-a'?PROJECT:OTHER,fetchImpl,activepiecesUrl:'https://ap.example',apiKey:'platform-key',attemptSecret:'s'.repeat(48),attemptStore,googleOAuth:overrides.googleOAuth})};
 }
 
 test('reads live auth schema and keeps secrets out of the response',async()=>{
@@ -63,6 +65,35 @@ test('customer OAuth is blocked until a Siyadah-owned flow is ready',async()=>{
   await assert.rejects(()=>service.oauthFinish({tenantId:'company-a',attempt:'old',state:'old',code:'oauth-code'}),error=>error.code==='siyadah_oauth_not_ready'&&error.status===409);
   assert.equal(calls.some(call=>call.url.startsWith('https://cloud.example/apps')),false);
   assert.equal(calls.some(call=>call.url.endsWith('/api/v1/app-connections')&&call.options.method==='POST'),false);
+});
+
+test('owned Google Gmail OAuth is session-bound, single-use and project-exclusive',async()=>{
+  const googleOAuth={clientId:'siyadah-client',clientSecret:'server-only-secret',redirectUrl:'https://accounts.siyadah-ai.com/siyadah-api/v1/integrations/oauth/callback'};
+  const {service,calls,pending}=harness({googleOAuth});
+  const method=(await service.methods({tenantId:'company-a',piece:'gmail'})).methods[0];assert.equal(method.available,true);
+  const started=await service.oauthStart({tenantId:'company-a',sessionBinding:'session-a',piece:'gmail'}),url=new URL(started.authorizationUrl),state=url.searchParams.get('state');
+  assert.equal(url.searchParams.get('redirect_uri'),googleOAuth.redirectUrl);assert.equal(url.searchParams.get('client_id'),'siyadah-client');assert.equal(url.searchParams.get('code_challenge_method'),'S256');
+  assert.equal(started.allowedOrigin,'https://accounts.siyadah-ai.com');assert.equal(pending.size,1);assert.doesNotMatch(JSON.stringify(started),/server-only-secret|activepieces/i);
+  await assert.rejects(()=>service.oauthFinish({tenantId:'company-b',sessionBinding:'session-a',state,code:'code'}),error=>error.code==='invalid_oauth_state');
+  await assert.rejects(()=>service.oauthFinish({tenantId:'company-a',sessionBinding:'session-b',state,code:'code'}),error=>error.code==='invalid_oauth_state');
+  assert.equal(pending.size,1);
+  const saved=await service.oauthFinish({tenantId:'company-a',sessionBinding:'session-a',state,code:'code'});assert.equal(saved.scope,'PROJECT');
+  const request=calls.find(call=>call.url.endsWith('/api/v1/app-connections')).body;assert.equal(request.projectId,PROJECT);assert.equal(request.type,'OAUTH2');assert.equal(request.value.client_secret,'server-only-secret');
+  await assert.rejects(()=>service.oauthFinish({tenantId:'company-a',sessionBinding:'session-a',state,code:'code2'}),error=>error.code==='invalid_oauth_state');
+  assert.equal(calls.filter(call=>call.url.endsWith('/api/v1/app-connections')).length,1);
+  assert.equal(calls.some(call=>call.url.startsWith('https://cloud.example/apps')),false);
+});
+
+test('owned OAuth rejects altered state, unsupported providers and shared connection results',async()=>{
+  const googleOAuth={clientId:'siyadah-client',clientSecret:'server-only-secret',redirectUrl:'https://accounts.siyadah-ai.com/siyadah-api/v1/integrations/oauth/callback'};
+  const {service,pending}=harness({googleOAuth,create:[PROJECT,OTHER]});
+  assert.equal((await service.methods({tenantId:'company-a',piece:'slack'})).methods[0].available,false);
+  await assert.rejects(()=>service.oauthStart({tenantId:'company-a',sessionBinding:'session-a',piece:'slack'}),error=>error.code==='siyadah_oauth_not_ready');
+  const started=await service.oauthStart({tenantId:'company-a',sessionBinding:'session-a',piece:'gmail'}),state=new URL(started.authorizationUrl).searchParams.get('state');
+  await assert.rejects(()=>service.oauthFinish({tenantId:'company-a',sessionBinding:'session-a',state:state+'x',code:'code'}),error=>error.code==='invalid_oauth_state');
+  assert.equal(pending.size,1);
+  await assert.rejects(()=>service.oauthFinish({tenantId:'company-a',sessionBinding:'session-a',state,code:'code'}),error=>error.code==='connection_project_mismatch');
+  assert.equal(pending.size,0);
 });
 
 test('rejects cross-company connection readback',async()=>{

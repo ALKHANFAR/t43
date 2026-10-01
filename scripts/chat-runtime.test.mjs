@@ -269,6 +269,22 @@ test('tool buttons show saved connection details without claiming a provider run
     assert.equal(p.d.querySelector('#input').value,'أحتاج أداة غير موجودة في القائمة: ');assert.equal(p.d.activeElement,p.d.querySelector('#input'));
   }finally{p.close();}
 });
+test('Google connect popup opens in the submit gesture before OAuth preparation returns',async()=>{
+  let finishStart,opened=0;
+  const start=new Promise(resolve=>{finishStart=resolve;});
+  const p=await page({integrations:{list:{ok:true,connections:[]},methods:{ok:true,methods:[{type:'OAUTH2',available:true,displayName:'Google',fields:[]}]},oauth_start:()=>start},hash:''});
+  try{
+    p.w.open=()=>{opened++;return {closed:false,close(){},location:{replace(){}}};};
+    p.d.querySelector('#toolsLink').click();await flush();
+    p.d.querySelector('#allTgl').click();await flush();
+    p.d.querySelector('[data-c="gmail"]').click();await flush();
+    p.d.querySelector('#mF form').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
+    assert.equal(opened,1);
+    assert.equal(p.requests.some(request=>request.body?.op==='oauth_start'),true);
+    finishStart({ok:true,authorizationUrl:'https://accounts.google.com/o/oauth2/auth',allowedOrigin:'https://accounts.siyadah-ai.com'});
+    await flush();
+  }finally{p.close();}
+});
 test('tools page distinguishes a saved connection from one assigned to an employee flow',async()=>{
   const flowId='F'.repeat(21),connection={id:'C'.repeat(21),pieceName:'@activepieces/piece-gmail',displayName:'Gmail',status:'ACTIVE',scope:'PROJECT',flowIds:[flowId]};
   const p=await page({hydrate:{...empty,team:[{...employee,flowId,tools:[]}]},integrations:{list:{ok:true,connections:[connection]}}});try{

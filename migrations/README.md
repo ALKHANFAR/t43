@@ -6,4 +6,6 @@ The application does not run schema initialization while serving requests. `/hea
 
 The current migration is additive: it creates missing tables and columns. The old application must be able to keep serving while the pre-deploy command runs. Review new migrations for that compatibility before adding them to this command. A Railway application rollback does not undo a committed database migration; never drop a table as an automatic rollback.
 
+The isolated Google OAuth branch adds `siyadah_google_oauth_attempts` through the pre-deploy migration. It stores only hashes of the OAuth state and session binding, plus company ID and expiry. Callback consumption deletes the matching row atomically. The new image's `/health` rejects a database where that table is missing. This is local code readiness, not evidence of a configured Google client or successful provider connection.
+
 Before merging into Railway's connected branch, confirm the production project, environment, service, GitHub trigger, pre-deploy command resolved from this file, database catalog, and an available restore point. The connected branch can deploy automatically without waiting for GitHub checks. Test the migration against a new and a representative existing PostgreSQL database, then verify `/health` returns 503 before and 200 after migration without any DDL in the health path.

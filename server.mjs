@@ -5,6 +5,7 @@ import {createHash,randomUUID,timingSafeEqual} from 'node:crypto';
 import pg from 'pg';
 import {createTenantProjectService,TenantProjectError} from './lib/tenant-projects.mjs';
 import {createToolConnectionService} from './lib/tool-connections.mjs';
+import {createGoogleOAuthAttemptStore} from './lib/google-oauth-attempts.mjs';
 import {SESSION_COOKIE,cookieValue,createTenantSession,readTenantSession,sessionCookie} from './lib/tenant-session.mjs';
 import {createFirecrawlClient,FirecrawlError} from './lib/firecrawl.mjs';
 import {createCompanyProfileService,CompanyProfileError} from './lib/company-profile.mjs';
@@ -46,8 +47,10 @@ async function tenantProjects(){
 }
 async function toolConnections(){
   if(!toolConnectionsPromise)toolConnectionsPromise=(async()=>{
-    const projects=await tenantProjects();
-    return createToolConnectionService({requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY,attemptSecret:process.env.SIYADAH_SESSION_SECRET});
+    const projects=await tenantProjects(),pool=await database();
+    const origin=publicOrigin(),redirectUrl=origin?new URL('/siyadah-api/v1/integrations/oauth/callback',origin).toString():'';
+    const googleOAuth=process.env.SIYADAH_GOOGLE_OAUTH_CLIENT_ID&&process.env.SIYADAH_GOOGLE_OAUTH_CLIENT_SECRET?{clientId:process.env.SIYADAH_GOOGLE_OAUTH_CLIENT_ID,clientSecret:process.env.SIYADAH_GOOGLE_OAUTH_CLIENT_SECRET,redirectUrl}:undefined;
+    return createToolConnectionService({requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY,attemptSecret:process.env.SIYADAH_SESSION_SECRET,attemptStore:createGoogleOAuthAttemptStore({query:(sql,values)=>pool.query(sql,values)}),googleOAuth});
   })().catch(error=>{toolConnectionsPromise=null;throw error;});
   return toolConnectionsPromise;
 }
@@ -191,8 +194,8 @@ async function integrations(req,res){
     if(input.op==='list')return json(res,200,{ok:true,connections:await service.list(tenantId)});
     if(input.op==='methods')return json(res,200,{ok:true,...await service.methods({tenantId,piece:input.piece})});
     if(input.op==='connect')return json(res,201,{ok:true,connection:await service.connect({tenantId,piece:input.piece,type:input.type,values:input.values})});
-    if(input.op==='oauth_start')return json(res,200,{ok:true,...await service.oauthStart({tenantId,piece:input.piece,values:input.values})});
-    if(input.op==='oauth_finish')return json(res,201,{ok:true,connection:await service.oauthFinish({tenantId,attempt:input.attempt,code:input.code,state:input.state})});
+    if(input.op==='oauth_start')return json(res,200,{ok:true,...await service.oauthStart({tenantId,sessionBinding:oauthSessionBinding(req),piece:input.piece,values:input.values})});
+    if(input.op==='oauth_finish')throw new TenantProjectError('oauth_callback_required','أكمل الربط من نافذة Google.',409);
     if(input.op==='revalidate')return json(res,200,{ok:true,connection:await service.revalidate({tenantId,id:input.connection_id})});
     if(input.op==='disconnect')return json(res,200,{ok:true,...await service.disconnect({tenantId,id:input.connection_id})});
     return json(res,400,{ok:false,error:'unsupported_operation'});
@@ -200,6 +203,23 @@ async function integrations(req,res){
     if(error instanceof TenantProjectError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
     console.error('tool connection failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error'});
   }
+}
+
+function oauthSessionBinding(req){return createHash('sha256').update(cookieValue(req.headers.cookie,SESSION_COOKIE)).digest('hex');}
+
+async function googleOAuthCallback(req,res,url){
+  let connectionId='';
+  try{
+    if(url.searchParams.has('error'))throw new TenantProjectError('oauth_denied','لم تكتمل موافقة Google.',400);
+    const resolved=await tenantSession(req),state=url.searchParams.get('state'),code=url.searchParams.get('code');
+    if(!state||!code)throw new TenantProjectError('oauth_return_incomplete','لم تكتمل عودة Google.',400);
+    const service=await toolConnections(),tenantId=resolved.session.companyId;
+    const saved=await service.oauthFinish({tenantId,sessionBinding:oauthSessionBinding(req),state,code});
+    if(/^[0-9A-Za-z]{21}$/.test(String(saved.id||''))&&(await service.list(tenantId)).some(connection=>connection.id===saved.id&&connection.status==='ACTIVE'))connectionId=saved.id;
+  }catch(error){console.warn('Google connection callback failed',error?.code||'internal_error');}
+  const ok=Boolean(connectionId),page=`<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><title>ربط الأداة · سيادة</title><body data-oauth-connection="${connectionId}"><p>${ok?'اكتمل حفظ الاتصال. يمكنك إغلاق هذه النافذة.':'لم يكتمل الربط. أغلق هذه النافذة وحاول من سيادة.'}</p><script src="/app/oauth-callback.js"></script></body></html>`;
+  res.writeHead(ok?200:400,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','content-security-policy':"default-src 'none'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'",'referrer-policy':'no-referrer','x-content-type-options':'nosniff'});
+  res.end(page);
 }
 
 async function tenantSession(req){
@@ -484,6 +504,7 @@ createServer((req,res)=>{
   if(req.method==='POST'&&req.url==='/internal/v1/web/scrape')return scrapeWeb(req,res);
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/onboarding')return onboarding(req,res);
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/integrations')return integrations(req,res);
+  if(req.method==='GET'&&pathname==='/siyadah-api/v1/integrations/oauth/callback')return googleOAuthCallback(req,res,new URL(req.url,'http://localhost'));
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/chat')return publicChat(req,res);
   if(req.method==='POST'&&req.url==='/deepseek/v1/chat/completions')return deepseek(req,res);
   if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{error:'method_not_allowed'});
