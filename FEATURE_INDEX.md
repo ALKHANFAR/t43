@@ -5,6 +5,8 @@
 ```sh
 node scripts/feature-index.mjs "موافقة الموظف"
 node scripts/feature-index.mjs "مسودة الموظف"
+node scripts/feature-index.mjs "نتيجة الطلب غير مؤكدة"
+node scripts/feature-index.mjs "ترحيل قاعدة البيانات"
 npm run index:check
 ```
 

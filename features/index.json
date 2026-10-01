@@ -55,14 +55,18 @@
       "name": "فحص تدفقات الموظفين القديمة قبل نشر الحفظ المحلي",
       "aliases": ["التدفقات القديمة", "تدفق بلا موظف", "legacy employee flows", "migration gate"],
       "state": "draft_pr",
-      "meaning": "فحص قراءة فقط في PR #17 يوقف الدمج عند وجود تدفق لدى المزود بلا صف موظف أو عند نتيجة ناقصة؛ لم يُنفذ على الإنتاج بعد.",
+      "meaning": "فحص قراءة فقط من PR #21 ضمن إصدار #19: تدفقات مشروع العميل تحتاج صف موظف مطابق، بينما تدفقات مشروع بلا أي مؤشر ملكية عميل تُحسب منفصلة وتُقبل فقط إذا كانت DISABLED. أي حالة مفعّلة أو مجهولة أو ربط ناقص يوقف الدمج. أعاد جرد production المصنف 10 مشاريع عملاء و4 مشاريع يتيمة و5 تدفقات يتيمة معطلة و0 تدفقات عملاء بلا موظف؛ يُعاد الجرد قبل النشر.",
       "linear": "ABO-55",
-      "pr": "https://github.com/ALKHANFAR/t43/pull/17",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/19",
       "locations": [
         {"role": "command", "path": "scripts/check-legacy-employee-flows.mjs", "anchor": "inventoryLegacyFlows({projects,employees"},
+        {"role": "ownership_sources", "path": "scripts/check-legacy-employee-flows.mjs", "anchor": "associatedCompanies=(await client.query"},
         {"role": "logic", "path": "lib/legacy-flow-inventory.mjs", "anchor": "export async function inventoryLegacyFlows"},
+        {"role": "classification", "path": "lib/legacy-flow-inventory.mjs", "anchor": "if(customerOwned)customerProjects++;else orphanProjects++;"},
+        {"role": "orphan_gate", "path": "lib/legacy-flow-inventory.mjs", "anchor": "if(String(flow.status||'').toUpperCase()!=='DISABLED')"},
         {"role": "release_gate", "path": "RELEASE-ABO55.md", "anchor": "Before merging"},
-        {"role": "test", "path": "scripts/legacy-flow-inventory-runtime.test.mjs", "anchor": "release inventory reports provider-only legacy flows"}
+        {"role": "test_customer", "path": "scripts/legacy-flow-inventory-runtime.test.mjs", "anchor": "any associated company data keeps an unmapped flow in the customer gate"},
+        {"role": "test_orphan", "path": "scripts/legacy-flow-inventory-runtime.test.mjs", "anchor": "orphan project flows must be verifiably disabled"}
       ]
     },
     {
@@ -111,6 +115,39 @@
         {"role": "state_check", "path": "lib/tool-connections.mjs", "anchor": "function verify(token,tenantId)"},
         {"role": "provider_write", "path": "lib/tool-connections.mjs", "anchor": "async function oauthFinish({tenantId,attempt,code,state})"},
         {"role": "test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "OAuth state hides customer auth props and PKCE verifier"}
+      ]
+    },
+    {
+      "id": "chat_unverified_result",
+      "name": "نتيجة الطلب غير مؤكدة في شات سيادة",
+      "aliases": ["لم نتأكد من نتيجة الطلب", "حالة الطلب غير معروفة", "التحقق من حالة الطلب", "unknown chat outcome", "unverified chat result"],
+      "state": "draft_pr",
+      "meaning": "PR #14 يعرض نتيجة غير مؤكدة دون علامة نجاح ويعيد قراءة معرّف الطلب نفسه، دون إرسال تنفيذ جديد تلقائيًا. يدخل في إصدار المسودة الموحد #19 ولم يُنشر بعد.",
+      "linear": "ABO-44",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/19",
+      "locations": [
+        {"role": "render", "path": "app/chat.js", "anchor": "function siyResultRow(data)"},
+        {"role": "message", "path": "app/chat.js", "anchor": "if(!text&&data.request_status==='not_observed'&&state==='unknown')"},
+        {"role": "retry", "path": "app/chat.js", "anchor": "row.siyRetry=function(){submit(true);}"},
+        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "| Uncertain outcome |"},
+        {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "terminal unknown request shows verification warning and never a success mark"}
+      ]
+    },
+    {
+      "id": "schema_predeploy_readiness",
+      "name": "ترحيل قاعدة بيانات سيادة قبل النشر وفحص جاهزيتها",
+      "aliases": ["ترحيل قاعدة البيانات", "جاهزية الصحة", "فحص health", "predeploy migration", "schema readiness"],
+      "state": "draft_pr",
+      "meaning": "PR #18 ضمن إصدار #19 يشغّل الترحيل في خطوة Railway pre-deploy، ثم يجعل /health يفحص الجداول والقيود باستعلامات قراءة فقط. إعداد Railway والإنتاج لم يثبتا بعد؛ جرد التدفقات القديمة بوابة مانعة للدمج.",
+      "linear": "ABO-57",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/19",
+      "locations": [
+        {"role": "deploy_command", "path": "railway.json", "anchor": "preDeployCommand"},
+        {"role": "migration", "path": "scripts/migrate-schema.mjs", "anchor": "await client.query('BEGIN');"},
+        {"role": "schema_guard", "path": "lib/schema-ready.mjs", "anchor": "export async function assertSchemaReady"},
+        {"role": "health_route", "path": "server.mjs", "anchor": "async function health(res)"},
+        {"role": "contract", "path": "migrations/README.md", "anchor": "The application does not run schema initialization while serving requests."},
+        {"role": "test", "path": "scripts/schema-ready-runtime.test.mjs", "anchor": "health checks schema without creating or altering tables"}
       ]
     },
     {
