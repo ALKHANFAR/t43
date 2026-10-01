@@ -192,9 +192,9 @@ async function integrations(req,res){
     if(['companyId','tenantId','projectId','scope'].some(key=>Object.hasOwn(input,key)))throw new TenantProjectError('client_scope_forbidden','نطاق الشركة يحدده الخادم فقط.',400);
     const service=await toolConnections(),tenantId=resolved.session.companyId;
     if(input.op==='list')return json(res,200,{ok:true,connections:await service.list(tenantId)});
-    if(input.op==='methods')return json(res,200,{ok:true,...await service.methods({tenantId,piece:input.piece})});
+    if(input.op==='methods')return json(res,200,{ok:true,...await service.methods({tenantId,piece:input.piece,requestOrigin:req.headers.origin})});
     if(input.op==='connect')return json(res,201,{ok:true,connection:await service.connect({tenantId,piece:input.piece,type:input.type,values:input.values})});
-    if(input.op==='oauth_start')return json(res,200,{ok:true,...await service.oauthStart({tenantId,sessionBinding:oauthSessionBinding(req),piece:input.piece,values:input.values})});
+    if(input.op==='oauth_start')return json(res,200,{ok:true,...await service.oauthStart({tenantId,sessionBinding:oauthSessionBinding(req),requestOrigin:req.headers.origin,piece:input.piece,values:input.values})});
     if(input.op==='oauth_finish')throw new TenantProjectError('oauth_callback_required','أكمل الربط من نافذة Google.',409);
     if(input.op==='revalidate')return json(res,200,{ok:true,connection:await service.revalidate({tenantId,id:input.connection_id})});
     if(input.op==='disconnect')return json(res,200,{ok:true,...await service.disconnect({tenantId,id:input.connection_id})});
