@@ -134,7 +134,8 @@ test('suggestion and employee preparation failures remain visible and retryable'
   w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
   assert.equal(w.document.querySelector('#stepLbl').textContent,'3 من 4');
   w.document.querySelector('[data-suggestion="marketing"]').click();
-  w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+  assert.match(w.document.querySelector('#next').textContent,/احفظ مسودة ريم/);
+  w.document.querySelector('#next').click();assert.match(w.document.querySelector('#live').textContent,/نحفظ المسودة/);await new Promise(resolve=>setImmediate(resolve));
   assert.equal(w.document.querySelector('#stepLbl').textContent,'3 من 4');
   assert.match(w.document.querySelector('#stepError').textContent,/تعذّر تجهيز الموظف/);
   assert.equal(w.document.querySelector('#next').disabled,false);
@@ -205,7 +206,8 @@ test('English onboarding keeps its labels, role choices, and draft status in LTR
   assert.match(w.document.querySelector('#plan').textContent,/Reem · Marketing employee/);
   w.document.querySelector('[data-suggestion="marketing"]').click();
   assert.match(w.document.querySelector('#plan').textContent,/Suggested because your company covers Services/);
-  w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+  assert.match(w.document.querySelector('#next').textContent,/Save draft Reem/);
+  w.document.querySelector('#next').click();assert.match(w.document.querySelector('#live').textContent,/Saving draft/);await new Promise(resolve=>setImmediate(resolve));
   assert.equal(w.document.querySelector('#stepLbl').textContent,'4 of 4');
   assert.match(w.document.querySelector('[data-step="4"]').textContent,/Tools are not connected/);
   assert.match(w.document.querySelector('[data-step="4"]').textContent,/Not connected/);
