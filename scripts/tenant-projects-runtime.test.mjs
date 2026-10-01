@@ -209,6 +209,15 @@ test('rejects an HTTP action failure despite a successful Activepieces run',asyn
 test('does not infer provider success from a non-HTTP action output',async()=>{
   const h=runHarness({action:{type:'PIECE',name:'step_1',settings:{pieceName:'@activepieces/piece-slack',actionName:'send_message'}}});
   await assert.rejects(()=>h.service.runFlow(runInput(h.flowId)),rejectsCode('provider_result_unverified'));
+  assert.equal(h.calls.some(call=>call.url.includes('/webhooks/')),false);
+});
+
+test('does not trigger unsupported or malformed action chains',async()=>{
+  for(const action of [null,{type:'CODE',name:'step_1',settings:{}},{type:'PIECE',name:'step_1',settings:{pieceName:'@activepieces/piece-http'},nextAction:{type:'PIECE',name:'step_1',settings:{pieceName:'@activepieces/piece-http'}}}]){
+    const h=runHarness({action});
+    await assert.rejects(()=>h.service.runFlow(runInput(h.flowId)),rejectsCode('provider_result_unverified'));
+    assert.equal(h.calls.some(call=>call.url.includes('/webhooks/')),false);
+  }
 });
 
 test('rejects a run whose readback belongs to another project or flow',async()=>{
