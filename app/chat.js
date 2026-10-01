@@ -1380,6 +1380,7 @@ var I = {
   }
   function siyResultRow(data){
     var state=data.work_status, text=data.reply;
+    if(!text&&data.request_status==='not_observed'&&state==='unknown') text=ui('لم نتأكد من نتيجة الطلب. لم نعد تنفيذه.','The request outcome is unverified. We did not run it again.');
     if(!text) text=(locale==='en'?{queued:'Request received, awaiting execution.',running:'Work in progress.',succeeded:'Work completed according to the run record.',failed:'Work could not be completed. Review the result details.',awaiting_input:'Work needs more information from you.',cancelled:'Request cancelled.'}:{queued:"تم استلام الطلب، بانتظار التنفيذ.",running:"العمل قيد التنفيذ.",succeeded:"اكتمل العمل حسب سجل التشغيل.",failed:"تعذّر إكمال العمل. راجع تفاصيل النتيجة.",awaiting_input:"العمل ينتظر معلومات إضافية منك.",cancelled:"أُلغي الطلب."})[state]||ui("وصل الرد دون تفاصيل إضافية.","Response received without further details.");
     var records=(Array.isArray(data.recent_work)?data.recent_work:[]).filter(function(r){return (!r.conversation_id||r.conversation_id===data.conversation_id)&&(!r.work_id||r.work_id===data.work_id);});
     var scoped=records.filter(function(r){return r.conversation_id;});
@@ -1420,7 +1421,7 @@ var I = {
       if(row.siyInFlight) return; row.siyInFlight=true; row.typing=true; row.siyRetry=null; siyDraw();
       try{
         var data=await siyRequest(refresh?{op:'work',request_id:request.request_id,conversation_id:request.conversation_id}:request); if(generation!==siyGeneration) return;
-        if(data.request_status==='not_observed') throw new Error(ui('لم يظهر سجل الطلب بعد؛ حالته غير معروفة. تحديث الحالة لا يعيد تنفيذه.','The request is not in the record yet. Its status is unknown. Checking status does not run it again.'));
+        if(data.request_status==='not_observed') throw new Error(ui('لم نتأكد من نتيجة الطلب. لم نعد تنفيذه. تحقق من حالته دون إرسال طلب جديد.','The request outcome is unverified. We did not run it again. Check its status without sending a new request.'));
         siyRememberConversation(data,list,employeeId,text); siyMerge(data,false);
         Object.assign(row,siyResultRow(data)); row.typing=false; row.siyInFlight=false; siyDraw();
         if(data.work_id&&["queued","running"].includes(data.work_status)) siyPoll(data.work_id,list,row,0);
