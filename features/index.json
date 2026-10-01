@@ -102,6 +102,7 @@
       "state": "draft_pr",
       "meaning": "خادم سيادة يملك مشروع الشركة ويُنشئ محاولة OAuth قصيرة مشفرة وموثقة، فلا تظهر حقول السر أو مفتاح PKCE في رابط الموافقة. لا تُطلب الوصلة عند حفظ مسودة الموظف، والاتصال المحفوظ لا يثبت نجاح مهمة خارجية. الجرد الحي واتصال عميل فعلي غير مثبتين.",
       "linear": "ABO-50",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/20",
       "locations": [
         {"role": "customer_action", "path": "app/chat.js", "anchor": "async function rcOAuth(values)"},
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='oauth_start')"},
