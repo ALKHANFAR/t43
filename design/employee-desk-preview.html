@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>معاينة مكتب الموظف — سيادة</title>
+  <link rel="stylesheet" href="../fonts.css">
+  <link rel="stylesheet" href="../siyadah-theme.css">
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#f5f5f7;color:var(--ink);font:15px/1.6 var(--f-body)}
+    button,textarea{font:inherit}
+    button{cursor:pointer}
+    :focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+    [hidden]{display:none!important}
+    .shell{min-height:100dvh;display:grid;grid-template-columns:250px minmax(0,1fr)}
+    .rail{position:sticky;top:0;height:100dvh;background:#0b0c10;color:white;padding:29px 22px;display:flex;flex-direction:column}
+    .brand{display:flex;align-items:center;min-height:45px}
+    .brand img{display:block;width:128px;height:auto;filter:invert(1)}
+    .rail-title{margin:47px 8px 13px;color:#aeb2c0;font-size:11px;letter-spacing:.06em}
+    .people{display:grid;gap:5px}
+    .person{width:100%;display:flex;align-items:center;gap:11px;padding:11px 10px;background:transparent;border:1px solid transparent;border-radius:12px;text-align:start;color:#d2d4dc}
+    .person:hover{background:#1a1c25}
+    .person[aria-current="true"]{background:#202331;border-color:#353c6a;color:white}
+    .person-mark{width:33px;height:33px;border:1px solid #656978;border-radius:50%;display:grid;place-items:center;flex:none;font:16px var(--f-display)}
+    .person span:last-child{display:grid;min-width:0;line-height:1.35}
+    .person small{color:#a7aab7;font-size:11px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .rail-foot{margin-top:auto;padding:20px 8px 0;border-top:1px solid #2c2f38;color:#aeb2c0;font-size:11px}
+    .surface{min-width:0;padding:0 clamp(20px,5vw,80px) 40px;position:relative;overflow:hidden}
+    .surface:before{content:"";position:absolute;width:600px;height:600px;inset-block-start:-345px;inset-inline-end:-195px;background:radial-gradient(circle,rgba(16,41,209,.075),transparent 65%);pointer-events:none}
+    .preview-bar{position:relative;display:flex;align-items:center;justify-content:space-between;gap:15px;min-height:58px;border-bottom:1px solid #dedfe6;color:#575b68;font-size:12px}
+    .preview-label{display:inline-flex;align-items:center;gap:8px}
+    .preview-label:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent)}
+    .language{background:none;border:0;color:var(--ink);padding:5px 8px;font-weight:600}
+    .workspace{position:relative;max-width:1040px;margin:auto}
+    .topline{display:flex;justify-content:space-between;gap:16px;margin-top:39px;color:#747785;font-size:11px}
+    .mobile-people{display:none}
+    .hero{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:22px;margin:37px 0 27px}
+    .hero h1{font:450 clamp(52px,6.3vw,88px)/1.06 var(--f-display);letter-spacing:-.035em;margin:0}
+    .hero .role{display:block;color:#747785;font-size:13px;margin-top:12px}
+    .status{display:inline-flex;align-items:center;gap:9px;align-self:start;margin-top:16px;font-size:12px;color:#454957;white-space:nowrap}
+    .status-line{position:relative;width:25px;height:2px;background:#a8aebd;border-radius:2px}
+    [data-state="draft"] .status-line{background:#a73d48}
+    [data-state="waiting"] .status-line{background:#a36a28}
+    [data-state="working"] .status-line{background:#2446d8}
+    [data-state="working"] .status-line:after{content:"";position:absolute;inset-inline-end:-2px;top:-3px;width:8px;height:8px;background:#2446d8;border-radius:50%;animation:pulse 2s ease-out infinite}
+    [data-state="done"] .status-line{background:#166b61}
+    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(36,70,216,.35)}70%,100%{box-shadow:0 0 0 8px rgba(36,70,216,0)}}
+    .focus-card{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 225px;gap:28px;min-height:300px;background:white;border:1px solid #e1e3eb;border-radius:20px;padding:clamp(24px,3.3vw,42px);box-shadow:0 18px 55px rgba(13,20,50,.055);overflow:hidden}
+    .focus-card:before{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:2px;background:#a73d48}
+    [data-state="waiting"] .focus-card:before{background:#a36a28}
+    [data-state="working"] .focus-card:before{background:#2446d8}
+    [data-state="done"] .focus-card:before{background:#166b61}
+    .card-kicker{font-size:12px;color:#686d7b}
+    .focus-card h2{font:500 clamp(27px,3vw,42px)/1.38 var(--f-display);letter-spacing:-.018em;max-width:20ch;margin:27px 0 10px}
+    .focus-card p{font-size:13px;color:#6a6f7b;margin:0;max-width:52ch}
+    .actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:29px}
+    .primary{display:inline-flex;align-items:center;gap:20px;min-height:43px;border:1px solid var(--ink);background:var(--ink);color:white;border-radius:9px;padding:8px 17px;font-size:13px;font-weight:500;transition:background .18s,transform .18s}
+    .primary:hover{background:#2836a4;border-color:#2836a4;transform:translateY(-1px)}
+    .quiet{border:0;background:none;padding:8px;color:#4a526b;font-size:13px}
+    .quiet:hover,.ask-why:hover{text-decoration:underline;text-underline-offset:4px}
+    .journey{border-inline-start:1px solid #e7e8ee;padding-inline-start:23px}
+    .journey-title{font-size:11px;color:#858a97}
+    .journey ol{list-style:none;margin:22px 0 0;padding:0;display:grid;gap:17px}
+    .journey li{display:flex;align-items:center;gap:10px;color:#4e5463;font-size:12px;line-height:1.5}
+    .journey li:before{content:"";width:7px;height:7px;flex:none;border:1px solid #b5bac7;background:white;border-radius:50%}
+    .signals{margin-top:23px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .signal{min-width:0;min-height:78px;display:flex;align-items:center;gap:12px;text-align:start;border:1px solid #e2e4ec;background:rgba(255,255,255,.8);border-radius:13px;padding:11px 15px;color:var(--ink);transition:border-color .18s,transform .18s,background .18s}
+    .signal:hover{border-color:#9ea9f5;background:white;transform:translateY(-2px)}
+    .signal-icon{flex:none;display:grid;place-items:center;width:33px;height:33px;border:1px solid #dfe3f7;border-radius:10px;color:var(--accent);font:500 17px var(--f-display)}
+    .signal-copy{display:grid;gap:2px;min-width:0}
+    .signal-copy small{font-size:11px;color:#7b8090}
+    .signal-copy strong{font-size:13px;font-weight:550;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .signal-arrow{margin-inline-start:auto;color:#8b91a0}
+    .ask-why{border:0;background:none;color:#4b579b;padding:8px 2px;font-size:12px;text-align:start}
+    .conversation{margin-top:17px;background:white;border:1px solid #e1e3ea;border-radius:17px;padding:15px 17px;display:flex;align-items:center;gap:15px}
+    .composer-icon{display:grid;place-items:center;width:33px;height:33px;border:1px solid #dfe1e7;border-radius:50%;flex:none;font:16px var(--f-display)}
+    .conversation textarea{resize:none;border:0;outline:none;flex:1;min-width:0;min-height:27px;max-height:85px;color:var(--ink);background:none;font-size:14px;line-height:1.5}
+    .conversation button{border:0;background:var(--accent);color:white;border-radius:9px;width:34px;height:34px;font-size:20px;line-height:1;flex:none}
+    .footnote{margin-top:11px;color:#898e9c;font-size:11px}
+    .drawer-backdrop{position:fixed;inset:0;background:rgba(9,12,25,.25);z-index:9}
+    .drawer{position:fixed;inset-block:0;inset-inline-end:0;width:min(420px,100vw);background:white;z-index:10;box-shadow:0 0 55px rgba(9,12,25,.13);padding:30px;overflow:auto}
+    .drawer header{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid #e5e6eb;padding-bottom:22px}
+    .drawer h2{font:500 24px var(--f-display);margin:0}
+    .drawer-close{border:0;background:#f0f1f5;width:32px;height:32px;border-radius:50%;font-size:18px}
+    .drawer-section{padding:21px 0;border-bottom:1px solid #ececf0}
+    .drawer-section small{display:block;color:#888d9b;font-size:11px}
+    .drawer-section strong{display:block;font-size:15px;font-weight:550;margin:7px 0}
+    .drawer-section p,.drawer-section li{font-size:13px;color:#555b69;line-height:1.75}
+    .drawer-section ul{padding-inline-start:20px}
+    .route{display:grid;gap:8px;margin-top:13px}
+    .route-step{display:flex;align-items:center;gap:10px;font-size:13px}
+    .route-step:before{content:"";width:7px;height:7px;background:var(--accent);border-radius:50%}
+    .branch{margin-top:14px;padding:11px 13px;background:#f7f8fb;border-radius:9px}
+    .tool-row{width:100%;display:flex;align-items:center;gap:11px;padding:11px 0;border:0;border-bottom:1px solid #ececf0;background:none;text-align:start;color:var(--ink)}
+    .tool-row:hover{color:var(--accent)}
+    .tool-icon{width:32px;height:32px;display:grid;place-items:center;border:1px solid #dfe3f7;border-radius:9px;color:var(--accent)}
+    .tool-row span:nth-child(2){flex:1;font-size:13px}
+    .tool-row small{font-size:11px;color:#7f8490}
+    .drawer-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+    .drawer-actions button{border:1px solid #d7dae5;border-radius:9px;background:white;color:#262a39;padding:9px 14px;font-size:12px}
+    .drawer-actions button:first-child{background:var(--ink);border-color:var(--ink);color:white}
+    .decision-preview{margin-top:15px;padding:17px;border:1px solid #e5e7ee;border-radius:12px;background:#f8f9fc}
+    .decision-preview p{margin:7px 0 0;color:#232735}
+    .toast{position:fixed;inset-block-end:24px;inset-inline-start:50%;transform:translateX(50%);z-index:20;background:#101216;color:white;border-radius:10px;padding:11px 16px;font-size:12px;box-shadow:0 8px 26px rgba(0,0,0,.16)}
+    @media(max-width:840px){
+      .shell{grid-template-columns:1fr}
+      .rail{position:static;height:auto;padding:16px 20px}
+      .brand img{width:98px}
+      .rail-title,.people,.rail-foot{display:none}
+      .surface{padding:0 24px 34px}
+      .mobile-people{display:flex;gap:6px;margin-top:18px;overflow:auto;padding-bottom:3px}
+      .mobile-people button{flex:none;border:1px solid #dfe1e9;background:transparent;border-radius:999px;padding:5px 13px;color:#696d7b;font-size:12px}
+      .mobile-people button[aria-current="true"]{background:var(--ink);border-color:var(--ink);color:white}
+      .focus-card{grid-template-columns:minmax(0,1fr) 185px}
+    }
+    @media(max-width:600px){
+      .surface{padding:0 17px 28px}
+      .preview-bar{min-height:51px}
+      .topline{margin-top:24px}
+      .hero{display:block;margin:30px 0 21px}
+      .hero h1{font-size:56px}
+      .status{margin-top:16px}
+      .focus-card{display:block;min-height:0;padding:24px 22px;border-radius:17px}
+      .focus-card h2{font-size:28px;margin-top:20px}
+      .actions{margin-top:24px}
+      .journey{margin-top:25px;border-inline-start:0;border-top:1px solid #e7e8ef;padding:15px 0 0}
+      .journey ol{display:flex;gap:7px;margin-top:10px}
+      .journey li{flex:1;display:grid;justify-items:center;text-align:center;gap:4px;font-size:10px}
+      .signals{grid-template-columns:1fr;gap:7px}
+      .signal{min-height:61px;padding:9px 13px}
+      .footnote{line-height:1.5}
+    }
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <div class="shell" id="app" data-state="draft">
+    <aside class="rail" aria-label="فريقك">
+      <a class="brand" href="../ar.html" aria-label="سيادة"><img src="../assets/wordmark.png" alt="سيادة"></a>
+      <div class="rail-title" data-i18n="team">فريقك</div>
+      <nav class="people" id="people" aria-label="أمثلة الموظفين"></nav>
+      <div class="rail-foot" data-i18n="railFoot">مكتب واحد لكل موظف.</div>
+    </aside>
+    <main class="surface" aria-label="مكتب الموظف">
+      <div class="preview-bar"><span class="preview-label" data-i18n="preview">معاينة تصميم · بيانات توضيحية</span><button type="button" class="language" id="language" aria-label="EN — Switch language to English">EN</button></div>
+      <div class="workspace">
+        <div class="topline"><span data-i18n="desk">مكتب الموظف</span><span><span data-i18n="company">شركتك</span> / <strong id="breadName"></strong></span></div>
+        <nav class="mobile-people" id="mobilePeople" aria-label="اختيار موظف المعاينة"></nav>
+        <header class="hero"><div><h1 id="name">سعد</h1><span class="role" id="role">مسؤول العملاء المحتملين</span></div><div class="status"><span class="status-line" aria-hidden="true"></span><span id="statusText">مسودة</span></div></header>
+        <section class="focus-card" aria-labelledby="focusTitle">
+          <div><div class="card-kicker" data-i18n="now">الآن</div><h2 id="focusTitle">تابع فرصة لم يكتمل حديثها</h2><p id="focusDetail">اقتراح توضيحي؛ لا يعتمد على بيانات شركتك.</p><div class="actions"><button type="button" class="primary" id="primaryAction"><span id="primaryLabel">افتح الاقتراح</span><span aria-hidden="true">↗</span></button><button type="button" class="quiet" id="secondaryAction">القدرة</button></div></div>
+          <div class="journey"><span class="journey-title" data-i18n="journey">رحلة عمله</span><ol id="journeySteps"></ol></div>
+        </section>
+        <section class="signals" id="signals" aria-label="عمله، قدرته، أثره"></section>
+        <button type="button" class="ask-why" id="askWhy">لماذا هذه الخطوة؟</button>
+        <div class="conversation"><span class="composer-icon" aria-hidden="true" id="composerIcon"></span><textarea id="composer" rows="1" aria-label="اسأله أو كلّفه" placeholder="اسأله أو كلّفه…"></textarea><button type="button" id="sendPreview" aria-label="إرسال">↑</button></div>
+        <div class="footnote" data-i18n="sampleNote">معاينة فقط؛ لا تُرسل رسائل ولا تنفّذ مهامًا.</div>
+      </div>
+    </main>
+  </div>
+  <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
+  <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" hidden><header><h2 id="drawerTitle">تفاصيل العمل</h2><button type="button" class="drawer-close" id="drawerClose" aria-label="إغلاق">×</button></header><div id="drawerContent"></div></aside>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <script>
+    const people={
+      sales:{
+        ar:{name:"سعد",role:"مسؤول العملاء المحتملين",suggestion:"تابع فرصة لم يكتمل حديثها",decision:"ردّ المتابعة جاهز لمراجعتك",working:"يردّ على اهتمام جديد",done:"سُجّلت الفرصة في المثال",task:"متابعة اهتمام العميل",reason:"يسأل عن احتياج العميل قبل متابعة البيع، ويعود إليك إذا تطلب الرد وعدًا جديدًا.",journey:["يستقبل الاهتمام","يفهم الحاجة","يردّ على العميل","يسجّل الفرصة"],branch:"إذا لم تتضح الحاجة، يسأل أولًا. وإذا احتاج وعدًا خاصًا، يعود إليك.",knowledge:"معرفة الشركة",boundary:"الإرسال بعد إذنك",tools:[["واتساب","◌"],["CRM","▦"]],draft:"مرحبًا، شكرًا لاهتمامك. ما الذي تريد تحسينه أولًا؟"},
+        en:{name:"Saad",role:"Lead specialist",suggestion:"Follow up on a quiet opportunity",decision:"Follow-up reply ready for review",working:"Responding to new interest",done:"Opportunity recorded in the sample",task:"Follow up on customer interest",reason:"He checks the customer's need before following up and returns to you if the reply requires a new commitment.",journey:["Receives interest","Understands the need","Replies to the customer","Records the opportunity"],branch:"If the need is unclear, he asks first. A special commitment comes back to you.",knowledge:"Company knowledge",boundary:"Sending needs your permission",tools:[["WhatsApp","◌"],["CRM","▦"]],draft:"Thanks for your interest. What would you like to improve first?"},
+        initial:"draft"},
+      marketing:{
+        ar:{name:"ريم",role:"التسويق",suggestion:"أجيبي عن سؤال يتكرر",decision:"محتوى جاهز لمراجعتك",working:"تصوغ إجابة من معرفة الشركة",done:"نُشر المحتوى في المثال",task:"إجابة سؤال العملاء",reason:"السؤال المتكرر أقرب إلى حاجة العميل من فكرة عشوائية؛ تبدأ بمصدر معتمد ثم تضبط النبرة.",journey:["تلتقط السؤال","تتحقق من الجواب","تصوغ المحتوى","تعرضه عليك"],branch:"إذا لم تجد مصدرًا موثوقًا، تسأل بدل أن تخمّن.",knowledge:"صوت العلامة ومصادرها",boundary:"النشر بعد إذنك",tools:[["قناة النشر","↗"]],draft:"السؤال الذي يطرحه عملاؤك كثيرًا يستحق إجابة واضحة ومباشرة."},
+        en:{name:"Reem",role:"Marketing",suggestion:"Answer a recurring question",decision:"Content ready for your review",working:"Drafting from company knowledge",done:"Content published in the sample",task:"Answer a customer question",reason:"A recurring question is closer to a customer's need than a random idea. She starts with an approved source and adjusts the tone.",journey:["Finds the question","Verifies the answer","Writes the content","Brings it to you"],branch:"If no trusted source is available, she asks instead of guessing.",knowledge:"Brand voice and sources",boundary:"Publishing needs your permission",tools:[["Publishing channel","↗"]],draft:"A question your customers ask often deserves a clear, direct answer."},
+        initial:"waiting"},
+      support:{
+        ar:{name:"فهد",role:"دعم العملاء",suggestion:"ابدأ بطلب غير محسوم",decision:"ردّ يحتاج قرارك",working:"يتحقق من طلب عميل",done:"وصل تأكيد الرد في المثال",task:"معالجة طلب عميل",reason:"يفهم الطلب ويتحقق من الإجابة قبل الرد؛ يصعّد ما يتجاوز معرفته أو صلاحياته.",journey:["يستقبل الطلب","يفهم المشكلة","يجيب أو يصعّد","يتابع الحل"],branch:"إذا احتاج تعويضًا أو جوابًا غير موثق، يعود إليك قبل الرد.",knowledge:"قاعدة المعرفة",boundary:"التعويضات بموافقتك",tools:[["واتساب","◌"],["سجل العملاء","▦"]],draft:"وصلني طلبك. أتحقق من التفاصيل وأعود إليك بالخطوة التالية."},
+        en:{name:"Fahad",role:"Customer support",suggestion:"Start with an unresolved request",decision:"A reply needs your decision",working:"Checking a customer request",done:"Reply receipt in the sample",task:"Handle a customer request",reason:"He understands the request and verifies the answer before replying. He escalates anything beyond his knowledge or permission.",journey:["Receives the request","Understands the issue","Answers or escalates","Follows the resolution"],branch:"Compensation or an unsupported answer comes back to you before a reply.",knowledge:"Knowledge base",boundary:"Compensation needs approval",tools:[["WhatsApp","◌"],["Customer record","▦"]],draft:"I received your request. I'll check the details and return with the next step."},
+        initial:"working"}
+    };
+    const copy={
+      ar:{team:"فريقك",railFoot:"مكتب واحد لكل موظف.",preview:"معاينة تصميم · بيانات توضيحية",desk:"مكتب الموظف",company:"شركتك",now:"الآن",journey:"رحلة عمله",sampleNote:"معاينة فقط؛ لا تُرسل رسائل ولا تنفّذ مهامًا.",lenses:["عمله","قدرته","أثره"],status:{draft:"مسودة",waiting:"بانتظارك",working:"يعمل · مثال",done:"نتيجة مثال"},detail:{draft:"اقتراح توضيحي؛ لا يعتمد على بيانات شركتك.",waiting:"بانتظار قرارك قبل أي أثر خارجي.",working:"نشاط توضيحي؛ لم يبدأ تشغيل حقيقي.",done:"ردّ أداة توضيحي؛ الأثر التجاري غير مثبت."},primary:{draft:"افتح الاقتراح",waiting:"راجع القرار",working:"افتح العمل",done:"راجع النتيجة"},ability:"القدرة",open:"افتح التفاصيل",why:"لماذا هذه الخطوة؟",ask:"اسأله أو كلّفه…",send:"إرسال",workTitle:"عمله",abilityTitle:"قدرته",impactTitle:"أثره",toolTitle:"الأدوات",noTool:"تحتاج ربطًا",sampleTool:"متصلة في المثال",connect:"ربط · معاينة",connectNote:"الربط الحقيقي يظهر هنا عند تطبيق التصميم.",knowledge:"معرفته",boundary:"صلاحياته",plan:"رحلة عمله",draftAction:"جهّز مثالًا",approveAction:"اعتماد في المعاينة",finishAction:"اعرض نتيجة المثال",reviseAction:"طلب تعديل",exampleDraft:"محتوى توضيحي",whyTitle:"سبب اختياره",branch:"إذا تغير المسار",noImpact:"لا نتيجة مثبتة بعد",exampleImpact:"ردّ أداة في المثال فقط",business:"الأثر التجاري",unknown:"لم يُتحقق منه",localOnly:"هذه معاينة؛ لم يُنفَّذ إجراء حقيقي.",moved:"تغيرت حالة المعاينة فقط.",noSend:"المعاينة لا ترسل رسائل أو تعديلات.",toolsCount:n=>n===2?"أداتان للربط":n===1?"أداة للربط":n+" أدوات للربط",readyCount:n=>n===2?"أداتان متصلتان · مثال":n===1?"أداة متصلة · مثال":n+" أدوات متصلة · مثال"},
+      en:{team:"Your team",railFoot:"One desk per employee.",preview:"Design preview · illustrative data",desk:"Employee desk",company:"Your company",now:"Now",journey:"How the work happens",sampleNote:"Preview only; no message or task is sent.",lenses:["Work","Ability","Impact"],status:{draft:"Draft",waiting:"Needs you",working:"Working · sample",done:"Sample result"},detail:{draft:"Illustrative suggestion; it does not use your company data.",waiting:"Needs your decision before external impact.",working:"Illustrative activity; no real run has started.",done:"Illustrative tool response; business impact is unverified."},primary:{draft:"Open suggestion",waiting:"Review decision",working:"Open work",done:"Review result"},ability:"Ability",open:"Open details",why:"Why this step?",ask:"Ask or assign…",send:"Send",workTitle:"Work",abilityTitle:"Ability",impactTitle:"Impact",toolTitle:"Tools",noTool:"Needs connection",sampleTool:"Connected in sample",connect:"Connect · preview",connectNote:"A real connection flow would appear here when integrated.",knowledge:"Knowledge",boundary:"Permissions",plan:"How the work happens",draftAction:"Prepare sample",approveAction:"Approve in preview",finishAction:"Show sample result",reviseAction:"Request change",exampleDraft:"Illustrative content",whyTitle:"Why this step",branch:"If the path changes",noImpact:"No verified outcome yet",exampleImpact:"Sample tool response only",business:"Business impact",unknown:"Not verified",localOnly:"This preview did not execute a real action.",moved:"Only the preview state changed.",noSend:"The preview does not send messages or changes.",toolsCount:n=>n+" tools to connect",readyCount:n=>n+" connected tools · sample"}
+    };
+    const state={lang:"ar",person:"sales",phase:"draft"};
+    const $=id=>document.getElementById(id);
+    const clean=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+    let drawerReturnFocus=null;
+    function notify(message){$("toast").textContent=message;$("toast").hidden=false;clearTimeout(notify.timer);notify.timer=setTimeout(()=>$("toast").hidden=true,3000)}
+    function current(){return people[state.person][state.lang]}
+    function render(){
+      const c=copy[state.lang],p=current(),phase=state.phase;
+      document.documentElement.lang=state.lang;document.documentElement.dir=state.lang==="ar"?"rtl":"ltr";
+      document.title=state.lang==="ar"?"معاينة مكتب الموظف — سيادة":"Employee desk preview — Siyadah";
+      document.querySelectorAll("[data-i18n]").forEach(el=>{el.textContent=c[el.dataset.i18n]});
+      document.querySelector(".rail").setAttribute("aria-label",c.team);
+      document.querySelector(".surface").setAttribute("aria-label",c.desk);
+      $("people").setAttribute("aria-label",state.lang==="ar"?"أمثلة الموظفين":"Employee examples");
+      $("mobilePeople").setAttribute("aria-label",state.lang==="ar"?"اختيار موظف المعاينة":"Choose preview employee");
+      $("signals").setAttribute("aria-label",c.lenses.join(state.lang==="ar"?"، ":", "));
+      $("language").textContent=state.lang==="ar"?"EN":"عربي";
+      $("language").setAttribute("aria-label",state.lang==="ar"?"Switch language to English":"التحويل إلى العربية");
+      $("app").dataset.state=phase;
+      $("people").innerHTML=Object.entries(people).map(([key,person])=>{const q=person[state.lang];return '<button type="button" class="person" data-person="'+key+'" aria-current="'+(key===state.person)+'"><span class="person-mark" aria-hidden="true">'+clean(q.name[0])+'</span><span>'+clean(q.name)+'<small>'+clean(q.role)+'</small></span></button>'}).join("");
+      $("mobilePeople").innerHTML=Object.entries(people).map(([key,person])=>{const q=person[state.lang];return '<button type="button" data-person="'+key+'" aria-current="'+(key===state.person)+'" aria-label="'+clean(q.name+' · '+q.role)+'">'+clean(q.name)+'</button>'}).join("");
+      $("breadName").textContent=p.name;$("name").textContent=p.name;$("role").textContent=p.role;
+      $("statusText").textContent=c.status[phase];
+      $("focusTitle").textContent=phase==="draft"?p.suggestion:phase==="waiting"?p.decision:phase==="working"?p.working:p.done;
+      $("focusDetail").textContent=c.detail[phase];
+      $("primaryLabel").textContent=c.primary[phase];
+      $("secondaryAction").textContent=phase==="done"?c.impactTitle:c.ability;
+      $("journeySteps").innerHTML=p.journey.map(step=>'<li>'+clean(step)+'</li>').join("");
+      $("composerIcon").textContent=p.name[0];$("composer").placeholder=c.ask;$("composer").setAttribute("aria-label",c.ask);$("sendPreview").setAttribute("aria-label",c.send);
+      $("askWhy").textContent=c.why;
+      const values=[phase==="draft"?p.suggestion:p.task,phase==="draft"?c.toolsCount(p.tools.length):c.readyCount(p.tools.length),phase==="done"?c.exampleImpact:c.noImpact];
+      const icons=["↗","⌁","◉"];
+      $("signals").innerHTML=c.lenses.map((label,i)=>'<button type="button" class="signal" data-signal="'+i+'" aria-label="'+clean(label+' · '+values[i])+'"><span class="signal-icon" aria-hidden="true">'+icons[i]+'</span><span class="signal-copy"><small>'+clean(label)+'</small><strong>'+clean(values[i])+'</strong></span><span class="signal-arrow" aria-hidden="true">↗</span></button>').join("");
+    }
+    function section(label,value){return '<div class="drawer-section"><small>'+clean(label)+'</small><strong>'+clean(value)+'</strong></div>'}
+    function openDrawer(kind){
+      drawerReturnFocus=document.activeElement;
+      const c=copy[state.lang],p=current(),phase=state.phase;
+      $("drawerTitle").textContent=kind==="work"?c.workTitle:kind==="ability"?c.abilityTitle:kind==="impact"?c.impactTitle:c.whyTitle;
+      let html="";
+      if(kind==="work"){
+        html=section(c.workTitle,phase==="draft"?p.suggestion:p.task)+'<div class="drawer-section"><small>'+clean(c.plan)+'</small><div class="route">'+p.journey.map(step=>'<div class="route-step">'+clean(step)+'</div>').join("")+'</div><p class="branch">'+clean(p.branch)+'</p></div>';
+        if(phase==="waiting")html+='<div class="drawer-section"><div class="decision-preview"><small>'+clean(c.exampleDraft)+'</small><p>'+clean(p.draft)+'</p></div></div>';
+        const action=phase==="draft"?"prepare":phase==="waiting"?"approve":phase==="working"?"finish":null;
+        if(action)html+='<div class="drawer-actions"><button type="button" data-preview-action="'+action+'">'+clean(action==="prepare"?c.draftAction:action==="approve"?c.approveAction:c.finishAction)+'</button>'+(phase==="waiting"?'<button type="button" data-preview-action="revise">'+clean(c.reviseAction)+'</button>':"")+'</div>';
+      } else if(kind==="ability"){
+        html=section(c.knowledge,p.knowledge)+'<div class="drawer-section"><small>'+clean(c.toolTitle)+'</small>'+p.tools.map(([name,icon])=>'<button type="button" class="tool-row" data-connect-preview="true" aria-label="'+clean(c.connect+' '+name)+'"><span class="tool-icon" aria-hidden="true">'+clean(icon)+'</span><span>'+clean(name)+'</span><small>'+clean(phase==="draft"?c.noTool:c.sampleTool)+'</small></button>').join("")+'</div>'+section(c.boundary,p.boundary);
+      } else if(kind==="impact"){
+        html=section(c.impactTitle,phase==="done"?c.exampleImpact:c.noImpact)+section(c.business,c.unknown);
+      } else {
+        html=section(c.why,p.reason)+section(c.branch,p.branch);
+      }
+      html+='<div class="drawer-section"><p>'+clean(c.localOnly)+'</p></div>';
+      $("drawerContent").innerHTML=html;
+      $("drawerBackdrop").hidden=false;$("drawer").hidden=false;document.body.style.overflow="hidden";$("drawerClose").focus();
+    }
+    function closeDrawer(){$("drawer").hidden=true;$("drawerBackdrop").hidden=true;document.body.style.overflow="";if(drawerReturnFocus?.isConnected)drawerReturnFocus.focus()}
+    function choosePerson(event){const button=event.target.closest("[data-person]");if(!button)return;state.person=button.dataset.person;state.phase=people[state.person].initial;render()}
+    $("people").addEventListener("click",choosePerson);$("mobilePeople").addEventListener("click",choosePerson);
+    $("language").addEventListener("click",()=>{state.lang=state.lang==="ar"?"en":"ar";render()});
+    $("signals").addEventListener("click",event=>{const button=event.target.closest("[data-signal]");if(button)openDrawer(["work","ability","impact"][Number(button.dataset.signal)])});
+    $("primaryAction").addEventListener("click",()=>openDrawer(state.phase==="done"?"impact":"work"));
+    $("secondaryAction").addEventListener("click",()=>openDrawer(state.phase==="done"?"impact":"ability"));
+    $("askWhy").addEventListener("click",()=>openDrawer("why"));
+    $("drawerClose").addEventListener("click",closeDrawer);$("drawerBackdrop").addEventListener("click",closeDrawer);
+    $("drawerContent").addEventListener("click",event=>{
+      if(event.target.closest("[data-connect-preview]")){notify(copy[state.lang].connectNote);return}
+      const button=event.target.closest("[data-preview-action]");if(!button)return;
+      if(button.dataset.previewAction==="revise"){notify(copy[state.lang].noSend);return}
+      state.phase={prepare:"waiting",approve:"working",finish:"done"}[button.dataset.previewAction];closeDrawer();render();notify(copy[state.lang].moved);
+    });
+    document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!$("drawer").hidden)closeDrawer()});
+    $("sendPreview").addEventListener("click",()=>notify(copy[state.lang].noSend));
+    $("composer").addEventListener("keydown",event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();notify(copy[state.lang].noSend)}});
+    render();
+  </script>
+</body>
+</html>
