@@ -23,11 +23,12 @@ function locate(entry){
 
 function check(){
   if(catalog.repository!=='ALKHANFAR/t43'||!Array.isArray(features))throw new Error('invalid feature index');
+  const states=new Set(['live','draft_pr','live_needs_change','gap','planned','illustrative']);
   const ids=new Set(),errors=[];
   for(const feature of features){
     if(!/^[a-z0-9_]+$/.test(feature.id)||ids.has(feature.id))errors.push(`invalid or duplicate id: ${feature.id}`);
     ids.add(feature.id);
-    if(!feature.name||!feature.meaning||!/^ABO-\d+$/.test(feature.linear)||!Array.isArray(feature.aliases)||!Array.isArray(feature.locations)||!feature.locations.length)errors.push(`incomplete feature: ${feature.id}`);
+    if(!feature.name||!feature.meaning||!states.has(feature.state)||!/^ABO-\d+$/.test(feature.linear)||!Array.isArray(feature.aliases)||!Array.isArray(feature.locations)||!feature.locations.length)errors.push(`incomplete feature: ${feature.id}`);
     for(const item of feature.locations||[]){
       if(!item.role||!item.path||!item.anchor){errors.push(`incomplete location: ${feature.id}`);continue;}
       try{locate(item);}catch(error){errors.push(`${feature.id}: ${error.message}`);}
