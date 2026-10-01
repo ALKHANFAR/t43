@@ -354,6 +354,18 @@ test('failed work with arbitrary proof text never renders success mark',async()=
     send(p,'نفذ');await flush();assert.match(thread(p),/تعذّر إكمال/);assert.ok(!thread(p).includes('✓'));assert.equal(p.polls.length,0);
   }finally{p.close();}
 });
+test('terminal unknown request shows verification warning and never a success mark',async()=>{
+  const unknown={ok:true,conversation_id:'c',request_status:'not_observed',work_status:'unknown',work_id:'request_req_1',reply:'لم نؤكد نتيجة الطلب بعد. لم نعد تنفيذه.'};
+  const p=await page({message:unknown,work:unknown});try{
+    send(p,'أنشئ موظفًا');await flush();
+    assert.ok(p.d.querySelector('[data-siy-retry]'));
+    assert.ok(!thread(p).includes('✓'));
+    p.d.querySelector('[data-siy-retry]').click();await flush();
+    assert.equal(p.requests.filter(x=>x.body.op==='message').length,1);
+    assert.match(thread(p),/حالته غير معروفة|not in the record/);
+    assert.ok(!thread(p).includes('✓'));
+  }finally{p.close();}
+});
 test('ambiguous message timeout refreshes by original request ID without redispatch',async()=>{
   const p=await page({message:Error('offline'),work:{ok:true,conversation_id:'c',work_id:'w',work_status:'succeeded',reply:'تم استلام السؤال'}});try{
     send(p,'سؤال');await flush();assert.ok(p.d.querySelector('[data-siy-retry]'));
