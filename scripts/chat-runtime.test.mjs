@@ -33,6 +33,26 @@ test('customer shell hides implementation brands and forbidden legacy dependency
   assert.doesNotMatch(onboardingHtml,/مسودة الموظف|<small>مسودة<\/small>/);
 });
 
+test('customer tool catalog excludes the execution platform while retaining useful tools',async()=>{
+  const pieces=[
+    ['activepieces','Activepieces Platform','Automation engine','developer','https://example.test/platform.png','إدارة الأتمتة'],
+    ['gmail','Gmail','Email','communication','https://example.test/gmail.png','البريد'],
+  ];
+  const p=await page({pieces});try{
+    p.d.querySelector('#toolsLink').click();await flush();
+    p.d.querySelector('#allTgl').click();await flush();
+    const visible=thread(p);
+    assert.doesNotMatch(visible,/Activepieces Platform|إدارة الأتمتة/);
+    assert.match(visible,/Gmail/);
+    assert.match(visible,/1 أداة/);
+  }finally{p.close();}
+});
+
+test('customer integrations API does not expose internal pilot inventory',()=>{
+  assert.ok(!serverSource.includes("input.op==='pilot_discover'"));
+  assert.ok(!serverSource.includes('createPilotToolDiscovery'));
+});
+
 test('selected real employee opens without placeholder metrics or invented activity',async()=>{
   const draft={...employee,status:'disabled',tools:[]};
   const p=await page({hash:'#e='+encodeURIComponent(draft.recordId),hydrate:{...empty,team:[draft]}});try{

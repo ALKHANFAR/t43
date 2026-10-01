@@ -23,6 +23,15 @@ function harness({listed=[],createdProject}={}){
   return {service:createTenantProjectService({query,fetchImpl,activepiecesUrl:'https://activepieces.example',apiKey:'secret'}),rows,calls};
 }
 
+test('execution service setup errors use Siyadah language without naming the engine',async()=>{
+  const service=createTenantProjectService({query:async()=>({rows:[]}),activepiecesUrl:'',apiKey:''});
+  await assert.rejects(()=>service.ensure({tenantId:'company_1',displayName:'شركة'}),error=>{
+    assert.equal(error.code,'provider_not_configured');
+    assert.doesNotMatch(error.message,/Activepieces|@activepieces/i);
+    return true;
+  });
+});
+
 test('provisions one isolated project with stable externalId and reuses the stored mapping',async()=>{
   const h=harness({createdProject:{id:projectId,externalId:'siyadah:tenant_1001'}});
   await h.service.init();

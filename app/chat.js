@@ -915,7 +915,7 @@ var I = {
   /* الكتالوج الحقيقي من pieces.js: [slug, name, description EN, category, logo, description AR] */
   var ON ={"gmail":"سعد · نورة · فهد","google-sheets":"نورة","google-calendar":"سعد","whatsapp":"سعد · فهد"};
   var SUG={"linkedin":"تحتاجه ريم","hubspot":"يحتاجه سعد","wafeq":"تحتاجه نورة","cal-com":"يحتاجه سعد","instagram-business":"تحتاجه ريم","google-docs":"تحتاجه ريم"};
-  var TOOLS=(window.PIECES||[]).map(function(p){ return {s:p[0],n:p[1],d:p[5]||p[2],en:p[2],c:p[3],logo:p[4],piece:(p[6]||{}).pieceName||"@activepieces/piece-"+p[0],on:!!ON[p[0]],by:ON[p[0]]||"",connection:null,sug:window.SIYADAH_REAL_ACCOUNT===true?"":(SUG[p[0]]||"")}; });
+  var TOOLS=(window.PIECES||[]).filter(function(p){return p[0]!=="activepieces";}).map(function(p){ return {s:p[0],n:p[1],d:p[5]||p[2],en:p[2],c:p[3],logo:p[4],piece:(p[6]||{}).pieceName||"@activepieces/piece-"+p[0],on:!!ON[p[0]],by:ON[p[0]]||"",connection:null,sug:window.SIYADAH_REAL_ACCOUNT===true?"":(SUG[p[0]]||"")}; });
   var SOON=["سلة","زد","فودكس","ميسر","Unifonic","تابي","دفترة"];
   var tq="", tshown=24, picked=null, allOpen=false; /* allOpen: قسم «الكل» مطوي افتراضيًا */
   function hasConnection(t){ return window.__SIY_REAL__?!!t.connection:t.on; }

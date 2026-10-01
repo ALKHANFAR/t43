@@ -5,7 +5,6 @@ import {createHash,randomUUID,timingSafeEqual} from 'node:crypto';
 import pg from 'pg';
 import {createTenantProjectService,TenantProjectError} from './lib/tenant-projects.mjs';
 import {createToolConnectionService} from './lib/tool-connections.mjs';
-import {createPilotToolDiscovery} from './lib/pilot-tool-discovery.mjs';
 import {SESSION_COOKIE,cookieValue,createTenantSession,readTenantSession,sessionCookie} from './lib/tenant-session.mjs';
 import {createFirecrawlClient,FirecrawlError} from './lib/firecrawl.mjs';
 import {createCompanyProfileService,CompanyProfileError} from './lib/company-profile.mjs';
@@ -174,11 +173,6 @@ async function integrations(req,res){
     const input=await body(req),resolved=await tenantSession(req);
     if(['companyId','tenantId','projectId','scope'].some(key=>Object.hasOwn(input,key)))throw new TenantProjectError('client_scope_forbidden','نطاق الشركة يحدده الخادم فقط.',400);
     const service=await toolConnections(),tenantId=resolved.session.companyId;
-    if(input.op==='pilot_discover'){
-      const projects=await tenantProjects();
-      const discovery=createPilotToolDiscovery({requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY});
-      return json(res,200,{ok:true,...await discovery.inspect(tenantId)});
-    }
     if(input.op==='list')return json(res,200,{ok:true,connections:await service.list(tenantId)});
     if(input.op==='methods')return json(res,200,{ok:true,...await service.methods({tenantId,piece:input.piece})});
     if(input.op==='connect')return json(res,201,{ok:true,connection:await service.connect({tenantId,piece:input.piece,type:input.type,values:input.values})});
