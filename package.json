@@ -9,7 +9,8 @@
     "lint:js": "node --check site.js && node --check integrations.js && node --check demo.js && node --check demo-en.js && node --check app/chat.js && node --check app/onboard.js",
     "lab": "node developer-lab/server.mjs",
     "preview:journey": "node scripts/journey-preview.mjs",
-    "test": "npm run test:runtime && npm run lint:js && npm run catalog && npm run validate && npm run a11y && npm run a11y:chrome",
+    "test": "npm run index:check && npm run test:runtime && npm run lint:js && npm run catalog && npm run validate && npm run a11y && npm run a11y:chrome",
+    "index:check": "node scripts/feature-index.mjs --check",
     "a11y:chrome": "node scripts/a11y-lh.mjs index.html ar.html auth.html integrations.html demo.html demo-en.html privacy.html 404.html app/chat.html app/onboard.html",
     "catalog": "node scripts/check-pieces.js",
     "test:runtime": "node --test scripts/*-runtime.test.mjs"

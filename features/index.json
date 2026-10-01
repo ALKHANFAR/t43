@@ -1,0 +1,114 @@
+{
+  "version": 1,
+  "repository": "ALKHANFAR/t43",
+  "features": [
+    {
+      "id": "chat_employee_approval",
+      "name": "موافقة تجهيز الموظف التي تظهر في الشات",
+      "aliases": ["موافقة الموظف", "موافقة على الموظف الي تظهر في الشات", "وافق وشغل", "اعتماد خطة الموظف", "employee approval in chat", "approve employee"],
+      "state": "gap",
+      "meaning": "يوجد زر ومُعالج واجهة لقرار تجهيز الموظف، واختبار واجهة بمحاكاة الرد. خادم سيادة الحالي لا يعرّف عملية approve؛ ليست موافقة حية مؤكدة.",
+      "linear": "ABO-44",
+      "locations": [
+        {"role": "render", "path": "app/chat.js", "anchor": "function siyBuilderProposalHtml(data)"},
+        {"role": "click", "path": "app/chat.js", "anchor": "async function siyDecideBuilder(row,decision)"},
+        {"role": "request", "path": "app/chat.js", "anchor": "op:'approve'"},
+        {"role": "test_mock_only", "path": "scripts/chat-runtime.test.mjs", "anchor": "data-siy-approval=\"approve\""},
+        {"role": "server_entry", "path": "server.mjs", "anchor": "async function publicChat(req,res)"}
+      ]
+    },
+    {
+      "id": "employee_draft_chat",
+      "name": "حفظ موظف كمسودة من الشات",
+      "aliases": ["انشاء موظف", "تجهيز موظف", "مسودة الموظف", "employee draft from chat"],
+      "state": "draft_pr",
+      "meaning": "PR #17 يحفظ المسودة محليًا في قاعدة سيادة دون انتظار Activepieces أو ربط الأداة. الحالة disabled وflowId فارغ؛ لا تعني تشغيل الموظف.",
+      "linear": "ABO-55",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/17",
+      "locations": [
+        {"role": "route", "path": "server.mjs", "anchor": "employeeRequestMode(input.message)==='create'"},
+        {"role": "intent", "path": "lib/chat-intelligence.mjs", "anchor": "export function employeeRequestMode(message)"},
+        {"role": "storage", "path": "lib/company-profile.mjs", "anchor": "async function createManualEmployeeDraft({companyId,name,requestId})"},
+        {"role": "migration", "path": "migrations/0002-local-employee-drafts.sql", "anchor": "ADD COLUMN IF NOT EXISTS creation_request_id"},
+        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "| Employee saved |"},
+        {"role": "test", "path": "scripts/local-employee-draft-runtime.test.mjs", "anchor": "createManualEmployeeDraft(input)"}
+      ]
+    },
+    {
+      "id": "employee_draft_onboarding",
+      "name": "اختيار موظف وحفظه أثناء التهيئة",
+      "aliases": ["اختيار الموظف", "موظف التهيئة", "onboarding employee selection"],
+      "state": "draft_pr",
+      "meaning": "PR #17 يحفظ اختيار الموظف محليًا فورًا بمعرّف طلب ثابت أثناء الجلسة؛ لا يطلب تجهيز Flow أو اتصال أداة حتى يحتاج العميل التفعيل.",
+      "linear": "ABO-55",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/17",
+      "locations": [
+        {"role": "screen", "path": "app/onboard.js", "anchor": "op:'select_employee'"},
+        {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='select_employee')"},
+        {"role": "storage", "path": "lib/company-profile.mjs", "anchor": "async function createEmployeeDraft({companyId,suggestionId,requestId})"},
+        {"role": "request_identity", "path": "app/onboard.js", "anchor": "function employeeSelectionRequestId()"},
+        {"role": "test", "path": "scripts/local-employee-draft-runtime.test.mjs", "anchor": "createEmployeeDraft(input)"}
+      ]
+    },
+    {
+      "id": "legacy_employee_flow_inventory",
+      "name": "فحص تدفقات الموظفين القديمة قبل نشر الحفظ المحلي",
+      "aliases": ["التدفقات القديمة", "تدفق بلا موظف", "legacy employee flows", "migration gate"],
+      "state": "draft_pr",
+      "meaning": "فحص قراءة فقط في PR #17 يوقف الدمج عند وجود تدفق لدى المزود بلا صف موظف أو عند نتيجة ناقصة؛ لم يُنفذ على الإنتاج بعد.",
+      "linear": "ABO-55",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/17",
+      "locations": [
+        {"role": "command", "path": "scripts/check-legacy-employee-flows.mjs", "anchor": "inventoryLegacyFlows({projects,employees"},
+        {"role": "logic", "path": "lib/legacy-flow-inventory.mjs", "anchor": "export async function inventoryLegacyFlows"},
+        {"role": "release_gate", "path": "RELEASE-ABO55.md", "anchor": "Before merging"},
+        {"role": "test", "path": "scripts/legacy-flow-inventory-runtime.test.mjs", "anchor": "release inventory reports provider-only legacy flows"}
+      ]
+    },
+    {
+      "id": "employee_activation",
+      "name": "تفعيل الموظف أو إيقافه",
+      "aliases": ["تشغيل الموظف", "ايقاف الموظف", "زر الموظف", "employee state"],
+      "state": "live",
+      "meaning": "يرسل حالة الموظف من الواجهة إلى خادم سيادة الذي يغير حالة Flow داخل مشروع الشركة. هذا غير موافقة تجهيز الموظف في الشات.",
+      "linear": "ABO-17",
+      "locations": [
+        {"role": "screen", "path": "app/chat.js", "anchor": "async function siySetEmployeeState(e)"},
+        {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='employee_state')"},
+        {"role": "provider", "path": "lib/tenant-projects.mjs", "anchor": "async function changeFlowStatus({tenantId,flowId,status})"},
+        {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "op:'employee_state'"}
+      ]
+    },
+    {
+      "id": "chat_request_identity",
+      "name": "منع تكرار طلب الشات ومعرفة حالته",
+      "aliases": ["حالة الطلب", "اعادة المحاولة", "request id", "idempotency"],
+      "state": "draft_pr",
+      "meaning": "PR #13 يربط الطلب بالشركة ومعرّف ثابت؛ قراءة الحالة بالمعرّف نفسه لا ترسل العمل مرة ثانية.",
+      "linear": "ABO-37",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/13",
+      "locations": [
+        {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='work')"},
+        {"role": "claim", "path": "lib/company-profile.mjs", "anchor": "async function claimChatRequest({companyId,conversationId,requestId,requestHash})"},
+        {"role": "result", "path": "lib/chat-outcome.mjs", "anchor": "export function failedChatExecution("},
+        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "## Request identity and company boundary"},
+        {"role": "test", "path": "scripts/chat-request-ledger-runtime.test.mjs", "anchor": "claimChatRequest(input)"}
+      ]
+    },
+    {
+      "id": "external_run_proof",
+      "name": "تشغيل أداة الموظف وإثبات نتيجتها",
+      "aliases": ["نتيجة الاداة", "Activepieces run", "دليل التنفيذ", "runId"],
+      "state": "draft_pr",
+      "meaning": "PR #15 يفحص التشغيل ودليل النقل؛ نتيجة المزود التجارية تحتاج محول تحقق وإيصالًا خاصًا بها. رد HTTP وحده ليس نجاحًا.",
+      "linear": "ABO-43",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/15",
+      "locations": [
+        {"role": "route", "path": "server.mjs", "anchor": "runFlow({tenantId:companyId"},
+        {"role": "provider", "path": "lib/tenant-projects.mjs", "anchor": "async function runFlow({tenantId,flowId,requestId,message"},
+        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "For a provider result, require"},
+        {"role": "test", "path": "scripts/tenant-projects-runtime.test.mjs", "anchor": "runFlow({tenantId:"}
+      ]
+    }
+  ]
+}
