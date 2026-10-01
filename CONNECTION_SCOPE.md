@@ -1,0 +1,7 @@
+# ABO-50: project-exclusive tool connections
+
+Siyadah resolves the Activepieces project from the customer's server session. A provider connection is accepted only if its readback has `scope: PROJECT` and `projectIds` contains exactly that one project. This rule applies to list results, direct ownership reads before revalidate or disconnect, connection creation results, OAuth finish results, and revalidation results. A provider row shared with another project, missing `projectIds`, or exposing only the legacy `projectId` field fails closed with `connection_project_mismatch`.
+
+Activepieces' [upsert request](https://www.activepieces.com/docs/endpoints/connections/upsert) takes a singular `projectId`; its [get response](https://www.activepieces.com/docs/endpoints/connections/get) and [list response](https://www.activepieces.com/docs/endpoints/connections/list) declare `projectIds`. Sending a project ID on create or filtering by one on get does not replace checking the returned ownership. The service returns only safe connection metadata, not credential values.
+
+Existing shared or malformed connections may no longer appear in Siyadah and cannot be revalidated or disconnected through Siyadah. We did not enumerate or change live customer connections in this PR. Those rows require a separate ownership audit and deliberate remediation; this change does not delete or rewrite them. Tests use synthetic provider rows and prove the shared case is rejected before a revalidate or delete request is sent.

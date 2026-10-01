@@ -10,6 +10,7 @@ const gmail={name:'@activepieces/piece-gmail',displayName:'Gmail',version:'0.17.
 function response(status,body){return {ok:status>=200&&status<300,status,json:async()=>body};}
 function harness(overrides={}){
   const calls=[];
+  const projects=stage=>Object.hasOwn(overrides,stage)?overrides[stage]:(overrides.foreign&&stage==='list'?[OTHER]:[PROJECT]);
   const fetchImpl=async(url,options={})=>{
     calls.push({url,options,body:options.body?JSON.parse(options.body):null});
     if(url.startsWith('https://cloud.example/apps'))return response(200,{'@activepieces/piece-gmail':{clientId:'google-client'}});
@@ -17,11 +18,11 @@ function harness(overrides={}){
       const name=new URL(url).searchParams.get('searchQuery');return response(200,[name==='stripe'?stripe:name==='whatsapp'?whatsapp:overrides.gmail||gmail]);
     }
     if(url.includes('/oauth2/authorization-url'))return response(200,{authorizationUrl:'https://accounts.google.com/o/oauth2/auth?client_id=google-client'});
-    if(url.includes('/revalidate'))return response(200,{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:[PROJECT]});
+    if(url.includes('/revalidate'))return response(200,{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:projects('revalidate')});
     if(options.method==='DELETE')return response(204,{});
-    if(url.includes(`/app-connections/${CONNECTION}`))return response(200,{id:CONNECTION,pieceName:'@activepieces/piece-stripe',scope:'PROJECT',projectIds:[PROJECT]});
-    if(url.includes('/app-connections?'))return response(200,{data:overrides.foreign?[{id:CONNECTION,pieceName:'@activepieces/piece-stripe',scope:'PROJECT',projectIds:[OTHER]}]:[{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:[PROJECT],flowIds:[FLOW,'invalid']}]});
-    if(url.endsWith('/api/v1/app-connections')){const b=JSON.parse(options.body);return response(201,{id:CONNECTION,pieceName:b.pieceName,pieceVersion:b.pieceVersion,displayName:b.displayName,status:'ACTIVE',scope:'PROJECT',projectIds:[PROJECT]});}
+    if(url.includes(`/app-connections/${CONNECTION}`))return response(200,{id:CONNECTION,pieceName:'@activepieces/piece-stripe',scope:'PROJECT',projectIds:projects('get')});
+    if(url.includes('/app-connections?'))return response(200,{data:[{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:projects('list'),projectId:overrides.projectIdOnly?PROJECT:undefined,flowIds:[FLOW,'invalid']}]});
+    if(url.endsWith('/api/v1/app-connections')){const b=JSON.parse(options.body);return response(201,{id:CONNECTION,pieceName:b.pieceName,pieceVersion:b.pieceVersion,displayName:b.displayName,status:'ACTIVE',scope:'PROJECT',projectIds:projects('create')});}
     throw new Error(`unexpected ${url}`);
   };
   return {calls,service:createToolConnectionService({requireProject:async tenant=>tenant==='company-a'?PROJECT:OTHER,fetchImpl,activepiecesUrl:'https://ap.example',apiKey:'platform-key',attemptSecret:'s'.repeat(48),cloudAppsUrl:'https://cloud.example/apps'})};
@@ -98,6 +99,30 @@ test('OAuth refuses an auth definition that places a secret field in a public UR
 test('rejects cross-company connection readback',async()=>{
   const {service}=harness({foreign:true});
   await assert.rejects(()=>service.list('company-a'),error=>error.code==='connection_project_mismatch'&&error.status===403);
+});
+
+test('shared or legacy projectId-only connection cannot be listed as company-owned',async()=>{
+  for(const config of [{list:[PROJECT,OTHER]},{list:[]},{list:undefined,projectIdOnly:true}]){
+    const {service}=harness(config);
+    await assert.rejects(()=>service.list('company-a'),error=>error.code==='connection_project_mismatch'&&error.status===403);
+  }
+});
+
+test('shared connection ownership is rejected before revalidate or disconnect writes',async()=>{
+  const {service,calls}=harness({get:[PROJECT,OTHER]});
+  await assert.rejects(()=>service.revalidate({tenantId:'company-a',id:CONNECTION}),error=>error.code==='connection_project_mismatch');
+  await assert.rejects(()=>service.disconnect({tenantId:'company-a',id:CONNECTION}),error=>error.code==='connection_project_mismatch');
+  assert.equal(calls.some(call=>call.url.includes('/revalidate')||call.options.method==='DELETE'),false);
+});
+
+test('a shared provider result after create or revalidation is rejected',async()=>{
+  const created=harness({create:[PROJECT,OTHER]});
+  await assert.rejects(()=>created.service.connect({tenantId:'company-a',piece:'stripe',type:'SECRET_TEXT',values:{secret_text:'test'}}),error=>error.code==='connection_project_mismatch');
+  const oauth=harness({create:[PROJECT,OTHER]});
+  const started=await oauth.service.oauthStart({tenantId:'company-a',piece:'gmail'});
+  await assert.rejects(()=>oauth.service.oauthFinish({tenantId:'company-a',attempt:started.attempt,state:started.attempt,code:'oauth-code'}),error=>error.code==='connection_project_mismatch');
+  const revalidated=harness({revalidate:[PROJECT,OTHER]});
+  await assert.rejects(()=>revalidated.service.revalidate({tenantId:'company-a',id:CONNECTION}),error=>error.code==='connection_project_mismatch');
 });
 
 test('revalidates and disconnects only after ownership readback',async()=>{

@@ -169,6 +169,20 @@
       ]
     },
     {
+      "id": "exclusive_project_connections",
+      "name": "عزل اتصال الأداة داخل مشروع شركة واحدة",
+      "aliases": ["ملكية الاتصال", "اتصال مشترك", "عزل الأدوات", "connection scope", "shared connection"],
+      "state": "draft_pr",
+      "meaning": "يتحقق خادم سيادة من أن اتصال Activepieces بنطاق PROJECT وله projectIds بمشروع الشركة وحده في القائمة والقراءة والإنشاء وOAuth وإعادة التحقق والفصل. الصف المشترك أو الناقص يرفض؛ لم يفحص اتصالات العملاء الحية أو يعالجها.",
+      "linear": "ABO-50",
+      "locations": [
+        {"role": "ownership_guard", "path": "lib/tool-connections.mjs", "anchor": "function publicConnection(connection,projectId)"},
+        {"role": "read_before_write", "path": "lib/tool-connections.mjs", "anchor": "async function owned(tenantId,id)"},
+        {"role": "test_shared", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "shared connection ownership is rejected before revalidate"},
+        {"role": "contract", "path": "CONNECTION_SCOPE.md", "anchor": "projectIds` contains exactly that one project"}
+      ]
+    },
+    {
       "id": "external_run_proof",
       "name": "تشغيل أداة الموظف وإثبات نتيجتها",
       "aliases": ["نتيجة الاداة", "Activepieces run", "دليل التنفيذ", "runId"],
