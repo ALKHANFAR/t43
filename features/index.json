@@ -55,14 +55,18 @@
       "name": "فحص تدفقات الموظفين القديمة قبل نشر الحفظ المحلي",
       "aliases": ["التدفقات القديمة", "تدفق بلا موظف", "legacy employee flows", "migration gate"],
       "state": "draft_pr",
-      "meaning": "فحص قراءة فقط في PR #17 يوقف الدمج عند وجود تدفق لدى المزود بلا صف موظف أو عند نتيجة ناقصة؛ لم يُنفذ على الإنتاج بعد.",
+      "meaning": "فحص قراءة فقط من PR #21 ضمن إصدار #19: تدفقات مشروع العميل تحتاج صف موظف مطابق، بينما تدفقات مشروع بلا أي مؤشر ملكية عميل تُحسب منفصلة وتُقبل فقط إذا كانت DISABLED. أي حالة مفعّلة أو مجهولة أو ربط ناقص يوقف الدمج. أعاد جرد production المصنف 10 مشاريع عملاء و4 مشاريع يتيمة و5 تدفقات يتيمة معطلة و0 تدفقات عملاء بلا موظف؛ يُعاد الجرد قبل النشر.",
       "linear": "ABO-55",
-      "pr": "https://github.com/ALKHANFAR/t43/pull/17",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/19",
       "locations": [
         {"role": "command", "path": "scripts/check-legacy-employee-flows.mjs", "anchor": "inventoryLegacyFlows({projects,employees"},
+        {"role": "ownership_sources", "path": "scripts/check-legacy-employee-flows.mjs", "anchor": "associatedCompanies=(await client.query"},
         {"role": "logic", "path": "lib/legacy-flow-inventory.mjs", "anchor": "export async function inventoryLegacyFlows"},
+        {"role": "classification", "path": "lib/legacy-flow-inventory.mjs", "anchor": "if(customerOwned)customerProjects++;else orphanProjects++;"},
+        {"role": "orphan_gate", "path": "lib/legacy-flow-inventory.mjs", "anchor": "if(String(flow.status||'').toUpperCase()!=='DISABLED')"},
         {"role": "release_gate", "path": "RELEASE-ABO55.md", "anchor": "Before merging"},
-        {"role": "test", "path": "scripts/legacy-flow-inventory-runtime.test.mjs", "anchor": "release inventory reports provider-only legacy flows"}
+        {"role": "test_customer", "path": "scripts/legacy-flow-inventory-runtime.test.mjs", "anchor": "any associated company data keeps an unmapped flow in the customer gate"},
+        {"role": "test_orphan", "path": "scripts/legacy-flow-inventory-runtime.test.mjs", "anchor": "orphan project flows must be verifiably disabled"}
       ]
     },
     {
