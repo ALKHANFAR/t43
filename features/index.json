@@ -96,6 +96,23 @@
       ]
     },
     {
+      "id": "customer_tool_oauth_connection",
+      "name": "ربط أداة الشركة عند الحاجة",
+      "aliases": ["ربط الأدوات", "اتصال أداة", "تسجيل دخول الأداة", "OAuth الأداة", "company tool connection"],
+      "state": "draft_pr",
+      "meaning": "خادم سيادة يملك مشروع الشركة ويُنشئ محاولة OAuth قصيرة مشفرة وموثقة، فلا تظهر حقول السر أو مفتاح PKCE في رابط الموافقة. لا تُطلب الوصلة عند حفظ مسودة الموظف، والاتصال المحفوظ لا يثبت نجاح مهمة خارجية. الجرد الحي واتصال عميل فعلي غير مثبتين.",
+      "linear": "ABO-50",
+      "locations": [
+        {"role": "customer_action", "path": "app/chat.js", "anchor": "async function rcOAuth(values)"},
+        {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='oauth_start')"},
+        {"role": "tenant_scope", "path": "lib/tool-connections.mjs", "anchor": "async function selected({tenantId,piece,type})"},
+        {"role": "state_seal", "path": "lib/tool-connections.mjs", "anchor": "function seal(payload)"},
+        {"role": "state_check", "path": "lib/tool-connections.mjs", "anchor": "function verify(token,tenantId)"},
+        {"role": "provider_write", "path": "lib/tool-connections.mjs", "anchor": "async function oauthFinish({tenantId,attempt,code,state})"},
+        {"role": "test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "OAuth state hides customer auth props and PKCE verifier"}
+      ]
+    },
+    {
       "id": "external_run_proof",
       "name": "تشغيل أداة الموظف وإثبات نتيجتها",
       "aliases": ["نتيجة الاداة", "Activepieces run", "دليل التنفيذ", "runId"],

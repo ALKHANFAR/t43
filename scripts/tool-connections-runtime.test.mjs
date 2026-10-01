@@ -5,7 +5,7 @@ import {createToolConnectionService} from '../lib/tool-connections.mjs';
 const PROJECT='P'.repeat(21),OTHER='Q'.repeat(21),CONNECTION='C'.repeat(21),FLOW='F'.repeat(21);
 const stripe={name:'@activepieces/piece-stripe',displayName:'Stripe',version:'0.7.0',auth:{type:'SECRET_TEXT',displayName:'Secret API Key',required:true}};
 const whatsapp={name:'@activepieces/piece-whatsapp',displayName:'WhatsApp',version:'1.0.0',auth:{type:'CUSTOM_AUTH',required:true,props:{access_token:{displayName:'Access token',required:true,type:'SECRET_TEXT'},businessAccountId:{displayName:'Business ID',required:true,type:'SHORT_TEXT'}}}};
-const gmail={name:'@activepieces/piece-gmail',displayName:'Gmail',version:'0.17.0',auth:[{type:'OAUTH2',displayName:'Google',authUrl:'https://accounts.google.com/o/oauth2/auth',scope:['gmail.send','email'],props:{}},{type:'CUSTOM_AUTH',displayName:'Service account',props:{json:{displayName:'JSON',required:true,type:'LONG_TEXT'}}}]};
+const gmail={name:'@activepieces/piece-gmail',displayName:'Gmail',version:'0.17.0',auth:[{type:'OAUTH2',displayName:'Google',authUrl:'https://accounts.google.com/o/oauth2/auth',scope:['gmail.send','email'],props:{private_hint:{displayName:'Private hint',required:false,type:'SECRET_TEXT'}}},{type:'CUSTOM_AUTH',displayName:'Service account',props:{json:{displayName:'JSON',required:true,type:'LONG_TEXT'}}}]};
 
 function response(status,body){return {ok:status>=200&&status<300,status,json:async()=>body};}
 function harness(overrides={}){
@@ -14,7 +14,7 @@ function harness(overrides={}){
     calls.push({url,options,body:options.body?JSON.parse(options.body):null});
     if(url.startsWith('https://cloud.example/apps'))return response(200,{'@activepieces/piece-gmail':{clientId:'google-client'}});
     if(url.includes('/api/v1/pieces')){
-      const name=new URL(url).searchParams.get('searchQuery');return response(200,[name==='stripe'?stripe:name==='whatsapp'?whatsapp:gmail]);
+      const name=new URL(url).searchParams.get('searchQuery');return response(200,[name==='stripe'?stripe:name==='whatsapp'?whatsapp:overrides.gmail||gmail]);
     }
     if(url.includes('/oauth2/authorization-url'))return response(200,{authorizationUrl:'https://accounts.google.com/o/oauth2/auth?client_id=google-client'});
     if(url.includes('/revalidate'))return response(200,{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:[PROJECT]});
@@ -57,6 +57,42 @@ test('starts and finishes cloud OAuth inside the tenant project',async()=>{
   assert.equal(finished.status,'ACTIVE');
   const request=calls.filter(call=>call.url.endsWith('/api/v1/app-connections')).at(-1).body;
   assert.equal(request.projectId,PROJECT);assert.equal(request.type,'CLOUD_OAUTH2');assert.equal(request.value.client_id,'google-client');
+});
+
+test('OAuth state hides customer auth props and PKCE verifier while retaining project scope',async()=>{
+  const {service,calls}=harness(),value='customer-private-hint-unique';
+  const started=await service.oauthStart({tenantId:'company-a',piece:'gmail',values:{private_hint:value}});
+  const url=new URL(started.authorizationUrl),state=url.searchParams.get('state');
+  assert.equal(state,started.attempt);assert.match(state,/^v1\./);
+  assert.equal(started.authorizationUrl.includes(value),false);
+  assert.equal(started.authorizationUrl.includes(Buffer.from(value).toString('base64url')),false);
+  const publicChallenge=url.searchParams.get('code_challenge');
+  assert.equal(state.includes(publicChallenge),false);
+  await service.oauthFinish({tenantId:'company-a',attempt:state,state,code:'oauth-code'});
+  const request=calls.filter(call=>call.url.endsWith('/api/v1/app-connections')).at(-1).body;
+  assert.equal(request.projectId,PROJECT);
+  assert.equal(request.value.props.private_hint,value);
+  assert.notEqual(request.value.code_challenge,publicChallenge);
+});
+
+test('OAuth state rejects another company, tampering, old format and expiry before provider write',async()=>{
+  const {service,calls}=harness(),started=await service.oauthStart({tenantId:'company-a',piece:'gmail'});
+  const finish=attempt=>service.oauthFinish({tenantId:'company-a',attempt,state:attempt,code:'oauth-code'});
+  await assert.rejects(()=>service.oauthFinish({tenantId:'company-b',attempt:started.attempt,state:started.attempt,code:'oauth-code'}),error=>error.code==='invalid_oauth_attempt'&&!JSON.stringify(error).includes('company-a'));
+  const altered=`${started.attempt.slice(0,-1)}${started.attempt.at(-1)==='A'?'B':'A'}`;
+  await assert.rejects(()=>finish(altered),error=>error.code==='invalid_oauth_attempt'&&!JSON.stringify(error).includes('oauth-code'));
+  await assert.rejects(()=>finish(Buffer.from(JSON.stringify({tenantId:'company-a'})).toString('base64url')+'.mac'),error=>error.code==='invalid_oauth_attempt');
+  const originalNow=Date.now;Date.now=()=>originalNow()+11*60_000;
+  try{await assert.rejects(()=>finish(started.attempt),error=>error.code==='expired_oauth_attempt');}
+  finally{Date.now=originalNow;}
+  assert.equal(calls.filter(call=>call.url.endsWith('/api/v1/app-connections')).length,0);
+});
+
+test('OAuth refuses an auth definition that places a secret field in a public URL',async()=>{
+  const unsafe=structuredClone(gmail);unsafe.auth[0].authUrl+='?hint={private_hint}';
+  const {service,calls}=harness({gmail:unsafe});
+  await assert.rejects(()=>service.oauthStart({tenantId:'company-a',piece:'gmail',values:{private_hint:'not-for-url'}}),error=>error.code==='oauth_secret_in_url'&&!error.message.includes('not-for-url'));
+  assert.equal(calls.filter(call=>call.url.endsWith('/api/v1/app-connections')).length,0);
 });
 
 test('rejects cross-company connection readback',async()=>{
