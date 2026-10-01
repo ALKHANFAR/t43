@@ -151,6 +151,21 @@
       ]
     },
     {
+      "id": "pilot_tool_discovery",
+      "name": "جرد أدوات Pilot واتصالات مشروع الشركة",
+      "aliases": ["جرد الأدوات", "اكتشاف الأدوات", "tool inventory", "pilot tool discovery", "ABO-40"],
+      "state": "draft_pr",
+      "meaning": "جرد قراءة فقط لثلاث قطع Pilot واتصالات مشروع الشركة. يظهر no_match واختلاف النسخة والحقول غير المعروفة صراحة؛ لا يثبت جاهزية التنفيذ أو نتيجة مزود. البحث الدلالي وخصائص الحقول الديناميكية مؤجلان.",
+      "linear": "ABO-40",
+      "locations": [
+        {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='pilot_discover')"},
+        {"role": "service", "path": "lib/pilot-tool-discovery.mjs", "anchor": "export function createPilotToolDiscovery"},
+        {"role": "pilot_set", "path": "lib/pilot-tool-discovery.mjs", "anchor": "export const PILOT_PIECES"},
+        {"role": "contract", "path": "PILOT_TOOL_DISCOVERY.md", "anchor": "an inventory"},
+        {"role": "test", "path": "scripts/pilot-tool-discovery-runtime.test.mjs", "anchor": "pilot inventory reads three exact pieces"}
+      ]
+    },
+    {
       "id": "external_run_proof",
       "name": "تشغيل أداة الموظف وإثبات نتيجتها",
       "aliases": ["نتيجة الاداة", "Activepieces run", "دليل التنفيذ", "runId"],
