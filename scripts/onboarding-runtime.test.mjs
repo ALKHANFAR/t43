@@ -117,13 +117,13 @@ test('suggestion and employee preparation failures remain visible and retryable'
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html',runScripts:'outside-only'}),w=dom.window;
   const profile={companyName:'شركة مثال',pagesRead:1,factCount:1,coverageScore:30,knowledgeVersion:1};
   const suggestion={id:'marketing',roleKey:'marketing',name:'ريم',title:'التسويق',goal:'المحتوى',confidence:80,knowledgeTopics:[]};
-  let alerts=0,recommendAttempts=0,selectAttempts=0;w.alert=()=>{alerts++};w.scrollTo=()=>{};
+  let alerts=0,recommendAttempts=0,selectAttempts=0;const selectionRequests=[];w.alert=()=>{alerts++};w.scrollTo=()=>{};
   w.fetch=async(_url,options)=>{
-    const {op}=JSON.parse(options.body);
+    const payload=JSON.parse(options.body),{op}=payload;
     if(op==='check_company_enrichment')return {ok:true,json:async()=>({ok:true,status:'ready',profile})};
     if(op==='recommend_employees'&&++recommendAttempts===1)return {ok:false,json:async()=>({ok:false,message:'تعذّر جلب الاقتراحات.'})};
     if(op==='recommend_employees')return {ok:true,json:async()=>({ok:true,suggestions:[suggestion]})};
-    if(op==='select_employee'&&++selectAttempts===1)return {ok:false,json:async()=>({ok:false,message:'تعذّر تجهيز الموظف.'})};
+    if(op==='select_employee'){selectionRequests.push(payload);if(++selectAttempts===1)return {ok:false,json:async()=>({ok:false,message:'تعذّر تجهيز الموظف.'})};}
     return {ok:true,json:async()=>({ok:true,employee:{initial:'ر',knowledgeVersion:1}})};
   };
   w.eval(js);await new Promise(resolve=>setImmediate(resolve));
@@ -139,6 +139,11 @@ test('suggestion and employee preparation failures remain visible and retryable'
   assert.match(w.document.querySelector('#stepError').textContent,/تعذّر تجهيز الموظف/);
   assert.equal(w.document.querySelector('#next').disabled,false);
   assert.equal(alerts,0);
+  w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(w.document.querySelector('#stepLbl').textContent,'4 من 4');
+  assert.equal(selectionRequests.length,2);
+  assert.match(selectionRequests[0].request_id,/^[A-Za-z0-9_-]{1,80}$/);
+  assert.equal(selectionRequests[0].request_id,selectionRequests[1].request_id);
   dom.window.close();
 });
 
