@@ -18,6 +18,7 @@ This contract belongs to `ALKHANFAR/t43`. The customer frontend may change later
 | `work_status` | Legacy progress/status field; `not_started` for a reply or disabled employee draft | Never by itself |
 | `work_id` | Identifier for status tracking; a `request_…` value is not a provider run | No |
 | `recent_work[].runId` | Activepieces run reference | Proves a run reference, not a provider outcome |
+| `transport_receipt` | Optional scoped run ID and HTTP status for a response whose business outcome is still unverified | Proves transport only; never success |
 
 ### Cases the frontend must distinguish
 
@@ -26,6 +27,8 @@ This contract belongs to `ALKHANFAR/t43`. The customer frontend may change later
 | Ordinary answer | `request_status:succeeded`, `outcome_kind:conversation_reply`, `work_status:not_started` | The answer was returned; no tool run is implied. |
 | Employee saved | `request_status:succeeded`, `outcome_kind:employee_draft`, `work_status:not_started`, `employee.status:disabled` | The employee was saved as a draft; it has not acted. |
 | Uncertain outcome | `request_status:not_observed`, `outcome_kind:unverified`, `work_status:unknown` | The result is unverified; check the same request ID. |
+| Rejected before dispatch | `request_status:failed`, `outcome_kind:unverified`, `work_status:failed`, no `transport_receipt` | The employee's task did not start. |
+| Tool response without business proof | `request_status:not_observed`, `work_status:unknown`, optional `transport_receipt` | The tool replied, but the result is still being verified; do not dispatch again automatically. |
 | External flow | `outcome_kind:external_run` plus scoped `runId` and execution record | Show only the level actually verified. Activepieces run success alone is not proof of the provider result or business impact. |
 
 For a provider result, require a terminal scoped run, the relevant step output, and validation specific to that tool. A provider outcome must be read back separately before the UI says it succeeded. A customer-visible result and a KPI need their own evidence. Draft PR #14 currently updates unknown-result wording; further frontend work must reflect `not_started` before either PR is merged.
