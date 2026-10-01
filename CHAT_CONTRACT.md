@@ -37,4 +37,4 @@ Saving an employee draft requires the company database and does not provision Ac
 
 ## Release boundary
 
-This file is a contract draft. PR #13, its dependent UI PR #14, and the Activepieces verification slice must be reviewed together before a final frontend is bound to them. Merging PR #13 into Railway's connected branch may trigger a production deploy and schema initialization; follow the documented release gate first.
+This file is a contract draft. This release combines PR #13 with the pre-deploy migration from PR #18 and the dependent UI PR #14. Railway's connected branch can deploy automatically; verify its resolved pre-deploy command and complete the documented release gates before merging. Activepieces provider verification remains a separate release gate for runnable tool work.
