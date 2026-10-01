@@ -151,7 +151,7 @@ test('runs only an enabled company-owned flow and matches proof to the request m
     query:async()=>({rows:[row]}),activepiecesUrl:'https://activepieces.example',apiKey:'secret',
     fetchImpl:async(url,options={})=>{
       calls.push({url,options});
-      if(url.endsWith(`/api/v1/flows/${flowId}`))return {ok:true,status:200,json:async()=>({id:flowId,projectId,status:'ENABLED',version:{trigger:{nextAction:{settings:{pieceName:'@activepieces/piece-http',actionName:'send_request'}}}}})};
+      if(url.endsWith(`/api/v1/flows/${flowId}`))return {ok:true,status:200,json:async()=>({id:flowId,projectId,status:'ENABLED',version:{trigger:{nextAction:{type:'PIECE',name:'step_1',settings:{pieceName:'@activepieces/piece-http',actionName:'send_request'}}}}})};
       if(url.endsWith(`/api/v1/webhooks/${flowId}`))return {ok:true,status:200,json:async()=>({})};
       if(url.includes('/api/v1/flow-runs?'))return {ok:true,status:200,json:async()=>({data:[{id:runId,flowId,projectId,created:new Date().toISOString()}]})};
       if(url.endsWith(`/api/v1/flow-runs/${runId}`))return {ok:true,status:200,json:async()=>({id:runId,flowId,projectId,status:'SUCCEEDED',startTime:'2026-09-30T05:00:00Z',finishTime:'2026-09-30T05:00:01Z',steps:{trigger:{output:{body:{requestId:'request-1'}}},step_1:{output:{status:200,body:{ok:true}}}}})};
@@ -162,4 +162,67 @@ test('runs only an enabled company-owned flow and matches proof to the request m
   assert.equal(proof.runId,runId);assert.equal(proof.projectId,projectId);assert.equal(proof.result.status,200);assert.equal(proof.tool.pieceName,'@activepieces/piece-http');
   const webhook=JSON.parse(calls.find(call=>call.url.includes('/webhooks/')).options.body);assert.deepEqual(webhook,{requestId:'request-1',task:'نفذ المهمة'});
   assert.equal(calls.find(call=>call.url.includes('/webhooks/')).options.headers.Authorization,undefined);
+});
+
+function runHarness({status='SUCCEEDED',steps,action,runProjectId=projectId,runFlowId='F12345678901234567890',candidateProjectId=projectId}={}){
+  const flowId='F12345678901234567890',runId='R12345678901234567890';
+  const row={tenant_id:'company_alpha',activepieces_project_id:projectId,provision_status:'ready'};
+  const flowAction=action===undefined?{type:'PIECE',name:'step_1',settings:{pieceName:'@activepieces/piece-http',actionName:'send_request'}}:action;
+  const runSteps=steps===undefined?{trigger:{output:{body:{requestId:'request-1'}}},step_1:{output:{status:200,body:{ok:true}}}}:steps;
+  const calls=[];
+  const service=createTenantProjectService({
+    query:async()=>({rows:[row]}),activepiecesUrl:'https://activepieces.example',apiKey:'secret',
+    fetchImpl:async(url,options={})=>{
+      calls.push({url,options});
+      if(url.endsWith(`/api/v1/flows/${flowId}`))return {ok:true,status:200,json:async()=>({id:flowId,projectId,status:'ENABLED',version:{trigger:{nextAction:flowAction}}})};
+      if(url.endsWith(`/api/v1/webhooks/${flowId}`))return {ok:true,status:200,json:async()=>({})};
+      if(url.includes('/api/v1/flow-runs?'))return {ok:true,status:200,json:async()=>({data:[{id:runId,flowId,projectId:candidateProjectId,created:new Date().toISOString()}]})};
+      if(url.endsWith(`/api/v1/flow-runs/${runId}`))return {ok:true,status:200,json:async()=>({id:runId,flowId:runFlowId,projectId:runProjectId,status,steps:runSteps})};
+      throw new Error(`unexpected ${url}`);
+    }
+  });
+  return {service,calls,flowId};
+}
+
+const runInput=flowId=>({tenantId:'company_alpha',flowId,requestId:'request-1',message:'نفذ المهمة'});
+const rejectsCode=code=>error=>error instanceof TenantProjectError&&error.code===code;
+
+test('does not report a successful run when its required action output is absent',async()=>{
+  const h=runHarness({steps:{trigger:{output:{body:{requestId:'request-1'}}},step_1:{}}});
+  await assert.rejects(()=>h.service.runFlow(runInput(h.flowId)),rejectsCode('provider_result_unverified'));
+});
+
+test('treats paused and canceled runs as non-successful',async()=>{
+  for(const [status,code] of [['PAUSED','flow_run_paused'],['CANCELED','flow_run_failed'],['CANCELLED','flow_run_failed']]){
+    const h=runHarness({status});
+    await assert.rejects(()=>h.service.runFlow(runInput(h.flowId)),rejectsCode(code));
+  }
+});
+
+test('rejects an HTTP action failure despite a successful Activepieces run',async()=>{
+  for(const status of [302,400,500]){
+    const h=runHarness({steps:{trigger:{output:{body:{requestId:'request-1'}}},step_1:{output:{status,body:{error:'failed'}}}}});
+    await assert.rejects(()=>h.service.runFlow(runInput(h.flowId)),rejectsCode('provider_action_failed'));
+  }
+});
+
+test('does not infer provider success from a non-HTTP action output',async()=>{
+  const h=runHarness({action:{type:'PIECE',name:'step_1',settings:{pieceName:'@activepieces/piece-slack',actionName:'send_message'}}});
+  await assert.rejects(()=>h.service.runFlow(runInput(h.flowId)),rejectsCode('provider_result_unverified'));
+});
+
+test('rejects a run whose readback belongs to another project or flow',async()=>{
+  for(const values of [{runProjectId:'Z12345678901234567890'},{runFlowId:'Z12345678901234567890'}]){
+    const h=runHarness(values);
+    await assert.rejects(()=>h.service.runFlow(runInput(h.flowId)),rejectsCode('flow_run_project_mismatch'));
+  }
+});
+
+test('checks every HTTP action before returning the final response',async()=>{
+  const action={type:'PIECE',name:'step_1',settings:{pieceName:'@activepieces/piece-http',actionName:'first'},nextAction:{type:'PIECE',name:'step_2',settings:{pieceName:'@activepieces/piece-http',actionName:'second'}}};
+  const h=runHarness({action,steps:{trigger:{output:{body:{requestId:'request-1'}}},step_1:{output:{status:200,body:{ok:true}}},step_2:{output:{status:201,body:{id:'created'}}}}});
+  const result=await h.service.runFlow(runInput(h.flowId));
+  assert.deepEqual(result.result,{status:201,body:{id:'created'}});
+  const missing=runHarness({action,steps:{trigger:{output:{body:{requestId:'request-1'}}},step_1:{output:{status:200,body:{ok:true}}}}});
+  await assert.rejects(()=>missing.service.runFlow(runInput(missing.flowId)),rejectsCode('provider_result_unverified'));
 });
