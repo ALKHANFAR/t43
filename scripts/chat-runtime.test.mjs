@@ -52,8 +52,8 @@ test('selected real employee opens without placeholder metrics or invented activ
 });
 
 test('routine draft work skips approval while severe final actions require it',()=>{
-  assert.match(serverSource,/state:'draft'/);
-  assert.match(serverSource,/لن يبدأ العمل قبل ربط أدواته واختبار أول مهمة/);
+  assert.match(serverSource,/createManualEmployeeDraft/);
+  assert.match(serverSource,/لم تُجهّز أدواته ولم يبدأ العمل بعد/);
   assert.ok(!serverSource.includes("input.op==='approve'"));
 });
 

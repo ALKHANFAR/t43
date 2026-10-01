@@ -25,13 +25,15 @@ This contract belongs to `ALKHANFAR/t43`. The customer frontend may change later
 | Case | Contract | Customer wording |
 | --- | --- | --- |
 | Ordinary answer | `request_status:succeeded`, `outcome_kind:conversation_reply`, `work_status:not_started` | The answer was returned; no tool run is implied. |
-| Employee saved | `request_status:succeeded`, `outcome_kind:employee_draft`, `work_status:not_started`, `employee.status:disabled` | The employee was saved as a draft; it has not acted. |
+| Employee saved | `request_status:succeeded`, `outcome_kind:employee_draft`, `work_status:not_started`, `employee.status:disabled`, `employee.flowId:null` until prepared | The employee is saved in Siyadah; its tools and runnable flow are not ready and it has not acted. |
 | Uncertain outcome | `request_status:not_observed`, `outcome_kind:unverified`, `work_status:unknown` | The result is unverified; check the same request ID. |
 | Rejected before dispatch | `request_status:failed`, `outcome_kind:unverified`, `work_status:failed`, no `transport_receipt` | The employee's task did not start. |
 | Tool response without business proof | `request_status:not_observed`, `work_status:unknown`, optional `transport_receipt` | The tool replied, but the result is still being verified; do not dispatch again automatically. |
 | External flow | `outcome_kind:external_run` plus scoped `runId` and execution record | Show only the level actually verified. Activepieces run success alone is not proof of the provider result or business impact. |
 
 For a provider result, require a terminal scoped run, the relevant step output, and validation specific to that tool. A provider outcome must be read back separately before the UI says it succeeded. A customer-visible result and a KPI need their own evidence. Draft PR #14 currently updates unknown-result wording; further frontend work must reflect `not_started` before either PR is merged.
+
+Saving an employee draft requires the company database and does not provision Activepieces. A later preparation path must attach a company-owned flow to the saved employee ID, validate its tools, and then enable execution. A saved draft alone must never be described as execution-ready or activated.
 
 ## Release boundary
 
