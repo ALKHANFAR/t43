@@ -228,8 +228,8 @@ var I = {
   function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
   function customerText(value){
     return String(value||"")
-      .replace(/@activepieces\/piece-[A-Za-z0-9_-]+/gi,"أداة العمل")
-      .replace(/Activepieces/gi,"مساحة العمل")
+      .replace(/@[a-z0-9-]+\/(?:piece-)?[A-Za-z0-9_-]+/gi,"أداة العمل")
+      .replace(/active.?pieces/gi,"مساحة العمل")
       .replace(/\bMCP\b/gi,"")
       .replace(/\bFlow\b/gi,"طريقة العمل")
       .replace(/فلو/g,"طريقة العمل")
@@ -911,11 +911,12 @@ var I = {
   $(".side").addEventListener("click",function(e){ if(e.target.closest("button,a")&&!e.target.closest("#keysBtn,#keys")&&mobile()) setTimeout(function(){ setDrawer(false); },0); });
   $("#keysBtn").addEventListener("click",function(){ var k=$("#keys"); k.hidden=!k.hidden; this.setAttribute("aria-expanded",String(!k.hidden)); });
 
-  /* ---------- الأدوات — الكتالوج الكامل (الحقيقي يجي من Activepieces /v1/pieces) ---------- */
-  /* الكتالوج الحقيقي من pieces.js: [slug, name, description EN, category, logo, description AR] */
+  /* ---------- الأدوات — كتالوج سيادة ---------- */
+  /* [slug, name, description EN, category, logo, description AR] */
   var ON ={"gmail":"سعد · نورة · فهد","google-sheets":"نورة","google-calendar":"سعد","whatsapp":"سعد · فهد"};
   var SUG={"linkedin":"تحتاجه ريم","hubspot":"يحتاجه سعد","wafeq":"تحتاجه نورة","cal-com":"يحتاجه سعد","instagram-business":"تحتاجه ريم","google-docs":"تحتاجه ريم"};
-  var TOOLS=(window.PIECES||[]).filter(function(p){return p[0]!=="activepieces";}).map(function(p){ return {s:p[0],n:p[1],d:p[5]||p[2],en:p[2],c:p[3],logo:p[4],piece:(p[6]||{}).pieceName||"@activepieces/piece-"+p[0],on:!!ON[p[0]],by:ON[p[0]]||"",connection:null,sug:window.SIYADAH_REAL_ACCOUNT===true?"":(SUG[p[0]]||"")}; });
+  var TOOLS=(window.PIECES||[]).filter(function(p){return !/active.?pieces/i.test(p[1]);}).map(function(p){ return {s:p[0],n:p[1],d:p[5]||p[2],en:p[2],c:p[3],logo:p[4],on:!!ON[p[0]],by:ON[p[0]]||"",connection:null,sug:window.SIYADAH_REAL_ACCOUNT===true?"":(SUG[p[0]]||"")}; });
+  function connectionSlug(name){ var value=String(name||""),part=value.split("/").pop();return part.indexOf("piece-")===0?part.slice(6):part; }
   var SOON=["سلة","زد","فودكس","ميسر","Unifonic","تابي","دفترة"];
   var tq="", tshown=24, picked=null, allOpen=false; /* allOpen: قسم «الكل» مطوي افتراضيًا */
   function hasConnection(t){ return window.__SIY_REAL__?!!t.connection:t.on; }
@@ -985,7 +986,7 @@ var I = {
   function rcBox(html){ $("#mF").hidden=false; $("#mF").innerHTML=html; $("#mGo").hidden=true; }
   async function realTools(){
     if(!window.__SIY_REAL__)return;
-    try{ var data=await integration({op:"list"}); window.__SIY_TOOLS_ERROR__=""; window.__SIY_TOOLS_LOADED__=true; TOOLS.forEach(function(t){t.on=false;t.connection=null;t.by="";}); (data.connections||[]).forEach(function(c){var t=TOOLS.find(function(x){return x.piece===c.pieceName;});if(t){t.connection=c;t.on=c.status==='ACTIVE';t.by=usersOf(t.s);t.sug="";}}); }
+    try{ var data=await integration({op:"list"}); window.__SIY_TOOLS_ERROR__=""; window.__SIY_TOOLS_LOADED__=true; TOOLS.forEach(function(t){t.on=false;t.connection=null;t.by="";}); (data.connections||[]).forEach(function(c){var slug=connectionSlug(c.pieceName),t=TOOLS.find(function(x){return x.s===slug;});if(t){t.connection=c;t.on=c.status==='ACTIVE';t.by=usersOf(t.s);t.sug="";}}); }
     catch(error){ window.__SIY_TOOLS_ERROR__=error.message||"تعذّر تحميل الاتصالات."; }
     toolsCount(); if(who==="tools")renderThread();
   }

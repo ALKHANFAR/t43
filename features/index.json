@@ -102,12 +102,16 @@
     {
       "id": "customer_tool_oauth_connection",
       "name": "ربط أداة الشركة عند الحاجة",
-      "aliases": ["ربط الأدوات", "اتصال أداة", "تسجيل دخول الأداة", "OAuth الأداة", "company tool connection"],
+      "aliases": ["ربط الأدوات", "اتصال أداة", "تسجيل دخول الأداة", "OAuth الأداة", "كتالوج الأدوات", "company tool connection", "tool catalog"],
       "state": "gap",
-      "meaning": "ربط OAuth الافتراضي محجوب عن العميل لأنه يعرض اسم ونطاق محرك التنفيذ. لا يُطلب الربط عند حفظ المسودة. يلزم تطبيق ونطاق عودة مملوكان لسيادة ثم اختبار اتصال ونتيجة فعلية قبل تفعيل هذا المسار.",
+      "meaning": "كتالوج الأدوات يعرض 762 أداة بأيقونات من نطاق سيادة، وبيانات المحرك محفوظة في الخادم. ربط OAuth الافتراضي محجوب عن العميل حتى يتوفر تطبيق ونطاق عودة مملوكان لسيادة واختبار اتصال ونتيجة فعلية.",
       "linear": "ABO-61",
       "pr": "https://github.com/ALKHANFAR/t43/pull/20",
       "locations": [
+        {"role": "catalog", "path": "pieces.js", "anchor": "window.PIECES="},
+        {"role": "catalog_mapping", "path": "app/chat.js", "anchor": "function connectionSlug(name)"},
+        {"role": "icon_allowlist", "path": "data/tool-icon-sources.json", "anchor": "\"gmail\":"},
+        {"role": "catalog_test", "path": "scripts/check-pieces.js", "anchor": "Customer catalog integrity"},
         {"role": "customer_action", "path": "app/chat.js", "anchor": "async function rcOAuth(values)"},
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='oauth_start')"},
         {"role": "tenant_scope", "path": "lib/tool-connections.mjs", "anchor": "async function selected({tenantId,piece,type})"},
