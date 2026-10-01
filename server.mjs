@@ -13,6 +13,7 @@ import {createMailer,MailerError} from './lib/mailer.mjs';
 import {conversationMemory,employeeRequestMode,flowName} from './lib/chat-intelligence.mjs';
 import {completedWithoutExecution,failedChatExecution} from './lib/chat-outcome.mjs';
 import {assertSchemaReady} from './lib/schema-ready.mjs';
+import {toolIcon} from './lib/tool-icons.mjs';
 import {createWaitlistProxy,WaitlistError} from './lib/waitlist.mjs';
 
 const root=process.cwd();
@@ -457,6 +458,14 @@ function staticFile(req,res){
 }
 createServer((req,res)=>{
   const pathname=new URL(req.url,'http://localhost').pathname;
+  if(req.method==='GET'&&pathname.startsWith('/siyadah-api/v1/tool-icons/')){
+    const slug=pathname.slice('/siyadah-api/v1/tool-icons/'.length);
+    return toolIcon(slug).then(result=>{
+      if(result.status!==200)return json(res,result.status,{error:'icon_unavailable'});
+      res.writeHead(200,{'content-type':result.type,'cache-control':'public, max-age=86400','x-content-type-options':'nosniff','content-security-policy':'sandbox'});
+      res.end(result.bytes);
+    });
+  }
   if((req.method==='GET'||req.method==='HEAD')&&pathname==='/'){
     res.writeHead(302,{location:'/app/chat.html','cache-control':'no-store'});
     return res.end();
