@@ -22,29 +22,47 @@
       "name": "حفظ موظف كمسودة من الشات",
       "aliases": ["انشاء موظف", "تجهيز موظف", "مسودة الموظف", "employee draft from chat"],
       "state": "draft_pr",
-      "meaning": "PR #13 يحفظ المسودة بعد إنشاء Flow في Activepieces؛ فصل الحفظ المحلي الفوري يتقدم في ABO-55. المسودة لا تعني تشغيل الموظف.",
+      "meaning": "PR #17 يحفظ المسودة محليًا في قاعدة سيادة دون انتظار Activepieces أو ربط الأداة. الحالة disabled وflowId فارغ؛ لا تعني تشغيل الموظف.",
       "linear": "ABO-55",
-      "pr": "https://github.com/ALKHANFAR/t43/pull/13",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/17",
       "locations": [
         {"role": "route", "path": "server.mjs", "anchor": "employeeRequestMode(input.message)==='create'"},
         {"role": "intent", "path": "lib/chat-intelligence.mjs", "anchor": "export function employeeRequestMode(message)"},
-        {"role": "storage", "path": "lib/company-profile.mjs", "anchor": "async function adoptEmployeeFlow({companyId,flow})"},
+        {"role": "storage", "path": "lib/company-profile.mjs", "anchor": "async function createManualEmployeeDraft({companyId,name,requestId})"},
+        {"role": "migration", "path": "migrations/0002-local-employee-drafts.sql", "anchor": "ADD COLUMN IF NOT EXISTS creation_request_id"},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "| Employee saved |"},
-        {"role": "test", "path": "scripts/chat-outcome-runtime.test.mjs", "anchor": "completedWithoutExecution('employee_draft'"}
+        {"role": "test", "path": "scripts/local-employee-draft-runtime.test.mjs", "anchor": "createManualEmployeeDraft(input)"}
       ]
     },
     {
       "id": "employee_draft_onboarding",
       "name": "اختيار موظف وحفظه أثناء التهيئة",
       "aliases": ["اختيار الموظف", "موظف التهيئة", "onboarding employee selection"],
-      "state": "live_needs_change",
-      "meaning": "المسار الحالي ينشئ Flow قبل حفظ المسودة؛ ABO-55 يفصل الحفظ عن جاهزية Activepieces.",
+      "state": "draft_pr",
+      "meaning": "PR #17 يحفظ اختيار الموظف محليًا فورًا بمعرّف طلب ثابت أثناء الجلسة؛ لا يطلب تجهيز Flow أو اتصال أداة حتى يحتاج العميل التفعيل.",
       "linear": "ABO-55",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/17",
       "locations": [
         {"role": "screen", "path": "app/onboard.js", "anchor": "op:'select_employee'"},
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='select_employee')"},
-        {"role": "storage", "path": "lib/company-profile.mjs", "anchor": "async function createEmployeeDraft({companyId,suggestionId,flow})"},
-        {"role": "test", "path": "scripts/onboarding-runtime.test.mjs", "anchor": "op:'select_employee'"}
+        {"role": "storage", "path": "lib/company-profile.mjs", "anchor": "async function createEmployeeDraft({companyId,suggestionId,requestId})"},
+        {"role": "request_identity", "path": "app/onboard.js", "anchor": "function employeeSelectionRequestId()"},
+        {"role": "test", "path": "scripts/local-employee-draft-runtime.test.mjs", "anchor": "createEmployeeDraft(input)"}
+      ]
+    },
+    {
+      "id": "legacy_employee_flow_inventory",
+      "name": "فحص تدفقات الموظفين القديمة قبل نشر الحفظ المحلي",
+      "aliases": ["التدفقات القديمة", "تدفق بلا موظف", "legacy employee flows", "migration gate"],
+      "state": "draft_pr",
+      "meaning": "فحص قراءة فقط في PR #17 يوقف الدمج عند وجود تدفق لدى المزود بلا صف موظف أو عند نتيجة ناقصة؛ لم يُنفذ على الإنتاج بعد.",
+      "linear": "ABO-55",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/17",
+      "locations": [
+        {"role": "command", "path": "scripts/check-legacy-employee-flows.mjs", "anchor": "inventoryLegacyFlows({projects,employees"},
+        {"role": "logic", "path": "lib/legacy-flow-inventory.mjs", "anchor": "export async function inventoryLegacyFlows"},
+        {"role": "release_gate", "path": "RELEASE-ABO55.md", "anchor": "Before merging"},
+        {"role": "test", "path": "scripts/legacy-flow-inventory-runtime.test.mjs", "anchor": "release inventory reports provider-only legacy flows"}
       ]
     },
     {
