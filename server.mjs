@@ -130,7 +130,7 @@ async function onboarding(req,res){
   try{
     const input=await body(req),resolved=await tenantSession(req);sessionHeaders=resolved.headers;
     if(Object.hasOwn(input,'companyId')||Object.hasOwn(input,'tenantId')||Object.hasOwn(input,'projectId'))throw new TenantProjectError('client_scope_forbidden','نطاق الشركة يحدده الخادم فقط.',400);
-    const companyId=resolved.session.companyId,projects=await tenantProjects(),profiles=await companyProfiles();
+    const companyId=resolved.session.companyId,profiles=await companyProfiles();
     const profileView=(profile)=>({
       companyName:profile.companyName,summary:profile.summary,industry:profile.industry,brandTone:profile.brandTone,
       coverageScore:profile.coverageScore,pagesRead:profile.pagesRead,knowledgeVersion:profile.knowledgeVersion,
@@ -141,8 +141,7 @@ async function onboarding(req,res){
       missingCritical:Array.isArray(profile.missingCritical)?profile.missingCritical.slice(0,6):[],
     });
     if(input.op==='enrich_company'){
-      const project=await projects.ensure({tenantId:companyId,displayName:resolved.account.company_name});
-      const started=await profiles.beginEnrich({companyId,projectId:project.activepieces_project_id,websiteUrl:input.website_url,maxCredits:Number(process.env.FIRECRAWL_AGENT_MAX_CREDITS||120)});
+      const started=await profiles.beginEnrich({companyId,projectId:null,websiteUrl:input.website_url,maxCredits:Number(process.env.FIRECRAWL_AGENT_MAX_CREDITS||120)});
       return json(res,202,{ok:true,status:'processing',jobId:started.jobId,creditsUsed:started.creditsUsed},sessionHeaders);
     }
     if(input.op==='check_company_enrichment'){
@@ -151,19 +150,16 @@ async function onboarding(req,res){
       return json(res,200,{ok:true,status:'ready',profile:profileView(checked.profile),suggestions:checked.profile.suggestions||[],creditsUsed:checked.creditsUsed},sessionHeaders);
     }
     if(input.op==='describe_company'){
-      const name=String(input.name||resolved.account.company_name),project=await projects.ensure({tenantId:companyId,displayName:name});
-      const profile=await profiles.describe({companyId,projectId:project.activepieces_project_id,name,description:input.description});
+      const name=String(input.name||resolved.account.company_name);
+      const profile=await profiles.describe({companyId,projectId:null,name,description:input.description});
       return json(res,200,{ok:true,profile:profileView(profile),suggestions:profile.suggestions},sessionHeaders);
     }
     if(input.op==='recommend_employees')return json(res,200,{ok:true,suggestions:await profiles.recommend(companyId,input.goal)},sessionHeaders);
     if(input.op==='add_knowledge')return json(res,201,{ok:true,...await profiles.addKnowledge({companyId,topic:input.topic,key:input.key,value:input.value})},sessionHeaders);
     if(input.op==='update_company_settings')return json(res,200,{ok:true,...await profiles.updateSettings({companyId,voice:input.voice,language:input.language,dialect:input.dialect,preferredWords:input.preferredWords,forbiddenWords:input.forbiddenWords})},sessionHeaders);
     if(input.op==='select_employee'){
-      const row=await profiles.read(companyId),suggestions=Array.isArray(row?.suggestions_json)?row.suggestions_json:[],suggestion=suggestions.find(item=>item.id===input.suggestion_id);
-      if(!suggestion)throw new CompanyProfileError('invalid_suggestion','اختر موظفًا من الاقتراحات الحالية.',400);
-      const flow=await projects.createFlow({tenantId:companyId,displayName:`${suggestion.name} · ${suggestion.title}`,metadata:{source:'siyadah-onboarding',state:'draft',roleKey:suggestion.roleKey,knowledgeVersion:row.knowledge_version}});
-      const created=await profiles.createEmployeeDraft({companyId,suggestionId:suggestion.id,flow});
-      return json(res,201,{ok:true,employee:created,message:`تم تجهيز ${created.name} وربطه بمعرفة شركتك. لن يبدأ العمل قبل ربط أدواته واختبار أول مهمة.`},sessionHeaders);
+      const created=await profiles.createEmployeeDraft({companyId,suggestionId:input.suggestion_id,requestId:input.request_id});
+      return json(res,201,{ok:true,employee:created,message:`حُفظ ${created.name} كمسودة داخل شركتك. لم تُجهّز أدواته ولم يبدأ العمل بعد.`},sessionHeaders);
     }
     return json(res,400,{ok:false,error:'unsupported_operation'},sessionHeaders);
   }catch(error){
@@ -320,9 +316,7 @@ async function publicChat(req,res){
     if(Object.hasOwn(input,'companyId')||Object.hasOwn(input,'tenantId')||Object.hasOwn(input,'projectId'))throw new TenantProjectError('client_scope_forbidden','نطاق الشركة يحدده الخادم فقط.',400);
     const companyId=resolved.session.companyId;
     if(input.op==='hydrate'){
-      const service=await tenantProjects();
-      const flows=await service.listFlows(companyId),profiles=await companyProfiles();let saved=await profiles.listEmployees(companyId),savedFlows=new Set(saved.map(item=>item.flowId));
-      for(const flow of flows)if(!savedFlows.has(flow.id)){const adopted=await profiles.adoptEmployeeFlow({companyId,flow});saved.push(adopted);savedFlows.add(flow.id);}
+      const profiles=await companyProfiles(),saved=await profiles.listEmployees(companyId);
       const profile=await profiles.read(companyId),recentWork=await profiles.recentWork(companyId);
       return json(res,200,{ok:true,company:profile?.company_name||resolved.account.company_name,company_settings:await profiles.readSettings(companyId),team:saved,memory:[],owned_knowledge:await profiles.ownedKnowledge(companyId),recent_work:recentWork,work_count:recentWork.length,conversations:await profiles.listConversations(companyId),pending_work:[]},sessionHeaders);
     }
@@ -340,6 +334,10 @@ async function publicChat(req,res){
       if(!saved)throw new CompanyProfileError('employee_not_found','الموظف غير موجود في شركتك.',404);
       const status=input.status==='active'?'active':input.status==='disabled'?'disabled':null;
       if(!status)throw new CompanyProfileError('invalid_employee_status','حالة الموظف غير صالحة.',400);
+      if(!saved.activepieces_flow_id){
+        if(status==='active')throw new CompanyProfileError('employee_not_ready','الموظف محفوظ كمسودة. جهّز أدواته وطريقة عمله قبل تفعيله.',409);
+        return json(res,200,{ok:true,state_verified:true,employee:(await profiles.listEmployees(companyId)).find(item=>item.recordId===saved.id)},sessionHeaders);
+      }
       await (await tenantProjects()).changeFlowStatus({tenantId:companyId,flowId:saved.activepieces_flow_id,status:status==='active'?'ENABLED':'DISABLED'});
       const updated=await profiles.setEmployeeState({companyId,employeeId:saved.id,status});
       return json(res,200,{ok:true,state_verified:true,employee:updated},sessionHeaders);
@@ -371,6 +369,12 @@ async function publicChat(req,res){
       if(typeof input.employee_id==='string'&&input.employee_id){
         const saved=await profiles.findEmployee(companyId,input.employee_id);
         if(!saved)throw new CompanyProfileError('employee_not_found','الموظف غير موجود في شركتك.',404);
+        if(saved.status==='active'&&!saved.activepieces_flow_id)throw new CompanyProfileError('employee_not_ready','الموظف بلا طريقة عمل مهيأة.',409);
+        if(saved.status!=='active'&&wantsEmployeeExecution(input.message)){
+          const reply=saved.activepieces_flow_id?'الموظف متوقف الآن؛ فعّله بعد التحقق من أدواته قبل طلب التنفيذ.':'الموظف محفوظ كمسودة. لم تُجهّز أدواته وطريقة عمله بعد، ولم يبدأ تنفيذ المهمة.';
+          await profiles.recordConversation({companyId,conversationId,employeeId:saved.id,requestId,userMessage:input.message,assistantMessage:reply});
+          return finish(200,completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply,experience:{employee_conversation:true,employee_id:saved.id,external_execution:false}}));
+        }
         if(saved.status==='active'&&wantsEmployeeExecution(input.message)){
           activeRequest.executionAttempt=true;
           const run=await (await tenantProjects()).runFlow({tenantId:companyId,flowId:saved.activepieces_flow_id,requestId,message:input.message,onDispatch:()=>{activeRequest.effectStarted=true;}});
@@ -387,13 +391,10 @@ async function publicChat(req,res){
         return finish(200,completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply,experience:{employee_conversation:true,employee_id:saved.id,instruction_version:Number(saved.prompt_version||1),external_execution:false}}));
       }
       if(employeeRequestMode(input.message)==='create'){
-        activeRequest.effectStarted=true;
-        const service=await tenantProjects();
-        await service.ensure({tenantId:companyId,displayName:`شركة سيادة ${companyId.slice(-8)}`});
-        const flow=await service.createFlow({tenantId:companyId,displayName:flowName(input.message),metadata:{source:'siyadah-chat',state:'draft',requestId}});
-        const created=await profiles.adoptEmployeeFlow({companyId,flow});
-        const reply=`تم تجهيز ${created.name} داخل مساحة شركتك. لن يبدأ العمل قبل ربط أدواته واختبار أول مهمة.`;
-        await profiles.recordConversation({companyId,conversationId,employeeId:created.recordId,requestId,userMessage:input.message,assistantMessage:reply});
+        const created=await profiles.createManualEmployeeDraft({companyId,name:flowName(input.message),requestId});
+        const reply=`حُفظ ${created.name} كمسودة داخل شركتك. لم تُجهّز أدواته ولم يبدأ العمل بعد.`;
+        try{await profiles.recordConversation({companyId,conversationId,employeeId:created.recordId,requestId,userMessage:input.message,assistantMessage:reply});}
+        catch(error){console.error('employee draft conversation save failed',error?.code||error?.name||'unknown_error');}
         return finish(201,completedWithoutExecution('employee_draft',{ok:true,conversation_id:conversationId,reply,employee:created}));
       }
       const profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId),conversations=await profiles.listConversations(companyId),conversation=conversations.find(item=>item.id===conversationId);
