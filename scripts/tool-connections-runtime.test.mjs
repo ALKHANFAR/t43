@@ -30,9 +30,12 @@ function harness(overrides={}){
 
 test('reads live auth schema and keeps secrets out of the response',async()=>{
   const {service}=harness(),methods=await service.methods({tenantId:'company-a',piece:'stripe'});
+  assert.equal(methods.pieceName,'stripe');
   assert.equal(methods.methods[0].fields[0].type,'password');
   const connected=await service.connect({tenantId:'company-a',piece:'stripe',type:'SECRET_TEXT',values:{secret_text:'sk_live_secret'}});
   assert.equal(connected.scope,'PROJECT');assert.equal(JSON.stringify(connected).includes('sk_live_secret'),false);
+  assert.equal(connected.pieceName,'stripe');
+  assert.doesNotMatch(JSON.stringify({methods,connected}),/activepieces/i);
 });
 
 test('shows only valid flow references from a project-owned connection',async()=>{
