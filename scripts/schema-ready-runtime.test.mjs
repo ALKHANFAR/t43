@@ -24,3 +24,31 @@ test('schema check fails closed on a missing table',async()=>{
 test('schema check rejects a ledger without the request identity primary key',async()=>{
   await assert.rejects(()=>assertSchemaReady(async sql=>({rows:sql.includes('pg_constraint')?[{ledger_pk_ok:false}]:[]})),/primary key is missing/);
 });
+
+test('local draft checks activate only when migration 0002 is in the image',async()=>{
+  const statements=[];
+  const query=async sql=>{
+    statements.push(sql);
+    if(sql.includes('pg_constraint'))return {rows:[{ledger_pk_ok:true}]};
+    if(sql.includes('pg_index'))return {rows:[{flow_nullable_ok:true,draft_unique_ok:true}]};
+    return {rows:[]};
+  };
+  await assertSchemaReady(query,{localDrafts:false});
+  assert.equal(statements.some(sql=>sql.includes('creation_payload_key')),false);
+  statements.length=0;
+  await assertSchemaReady(query,{localDrafts:true});
+  assert.equal(statements.some(sql=>sql.includes('creation_payload_key')),true);
+  assert.equal(statements.some(sql=>sql.includes('pg_index')&&sql.includes('indisunique')&&sql.includes('indpred IS NULL')),true);
+});
+
+test('local draft readiness rejects missing columns, nullable flow rule, or unique request index',async()=>{
+  const queryFor=checks=>async sql=>{
+    if(sql.includes('pg_constraint'))return {rows:[{ledger_pk_ok:true}]};
+    if(sql.includes('creation_payload_key')&&checks.columns===false)throw Object.assign(new Error('column missing'),{code:'42703'});
+    if(sql.includes('pg_index'))return {rows:[{flow_nullable_ok:checks.nullable,draft_unique_ok:checks.unique}]};
+    return {rows:[]};
+  };
+  await assert.rejects(()=>assertSchemaReady(queryFor({columns:false,nullable:true,unique:true}),{localDrafts:true}),{code:'42703'});
+  await assert.rejects(()=>assertSchemaReady(queryFor({columns:true,nullable:false,unique:true}),{localDrafts:true}),/local employee draft schema is incomplete/);
+  await assert.rejects(()=>assertSchemaReady(queryFor({columns:true,nullable:true,unique:false}),{localDrafts:true}),/local employee draft schema is incomplete/);
+});

@@ -2,7 +2,7 @@
 
 Railway runs `node scripts/migrate-schema.mjs` from `railway.json` after building the image and before starting the new application. It requires `DATABASE_URL` in the service environment. The command uses one PostgreSQL transaction, bounded lock and statement waits, and a database advisory lock. A failed command exits nonzero and rolls back the transaction; the deployment must not proceed.
 
-The application does not run schema initialization while serving requests. `/health` checks required tables, columns, and the chat ledger primary key using read-only queries. It returns 503 if the migration did not finish.
+The application does not run schema initialization while serving requests. `/health` checks required tables, columns, and the chat ledger primary key using read-only queries. When migration `0002-local-employee-drafts.sql` is included in the deployed image, it also checks the local-draft columns, nullable flow reference, and unique request index. It returns 503 if the schema required by that image is incomplete.
 
 The current migration is additive: it creates missing tables and columns. The old application must be able to keep serving while the pre-deploy command runs. Review new migrations for that compatibility before adding them to this command. A Railway application rollback does not undo a committed database migration; never drop a table as an automatic rollback.
 
