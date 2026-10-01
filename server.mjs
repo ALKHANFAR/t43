@@ -74,6 +74,21 @@ async function companyProfiles(){
   })().catch(error=>{companyProfilesPromise=null;throw error;});
   return companyProfilesPromise;
 }
+async function health(res){
+  if(!process.env.DATABASE_URL){
+    if(process.env.NODE_ENV!=='production')return json(res,200,{ok:true,mode:'static_preview'});
+    return json(res,503,{ok:false,error:'not_ready'});
+  }
+  try{
+    await companyProfiles();
+    const pool=await database();
+    await pool.query('SELECT company_id,request_id,request_hash,claim_token FROM siyadah_chat_requests LIMIT 0');
+    return json(res,200,{ok:true});
+  }catch(error){
+    console.error('readiness check failed',error?.code||error?.name||'unknown_error');
+    return json(res,503,{ok:false,error:'not_ready'});
+  }
+}
 async function createTenantFlow(req,res){
   if(!authorized(req))return json(res,401,{ok:false,error:'unauthorized'});
   try{
@@ -430,7 +445,7 @@ createServer((req,res)=>{
     res.writeHead(302,{location:'/app/chat.html','cache-control':'no-store'});
     return res.end();
   }
-  if(req.method==='GET'&&req.url==='/health')return json(res,200,{ok:true});
+  if(req.method==='GET'&&req.url==='/health')return health(res);
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/auth/signup')return authRoute(req,res,'signup');
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/auth/verify-email')return authRoute(req,res,'verify');
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/auth/login')return authRoute(req,res,'login');

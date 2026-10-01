@@ -26,11 +26,13 @@ test('root hides the broken duplicate and redirects to the working chat',async()
   const port=await freePort();
   const child=spawn(process.execPath,['server.mjs'],{
     cwd:new URL('..',import.meta.url),
-    env:{...process.env,PORT:String(port)},
+    env:{...process.env,PORT:String(port),NODE_ENV:'development',DATABASE_URL:''},
     stdio:'ignore',
   });
   try{
-    await waitForServer(`http://127.0.0.1:${port}/health`);
+    const health=await waitForServer(`http://127.0.0.1:${port}/health`);
+    assert.equal(health.status,200);
+    assert.equal((await health.json()).mode,'static_preview');
     const root=await fetch(`http://127.0.0.1:${port}/`,{redirect:'manual'});
     assert.equal(root.status,302);
     assert.equal(root.headers.get('location'),'/app/chat.html');
@@ -43,6 +45,23 @@ test('root hides the broken duplicate and redirects to the working chat',async()
       const response=await fetch(`http://127.0.0.1:${port}${path}`);
       assert.equal(response.status,404,`${path} must not be publicly served`);
     }
+  }finally{
+    child.kill();
+    await once(child,'exit');
+  }
+});
+
+test('production health stays unready without a database',async()=>{
+  const port=await freePort();
+  const child=spawn(process.execPath,['server.mjs'],{
+    cwd:new URL('..',import.meta.url),
+    env:{...process.env,PORT:String(port),NODE_ENV:'production',DATABASE_URL:''},
+    stdio:'ignore',
+  });
+  try{
+    const health=await waitForServer(`http://127.0.0.1:${port}/health`);
+    assert.equal(health.status,503);
+    assert.deepEqual(await health.json(),{ok:false,error:'not_ready'});
   }finally{
     child.kill();
     await once(child,'exit');
