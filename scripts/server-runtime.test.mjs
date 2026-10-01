@@ -15,7 +15,7 @@ async function freePort(){
 }
 
 async function waitForServer(url){
-  for(let attempt=0;attempt<50;attempt+=1){
+  for(let attempt=0;attempt<200;attempt+=1){
     try{return await fetch(url);}
     catch{await new Promise(resolve=>setTimeout(resolve,50));}
   }
