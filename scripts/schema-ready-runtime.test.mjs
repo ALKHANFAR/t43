@@ -5,7 +5,7 @@ import {assertSchemaReady} from '../lib/schema-ready.mjs';
 
 test('health checks schema without creating or altering tables',async()=>{
   const statements=[];
-  await assertSchemaReady(async sql=>{statements.push(sql);return {rows:sql.includes('pg_constraint')?[{ledger_pk_ok:true}]:[]};});
+  await assertSchemaReady(async sql=>{statements.push(sql);return {rows:sql.includes('pg_constraint')?[{ledger_pk_ok:true}]:[]};},{localDrafts:false});
   assert.ok(statements.length>=5);
   assert.ok(statements.every(sql=>/^SELECT\b/i.test(sql)));
   assert.ok(statements.slice(0,-1).every(sql=>/\bLIMIT 0$/i.test(sql)));
@@ -17,12 +17,12 @@ test('health checks schema without creating or altering tables',async()=>{
 
 test('schema check fails closed on a missing table',async()=>{
   let count=0;
-  await assert.rejects(()=>assertSchemaReady(async()=>{if(++count===3)throw Object.assign(new Error('relation missing'),{code:'42P01'});}),{code:'42P01'});
+  await assert.rejects(()=>assertSchemaReady(async()=>{if(++count===3)throw Object.assign(new Error('relation missing'),{code:'42P01'});},{localDrafts:false}),{code:'42P01'});
   assert.equal(count,3);
 });
 
 test('schema check rejects a ledger without the request identity primary key',async()=>{
-  await assert.rejects(()=>assertSchemaReady(async sql=>({rows:sql.includes('pg_constraint')?[{ledger_pk_ok:false}]:[]})),/primary key is missing/);
+  await assert.rejects(()=>assertSchemaReady(async sql=>({rows:sql.includes('pg_constraint')?[{ledger_pk_ok:false}]:[]}),{localDrafts:false}),/primary key is missing/);
 });
 
 test('local draft checks activate only when migration 0002 is in the image',async()=>{
