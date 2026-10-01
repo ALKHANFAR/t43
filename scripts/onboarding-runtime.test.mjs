@@ -147,6 +147,37 @@ test('suggestion and employee preparation failures remain visible and retryable'
   dom.window.close();
 });
 
+test('reload after an uncertain employee save reuses the original request ID',async()=>{
+  const [html,js]=await Promise.all([readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),readFile(new URL('../app/onboard.js',import.meta.url),'utf8')]);
+  const suggestion={id:'marketing',roleKey:'marketing',name:'ريم',title:'التسويق',goal:'المحتوى',confidence:80,knowledgeTopics:[]};
+  const first=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html',runScripts:'outside-only'}).window;
+  first.scrollTo=()=>{};let originalId;
+  first.fetch=async(_url,options)=>{
+    const input=JSON.parse(options.body);
+    if(input.op==='select_employee'){originalId=input.request_id;throw new Error('connection lost');}
+    return {ok:true,json:async()=>input.op==='recommend_employees'?{ok:true,suggestions:[suggestion]}:{ok:true,status:'ready',profile:{companyName:'شركة مثال',coverageScore:30,pagesRead:1,factCount:1,knowledgeVersion:1},suggestions:[suggestion]}};
+  };
+  first.eval(js);await new Promise(resolve=>setImmediate(resolve));
+  first.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+  first.document.querySelector('[data-suggestion="marketing"]').click();first.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+  const savedAttempt=first.sessionStorage.getItem('siyadah_employee_selection_attempt');
+  assert.ok(savedAttempt);assert.equal(JSON.parse(savedAttempt).requestId,originalId);assert.equal(JSON.parse(savedAttempt).profileKey,'شركة مثال');first.close();
+
+  const second=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html',runScripts:'outside-only'}).window;
+  second.scrollTo=()=>{};second.sessionStorage.setItem('siyadah_employee_selection_attempt',savedAttempt);let retriedId;
+  second.fetch=async(_url,options)=>{
+    const input=JSON.parse(options.body);
+    if(input.op==='select_employee'){retriedId=input.request_id;return {ok:true,json:async()=>({ok:true,employee:{recordId:'employee-1',initial:'ر',status:'disabled',flowId:null}})};}
+    return {ok:true,json:async()=>input.op==='recommend_employees'?{ok:true,suggestions:[suggestion]}:{ok:true,status:'ready',profile:{companyName:'شركة مثال',coverageScore:30,pagesRead:1,factCount:1,knowledgeVersion:1},suggestions:[suggestion]}};
+  };
+  second.eval(js);await new Promise(resolve=>setImmediate(resolve));
+  second.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+  second.document.querySelector('[data-suggestion="marketing"]').click();second.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(retriedId,originalId);
+  assert.equal(second.sessionStorage.getItem('siyadah_employee_selection_attempt'),null);
+  second.close();
+});
+
 test('English onboarding keeps its labels, role choices, and draft status in LTR',async()=>{
   const [html,js]=await Promise.all([
     readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),

@@ -4,7 +4,7 @@ import {inventoryLegacyFlows} from '../lib/legacy-flow-inventory.mjs';
 
 const databaseUrl=process.env.DATABASE_URL,base=String(process.env.ACTIVEPIECES_URL||'').replace(/\/$/,''),key=process.env.ACTIVEPIECES_PLATFORM_API_KEY;
 if(!databaseUrl||!base||!key){console.error('Set DATABASE_URL, ACTIVEPIECES_URL and ACTIVEPIECES_PLATFORM_API_KEY.');process.exit(2);}
-const url=new URL(databaseUrl),ssl=url.hostname.endsWith('.railway.internal')?false:(process.env.NODE_ENV==='production'?{rejectUnauthorized:false}:undefined);
+const url=new URL(databaseUrl),ssl=url.hostname.endsWith('.railway.internal')?false:true;
 const pool=new pg.Pool({connectionString:databaseUrl,ssl,max:1,connectionTimeoutMillis:5000});
 try{
   const client=await pool.connect();
@@ -22,7 +22,10 @@ try{
     if(!response.ok)throw new Error(`provider_read_failed_${response.status}`);
     return (await response.json()).data;
   }});
-  console.log(JSON.stringify(result));
+  console.log(JSON.stringify({projects:result.projects,scannedFlows:result.scannedFlows,unadoptedCount:result.unadopted.length}));
   if(result.unadopted.length)process.exitCode=2;
-}catch(error){console.error(error?.message||'inventory_failed');process.exitCode=2;}
+}catch(error){
+  const safeCodes=new Set(['legacy_flow_inventory_incomplete','legacy_flow_project_mismatch']);
+  console.error(safeCodes.has(error?.message)?error.message:'inventory_read_failed');process.exitCode=2;
+}
 finally{await pool.end();}

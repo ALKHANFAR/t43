@@ -3,6 +3,19 @@
   var $=function(s,c){return (c||document).querySelector(s)};
   var $$=function(s,c){return Array.prototype.slice.call((c||document).querySelectorAll(s))};
   var step=1,TOTAL=4,PROFILE=null,SUGGESTIONS=[],SELECTED=null,CREATED=null,busy=false,selectionRequestId=null;
+  var selectionAttemptKey='siyadah_employee_selection_attempt';
+  function forgetSelectionAttempt(){selectionRequestId=null;try{sessionStorage.removeItem(selectionAttemptKey);}catch(error){/* Private browsing may block storage. */}}
+  function employeeSelectionRequestId(){
+    if(selectionRequestId)return selectionRequestId;
+    var profileKey=String(PROFILE&&PROFILE.companyName||'');
+    try{
+      var saved=JSON.parse(sessionStorage.getItem(selectionAttemptKey)||'null');
+      if(saved&&saved.profileKey===profileKey&&saved.suggestionId===SELECTED&&typeof saved.requestId==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(saved.requestId))return selectionRequestId=saved.requestId;
+    }catch(error){/* A bad or unavailable cache never supplies an ID. */}
+    selectionRequestId=crypto.randomUUID();
+    try{sessionStorage.setItem(selectionAttemptKey,JSON.stringify({profileKey,suggestionId:SELECTED,requestId:selectionRequestId}));}catch(error){/* The active page still retries with this ID. */}
+    return selectionRequestId;
+  }
   var requested=new URLSearchParams(location.search).get('lang');
   var locale=requested==='en'||requested==='ar'?requested:(sessionStorage.getItem('siyadah_locale')==='en'?'en':'ar');
   var TOPIC_LABELS={
@@ -139,12 +152,12 @@
     if(step===1){if(noSiteOn()&&!await readLines())return;step=2;show();return;}
     if(step===2){
       setBusy(true,t('arranging'));
-      try{var data=await api({op:'recommend_employees',goal:$('#brief').value.trim()});SUGGESTIONS=data.suggestions||SUGGESTIONS;SELECTED=null;selectionRequestId=null;step=3;}
+      try{var data=await api({op:'recommend_employees',goal:$('#brief').value.trim()});SUGGESTIONS=data.suggestions||SUGGESTIONS;SELECTED=null;step=3;}
       catch(error){showStepError(error);}finally{setBusy(false);show();}return;
     }
     if(step===3){
       setBusy(true,t('preparingEmployee'));
-      try{selectionRequestId=selectionRequestId||crypto.randomUUID();var selected=await api({op:'select_employee',suggestion_id:SELECTED,request_id:selectionRequestId});CREATED=selected.employee;step=4;}
+      try{var selected=await api({op:'select_employee',suggestion_id:SELECTED,request_id:employeeSelectionRequestId()});CREATED=selected.employee;forgetSelectionAttempt();step=4;}
       catch(error){showStepError(error);}finally{setBusy(false);show();}
     }
   });

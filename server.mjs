@@ -370,6 +370,11 @@ async function publicChat(req,res){
         const saved=await profiles.findEmployee(companyId,input.employee_id);
         if(!saved)throw new CompanyProfileError('employee_not_found','الموظف غير موجود في شركتك.',404);
         if(saved.status==='active'&&!saved.activepieces_flow_id)throw new CompanyProfileError('employee_not_ready','الموظف بلا طريقة عمل مهيأة.',409);
+        if(saved.status!=='active'&&wantsEmployeeExecution(input.message)){
+          const reply=saved.activepieces_flow_id?'الموظف متوقف الآن؛ فعّله بعد التحقق من أدواته قبل طلب التنفيذ.':'الموظف محفوظ كمسودة. لم تُجهّز أدواته وطريقة عمله بعد، ولم يبدأ تنفيذ المهمة.';
+          await profiles.recordConversation({companyId,conversationId,employeeId:saved.id,requestId,userMessage:input.message,assistantMessage:reply});
+          return finish(200,completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply,experience:{employee_conversation:true,employee_id:saved.id,external_execution:false}}));
+        }
         if(saved.status==='active'&&wantsEmployeeExecution(input.message)){
           activeRequest.executionAttempt=true;
           const run=await (await tenantProjects()).runFlow({tenantId:companyId,flowId:saved.activepieces_flow_id,requestId,message:input.message,onDispatch:()=>{activeRequest.effectStarted=true;}});
