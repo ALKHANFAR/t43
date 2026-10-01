@@ -106,7 +106,7 @@
       "state": "gap",
       "meaning": "كتالوج الأدوات يعرض 762 أداة بأيقونات من نطاق سيادة، وبيانات المحرك محفوظة في الخادم. ربط OAuth الافتراضي محجوب عن العميل حتى يتوفر تطبيق ونطاق عودة مملوكان لسيادة واختبار اتصال ونتيجة فعلية.",
       "linear": "ABO-61",
-      "pr": "https://github.com/ALKHANFAR/t43/pull/20",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/24",
       "locations": [
         {"role": "catalog", "path": "pieces.js", "anchor": "window.PIECES="},
         {"role": "catalog_mapping", "path": "app/chat.js", "anchor": "function connectionSlug(name)"},
@@ -118,6 +118,21 @@
         {"role": "blocked_start", "path": "lib/tool-connections.mjs", "anchor": "async function oauthStart()"},
         {"role": "blocked_finish", "path": "lib/tool-connections.mjs", "anchor": "async function oauthFinish()"},
         {"role": "test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "customer OAuth is blocked until a Siyadah-owned flow is ready"}
+      ]
+    },
+    {
+      "id": "public_waitlist_brand_boundary",
+      "name": "تسجيل قائمة الانتظار عبر سيادة",
+      "aliases": ["قائمة الانتظار", "تسجيل الزائر", "نموذج الموقع", "waitlist", "same origin form"],
+      "state": "draft_pr",
+      "meaning": "متصفح الزائر يرسل إلى نطاق سيادة، والخادم يمرر الطلب إلى webhook خاص. الاستجابة تثبت قبول webhook فقط؛ يلزم ضبط SIYADAH_WAITLIST_WEBHOOK_URL قبل النشر والتحقق من حفظ السجل والإشعار.",
+      "linear": "ABO-61",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/24",
+      "locations": [
+        {"role": "browser", "path": "site.js", "anchor": "endpoint: \"/siyadah-api/v1/waitlist\""},
+        {"role": "route", "path": "server.mjs", "anchor": "async function waitlist(req,res)"},
+        {"role": "proxy", "path": "lib/waitlist.mjs", "anchor": "export function createWaitlistProxy"},
+        {"role": "test", "path": "scripts/waitlist-runtime.test.mjs", "anchor": "waitlist proxy forwards a bounded lead"}
       ]
     },
     {
