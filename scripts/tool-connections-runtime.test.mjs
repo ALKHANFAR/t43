@@ -74,7 +74,7 @@ test('owned Google Gmail OAuth is session-bound, single-use and project-exclusiv
   const method=(await service.methods({tenantId:'company-a',requestOrigin:ORIGIN,piece:'gmail'})).methods[0];assert.equal(method.available,true);assert.deepEqual(method.scopes,[SEND_SCOPE]);
   const started=await service.oauthStart({tenantId:'company-a',sessionBinding:'session-a',requestOrigin:ORIGIN,piece:'gmail'}),url=new URL(started.authorizationUrl),state=url.searchParams.get('state');
   assert.equal(url.searchParams.get('redirect_uri'),googleOAuth.redirectUrl);assert.equal(url.searchParams.get('client_id'),'siyadah-client');assert.equal(url.searchParams.get('code_challenge_method'),'S256');
-  assert.equal(url.searchParams.get('scope'),SEND_SCOPE);assert.doesNotMatch(started.authorizationUrl,/readonly|modify|compose|email/);
+  assert.equal(url.searchParams.get('scope'),SEND_SCOPE);assert.equal(url.searchParams.get('prompt'),'consent');assert.doesNotMatch(started.authorizationUrl,/readonly|modify|compose|email/);
   assert.equal(started.allowedOrigin,'https://accounts.siyadah-ai.com');assert.equal(pending.size,1);assert.doesNotMatch(JSON.stringify(started),/server-only-secret|activepieces/i);
   await assert.rejects(()=>service.oauthFinish({tenantId:'company-b',sessionBinding:'session-a',state,code:'code'}),error=>error.code==='invalid_oauth_state');
   await assert.rejects(()=>service.oauthFinish({tenantId:'company-a',sessionBinding:'session-b',state,code:'code'}),error=>error.code==='invalid_oauth_state');
