@@ -9,7 +9,7 @@ function fixture(){
     const key=`${values[0]}:${values[1]}`;
     if(sql.startsWith('INSERT INTO siyadah_chat_requests')){
       if(rows.has(key))return {rows:[]};
-      rows.set(key,{conversation_id:values[2],request_hash:values[3],status:'pending',created_at:new Date()});
+      rows.set(key,{conversation_id:values[2],request_hash:values[3],claim_token:values[4],status:'pending',created_at:new Date()});
       return {rows:[{request_id:values[1]}]};
     }
     if(sql.startsWith('SELECT conversation_id,request_hash'))return {rows:rows.has(key)?[rows.get(key)]:[]};
@@ -19,6 +19,12 @@ function fixture(){
         Object.assign(row,{status:'unknown',http_status:200,response_json:{ok:true,conversation_id:row.conversation_id,request_status:'not_observed',work_status:'unknown',work_id:`request_${values[1]}`,reply:'لم نؤكد نتيجة الطلب بعد. لم نعد تنفيذه.'}});
       }
       return {rows:[]};
+    }
+    if(sql.includes("SET status='succeeded'")){
+      const row=rows.get(key);
+      if(!row||row.status!=='unknown'||row.claim_token!==values[4])return {rows:[]};
+      Object.assign(row,{status:'succeeded',http_status:values[2],response_json:JSON.parse(values[3])});
+      return {rows:[{request_id:values[1]}]};
     }
     if(sql.startsWith('UPDATE siyadah_chat_requests')){
       const row=rows.get(key);
@@ -33,14 +39,14 @@ function fixture(){
 
 test('same request is claimed once and result is read back only within its company',async()=>{
   const {service,calls}=fixture(),input={companyId:'company_a',conversationId:'chat_a',requestId:'req_1',requestHash:'a'.repeat(64)};
-  assert.deepEqual(await service.claimChatRequest(input),{claimed:true});
+  assert.equal((await service.claimChatRequest(input)).claimed,true);
   assert.equal((await service.claimChatRequest(input)).claimed,false);
   await service.completeChatRequest({companyId:'company_a',requestId:'req_1',status:'succeeded',httpStatus:200,response:{ok:true,reply:'saved'}});
   assert.equal((await service.claimChatRequest(input)).response.reply,'saved');
   assert.equal(await service.readChatRequest({companyId:'company_b',requestId:'req_1'}),null);
-  assert.deepEqual(await service.claimChatRequest({...input,companyId:'company_b'}),{claimed:true});
+  assert.equal((await service.claimChatRequest({...input,companyId:'company_b'})).claimed,true);
   assert.ok(calls.every(call=>call.values[0]==='company_a'||call.values[0]==='company_b'));
-  assert.ok(calls.every(call=>/company_id=\$1|\(company_id,request_id,conversation_id,request_hash\)/.test(call.sql)));
+  assert.ok(calls.every(call=>/company_id=\$1|\(company_id,request_id,conversation_id,request_hash,claim_token\)/.test(call.sql)));
 });
 
 test('request ID cannot be reused for another conversation or payload',async()=>{
@@ -83,13 +89,27 @@ test('expiry leaves a completed request unchanged if completion wins the race',a
   assert.equal(after.response.reply,'done');
 });
 
-test('late success returns the durable unknown receipt after expiry wins the race',async()=>{
+test('the original claim can upgrade an expired unknown to its verified late success',async()=>{
   const {service,rows}=fixture(),input={companyId:'company_a',conversationId:'chat_a',requestId:'req_3',requestHash:'c'.repeat(64)};
-  await service.claimChatRequest(input);
+  const claim=await service.claimChatRequest(input);
   rows.get('company_a:req_3').created_at=new Date(Date.now()-121_000);
   await service.expireChatRequest({companyId:'company_a',requestId:'req_3'});
-  const settled=await service.settleChatRequest({companyId:'company_a',requestId:'req_3',status:'succeeded',httpStatus:200,response:{ok:true,work_status:'succeeded',reply:'done'}});
-  assert.equal(settled.status,'unknown');
-  assert.equal(settled.response.work_status,'unknown');
-  assert.notEqual(settled.response.reply,'done');
+  const settled=await service.settleChatRequest({companyId:'company_a',requestId:'req_3',status:'succeeded',httpStatus:200,response:{ok:true,work_status:'succeeded',reply:'done'},claimToken:claim.claimToken});
+  assert.equal(settled.status,'succeeded');
+  assert.equal((await service.readChatRequest({companyId:'company_a',requestId:'req_3'})).response.reply,'done');
+});
+
+test('a duplicate without the original claim cannot upgrade unknown or failed',async()=>{
+  const {service,rows}=fixture(),input={companyId:'company_a',conversationId:'chat_a',requestId:'req_4',requestHash:'d'.repeat(64)};
+  await service.claimChatRequest(input);
+  rows.get('company_a:req_4').created_at=new Date(Date.now()-121_000);
+  await service.expireChatRequest({companyId:'company_a',requestId:'req_4'});
+  const replay=await service.settleChatRequest({companyId:'company_a',requestId:'req_4',status:'succeeded',httpStatus:200,response:{ok:true,work_status:'succeeded',reply:'false success'}});
+  assert.equal(replay.status,'unknown');
+  assert.notEqual(replay.response.reply,'false success');
+  const failed={...input,requestId:'req_5'};
+  const claim=await service.claimChatRequest(failed);
+  await service.completeChatRequest({companyId:'company_a',requestId:'req_5',status:'failed',httpStatus:200,response:{ok:true,work_status:'failed'}});
+  const after=await service.settleChatRequest({companyId:'company_a',requestId:'req_5',status:'succeeded',httpStatus:200,response:{ok:true,work_status:'succeeded'},claimToken:claim.claimToken});
+  assert.equal(after.status,'failed');
 });

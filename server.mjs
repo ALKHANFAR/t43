@@ -302,8 +302,9 @@ async function publicChat(req,res){
   try{
     const input=await body(req),resolved=await tenantSession(req);sessionHeaders=resolved.headers;
     if(Object.hasOwn(input,'companyId')||Object.hasOwn(input,'tenantId')||Object.hasOwn(input,'projectId'))throw new TenantProjectError('client_scope_forbidden','نطاق الشركة يحدده الخادم فقط.',400);
-    const service=await tenantProjects(),companyId=resolved.session.companyId;
+    const companyId=resolved.session.companyId;
     if(input.op==='hydrate'){
+      const service=await tenantProjects();
       const flows=await service.listFlows(companyId),profiles=await companyProfiles();let saved=await profiles.listEmployees(companyId),savedFlows=new Set(saved.map(item=>item.flowId));
       for(const flow of flows)if(!savedFlows.has(flow.id)){const adopted=await profiles.adoptEmployeeFlow({companyId,flow});saved.push(adopted);savedFlows.add(flow.id);}
       const profile=await profiles.read(companyId),recentWork=await profiles.recentWork(companyId);
@@ -323,7 +324,7 @@ async function publicChat(req,res){
       if(!saved)throw new CompanyProfileError('employee_not_found','الموظف غير موجود في شركتك.',404);
       const status=input.status==='active'?'active':input.status==='disabled'?'disabled':null;
       if(!status)throw new CompanyProfileError('invalid_employee_status','حالة الموظف غير صالحة.',400);
-      await service.changeFlowStatus({tenantId:companyId,flowId:saved.activepieces_flow_id,status:status==='active'?'ENABLED':'DISABLED'});
+      await (await tenantProjects()).changeFlowStatus({tenantId:companyId,flowId:saved.activepieces_flow_id,status:status==='active'?'ENABLED':'DISABLED'});
       const updated=await profiles.setEmployeeState({companyId,employeeId:saved.id,status});
       return json(res,200,{ok:true,state_verified:true,employee:updated},sessionHeaders);
     }
@@ -345,9 +346,9 @@ async function publicChat(req,res){
       const requestHash=createHash('sha256').update(JSON.stringify({message:input.message,employeeId:input.employee_id||null,priorRequestId:input.prior_request_id||null})).digest('hex');
       const profiles=await companyProfiles(),claim=await profiles.claimChatRequest({companyId,conversationId,requestId,requestHash});
       if(!claim.claimed)return claim.status==='pending'?json(res,200,{ok:true,conversation_id:conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders):json(res,claim.httpStatus||200,claim.response,sessionHeaders);
-      activeRequest={companyId,requestId,conversationId,profiles,effectStarted:false};
+      activeRequest={companyId,requestId,conversationId,profiles,effectStarted:false,claimToken:claim.claimToken};
       const finish=async(status,response)=>{
-        const settled=await profiles.settleChatRequest({companyId,requestId,status:'succeeded',httpStatus:status,response});
+        const settled=await profiles.settleChatRequest({companyId,requestId,status:'succeeded',httpStatus:status,response,claimToken:claim.claimToken});
         activeRequest=null;
         return json(res,settled.httpStatus,settled.response,sessionHeaders);
       };
@@ -356,7 +357,7 @@ async function publicChat(req,res){
         if(!saved)throw new CompanyProfileError('employee_not_found','الموظف غير موجود في شركتك.',404);
         if(saved.status==='active'&&wantsEmployeeExecution(input.message)){
           activeRequest.effectStarted=true;
-          const run=await service.runFlow({tenantId:companyId,flowId:saved.activepieces_flow_id,requestId,message:input.message});
+          const run=await (await tenantProjects()).runFlow({tenantId:companyId,flowId:saved.activepieces_flow_id,requestId,message:input.message});
           const tools=run.tool.pieceName==='@activepieces/piece-http'?['اتصال ويب']:[];
           const updated=await profiles.recordEmployeeRun({companyId,employeeId:saved.id,flowId:run.flowId,runId:run.runId,result:run.result,tools,conversationId});
           const proof={recordId:`proof_${run.runId}`,employeeId:saved.id,flowId:run.flowId,runId:run.runId,work_id:`work_${run.runId}`,conversation_id:conversationId,subject:`مهمة ${saved.name}`,message:'اكتملت المهمة ووصل رد الخدمة.',status:'succeeded',proof:`ردت الخدمة برمز ${run.result.status||200}`,at:run.finishedAt};
@@ -371,6 +372,7 @@ async function publicChat(req,res){
       }
       if(employeeRequestMode(input.message)==='create'){
         activeRequest.effectStarted=true;
+        const service=await tenantProjects();
         await service.ensure({tenantId:companyId,displayName:`شركة سيادة ${companyId.slice(-8)}`});
         const flow=await service.createFlow({tenantId:companyId,displayName:flowName(input.message),metadata:{source:'siyadah-chat',state:'draft'}});
         const created=await profiles.adoptEmployeeFlow({companyId,flow});
@@ -386,6 +388,7 @@ async function publicChat(req,res){
     return json(res,400,{ok:false,error:'unsupported_operation'},sessionHeaders);
   }catch(error){
     if(activeRequest){
+      console.error('chat request failed',error instanceof TenantProjectError||error instanceof CompanyProfileError?error.code:error?.name==='AbortError'?'AbortError':'unexpected_error');
       const {companyId,requestId,conversationId,profiles,effectStarted}=activeRequest;
       const status=effectStarted?'unknown':'failed',httpStatus=200;
       const response={ok:true,conversation_id:conversationId,request_status:effectStarted?'not_observed':'failed',work_status:status,work_id:`request_${requestId}`,reply:effectStarted?'بدأ الطلب لكن لم نؤكد نتيجته. لم نعد تنفيذه.':'تعذّر إكمال الطلب. لم نعد تنفيذه.'};
