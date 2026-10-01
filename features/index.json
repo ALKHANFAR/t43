@@ -175,6 +175,7 @@
       "state": "draft_pr",
       "meaning": "يتحقق خادم سيادة من أن اتصال Activepieces بنطاق PROJECT وله projectIds بمشروع الشركة وحده في القائمة والقراءة والإنشاء وOAuth وإعادة التحقق والفصل. الصف المشترك أو الناقص يرفض؛ لم يفحص اتصالات العملاء الحية أو يعالجها.",
       "linear": "ABO-50",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/23",
       "locations": [
         {"role": "ownership_guard", "path": "lib/tool-connections.mjs", "anchor": "function publicConnection(connection,projectId)"},
         {"role": "read_before_write", "path": "lib/tool-connections.mjs", "anchor": "async function owned(tenantId,id)"},
