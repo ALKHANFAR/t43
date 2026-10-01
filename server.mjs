@@ -11,6 +11,7 @@ import {createCompanyProfileService,CompanyProfileError} from './lib/company-pro
 import {createAccountAuthService,AccountAuthError} from './lib/account-auth.mjs';
 import {createMailer,MailerError} from './lib/mailer.mjs';
 import {conversationMemory,employeeRequestMode,flowName} from './lib/chat-intelligence.mjs';
+import {completedWithoutExecution} from './lib/chat-outcome.mjs';
 
 const root=process.cwd();
 const port=Number(process.env.PORT||3000);
@@ -329,7 +330,7 @@ async function publicChat(req,res){
       const requestId=typeof input.request_id==='string'?input.request_id:typeof input.work_id==='string'&&input.work_id.startsWith('request_')?input.work_id.slice(8):'';
       if(!/^[A-Za-z0-9_-]{1,80}$/.test(requestId))throw new CompanyProfileError('invalid_request','معرّف الطلب غير صالح.',400);
       const record=await (await companyProfiles()).expireChatRequest({companyId,requestId});
-      if(!record)return json(res,200,{ok:true,request_status:'not_observed',work_status:'unknown'},sessionHeaders);
+      if(!record)return json(res,200,{ok:true,request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified'},sessionHeaders);
       if(input.conversation_id&&record.conversationId!==input.conversation_id)throw new CompanyProfileError('request_scope_mismatch','معرّف الطلب مرتبط بمحادثة أخرى.',409);
       if(record.status!=='pending')return json(res,record.httpStatus||200,record.response,sessionHeaders);
       return json(res,200,{ok:true,conversation_id:record.conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders);
@@ -378,12 +379,12 @@ async function publicChat(req,res){
           const proof={recordId:`proof_${run.runId}`,employeeId:saved.id,flowId:run.flowId,runId:run.runId,work_id:`work_${run.runId}`,conversation_id:conversationId,subject:`مهمة ${saved.name}`,message:'اكتملت المهمة ووصل رد الخدمة.',status:'succeeded',proof:`ردت الخدمة برمز ${run.result.status||200}`,at:run.finishedAt};
           const reply='نفّذت المهمة ووصلت النتيجة بنجاح.';
           await profiles.recordConversation({companyId,conversationId,employeeId:saved.id,requestId,userMessage:input.message,assistantMessage:reply});
-          return finish(200,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',work_id:proof.work_id,reply,employee:updated,recent_work:[proof]});
+          return finish(200,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',outcome_kind:'external_run',work_id:proof.work_id,reply,employee:updated,recent_work:[proof]});
         }
         const profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId),conversations=await profiles.listConversations(companyId),conversation=conversations.find(item=>item.id===conversationId);
         const reply=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history:conversation?.messages||[],message:input.message,employee:saved});
         await profiles.recordConversation({companyId,conversationId,employeeId:saved.id,requestId,userMessage:input.message,assistantMessage:reply});
-        return finish(200,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',reply,experience:{employee_conversation:true,employee_id:saved.id,instruction_version:Number(saved.prompt_version||1),external_execution:false}});
+        return finish(200,completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply,experience:{employee_conversation:true,employee_id:saved.id,instruction_version:Number(saved.prompt_version||1),external_execution:false}}));
       }
       if(employeeRequestMode(input.message)==='create'){
         activeRequest.effectStarted=true;
@@ -393,12 +394,12 @@ async function publicChat(req,res){
         const created=await profiles.adoptEmployeeFlow({companyId,flow});
         const reply=`تم تجهيز ${created.name} داخل مساحة شركتك. لن يبدأ العمل قبل ربط أدواته واختبار أول مهمة.`;
         await profiles.recordConversation({companyId,conversationId,employeeId:created.recordId,requestId,userMessage:input.message,assistantMessage:reply});
-        return finish(201,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',reply,employee:created});
+        return finish(201,completedWithoutExecution('employee_draft',{ok:true,conversation_id:conversationId,reply,employee:created}));
       }
       const profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId),conversations=await profiles.listConversations(companyId),conversation=conversations.find(item=>item.id===conversationId);
       const reply=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history:conversation?.messages||[],message:input.message});
       await profiles.recordConversation({companyId,conversationId,employeeId:null,requestId,userMessage:input.message,assistantMessage:reply});
-      return finish(200,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',reply,experience:{understood_company:true,knowledge_version:Number(knowledge?.knowledgeVersion||0),catalog_reviewed:true}});
+      return finish(200,completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply,experience:{understood_company:true,knowledge_version:Number(knowledge?.knowledgeVersion||0),catalog_reviewed:true}}));
     }
     return json(res,400,{ok:false,error:'unsupported_operation'},sessionHeaders);
   }catch(error){
@@ -406,7 +407,7 @@ async function publicChat(req,res){
       console.error('chat request failed',error instanceof TenantProjectError||error instanceof CompanyProfileError?error.code:error?.name==='AbortError'?'AbortError':'unexpected_error');
       const {companyId,requestId,conversationId,profiles,effectStarted}=activeRequest;
       const status=effectStarted?'unknown':'failed',httpStatus=200;
-      const response={ok:true,conversation_id:conversationId,request_status:effectStarted?'not_observed':'failed',work_status:status,work_id:`request_${requestId}`,reply:effectStarted?'بدأ الطلب لكن لم نؤكد نتيجته. لم نعد تنفيذه.':'تعذّر إكمال الطلب. لم نعد تنفيذه.'};
+      const response={ok:true,conversation_id:conversationId,request_status:effectStarted?'not_observed':'failed',work_status:status,outcome_kind:'unverified',work_id:`request_${requestId}`,reply:effectStarted?'بدأ الطلب لكن لم نؤكد نتيجته. لم نعد تنفيذه.':'تعذّر إكمال الطلب. لم نعد تنفيذه.'};
       try{const settled=await profiles.settleChatRequest({companyId,requestId,status,httpStatus,response});return json(res,settled.httpStatus,settled.response,sessionHeaders);}
       catch(completionError){console.error('chat request completion failed',completionError?.code||completionError?.name||'unknown_error');}
     }
