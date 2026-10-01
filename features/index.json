@@ -96,6 +96,39 @@
       ]
     },
     {
+      "id": "chat_unverified_result",
+      "name": "نتيجة الطلب غير مؤكدة في شات سيادة",
+      "aliases": ["لم نتأكد من نتيجة الطلب", "حالة الطلب غير معروفة", "التحقق من حالة الطلب", "unknown chat outcome", "unverified chat result"],
+      "state": "draft_pr",
+      "meaning": "PR #14 يعرض نتيجة غير مؤكدة دون علامة نجاح ويعيد قراءة معرّف الطلب نفسه، دون إرسال تنفيذ جديد تلقائيًا. يدخل في إصدار المسودة الموحد #19 ولم يُنشر بعد.",
+      "linear": "ABO-44",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/19",
+      "locations": [
+        {"role": "render", "path": "app/chat.js", "anchor": "function siyResultRow(data)"},
+        {"role": "message", "path": "app/chat.js", "anchor": "if(!text&&data.request_status==='not_observed'&&state==='unknown')"},
+        {"role": "retry", "path": "app/chat.js", "anchor": "row.siyRetry=function(){submit(true);}"},
+        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "| Uncertain outcome |"},
+        {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "terminal unknown request shows verification warning and never a success mark"}
+      ]
+    },
+    {
+      "id": "schema_predeploy_readiness",
+      "name": "ترحيل قاعدة بيانات سيادة قبل النشر وفحص جاهزيتها",
+      "aliases": ["ترحيل قاعدة البيانات", "جاهزية الصحة", "فحص health", "predeploy migration", "schema readiness"],
+      "state": "draft_pr",
+      "meaning": "PR #18 ضمن إصدار #19 يشغّل الترحيل في خطوة Railway pre-deploy، ثم يجعل /health يفحص الجداول والقيود باستعلامات قراءة فقط. إعداد Railway والإنتاج لم يثبتا بعد؛ جرد التدفقات القديمة بوابة مانعة للدمج.",
+      "linear": "ABO-57",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/19",
+      "locations": [
+        {"role": "deploy_command", "path": "railway.json", "anchor": "preDeployCommand"},
+        {"role": "migration", "path": "scripts/migrate-schema.mjs", "anchor": "await client.query('BEGIN');"},
+        {"role": "schema_guard", "path": "lib/schema-ready.mjs", "anchor": "export async function assertSchemaReady"},
+        {"role": "health_route", "path": "server.mjs", "anchor": "async function health(res)"},
+        {"role": "contract", "path": "migrations/README.md", "anchor": "The application does not run schema initialization while serving requests."},
+        {"role": "test", "path": "scripts/schema-ready-runtime.test.mjs", "anchor": "health checks schema without creating or altering tables"}
+      ]
+    },
+    {
       "id": "external_run_proof",
       "name": "تشغيل أداة الموظف وإثبات نتيجتها",
       "aliases": ["نتيجة الاداة", "Activepieces run", "دليل التنفيذ", "runId"],
