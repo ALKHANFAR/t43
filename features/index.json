@@ -111,8 +111,8 @@
         {"role": "customer_action", "path": "app/chat.js", "anchor": "async function rcOAuth(values)"},
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='oauth_start')"},
         {"role": "tenant_scope", "path": "lib/tool-connections.mjs", "anchor": "async function selected({tenantId,piece,type})"},
-        {"role": "blocked_start", "path": "lib/tool-connections.mjs", "anchor": "async function oauthStart({tenantId,piece,values={}})"},
-        {"role": "blocked_finish", "path": "lib/tool-connections.mjs", "anchor": "async function oauthFinish({tenantId,attempt,code,state})"},
+        {"role": "blocked_start", "path": "lib/tool-connections.mjs", "anchor": "async function oauthStart()"},
+        {"role": "blocked_finish", "path": "lib/tool-connections.mjs", "anchor": "async function oauthFinish()"},
         {"role": "test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "customer OAuth is blocked until a Siyadah-owned flow is ready"}
       ]
     },
@@ -154,11 +154,10 @@
       "name": "جرد أدوات Pilot واتصالات مشروع الشركة",
       "aliases": ["جرد الأدوات", "اكتشاف الأدوات", "tool inventory", "pilot tool discovery", "ABO-40"],
       "state": "draft_pr",
-      "meaning": "جرد قراءة فقط لثلاث قطع Pilot واتصالات مشروع الشركة. يقرأ قائمة القطع للنسخة والعدد ثم تفاصيل القطعة بالنسخة نفسها مع تحقق الاسم/النسخة؛ يظهر no_match واختلاف النسخة والحقول غير المعروفة صراحة. لا يثبت جاهزية التنفيذ أو نتيجة مزود. البحث الدلالي والحقول الديناميكية مؤجلان.",
+      "meaning": "جرد قراءة فقط لثلاث قطع Pilot واتصالات مشروع الشركة. هذا فحص داخلي لا يُعرض عبر API العميل لأنه يحوي تفاصيل محرك التنفيذ. لا يثبت جاهزية التنفيذ أو نتيجة مزود.",
       "linear": "ABO-40",
       "pr": "https://github.com/ALKHANFAR/t43/pull/22",
       "locations": [
-        {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='pilot_discover')"},
         {"role": "service", "path": "lib/pilot-tool-discovery.mjs", "anchor": "export function createPilotToolDiscovery"},
         {"role": "pinned_detail", "path": "lib/pilot-tool-discovery.mjs", "anchor": "const detail=version?await get"},
         {"role": "pilot_set", "path": "lib/pilot-tool-discovery.mjs", "anchor": "export const PILOT_PIECES"},
