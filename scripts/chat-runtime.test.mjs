@@ -354,16 +354,67 @@ test('failed work with arbitrary proof text never renders success mark',async()=
     send(p,'نفذ');await flush();assert.match(thread(p),/تعذّر إكمال/);assert.ok(!thread(p).includes('✓'));assert.equal(p.polls.length,0);
   }finally{p.close();}
 });
+test('ordinary reply readback accepts not_started and never shows run proof',async()=>{
+  const answer={ok:true,conversation_id:'c',request_status:'succeeded',work_status:'not_started',outcome_kind:'conversation_reply',reply:'هذا جواب السؤال.',recent_work:[proof]};
+  const p=await page({message:Error('offline'),work:answer});try{
+    send(p,'سؤال');await flush();p.d.querySelector('[data-siy-retry]').click();await flush();
+    assert.match(thread(p),/هذا جواب السؤال/);
+    assert.doesNotMatch(thread(p),/اكتمل العمل حسب سجل التشغيل|آخر عمل فعلي|✓/);
+    assert.equal(p.d.querySelectorAll('[data-siy-retry]').length,0);
+    assert.equal(p.requests.filter(x=>x.body.op==='message').length,1);
+    assert.equal(p.requests.filter(x=>x.body.op==='work').length,1);
+  }finally{p.close();}
+});
+test('employee draft fallback describes a saved draft without claiming a run',async()=>{
+  const draft={ok:true,conversation_id:'c',request_status:'succeeded',work_status:'not_started',outcome_kind:'employee_draft',employee:{...employee,status:'disabled',tools:[]},recent_work:[proof]};
+  const p=await page({message:Error('offline'),work:draft});try{
+    send(p,'أنشئ موظفًا');await flush();p.d.querySelector('[data-siy-retry]').click();await flush();
+    assert.match(thread(p),/حُفظت مسودة الموظف. لم يبدأ تشغيل أدواته/);
+    assert.doesNotMatch(thread(p),/اكتمل العمل حسب سجل التشغيل|✓/);
+    assert.equal(p.polls.length,0);
+    assert.equal(p.d.querySelectorAll('[data-siy-retry]').length,0);
+    assert.equal(p.requests.filter(x=>x.body.op==='message').length,1);
+    assert.equal(p.requests.filter(x=>x.body.op==='work').length,1);
+  }finally{p.close();}
+});
+test('external run without a reply asks for tool verification instead of inventing provider success',async()=>{
+  const run={ok:true,conversation_id:'c',request_status:'succeeded',work_status:'succeeded',outcome_kind:'external_run'};
+  const p=await page({message:run});try{
+    send(p,'شغّل المهمة');await flush();
+    assert.match(thread(p),/سُجّل التشغيل؛ تحقّق من نتيجة الأداة/);
+    assert.doesNotMatch(thread(p),/ردت الخدمة|✓/);
+  }finally{p.close();}
+});
 test('terminal unknown request shows verification warning and never a success mark',async()=>{
-  const unknown={ok:true,conversation_id:'c',request_status:'not_observed',work_status:'unknown',work_id:'request_req_1',reply:'لم نؤكد نتيجة الطلب بعد. لم نعد تنفيذه.'};
+  const unknown={ok:true,conversation_id:'c',request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',work_id:'request_req_1',reply:'لم نؤكد نتيجة الطلب بعد. لم نعد تنفيذه.'};
   const p=await page({message:unknown,work:unknown});try{
     send(p,'أنشئ موظفًا');await flush();
     assert.ok(p.d.querySelector('[data-siy-retry]'));
+    assert.match(thread(p),/لم نتأكد من نتيجة الطلب/);
+    assert.doesNotMatch(thread(p),/لم يظهر سجل الطلب/);
     assert.ok(!thread(p).includes('✓'));
     p.d.querySelector('[data-siy-retry]').click();await flush();
-    assert.equal(p.requests.filter(x=>x.body.op==='message').length,1);
-    assert.match(thread(p),/حالته غير معروفة|not in the record/);
+    const messages=p.requests.filter(x=>x.body.op==='message'),checks=p.requests.filter(x=>x.body.op==='work');
+    assert.equal(messages.length,1);
+    assert.equal(checks.length,1);
+    assert.equal(checks[0].body.request_id,messages[0].body.request_id);
+    assert.match(thread(p),/لم نتأكد من نتيجة الطلب/);
+    assert.doesNotMatch(thread(p),/لم يظهر سجل الطلب/);
     assert.ok(!thread(p).includes('✓'));
+  }finally{p.close();}
+});
+test('queued request with no ledger readback shows an explicit unknown result and stops polling',async()=>{
+  const p=await page({message:{ok:true,conversation_id:'c',request_status:'queued',work_status:'queued',work_id:'request_req_1'},work:{ok:true,request_status:'not_observed',work_status:'unknown'}});try{
+    send(p,'أنشئ موظفًا');await flush();
+    assert.match(thread(p),/بانتظار التنفيذ/);
+    assert.equal(p.polls.length,1);
+    await p.polls.shift()();await flush();
+    assert.match(thread(p),/لم نتأكد من نتيجة الطلب. لم نعد تنفيذه/);
+    assert.doesNotMatch(thread(p),/وصل الرد دون تفاصيل إضافية/);
+    assert.ok(!thread(p).includes('✓'));
+    assert.equal(p.polls.length,0);
+    assert.equal(p.requests.filter(x=>x.body.op==='message').length,1);
+    assert.equal(p.requests.filter(x=>x.body.op==='work').length,1);
   }finally{p.close();}
 });
 test('ambiguous message timeout refreshes by original request ID without redispatch',async()=>{
@@ -507,7 +558,7 @@ test('explicit cancel after timeout has a new request ID and targets prior reque
   assert.equal(messages.length,2);assert.notEqual(messages[1].body.request_id,first.request_id);assert.equal(messages[1].body.prior_request_id,first.request_id);
   assert.equal(messages[1].body.message,'ألغ طلبي السابق');assert.equal(p.alerts.length,0);
   p.d.querySelector('[data-siy-retry]').click();await flush();assert.equal(p.requests.filter(x=>x.body.op==='message').length,2);
-  assert.equal(p.requests.at(-1).body.request_id,first.request_id);assert.match(thread(p),/حالته غير معروفة/);assert.ok(p.d.querySelector('[data-siy-retry]'));
+  assert.equal(p.requests.at(-1).body.request_id,first.request_id);assert.match(thread(p),/لم نتأكد من نتيجة الطلب/);assert.ok(p.d.querySelector('[data-siy-retry]'));
  }finally{p.close();}
 });
 
