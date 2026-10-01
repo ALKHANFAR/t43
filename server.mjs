@@ -12,6 +12,7 @@ import {createAccountAuthService,AccountAuthError} from './lib/account-auth.mjs'
 import {createMailer,MailerError} from './lib/mailer.mjs';
 import {conversationMemory,employeeRequestMode,flowName} from './lib/chat-intelligence.mjs';
 import {completedWithoutExecution,failedChatExecution} from './lib/chat-outcome.mjs';
+import {assertSchemaReady} from './lib/schema-ready.mjs';
 
 const root=process.cwd();
 const port=Number(process.env.PORT||3000);
@@ -37,7 +38,7 @@ async function tenantProjects(){
   if(!tenantProjectsPromise)tenantProjectsPromise=(async()=>{
     const pool=await database();
     const service=createTenantProjectService({query:(text,values)=>pool.query(text,values),activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY,defaultMaxConcurrentJobs:process.env.SIYADAH_DEFAULT_PROJECT_CONCURRENCY||2});
-    await service.init();return service;
+    return service;
   })().catch(error=>{tenantProjectsPromise=null;throw error;});
   return tenantProjectsPromise;
 }
@@ -60,7 +61,7 @@ async function database(){
 async function accountAuth(){
   if(!accountAuthPromise)accountAuthPromise=(async()=>{
     const pool=await database(),service=createAccountAuthService({query:(text,values)=>pool.query(text,values)});
-    await service.init();return service;
+    return service;
   })().catch(error=>{accountAuthPromise=null;throw error;});
   return accountAuthPromise;
 }
@@ -71,7 +72,7 @@ function firecrawl(){
 async function companyProfiles(){
   if(!companyProfilesPromise)companyProfilesPromise=(async()=>{
     const pool=await database(),service=createCompanyProfileService({query:(text,values)=>pool.query(text,values),firecrawl:firecrawl()});
-    await service.init();return service;
+    return service;
   })().catch(error=>{companyProfilesPromise=null;throw error;});
   return companyProfilesPromise;
 }
@@ -81,9 +82,8 @@ async function health(res){
     return json(res,503,{ok:false,error:'not_ready'});
   }
   try{
-    await companyProfiles();
     const pool=await database();
-    await pool.query('SELECT company_id,request_id,request_hash,claim_token FROM siyadah_chat_requests LIMIT 0');
+    await assertSchemaReady((sql)=>pool.query(sql));
     return json(res,200,{ok:true});
   }catch(error){
     console.error('readiness check failed',error?.code||error?.name||'unknown_error');
