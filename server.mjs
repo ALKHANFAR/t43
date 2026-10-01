@@ -13,6 +13,7 @@ import {createMailer,MailerError} from './lib/mailer.mjs';
 import {conversationMemory,employeeRequestMode,flowName} from './lib/chat-intelligence.mjs';
 import {completedWithoutExecution,failedChatExecution} from './lib/chat-outcome.mjs';
 import {assertSchemaReady} from './lib/schema-ready.mjs';
+import {createWaitlistProxy,WaitlistError} from './lib/waitlist.mjs';
 
 const root=process.cwd();
 const port=Number(process.env.PORT||3000);
@@ -122,6 +123,19 @@ async function scrapeWeb(req,res){
   }catch(error){
     if(error instanceof FirecrawlError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
     console.error('web scrape failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error'});
+  }
+}
+
+async function waitlist(req,res){
+  try{
+    const input=await body(req,8_000);
+    const submit=createWaitlistProxy({webhookUrl:process.env.SIYADAH_WAITLIST_WEBHOOK_URL});
+    return json(res,202,await submit(input));
+  }catch(error){
+    if(error instanceof WaitlistError)return json(res,error.status,{ok:false,error:error.code});
+    if(error instanceof TenantProjectError)return json(res,error.status,{ok:false,error:error.code});
+    console.error('waitlist submission failed',error?.code||error?.name||'unknown_error');
+    return json(res,500,{ok:false,error:'internal_error'});
   }
 }
 
@@ -448,6 +462,7 @@ createServer((req,res)=>{
     return res.end();
   }
   if(req.method==='GET'&&req.url==='/health')return health(res);
+  if(req.method==='POST'&&req.url==='/siyadah-api/v1/waitlist')return waitlist(req,res);
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/auth/signup')return authRoute(req,res,'signup');
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/auth/verify-email')return authRoute(req,res,'verify');
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/auth/login')return authRoute(req,res,'login');

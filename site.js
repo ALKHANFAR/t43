@@ -6,8 +6,8 @@ var CONFIG = {
   //    رابط Apps Script إن أردت الحفظ في Google Sheet مباشرة.
   sheetUrl: "",   // Apps Script — غير مستخدم الآن
 
-  // 2) ✅ المسار الفعّال: ويب هوك Activepieces — يكتب مباشرة في جدولك.
-  endpoint: "https://cloud.activepieces.com/api/v1/webhooks/AgT75WkSTGHn4OTftrx5F",   // ✅ التسجيل → Activepieces → الجدول + الإيميل
+  // 2) يُرسل نموذج التسجيل عبر سيادة؛ الوجهة الخارجية محفوظة على الخادم.
+  endpoint: "/siyadah-api/v1/waitlist",
 
   // 3) اختياري: إشعار بريد إضافي عبر web3forms.com/#start
   web3formsKey: "",
