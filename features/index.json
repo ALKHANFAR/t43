@@ -5,7 +5,7 @@
     {
       "id": "chat_employee_approval",
       "name": "موافقة تجهيز الموظف التي تظهر في الشات",
-      "aliases": ["موافقة الموظف", "وافق وشغل", "اعتماد خطة الموظف", "employee approval in chat", "approve employee"],
+      "aliases": ["موافقة الموظف", "موافقة على الموظف الي تظهر في الشات", "وافق وشغل", "اعتماد خطة الموظف", "employee approval in chat", "approve employee"],
       "state": "gap",
       "meaning": "يوجد زر ومُعالج واجهة لقرار تجهيز الموظف، واختبار واجهة بمحاكاة الرد. خادم سيادة الحالي لا يعرّف عملية approve؛ ليست موافقة حية مؤكدة.",
       "linear": "ABO-44",
