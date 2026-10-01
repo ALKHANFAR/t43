@@ -50,50 +50,16 @@ test('builds custom auth only from authoritative fields',async()=>{
   assert.equal(request.projectId,PROJECT);assert.equal(request.scope,undefined);
 });
 
-test('starts and finishes cloud OAuth inside the tenant project',async()=>{
-  const {service,calls}=harness(),started=await service.oauthStart({tenantId:'company-a',piece:'gmail'});
-  assert.equal(started.allowedOrigin,'https://secrets.activepieces.com');assert.match(started.authorizationUrl,/accounts\.google\.com/);
-  assert.equal(new URL(started.authorizationUrl).searchParams.get('state'),started.attempt);assert.equal(new URL(started.authorizationUrl).searchParams.get('code_challenge_method'),'S256');
-  const finished=await service.oauthFinish({tenantId:'company-a',attempt:started.attempt,state:started.attempt,code:'oauth-code'});
-  assert.equal(finished.status,'ACTIVE');
-  const request=calls.filter(call=>call.url.endsWith('/api/v1/app-connections')).at(-1).body;
-  assert.equal(request.projectId,PROJECT);assert.equal(request.type,'CLOUD_OAUTH2');assert.equal(request.value.client_id,'google-client');
-});
-
-test('OAuth state hides customer auth props and PKCE verifier while retaining project scope',async()=>{
-  const {service,calls}=harness(),value='customer-private-hint-unique';
-  const started=await service.oauthStart({tenantId:'company-a',piece:'gmail',values:{private_hint:value}});
-  const url=new URL(started.authorizationUrl),state=url.searchParams.get('state');
-  assert.equal(state,started.attempt);assert.match(state,/^v1\./);
-  assert.equal(started.authorizationUrl.includes(value),false);
-  assert.equal(started.authorizationUrl.includes(Buffer.from(value).toString('base64url')),false);
-  const publicChallenge=url.searchParams.get('code_challenge');
-  assert.equal(state.includes(publicChallenge),false);
-  await service.oauthFinish({tenantId:'company-a',attempt:state,state,code:'oauth-code'});
-  const request=calls.filter(call=>call.url.endsWith('/api/v1/app-connections')).at(-1).body;
-  assert.equal(request.projectId,PROJECT);
-  assert.equal(request.value.props.private_hint,value);
-  assert.notEqual(request.value.code_challenge,publicChallenge);
-});
-
-test('OAuth state rejects another company, tampering, old format and expiry before provider write',async()=>{
-  const {service,calls}=harness(),started=await service.oauthStart({tenantId:'company-a',piece:'gmail'});
-  const finish=attempt=>service.oauthFinish({tenantId:'company-a',attempt,state:attempt,code:'oauth-code'});
-  await assert.rejects(()=>service.oauthFinish({tenantId:'company-b',attempt:started.attempt,state:started.attempt,code:'oauth-code'}),error=>error.code==='invalid_oauth_attempt'&&!JSON.stringify(error).includes('company-a'));
-  const altered=`${started.attempt.slice(0,-1)}${started.attempt.at(-1)==='A'?'B':'A'}`;
-  await assert.rejects(()=>finish(altered),error=>error.code==='invalid_oauth_attempt'&&!JSON.stringify(error).includes('oauth-code'));
-  await assert.rejects(()=>finish(Buffer.from(JSON.stringify({tenantId:'company-a'})).toString('base64url')+'.mac'),error=>error.code==='invalid_oauth_attempt');
-  const originalNow=Date.now;Date.now=()=>originalNow()+11*60_000;
-  try{await assert.rejects(()=>finish(started.attempt),error=>error.code==='expired_oauth_attempt');}
-  finally{Date.now=originalNow;}
-  assert.equal(calls.filter(call=>call.url.endsWith('/api/v1/app-connections')).length,0);
-});
-
-test('OAuth refuses an auth definition that places a secret field in a public URL',async()=>{
-  const unsafe=structuredClone(gmail);unsafe.auth[0].authUrl+='?hint={private_hint}';
-  const {service,calls}=harness({gmail:unsafe});
-  await assert.rejects(()=>service.oauthStart({tenantId:'company-a',piece:'gmail',values:{private_hint:'not-for-url'}}),error=>error.code==='oauth_secret_in_url'&&!error.message.includes('not-for-url'));
-  assert.equal(calls.filter(call=>call.url.endsWith('/api/v1/app-connections')).length,0);
+test('customer OAuth is blocked until a Siyadah-owned flow is ready',async()=>{
+  const {service,calls}=harness();
+  const methods=await service.methods({tenantId:'company-a',piece:'gmail'});
+  const oauth=methods.methods.find(method=>method.type==='OAUTH2');
+  assert.equal(oauth.available,false);
+  assert.match(oauth.message,/سيادة/);
+  await assert.rejects(()=>service.oauthStart({tenantId:'company-a',piece:'gmail'}),error=>error.code==='siyadah_oauth_not_ready'&&error.status===409);
+  await assert.rejects(()=>service.oauthFinish({tenantId:'company-a',attempt:'old',state:'old',code:'oauth-code'}),error=>error.code==='siyadah_oauth_not_ready'&&error.status===409);
+  assert.equal(calls.some(call=>call.url.startsWith('https://cloud.example/apps')),false);
+  assert.equal(calls.some(call=>call.url.endsWith('/api/v1/app-connections')&&call.options.method==='POST'),false);
 });
 
 test('rejects cross-company connection readback',async()=>{
@@ -118,9 +84,6 @@ test('shared connection ownership is rejected before revalidate or disconnect wr
 test('a shared provider result after create or revalidation is rejected',async()=>{
   const created=harness({create:[PROJECT,OTHER]});
   await assert.rejects(()=>created.service.connect({tenantId:'company-a',piece:'stripe',type:'SECRET_TEXT',values:{secret_text:'test'}}),error=>error.code==='connection_project_mismatch');
-  const oauth=harness({create:[PROJECT,OTHER]});
-  const started=await oauth.service.oauthStart({tenantId:'company-a',piece:'gmail'});
-  await assert.rejects(()=>oauth.service.oauthFinish({tenantId:'company-a',attempt:started.attempt,state:started.attempt,code:'oauth-code'}),error=>error.code==='connection_project_mismatch');
   const revalidated=harness({revalidate:[PROJECT,OTHER]});
   await assert.rejects(()=>revalidated.service.revalidate({tenantId:'company-a',id:CONNECTION}),error=>error.code==='connection_project_mismatch');
 });
