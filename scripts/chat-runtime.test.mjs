@@ -354,8 +354,39 @@ test('failed work with arbitrary proof text never renders success mark',async()=
     send(p,'نفذ');await flush();assert.match(thread(p),/تعذّر إكمال/);assert.ok(!thread(p).includes('✓'));assert.equal(p.polls.length,0);
   }finally{p.close();}
 });
+test('ordinary reply readback accepts not_started and never shows run proof',async()=>{
+  const answer={ok:true,conversation_id:'c',request_status:'succeeded',work_status:'not_started',outcome_kind:'conversation_reply',reply:'هذا جواب السؤال.',recent_work:[proof]};
+  const p=await page({message:Error('offline'),work:answer});try{
+    send(p,'سؤال');await flush();p.d.querySelector('[data-siy-retry]').click();await flush();
+    assert.match(thread(p),/هذا جواب السؤال/);
+    assert.doesNotMatch(thread(p),/اكتمل العمل حسب سجل التشغيل|آخر عمل فعلي|✓/);
+    assert.equal(p.d.querySelectorAll('[data-siy-retry]').length,0);
+    assert.equal(p.requests.filter(x=>x.body.op==='message').length,1);
+    assert.equal(p.requests.filter(x=>x.body.op==='work').length,1);
+  }finally{p.close();}
+});
+test('employee draft fallback describes a saved draft without claiming a run',async()=>{
+  const draft={ok:true,conversation_id:'c',request_status:'succeeded',work_status:'not_started',outcome_kind:'employee_draft',employee:{...employee,status:'disabled',tools:[]},recent_work:[proof]};
+  const p=await page({message:Error('offline'),work:draft});try{
+    send(p,'أنشئ موظفًا');await flush();p.d.querySelector('[data-siy-retry]').click();await flush();
+    assert.match(thread(p),/حُفظت مسودة الموظف. لم يبدأ تشغيل أدواته/);
+    assert.doesNotMatch(thread(p),/اكتمل العمل حسب سجل التشغيل|✓/);
+    assert.equal(p.polls.length,0);
+    assert.equal(p.d.querySelectorAll('[data-siy-retry]').length,0);
+    assert.equal(p.requests.filter(x=>x.body.op==='message').length,1);
+    assert.equal(p.requests.filter(x=>x.body.op==='work').length,1);
+  }finally{p.close();}
+});
+test('external run without a reply asks for tool verification instead of inventing provider success',async()=>{
+  const run={ok:true,conversation_id:'c',request_status:'succeeded',work_status:'succeeded',outcome_kind:'external_run'};
+  const p=await page({message:run});try{
+    send(p,'شغّل المهمة');await flush();
+    assert.match(thread(p),/سُجّل التشغيل؛ تحقّق من نتيجة الأداة/);
+    assert.doesNotMatch(thread(p),/ردت الخدمة|✓/);
+  }finally{p.close();}
+});
 test('terminal unknown request shows verification warning and never a success mark',async()=>{
-  const unknown={ok:true,conversation_id:'c',request_status:'not_observed',work_status:'unknown',work_id:'request_req_1',reply:'لم نؤكد نتيجة الطلب بعد. لم نعد تنفيذه.'};
+  const unknown={ok:true,conversation_id:'c',request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',work_id:'request_req_1',reply:'لم نؤكد نتيجة الطلب بعد. لم نعد تنفيذه.'};
   const p=await page({message:unknown,work:unknown});try{
     send(p,'أنشئ موظفًا');await flush();
     assert.ok(p.d.querySelector('[data-siy-retry]'));

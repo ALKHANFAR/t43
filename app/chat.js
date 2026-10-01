@@ -1205,7 +1205,7 @@ var I = {
       if(!response.ok) throw new Error(ui("تعذّر الاتصال بالخادم. أعد المحاولة.","Could not reach the server. Try again."));
       var data=await response.json();
       if(!data||data.ok!==true) throw new Error(ui("تعذّر إتمام الطلب. لم يتم تأكيد نجاحه.","The request was not confirmed as complete."));
-      if(body.op==="work"&&!(data.request_status==="not_observed"&&data.work_status==="unknown")&&!["queued","running","succeeded","failed","awaiting_input","cancelled"].includes(data.work_status)) throw new Error(ui("وصلت حالة عمل غير مكتملة؛ لم نتأكد من النتيجة.","The work status is incomplete; the outcome is unverified."));
+      if(body.op==="work"&&!(data.request_status==="not_observed"&&data.work_status==="unknown")&&!(data.request_status==="succeeded"&&data.work_status==="not_started"&&["conversation_reply","employee_draft"].includes(data.outcome_kind))&&!["queued","running","succeeded","failed","awaiting_input","cancelled"].includes(data.work_status)) throw new Error(ui("وصلت حالة عمل غير مكتملة؛ لم نتأكد من النتيجة.","The work status is incomplete; the outcome is unverified."));
       return data;
     }catch(e){ if(e.name==="AbortError") throw new Error(ui("تأخر الرد. أعد المحاولة بنفس الطلب للتحقق من حالته.","The response timed out. Check the same request to verify its status.")); throw e; }
     finally{clearTimeout(timer);}
@@ -1379,10 +1379,12 @@ var I = {
       '<button type="button" class="bt bt--line" data-siy-approval="reject">'+ui('إلغاء','Cancel')+'</button></div>';
   }
   function siyResultRow(data){
-    var state=data.work_status, text=data.reply;
+    var state=data.work_status, kind=data.outcome_kind, text=data.reply;
+    if(!text&&kind==='conversation_reply'&&state==='not_started') text=ui('اكتملت معالجة السؤال دون تشغيل أداة، لكن تفاصيل الرد غير متاحة.','The question was processed without running a tool, but the reply details are unavailable.');
+    if(!text&&kind==='employee_draft'&&state==='not_started') text=ui('حُفظت مسودة الموظف. لم يبدأ تشغيل أدواته.','The employee draft was saved. Its tools have not run.');
     if(!text&&data.request_status==='not_observed'&&state==='unknown') text=ui('لم نتأكد من نتيجة الطلب. لم نعد تنفيذه.','The request outcome is unverified. We did not run it again.');
-    if(!text) text=(locale==='en'?{queued:'Request received, awaiting execution.',running:'Work in progress.',succeeded:'Work completed according to the run record.',failed:'Work could not be completed. Review the result details.',awaiting_input:'Work needs more information from you.',cancelled:'Request cancelled.'}:{queued:"تم استلام الطلب، بانتظار التنفيذ.",running:"العمل قيد التنفيذ.",succeeded:"اكتمل العمل حسب سجل التشغيل.",failed:"تعذّر إكمال العمل. راجع تفاصيل النتيجة.",awaiting_input:"العمل ينتظر معلومات إضافية منك.",cancelled:"أُلغي الطلب."})[state]||ui("وصل الرد دون تفاصيل إضافية.","Response received without further details.");
-    var records=(Array.isArray(data.recent_work)?data.recent_work:[]).filter(function(r){return (!r.conversation_id||r.conversation_id===data.conversation_id)&&(!r.work_id||r.work_id===data.work_id);});
+    if(!text) text=(locale==='en'?{queued:'Request received, awaiting execution.',running:'Work in progress.',succeeded:'The run is recorded; verify the tool result.',failed:'Work could not be completed. Review the result details.',awaiting_input:'Work needs more information from you.',cancelled:'Request cancelled.'}:{queued:"تم استلام الطلب، بانتظار التنفيذ.",running:"العمل قيد التنفيذ.",succeeded:"سُجّل التشغيل؛ تحقّق من نتيجة الأداة.",failed:"تعذّر إكمال العمل. راجع تفاصيل النتيجة.",awaiting_input:"العمل ينتظر معلومات إضافية منك.",cancelled:"أُلغي الطلب."})[state]||ui("وصل الرد دون تفاصيل إضافية.","Response received without further details.");
+    var noExecution=["conversation_reply","employee_draft","unverified"].includes(kind),records=(noExecution?[]:Array.isArray(data.recent_work)?data.recent_work:[]).filter(function(r){return (!r.conversation_id||r.conversation_id===data.conversation_id)&&(!r.work_id||r.work_id===data.work_id);});
     var scoped=records.filter(function(r){return r.conversation_id;});
     var draft=data.draft&&data.flow_id?siyRefsHtml([['طريقة العمل',data.flow_id],['المهمة',data.work_id]]):'';
     return {me:false,at:now(),t:siyReplyHtml(text)+siyBuilderProposalHtml(data)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,ui('نتائج هذا الطلب','Results for this request')):'')+siyLegacyProofHtml(records)+draft,workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;}),builderApproval:data.approval&&data.approval.required===true?{id:data.approval.approval_id,conversationId:data.conversation_id}:null};
