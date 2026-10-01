@@ -157,6 +157,7 @@
       "state": "draft_pr",
       "meaning": "جرد قراءة فقط لثلاث قطع Pilot واتصالات مشروع الشركة. يظهر no_match واختلاف النسخة والحقول غير المعروفة صراحة؛ لا يثبت جاهزية التنفيذ أو نتيجة مزود. البحث الدلالي وخصائص الحقول الديناميكية مؤجلان.",
       "linear": "ABO-40",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/22",
       "locations": [
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='pilot_discover')"},
         {"role": "service", "path": "lib/pilot-tool-discovery.mjs", "anchor": "export function createPilotToolDiscovery"},
