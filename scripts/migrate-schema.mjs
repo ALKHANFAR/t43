@@ -7,7 +7,7 @@ import {assertSchemaReady} from '../lib/schema-ready.mjs';
 const connectionString=process.env.DATABASE_URL;
 if(!connectionString)throw new Error('DATABASE_URL is required for schema migration');
 const host=new URL(connectionString).hostname;
-const ssl=host.endsWith('.railway.internal')?false:process.env.NODE_ENV==='production'?{rejectUnauthorized:false}:undefined;
+const ssl=host.endsWith('.railway.internal')?false:process.env.NODE_ENV==='production'?{rejectUnauthorized:true}:undefined;
 const client=new pg.Client({connectionString,ssl,connectionTimeoutMillis:10_000});
 const deadline=setTimeout(()=>{
   console.error('schema migration exceeded 120 seconds');
