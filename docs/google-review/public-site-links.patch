@@ -1,0 +1,36 @@
+--- a/index.html
++++ b/index.html
+@@ -617,6 +617,7 @@
+       <p class="idx">05 — Waitlist</p>
+       <h2 class="d2 rv"><span>Reserve your seat before the door closes.</span></h2>
+       <p class="lead" style="margin-top:24px">Reserving is completely free. You join the queue, we reach out when your wave opens, you try it, and then you decide.</p>
++      <p>In a private pilot, Siyadah AI is testing an optional Gmail connection for email sends requested by the user. Joining this waitlist does not require Google access.</p>
+       <ul class="assure">
+         <li><span class="drop"></span> No card, no commitment, nothing to cancel</li>
+         <li><span class="drop"></span> Encrypted end to end. Your data never trains a model — ours or anyone else's</li>
+@@ -751,6 +752,7 @@
+     </div>
+     <div class="foot__bot">
+       <a href="mailto:info@siyadah-ai.com" class="mail">info@siyadah-ai.com</a>
++      <span><a href="https://siyadah-ai.com/privacy.html">Privacy Policy</a> · <a href="https://siyadah-ai.com/terms.html">Service Terms</a></span>
+       <span>© <span id="yr">2026</span> Siyadah AI. All rights reserved.</span>
+     </div>
+   </div>
+--- a/ar.html
++++ b/ar.html
+@@ -612,6 +612,7 @@
+       <p class="idx">05 — قائمة الانتظار</p>
+       <h2 class="d2 rv"><span>احجز مقعدك قبل ما يُقفل الباب.</span></h2>
+       <p class="lead" style="margin-block-start:24px">الحجز مجاني بالكامل. تدخل القائمة، ونتواصل معك أول ما تفتح دفعتك، تجرّب، وبعدين تقرر.</p>
++      <p>في تجربة خاصة، تختبر سيادة (Siyadah AI) ربط Gmail اختياريًا لإرسال رسائل يطلبها المستخدم. الانضمام إلى قائمة الانتظار لا يتطلب منح صلاحية لحساب Google.</p>
+       <ul class="assure">
+         <li><span class="drop"></span> بدون بطاقة، بدون التزام، وما فيه شيء تلغيه</li>
+         <li><span class="drop"></span> تشفير كامل. بياناتك ما تدرّب أي نموذج — لا نموذجنا ولا غيره</li>
+@@ -745,6 +746,7 @@
+     </div>
+     <div class="foot__bot">
+       <a href="mailto:info@siyadah-ai.com" class="mail">info@siyadah-ai.com</a>
++      <span><a href="https://siyadah-ai.com/privacy.html">سياسة الخصوصية</a> · <a href="https://siyadah-ai.com/terms.html">شروط الخدمة</a></span>
+       <span>© <span id="yr">2026</span> سيادة. جميع الحقوق محفوظة.</span>
+     </div>
+   </div>
