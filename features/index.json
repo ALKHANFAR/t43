@@ -219,6 +219,21 @@
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "For a provider result, require"},
         {"role": "test", "path": "scripts/tenant-projects-runtime.test.mjs", "anchor": "runFlow({tenantId:"}
       ]
+    },
+    {
+      "id": "gmail_send_pilot_43",
+      "name": "إرسال بريد تجريبي من شركة 43",
+      "aliases": ["رسالة Gmail التجريبية", "معرف رسالة Google", "Gmail pilot send", "شركة 43"],
+      "state": "gap",
+      "meaning": "فرع محلي يحوي عقد منع إرسال Gmail خارج شركة 43 أو تدفق منشور بخطوة إرسال واحدة واتصال حصري، مع HMAC لحمولة webhook نفسها والتحقق من data.id. لم يوصل العقد بعد بالشات أو webhook، ولم يُرسل بريد حي، وموظفو الشركة ما زالوا مسودات.",
+      "linear": "ABO-43",
+      "locations": [
+        {"role": "flow_gate", "path": "lib/gmail-send-pilot.mjs", "anchor": "export function validateGmailPilotFlow("},
+        {"role": "signed_payload", "path": "lib/gmail-send-pilot.mjs", "anchor": "export function signedGmailPilotWebhook("},
+        {"role": "provider_receipt", "path": "lib/gmail-send-pilot.mjs", "anchor": "export function verifyGmailPilotRun("},
+        {"role": "contract", "path": "GMAIL-PILOT-CONTRACT.md", "anchor": "# شركة الاختبار 43"},
+        {"role": "test", "path": "scripts/gmail-send-pilot-runtime.test.mjs", "anchor": "pilot gate accepts only the exact company"}
+      ]
     }
   ]
 }
