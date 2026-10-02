@@ -225,14 +225,19 @@
       "name": "إرسال بريد تجريبي من شركة 43",
       "aliases": ["رسالة Gmail التجريبية", "معرف رسالة Google", "Gmail pilot send", "شركة 43"],
       "state": "gap",
-      "meaning": "فرع محلي يحوي عقد منع إرسال Gmail خارج شركة 43 أو تدفق منشور بخطوة إرسال واحدة واتصال حصري، مع HMAC لحمولة webhook نفسها والتحقق من data.id. لم يوصل العقد بعد بالشات أو webhook، ولم يُرسل بريد حي، وموظفو الشركة ما زالوا مسودات.",
+      "meaning": "فرع محلي يوصل أمر شات صريح لتجربة إرسال واحدة في شركة 43 بدفتر طلبات ثابت عبر المحادثات، مع فحص التدفق والاتصال الحصريين، توقيع webhook، وقراءة معرف رسالة Google. لم ينشر الكود أو تدفق التجربة ولم يرسل بريد حي، وموظفو الشركة ما زالوا مسودات.",
       "linear": "ABO-43",
       "locations": [
         {"role": "flow_gate", "path": "lib/gmail-send-pilot.mjs", "anchor": "export function validateGmailPilotFlow("},
+        {"role": "chat_command", "path": "server.mjs", "anchor": "if(typeof input.message==='string'&&input.message.trim()===GMAIL_PILOT_COMMAND"},
+        {"role": "execution", "path": "lib/gmail-pilot-runner.mjs", "anchor": "export function createGmailPilotRunner("},
+        {"role": "dedupe", "path": "lib/gmail-pilot-runner.mjs", "anchor": "export function gmailPilotLedgerIdentity("},
         {"role": "signed_payload", "path": "lib/gmail-send-pilot.mjs", "anchor": "export function signedGmailPilotWebhook("},
         {"role": "provider_receipt", "path": "lib/gmail-send-pilot.mjs", "anchor": "export function verifyGmailPilotRun("},
         {"role": "contract", "path": "GMAIL-PILOT-CONTRACT.md", "anchor": "# شركة الاختبار 43"},
-        {"role": "test", "path": "scripts/gmail-send-pilot-runtime.test.mjs", "anchor": "pilot gate accepts only the exact company"}
+        {"role": "test", "path": "scripts/gmail-send-pilot-runtime.test.mjs", "anchor": "pilot gate accepts only the exact company"},
+        {"role": "test", "path": "scripts/gmail-pilot-runner-runtime.test.mjs", "anchor": "one exact signed dispatch returns only Gmail provider message id"},
+        {"role": "test", "path": "scripts/chat-request-ledger-runtime.test.mjs", "anchor": "Gmail pilot shares one ledger key across two chat conversations"}
       ]
     }
   ]

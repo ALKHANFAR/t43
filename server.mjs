@@ -16,6 +16,8 @@ import {completedWithoutExecution,failedChatExecution} from './lib/chat-outcome.
 import {assertSchemaReady} from './lib/schema-ready.mjs';
 import {toolIcon} from './lib/tool-icons.mjs';
 import {createWaitlistProxy,WaitlistError} from './lib/waitlist.mjs';
+import {createGmailPilotRunner,GMAIL_PILOT_COMMAND,gmailPilotLedgerIdentity} from './lib/gmail-pilot-runner.mjs';
+import {GMAIL_PILOT_COMPANY_ID,GmailPilotError} from './lib/gmail-send-pilot.mjs';
 
 const root=process.cwd();
 const port=Number(process.env.PORT||3000);
@@ -389,6 +391,22 @@ async function publicChat(req,res){
       return json(res,200,{ok:true,filename,export:{schemaVersion:1,kind:'siyadah_customer_bundle',exportedAt:new Date().toISOString(),company:{name,settings,knowledge},employees,recentWork,manifest:{complete:false,employeeCount:employees.length,knowledgeVersion:Number(knowledge?.knowledgeVersion||0)}}},sessionHeaders);
     }
     if(input.op==='message'){
+      if(typeof input.message==='string'&&input.message.trim()===GMAIL_PILOT_COMMAND&&!input.employee_id){
+        if(companyId!==GMAIL_PILOT_COMPANY_ID)throw new GmailPilotError('pilot_company_forbidden');
+        const {conversationId,requestId,requestHash}=gmailPilotLedgerIdentity();
+        const profiles=await companyProfiles();
+        const claim=await profiles.claimChatRequest({companyId,conversationId,requestId,requestHash});
+        if(!claim.claimed)return claim.status==='pending'?json(res,200,{ok:true,conversation_id:conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders):json(res,claim.httpStatus||200,claim.response,sessionHeaders);
+        activeRequest={companyId,requestId,conversationId,profiles,effectStarted:false,executionAttempt:true,claimToken:claim.claimToken};
+        const projects=await tenantProjects();
+        const runner=createGmailPilotRunner({requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY,flowId:process.env.SIYADAH_GMAIL_PILOT_FLOW_ID,connectionId:process.env.SIYADAH_GMAIL_PILOT_CONNECTION_ID,secret:process.env.SIYADAH_GMAIL_PILOT_HMAC_SECRET});
+        const receipt=await runner.send({companyId,onDispatch:()=>{activeRequest.effectStarted=true;}});
+        const reply='قبلت Google رسالة الاختبار للإرسال. معرّف الرسالة: '+receipt.messageId;
+        const response={ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',outcome_kind:'external_run',work_id:`work_${receipt.runId}`,reply,provider_message_id:receipt.messageId,run_id:receipt.runId};
+        const settled=await profiles.settleChatRequest({companyId,requestId,status:'succeeded',httpStatus:200,response,claimToken:claim.claimToken});
+        activeRequest=null;
+        return json(res,settled.httpStatus,settled.response,sessionHeaders);
+      }
       const conversationId=typeof input.conversation_id==='string'&&input.conversation_id?input.conversation_id:`chat_${randomUUID()}`;
       const requestId=typeof input.request_id==='string'&&input.request_id?input.request_id:randomUUID();
       if(!/^[A-Za-z0-9_-]{1,80}$/.test(requestId)||!/^[A-Za-z0-9_-]{1,80}$/.test(conversationId))throw new CompanyProfileError('invalid_request','معرّف الطلب أو المحادثة غير صالح.',400);
@@ -447,7 +465,7 @@ async function publicChat(req,res){
       try{const settled=await profiles.settleChatRequest({companyId,requestId,status,httpStatus,response});return json(res,settled.httpStatus,settled.response,sessionHeaders);}
       catch(completionError){console.error('chat request completion failed',completionError?.code||completionError?.name||'unknown_error');}
     }
-    if(error instanceof TenantProjectError||error instanceof CompanyProfileError)return json(res,error.status,{ok:false,error:error.code,message:error.message},sessionHeaders);
+    if(error instanceof TenantProjectError||error instanceof CompanyProfileError||error instanceof GmailPilotError)return json(res,error.status,{ok:false,error:error.code,message:error.message},sessionHeaders);
     console.error('public tenant chat failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error'},sessionHeaders);
   }
 }

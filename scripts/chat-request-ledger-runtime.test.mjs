@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createCompanyProfileService,CompanyProfileError} from '../lib/company-profile.mjs';
+import {gmailPilotLedgerIdentity} from '../lib/gmail-pilot-runner.mjs';
 
 function fixture(){
   const rows=new Map(),calls=[];
@@ -47,6 +48,16 @@ test('same request is claimed once and result is read back only within its compa
   assert.equal((await service.claimChatRequest({...input,companyId:'company_b'})).claimed,true);
   assert.ok(calls.every(call=>call.values[0]==='company_a'||call.values[0]==='company_b'));
   assert.ok(calls.every(call=>/company_id=\$1|\(company_id,request_id,conversation_id,request_hash,claim_token\)/.test(call.sql)));
+});
+
+test('Gmail pilot shares one ledger key across two chat conversations',async()=>{
+  const {service}=fixture(),identity=gmailPilotLedgerIdentity();
+  const first=await service.claimChatRequest({companyId:'company_43',...identity});
+  assert.equal(first.claimed,true);
+  const second=await service.claimChatRequest({companyId:'company_43',...gmailPilotLedgerIdentity()});
+  assert.equal(second.claimed,false);
+  await service.completeChatRequest({companyId:'company_43',requestId:identity.requestId,status:'unknown',httpStatus:200,response:{work_status:'unknown'}});
+  assert.equal((await service.claimChatRequest({companyId:'company_43',...gmailPilotLedgerIdentity()})).status,'unknown');
 });
 
 test('request ID cannot be reused for another conversation or payload',async()=>{

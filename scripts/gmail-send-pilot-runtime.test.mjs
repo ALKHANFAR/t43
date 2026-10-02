@@ -7,9 +7,9 @@ const projectId='IgVzWxZU2AsDQMo6ZCugr',flowId='F'.repeat(21),connectionId='q1ji
 const expected={to:'owner@example.com',from:'sender@example.com',subject:'اختبار سيادة',body:'رسالة اختبار واحدة.'};
 function fixture(){
   const employee={company_id:companyId,activepieces_flow_id:flowId,status:'active'};
-  const connection={id:connectionId,externalId:'gmail-pilot',scope:'PROJECT',projectIds:[projectId],status:'ACTIVE',pieceName:'@activepieces/piece-gmail'};
-  const flow={id:flowId,projectId,status:'ENABLED',publishedVersionId:'version-1',version:{id:'version-1',state:'LOCKED',connectionIds:[connectionId],trigger:{type:'PIECE_TRIGGER',settings:{pieceName:'@activepieces/piece-webhook',triggerName:'catch_webhook',input:{authType:'hmac',authFields:{hmacHeaderName:'x-siyadah-signature',hmacAlgorithm:'sha256',hmacEncoding:'hex'}}},nextAction:{name:'send_email_1',type:'PIECE',settings:{pieceName:'@activepieces/piece-gmail',actionName:'send_email',input:{auth:'gmail-pilot',receiver:[expected.to],subject:expected.subject,body_type:'plain_text',body:expected.body,from:expected.from}}}}}};
-  return {companyId,allowedCompanyId:companyId,employee,projectId,flow,connection,expected,expectedFlowId:flowId,expectedConnectionId:connectionId};
+  const connection={id:connectionId,externalId:`siyadah-${companyId}-gmail`,scope:'PROJECT',projectIds:[projectId],status:'ACTIVE',pieceName:'@activepieces/piece-gmail'};
+  const flow={id:flowId,projectId,status:'ENABLED',publishedVersionId:'version-1',version:{id:'version-1',state:'LOCKED',connectionIds:[connection.externalId],trigger:{type:'PIECE_TRIGGER',settings:{pieceName:'@activepieces/piece-webhook',triggerName:'catch_webhook',input:{authType:'hmac',authFields:{hmacHeaderName:'x-siyadah-signature',hmacAlgorithm:'sha256',hmacEncoding:'hex'}}},nextAction:{name:'send_email_1',type:'PIECE',settings:{pieceName:'@activepieces/piece-gmail',actionName:'send_email',errorHandlingOptions:{retryOnFailure:{value:false},continueOnFailure:{value:false}},input:{auth:`{{connections['siyadah-${companyId}-gmail']}}`,receiver:[expected.to],subject:expected.subject,body_type:'plain_text',body:expected.body,from:expected.from,draft:false,retry:false}}}}}};
+  return {companyId,allowedCompanyId:companyId,employee:null,projectId,flow,connection,expected,expectedFlowId:flowId,expectedConnectionId:connectionId};
 }
 
 test('pilot gate accepts only the exact company published single-send flow and exclusive connection',()=>{
@@ -17,12 +17,14 @@ test('pilot gate accepts only the exact company published single-send flow and e
   assert.deepEqual(validateGmailPilotFlow(input),{actionName:'send_email_1',flowId,projectId,connectionId});
   for(const change of [
     x=>{x.allowedCompanyId='company_other';},
-    x=>{x.employee.company_id='company_other';},
+    x=>{x.employee={company_id:'company_other',activepieces_flow_id:flowId,status:'active'};},
     x=>{x.flow.projectId='Q'.repeat(21);},
     x=>{x.flow.publishedVersionId='other-version';},
-    x=>{x.flow.version.connectionIds=[connectionId,'X'.repeat(21)];},
+    x=>{x.flow.version.connectionIds=[x.connection.externalId,'other'];},
     x=>{x.connection.projectIds=[projectId,'Q'.repeat(21)];},
     x=>{x.flow.version.trigger.nextAction.nextAction={name:'extra'};},
+    x=>{x.flow.version.trigger.nextAction.settings.errorHandlingOptions.retryOnFailure.value=true;},
+    x=>{x.flow.version.trigger.nextAction.settings.errorHandlingOptions.continueOnFailure.value=true;},
     x=>{x.flow.version.trigger.settings.input.authType='none';},
     x=>{x.flow.version.trigger.settings.input.authFields.hmacSignaturePrefix='sha256=';},
     x=>{delete x.flow.version.trigger.nextAction.settings.input.auth;},
