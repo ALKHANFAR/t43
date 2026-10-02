@@ -1,6 +1,16 @@
 # Siyadah public-site and Google OAuth release gates
 
-Status: evidence inventory, 2 October 2026. Track in [ABO-62](https://linear.app/abo-eyad/issue/ABO-62/tjhyz-sfhh-syadh-alaamh-wsyash-gmail-lqbwl-google). No public page has been changed by this package.
+Status: server released; public LWS site and Google review pending. Updated 2 October 2026. Track in [ABO-62](https://linear.app/abo-eyad/issue/ABO-62/tjhyz-sfhh-syadh-alaamh-wsyash-gmail-lqbwl-google). No LWS page has been changed by this package.
+
+## Current release readback (supersedes the pre-deploy inventory below)
+
+- PR [#25](https://github.com/ALKHANFAR/t43/pull/25) and [#26](https://github.com/ALKHANFAR/t43/pull/26) merged in order into Railway's watched t43 branch `codex/abo-38-isolation-gate-20261001`. Its head is `4cc473fe84e49c1dc4d38679b15178c65203b062`.
+- Railway `siyadah-direct-ui` production deployment `889aca55-5206-4f61-9964-348d1f3bb973` reports `SUCCESS` for that exact SHA. `/health` returned HTTP 200. A controlled POST to `/siyadah-api/v1/waitlist` returned HTTP 202; a separate PostgreSQL read found exactly one corresponding synthetic row, which was then deleted (one row). This proves the deployed route and durable write/readback. It does not prove the LWS browser form.
+- `npm test` passed locally on Node 22.23.3 (223/223 runtime checks, 14 indexed features and 94 anchors, plus syntax, catalog, HTML and accessibility checks). GitHub Standards jobs did **not start** due to the account billing lock; that is neither passing CI nor a failing code test.
+- The live public site still points its form to the old Activepieces Cloud webhook. Root `/privacy.html` and `/terms.html` returned 404. The prepared corrected bilingual site and policy files remain local. LWS requires a new-device email code after an IP change; the owner has deferred that access. Do not bypass it or describe the site as migrated.
+- The current app files do not expose a prominent Gmail privacy link or notice at connection time. Include the published policy link and notice in the upcoming page-level frontend design before recording the Google demonstration.
+
+The sections below are the **historical pre-deployment inventory**. Use the current release readback above for today's server state; use the inventory below for the unresolved data-flow and public-copy review.
 
 ## Data and policy facts
 
