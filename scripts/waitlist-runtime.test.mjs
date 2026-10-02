@@ -1,41 +1,51 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {createWaitlistProxy,WaitlistError} from '../lib/waitlist.mjs';
+import {createPublicWaitlist,PublicWaitlistError} from '../lib/public-waitlist.mjs';
 
-const webhookUrl='https://example.test/webhook-secret';
-const input={name:'Test Person',email:'test@example.com',country_code:'+966',phone:'5551234567',company:'Siyadah',page:'https://siyadah.test/',ref:'',ts:'2026-10-02T00:00:00.000Z'};
+const input={name:'Test Person',email:'TEST@example.com',country_code:'+966',phone:'5551234567',company:'Siyadah',role:'Founder'};
 
-test('waitlist proxy forwards a bounded lead and returns only a Siyadah receipt',async()=>{
+test('public waitlist saves a bounded lead in Siyadah before acknowledging it',async()=>{
   const calls=[];
-  const submit=createWaitlistProxy({webhookUrl,fetchImpl:async(url,options)=>{calls.push({url,options});return {ok:true,status:200};}});
-  const result=await submit({...input,company:'X'.repeat(300)});
+  const store=createPublicWaitlist({query:async(sql,values)=>{calls.push({sql,values});return {rows:[]};}});
+  const result=await store.submit({...input,company:'X'.repeat(300)});
   assert.deepEqual(result,{ok:true,status:'accepted'});
   assert.equal(calls.length,1);
-  assert.equal(calls[0].url,webhookUrl);
-  assert.equal(calls[0].options.method,'POST');
-  const body=JSON.parse(calls[0].options.body);
-  assert.equal(body.company.length,160);
-  assert.equal(body.email,input.email);
-  assert.equal(body.page,input.page);
+  assert.match(calls[0].sql,/INSERT INTO siyadah_public_waitlist/);
+  assert.match(calls[0].sql,/ON CONFLICT \(email\) DO NOTHING/);
+  assert.equal(calls[0].values[0],'test@example.com');
+  assert.equal(calls[0].values[4].length,160);
+  assert.equal(calls[0].values[5],'Founder');
 });
 
-test('waitlist proxy rejects invalid leads and missing destination without forwarding',async()=>{
-  let calls=0;
-  const fetchImpl=async()=>{calls++;return {ok:true};};
-  await assert.rejects(()=>createWaitlistProxy({webhookUrl,fetchImpl})({...input,email:'bad'}),error=>error instanceof WaitlistError&&error.status===400);
-  await assert.rejects(()=>createWaitlistProxy({webhookUrl:'',fetchImpl})(input),error=>error instanceof WaitlistError&&error.status===503);
-  assert.equal(calls,0);
-});
-
-test('waitlist proxy does not claim delivery after upstream failure',async()=>{
-  for(const fetchImpl of [async()=>({ok:false,status:500}),async()=>{throw new Error('network');}]){
-    await assert.rejects(()=>createWaitlistProxy({webhookUrl,fetchImpl})(input),error=>error instanceof WaitlistError&&error.status===502);
+test('public waitlist rejects malformed leads before storage',async()=>{
+  let writes=0;
+  const store=createPublicWaitlist({query:async()=>{writes++;}});
+  for(const bad of [{...input,email:'bad'},{...input,email:`${'a'.repeat(255)}@example.com`},{...input,phone:'12'},{...input,name:'A'}]){
+    await assert.rejects(()=>store.submit(bad),error=>error instanceof PublicWaitlistError&&error.status===400);
   }
+  assert.equal(writes,0);
 });
 
-test('public server registers a same-origin waitlist route',async()=>{
+test('public waitlist does not claim acceptance when storage fails',async()=>{
+  const store=createPublicWaitlist({query:async()=>{throw new Error('database unavailable');}});
+  await assert.rejects(()=>store.submit(input),/database unavailable/);
+});
+
+test('public waitlist removes active records older than 90 days',async()=>{
+  const calls=[];
+  const store=createPublicWaitlist({query:async(sql)=>{calls.push(sql);return {rowCount:2};}});
+  assert.equal(await store.purgeExpired(),2);
+  assert.equal(calls.length,1);
+  assert.match(calls[0],/DELETE FROM siyadah_public_waitlist/);
+  assert.match(calls[0],/created_at < now\(\) - interval '90 days'/);
+});
+
+test('public site route stores leads and permits only the named site for CORS',async()=>{
   const source=await readFile(new URL('../server.mjs',import.meta.url),'utf8');
-  assert.match(source,/req\.url==='\/siyadah-api\/v1\/waitlist'\)return waitlist\(req,res\)/);
-  assert.match(source,/process\.env\.SIYADAH_WAITLIST_WEBHOOK_URL/);
+  assert.match(source,/createPublicWaitlist/);
+  assert.match(source,/req\.method==='POST'&&req\.url==='\/siyadah-api\/v1\/waitlist'/);
+  assert.match(source,/req\.method==='OPTIONS'&&pathname==='\/siyadah-api\/v1\/waitlist'/);
+  assert.match(source,/https:\/\/siyadah-ai\.com/);
+  assert.doesNotMatch(source,/SIYADAH_WAITLIST_WEBHOOK_URL/);
 });

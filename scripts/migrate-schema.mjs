@@ -4,6 +4,7 @@ import {createTenantProjectService} from '../lib/tenant-projects.mjs';
 import {createCompanyProfileService} from '../lib/company-profile.mjs';
 import {assertSchemaReady} from '../lib/schema-ready.mjs';
 import {createGoogleOAuthAttemptStore} from '../lib/google-oauth-attempts.mjs';
+import {createPublicWaitlist} from '../lib/public-waitlist.mjs';
 
 const connectionString=process.env.DATABASE_URL;
 if(!connectionString)throw new Error('DATABASE_URL is required for schema migration');
@@ -25,6 +26,7 @@ try{
   await createTenantProjectService({query}).init();
   await createCompanyProfileService({query}).init();
   await createGoogleOAuthAttemptStore({query}).init();
+  await createPublicWaitlist({query}).init();
   await assertSchemaReady(query);
   await client.query('COMMIT');
   console.log('Siyadah schema migration complete');
