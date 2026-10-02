@@ -109,7 +109,8 @@
       "pr": "https://github.com/ALKHANFAR/t43/pull/24",
       "locations": [
         {"role": "catalog", "path": "pieces.js", "anchor": "window.PIECES="},
-        {"role": "catalog_mapping", "path": "app/chat.js", "anchor": "function connectionSlug(name)"},
+        {"role": "catalog_mapping", "path": "app/chat.js", "anchor": "x.s===c.slug"},
+        {"role": "connection_response", "path": "lib/tool-connections.mjs", "anchor": "return {id:connection.id,slug,"},
         {"role": "icon_allowlist", "path": "data/tool-icon-sources.json", "anchor": "\"gmail\":"},
         {"role": "catalog_test", "path": "scripts/check-pieces.js", "anchor": "Customer catalog integrity"},
         {"role": "customer_action", "path": "app/chat.js", "anchor": "async function rcOAuth(values)"},
