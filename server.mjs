@@ -15,7 +15,7 @@ import {conversationMemory,employeeRequestMode,flowName} from './lib/chat-intell
 import {completedWithoutExecution,failedChatExecution} from './lib/chat-outcome.mjs';
 import {assertSchemaReady} from './lib/schema-ready.mjs';
 import {toolIcon} from './lib/tool-icons.mjs';
-import {createWaitlistProxy,WaitlistError} from './lib/waitlist.mjs';
+import {createPublicWaitlist,PublicWaitlistError} from './lib/public-waitlist.mjs';
 import {createGmailPilotRunner,GMAIL_PILOT_COMMAND,gmailPilotLedgerIdentity,gmailPilotSuccessResponse,recordGmailPilotConversation} from './lib/gmail-pilot-runner.mjs';
 import {GMAIL_PILOT_COMPANY_ID,GMAIL_PILOT_REQUEST_ID,GmailPilotError} from './lib/gmail-send-pilot.mjs';
 
@@ -133,15 +133,20 @@ async function scrapeWeb(req,res){
 }
 
 async function waitlist(req,res){
+  const origin=String(req.headers.origin||'');
+  const allowedOrigins=new Set(['https://siyadah-ai.com','https://www.siyadah-ai.com','https://accounts.siyadah-ai.com']);
+  const cors=origin&&allowedOrigins.has(origin)?{'access-control-allow-origin':origin,'vary':'Origin'}:{};
+  if(origin&&!allowedOrigins.has(origin))return json(res,403,{ok:false,error:'origin_not_allowed'});
   try{
     const input=await body(req,8_000);
-    const submit=createWaitlistProxy({webhookUrl:process.env.SIYADAH_WAITLIST_WEBHOOK_URL});
-    return json(res,202,await submit(input));
+    const pool=await database();
+    const store=createPublicWaitlist({query:(sql,values)=>pool.query(sql,values)});
+    return json(res,202,await store.submit(input),cors);
   }catch(error){
-    if(error instanceof WaitlistError)return json(res,error.status,{ok:false,error:error.code});
-    if(error instanceof TenantProjectError)return json(res,error.status,{ok:false,error:error.code});
+    if(error instanceof PublicWaitlistError)return json(res,error.status,{ok:false,error:error.code},cors);
+    if(error instanceof TenantProjectError)return json(res,error.status,{ok:false,error:error.code},cors);
     console.error('waitlist submission failed',error?.code||error?.name||'unknown_error');
-    return json(res,500,{ok:false,error:'internal_error'});
+    return json(res,503,{ok:false,error:'waitlist_unavailable'},cors);
   }
 }
 
@@ -535,6 +540,12 @@ createServer((req,res)=>{
     return res.end();
   }
   if(req.method==='GET'&&req.url==='/health')return health(res);
+  if(req.method==='OPTIONS'&&pathname==='/siyadah-api/v1/waitlist'){
+    const origin=String(req.headers.origin||'');
+    if(!['https://siyadah-ai.com','https://www.siyadah-ai.com'].includes(origin))return json(res,403,{ok:false,error:'origin_not_allowed'});
+    res.writeHead(204,{'access-control-allow-origin':origin,'access-control-allow-methods':'POST, OPTIONS','access-control-allow-headers':'Content-Type','access-control-max-age':'600','vary':'Origin'});
+    return res.end();
+  }
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/waitlist')return waitlist(req,res);
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/auth/signup')return authRoute(req,res,'signup');
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/auth/verify-email')return authRoute(req,res,'verify');

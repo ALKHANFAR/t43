@@ -124,10 +124,12 @@
 @@ -631 +614 @@
 -          <h3 class="d3 form__h">Claim your founder seat</h3>
 +          <h3 class="d3 form__h">Join the waitlist</h3>
-@@ -690 +673,2 @@
+@@ -690,2 +673,3 @@
 -          <button class="btn btn--wide" type="submit" id="submitBtn">Reserve my seat <span class="drop"></span></button>
+-          <p class="form__fine">By signing up you agree to be contacted about early access only. Unsubscribe any time.</p>
 +          <button class="btn btn--wide" type="submit" id="submitBtn">Join the waitlist <span class="drop"></span></button>
 +          <p id="sendError" role="alert" hidden>We could not confirm your request. Please try again or email info@siyadah-ai.com.</p>
++          <p class="form__fine">We will contact you about early access only. To stop contact or request deletion, email info@siyadah-ai.com. Read our <a href="https://siyadah-ai.com/privacy.html">Privacy Policy</a>.</p>
 @@ -697,3 +681,2 @@
 -        <h3 class="d3">Your seat is reserved</h3>
 -        <p>We've got it. You'll hear from us exactly once — when your wave opens.</p>
@@ -165,13 +167,7 @@
 @@ -761 +745 @@
 -    <span class="sticky__t"><b id="leftMini">—</b> founder seats remaining · free to reserve</span>
 +    <span class="sticky__t">Join the private pilot waitlist</span>
-@@ -781,4 +765 @@
--  fallbackEmail: "anis@sondos-ai.com",
--  seatsTotal: 500,
--  seatsClaimed: 390,                       // ← illustrative, replace with the real number
--  deadline: new Date(2026, 8, 30, 23, 59)  // month is 0-based: 8 = September
-+  fallbackEmail: "anis@sondos-ai.com"
-@@ -913,21 +893,0 @@
+@@ -913,21 +883,0 @@
 -  /* seats + countdown */
 -  var claimed = Math.min(CONFIG.seatsClaimed, CONFIG.seatsTotal);
 -  var left = Math.max(CONFIG.seatsTotal - claimed, 0);
@@ -193,9 +189,10 @@
 -    $('[data-cd="m"]').textContent = two(Math.floor(ms / 6e4) % 60);
 -  }
 -  countdown(); setInterval(countdown, 30000);
-@@ -956 +915,0 @@
+@@ -956 +905,0 @@
 -    $("#rank").textContent = "#" + (claimed + 1);
-@@ -959,10 +917,0 @@
+@@ -958,10 +906,0 @@
+-  }
 -  function mailtoFallback(d) {
 -    var body = "Founder seat request%0D%0A%0D%0A"
 -      + "Name: " + d.name + "%0D%0A"
@@ -205,17 +202,69 @@
 -      + "Role: " + d.role;
 -    window.location.href = "mailto:" + CONFIG.fallbackEmail
 -      + "?subject=" + encodeURIComponent("Founder seat - " + d.name) + "&body=" + body;
--  }
-@@ -988 +937 @@
+@@ -988,2 +927,3 @@
 -    if (!CONFIG.sheetUrl && !CONFIG.endpoint && !CONFIG.web3formsKey) { mailtoFallback(data); succeed(); return; }
-+    if (!CONFIG.sheetUrl && !CONFIG.endpoint && !CONFIG.web3formsKey) { $("#sendError").hidden = false; return; }
-@@ -989,0 +939 @@
+-
++    if (!CONFIG.endpoint) { $("#sendError").hidden = false; return; }
++
 +    $("#sendError").hidden = true;
-@@ -1051,2 +1001,2 @@
+@@ -1001 +941 @@
+-        return r.json().catch(function () { return {}; });
++        return r.json();
+@@ -1005,47 +945,2 @@
+-    var jobs = [];
+-
+-    // أ) Google Sheet — نرسل بنوع text/plain عشان نتفادى preflight الذي يرفضه Apps Script
+-    if (CONFIG.sheetUrl) {
+-      jobs.push(
+-        fetch(CONFIG.sheetUrl, {
+-          method: "POST",
+-          headers: { "Content-Type": "text/plain;charset=utf-8" },
+-          body: JSON.stringify(data)
+-        }).then(function (r) {
+-          if (!r.ok) throw new Error("sheet " + r.status);
+-          return r.json().catch(function () { return {}; });
+-        }).catch(function (err) {
+-          // بعض المتصفحات تحجب قراءة رد Apps Script — نعيد الإرسال بلا قراءة
+-          return fetch(CONFIG.sheetUrl, {
+-            method: "POST",
+-            mode: "no-cors",
+-            headers: { "Content-Type": "text/plain;charset=utf-8" },
+-            body: JSON.stringify(data)
+-          }).then(function () { return { ok: true, opaque: true }; });
+-        })
+-      );
+-    }
+-
+-    // ب) الحفظ على سيرفرك (leads.csv)
+-    if (CONFIG.endpoint) { jobs.push(post(CONFIG.endpoint, data)); }
+-
+-    // ج) إشعار بريد إضافي — يشتغل من أي استضافة
+-    if (CONFIG.web3formsKey) {
+-      jobs.push(post("https://api.web3forms.com/submit", {
+-        access_key: CONFIG.web3formsKey,
+-        subject: "New founder seat - " + data.name,
+-        from_name: "Siyadah AI",
+-        replyto: data.email,
+-        Name: data.name,
+-        Email: data.email,
+-        Phone: data.country_code + " " + data.phone,
+-        Company: data.company || "-",
+-        Role: data.role,
+-        Page: data.page,
+-        Source: data.ref || "direct"
+-      }));
+-    }
+-
+-    Promise.allSettled(jobs).then(function (res) {
+-      var anyOk = res.some(function (r) { return r.status === "fulfilled"; });
 -      if (!anyOk) { mailtoFallback(data); }
--      succeed();
-+      if (anyOk) succeed();
-+      else $("#sendError").hidden = false;
++    post(CONFIG.endpoint, data).then(function (result) {
++      if (!result || result.ok !== true || result.status !== "accepted") throw new Error("request not stored");
+@@ -1052,0 +948,3 @@
++    }).catch(function () {
++      $("#sendError").hidden = false;
++    }).finally(function () {
 --- a/ar.html
 +++ b/ar.html
 @@ -6,2 +6,2 @@
@@ -333,10 +382,12 @@
 @@ -626 +610 @@
 -          <h3 class="d3 form__h">احجز مقعد المؤسس</h3>
 +          <h3 class="d3 form__h">انضم للقائمة</h3>
-@@ -684 +668,2 @@
+@@ -684,2 +668,3 @@
 -          <button class="btn btn--wide" type="submit" id="submitBtn">احجز مقعدي <span class="drop"></span></button>
+-          <p class="form__fine">بالتسجيل توافق على تواصلنا معك بخصوص الوصول المبكر فقط. تقدر تلغي في أي وقت.</p>
 +          <button class="btn btn--wide" type="submit" id="submitBtn">انضم للقائمة <span class="drop"></span></button>
 +          <p id="sendError" role="alert" hidden>لم نتمكن من تأكيد إرسال طلبك. حاول مرة أخرى أو راسل info@siyadah-ai.com.</p>
++          <p class="form__fine">سنتواصل معك بشأن الوصول المبكر فقط. لإيقاف التواصل أو طلب الحذف، راسل info@siyadah-ai.com. اقرأ <a href="https://siyadah-ai.com/privacy.html#ar">سياسة الخصوصية</a>.</p>
 @@ -691,3 +676,2 @@
 -        <h3 class="d3">تم حجز مقعدك</h3>
 -        <p>وصلنا طلبك. بتسمع منا مرة وحدة بالضبط — لما تفتح دفعتك.</p>
@@ -368,13 +419,7 @@
 @@ -755 +740 @@
 -    <span class="sticky__t"><b id="leftMini">—</b> مقعد مؤسس باقي · الحجز مجاني</span>
 +    <span class="sticky__t">انضم لقائمة التجربة الخاصة</span>
-@@ -775,4 +760 @@
--  fallbackEmail: "anis@sondos-ai.com",
--  seatsTotal: 500,
--  seatsClaimed: 390,                       // ← رقم توضيحي، بدّله بالحقيقي
--  deadline: new Date(2026, 8, 30, 23, 59)  // الشهر يبدأ من صفر: 8 = سبتمبر
-+  fallbackEmail: "anis@sondos-ai.com"
-@@ -904,21 +885,0 @@
+@@ -904,21 +875,0 @@
 -  /* المقاعد والعدّاد */
 -  var claimed = Math.min(CONFIG.seatsClaimed, CONFIG.seatsTotal);
 -  var left = Math.max(CONFIG.seatsTotal - claimed, 0);
@@ -396,9 +441,10 @@
 -    $('[data-cd="m"]').textContent = two(Math.floor(ms / 6e4) % 60);
 -  }
 -  countdown(); setInterval(countdown, 30000);
-@@ -947 +907,0 @@
+@@ -947 +897,0 @@
 -    $("#rank").textContent = "#" + (claimed + 1);
-@@ -950,10 +909,0 @@
+@@ -949,10 +898,0 @@
+-  }
 -  function mailtoFallback(d) {
 -    var body = "طلب حجز مقعد مؤسس%0D%0A%0D%0A"
 -      + "الاسم: " + d.name + "%0D%0A"
@@ -408,14 +454,66 @@
 -      + "الدور: " + d.role;
 -    window.location.href = "mailto:" + CONFIG.fallbackEmail
 -      + "?subject=" + encodeURIComponent("حجز مقعد مؤسس — " + d.name) + "&body=" + body;
--  }
-@@ -979 +929 @@
+@@ -979,2 +919,3 @@
 -    if (!CONFIG.sheetUrl && !CONFIG.endpoint && !CONFIG.web3formsKey) { mailtoFallback(data); succeed(); return; }
-+    if (!CONFIG.sheetUrl && !CONFIG.endpoint && !CONFIG.web3formsKey) { $("#sendError").hidden = false; return; }
-@@ -980,0 +931 @@
+-
++    if (!CONFIG.endpoint) { $("#sendError").hidden = false; return; }
++
 +    $("#sendError").hidden = true;
-@@ -1042,2 +993,2 @@
+@@ -992 +933 @@
+-        return r.json().catch(function () { return {}; });
++        return r.json();
+@@ -996,47 +937,2 @@
+-    var jobs = [];
+-
+-    // أ) Google Sheet — نرسل بنوع text/plain عشان نتفادى preflight الذي يرفضه Apps Script
+-    if (CONFIG.sheetUrl) {
+-      jobs.push(
+-        fetch(CONFIG.sheetUrl, {
+-          method: "POST",
+-          headers: { "Content-Type": "text/plain;charset=utf-8" },
+-          body: JSON.stringify(data)
+-        }).then(function (r) {
+-          if (!r.ok) throw new Error("sheet " + r.status);
+-          return r.json().catch(function () { return {}; });
+-        }).catch(function (err) {
+-          // بعض المتصفحات تحجب قراءة رد Apps Script — نعيد الإرسال بلا قراءة
+-          return fetch(CONFIG.sheetUrl, {
+-            method: "POST",
+-            mode: "no-cors",
+-            headers: { "Content-Type": "text/plain;charset=utf-8" },
+-            body: JSON.stringify(data)
+-          }).then(function () { return { ok: true, opaque: true }; });
+-        })
+-      );
+-    }
+-
+-    // ب) الحفظ على سيرفرك (leads.csv)
+-    if (CONFIG.endpoint) { jobs.push(post(CONFIG.endpoint, data)); }
+-
+-    // ج) إشعار بريد إضافي — يشتغل من أي استضافة
+-    if (CONFIG.web3formsKey) {
+-      jobs.push(post("https://api.web3forms.com/submit", {
+-        access_key: CONFIG.web3formsKey,
+-        subject: "مقعد مؤسس جديد - " + data.name,
+-        from_name: "Siyadah AI",
+-        replyto: data.email,
+-        Name: data.name,
+-        Email: data.email,
+-        Phone: data.country_code + " " + data.phone,
+-        Company: data.company || "-",
+-        Role: data.role,
+-        Page: data.page,
+-        Source: data.ref || "direct"
+-      }));
+-    }
+-
+-    Promise.allSettled(jobs).then(function (res) {
+-      var anyOk = res.some(function (r) { return r.status === "fulfilled"; });
 -      if (!anyOk) { mailtoFallback(data); }
--      succeed();
-+      if (anyOk) succeed();
-+      else $("#sendError").hidden = false;
++    post(CONFIG.endpoint, data).then(function (result) {
++      if (!result || result.ok !== true || result.status !== "accepted") throw new Error("request not stored");
+@@ -1043,0 +940,3 @@
++    }).catch(function () {
++      $("#sendError").hidden = false;
++    }).finally(function () {
