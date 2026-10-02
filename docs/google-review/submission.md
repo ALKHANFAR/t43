@@ -1,5 +1,11 @@
 # Google verification submission — prepared, not submitted
 
+## Post-deploy update, 2 October 2026
+
+The Siyadah waitlist API is now deployed from t43 commit `4cc473fe84e49c1dc4d38679b15178c65203b062` in Railway deployment `889aca55-5206-4f61-9964-348d1f3bb973` (`SUCCESS`). A synthetic request returned HTTP 202, was read back as one PostgreSQL row, and was deleted. The **published LWS homepage has not switched to that API**, and its root privacy and terms URLs still return 404. The founder has deferred LWS access. Do not submit Branding or `gmail.send` review while the public homepage and configured privacy URL disagree. The older server SHA and deployment listed below are a historical pre-release snapshot.
+
+The current app UI does not yet present a prominent Gmail privacy link / notice at connection time. Carry this into the page-level frontend redesign and verify it in the Google demonstration. Google's [verification requirements](https://support.google.com/cloud/answer/13464321?hl=en) require a discoverable in-product privacy notice as well as the same published privacy URL on the homepage and OAuth consent screen. The demo must show the exact consent screen in English and the feature using the requested scope. No video URL has been submitted.
+
 ## Current state on 2 October 2026
 
 - Search Console domain ownership: **verified** for `siyadah-ai.com`.
