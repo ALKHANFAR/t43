@@ -1,7 +1,8 @@
 .git
 .github
 node_modules
-scripts
+scripts/*
+!scripts/migrate-schema.mjs
 work
 outputs
 evidence
