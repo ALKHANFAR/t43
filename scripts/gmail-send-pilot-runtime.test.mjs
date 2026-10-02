@@ -30,6 +30,8 @@ test('pilot gate accepts only the exact company published single-send flow and e
     x=>{delete x.flow.version.trigger.nextAction.settings.input.auth;},
     x=>{x.flow.version.trigger.nextAction.settings.input.receiver=['other@example.com'];},
     x=>{x.flow.version.trigger.nextAction.settings.input.in_reply_to='old-message';},
+    x=>{x.flow.version.trigger.nextAction.settings.input.draft='false';},
+    x=>{delete x.flow.version.trigger.nextAction.settings.input.draft;},
   ]){const unsafe=fixture();change(unsafe);assert.throws(()=>validateGmailPilotFlow(unsafe),{name:'GmailPilotError'});}
 });
 

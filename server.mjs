@@ -395,12 +395,15 @@ async function publicChat(req,res){
         if(companyId!==GMAIL_PILOT_COMPANY_ID)throw new GmailPilotError('pilot_company_forbidden');
         const {conversationId,requestId,requestHash}=gmailPilotLedgerIdentity();
         const profiles=await companyProfiles();
+        const existing=await profiles.expireChatRequest({companyId,requestId});
+        if(existing)return existing.status==='pending'?json(res,200,{ok:true,conversation_id:conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders):json(res,existing.httpStatus||200,existing.response,sessionHeaders);
+        const projects=await tenantProjects();
+        const runner=createGmailPilotRunner({requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY,flowId:process.env.SIYADAH_GMAIL_PILOT_FLOW_ID,connectionId:process.env.SIYADAH_GMAIL_PILOT_CONNECTION_ID,secret:process.env.SIYADAH_GMAIL_PILOT_HMAC_SECRET});
+        const prepared=await runner.preflight({companyId});
         const claim=await profiles.claimChatRequest({companyId,conversationId,requestId,requestHash});
         if(!claim.claimed)return claim.status==='pending'?json(res,200,{ok:true,conversation_id:conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders):json(res,claim.httpStatus||200,claim.response,sessionHeaders);
         activeRequest={companyId,requestId,conversationId,profiles,effectStarted:false,executionAttempt:true,claimToken:claim.claimToken};
-        const projects=await tenantProjects();
-        const runner=createGmailPilotRunner({requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY,flowId:process.env.SIYADAH_GMAIL_PILOT_FLOW_ID,connectionId:process.env.SIYADAH_GMAIL_PILOT_CONNECTION_ID,secret:process.env.SIYADAH_GMAIL_PILOT_HMAC_SECRET});
-        const receipt=await runner.send({companyId,onDispatch:()=>{activeRequest.effectStarted=true;}});
+        const receipt=await runner.send({companyId,prepared,onDispatch:()=>{activeRequest.effectStarted=true;}});
         const reply='قبلت Google رسالة الاختبار للإرسال. معرّف الرسالة: '+receipt.messageId;
         const response={ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',outcome_kind:'external_run',work_id:`work_${receipt.runId}`,reply,provider_message_id:receipt.messageId,run_id:receipt.runId};
         const settled=await profiles.settleChatRequest({companyId,requestId,status:'succeeded',httpStatus:200,response,claimToken:claim.claimToken});

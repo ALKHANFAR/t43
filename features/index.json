@@ -230,6 +230,7 @@
       "locations": [
         {"role": "flow_gate", "path": "lib/gmail-send-pilot.mjs", "anchor": "export function validateGmailPilotFlow("},
         {"role": "chat_command", "path": "server.mjs", "anchor": "if(typeof input.message==='string'&&input.message.trim()===GMAIL_PILOT_COMMAND"},
+        {"role": "chat_request_identity", "path": "app/chat.js", "anchor": "if(!employeeId&&text.trim()==='أرسل رسالة اختبار إلى بريدي')"},
         {"role": "execution", "path": "lib/gmail-pilot-runner.mjs", "anchor": "export function createGmailPilotRunner("},
         {"role": "dedupe", "path": "lib/gmail-pilot-runner.mjs", "anchor": "export function gmailPilotLedgerIdentity("},
         {"role": "signed_payload", "path": "lib/gmail-send-pilot.mjs", "anchor": "export function signedGmailPilotWebhook("},
