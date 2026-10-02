@@ -21,12 +21,12 @@ The current LWS English and Arabic pages display:
 - 50% permanent pricing and a lifetime founder rate, without verified commercial terms in this release review.
 - End-to-end encryption, SOC 2-aligned infrastructure, data residency options and no model training by any provider, without the provider-by-provider evidence needed for the published claim.
 
-Before Google brand review, replace or qualify these visible claims and preserve the existing site's layout. Never upload an older t43 landing page over the LWS source. The Google homepage must accurately describe the submitted app and link the same published privacy URL as the OAuth consent screen.
+The local public-site patch replaces or qualifies these visible claims while preserving the existing site's layout. It has passed a dry-run apply against the downloaded live source but is not published. Never upload an older t43 landing page over the LWS source. The Google homepage must accurately describe the submitted app and link the same published privacy URL as the OAuth consent screen. The current live page also exposes the Cloud workflow endpoint in client-side source. Hiding that implementation detail requires a Siyadah server-side proxy and an actual waitlist readback; renaming the comment alone does not hide it.
 
 ## Order to finish
 
 1. Identify the owner of the live waitlist webhook and read its actual flow and data destinations. Confirm Google and Activepieces retention/deletion; put the true details in `privacy.html`.
 2. Assign the privacy-response owner. Final factual and legal review of the bilingual `privacy.html` and `terms.html`; remove draft banners and `noindex` only from approved copies.
-3. Prepare corrected copy for the actual LWS pages, compare with fresh live hashes, and publish the approved pages and links together. Check them anonymously in both languages.
+3. Review the prepared corrected copy for the actual LWS pages. Compare with fresh live hashes, and publish the approved pages and links together. Check them anonymously in both languages. Treat the public workflow URL as a separate implementation-boundary gate; do not claim it is hidden before proxy verification.
 4. Set Google Branding to the exact published privacy and terms URLs. Retry brand review after Google's 24-hour ownership wait, then read the Verification Centre result.
 5. With the pilot enabled only for a controlled test, capture the real Google consent and requested send end-to-end; produce the YouTube evidence and submit the `gmail.send` scope review. Keep a run ID, provider message ID and customer-visible result separate.

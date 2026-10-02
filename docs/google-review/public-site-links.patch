@@ -1,36 +1,368 @@
 --- a/index.html
 +++ b/index.html
-@@ -617,6 +617,7 @@
-       <p class="idx">05 — Waitlist</p>
-       <h2 class="d2 rv"><span>Reserve your seat before the door closes.</span></h2>
-       <p class="lead" style="margin-top:24px">Reserving is completely free. You join the queue, we reach out when your wave opens, you try it, and then you decide.</p>
+@@ -6,2 +6,2 @@
+-<title>Siyadah AI — Write one sentence. Your operations run themselves.</title>
+-<meta name="description" content="Siyadah AI builds the operations team you can't afford to hire, inside a single chat. It follows up with every lead, chases unpaid invoices, answers customers, and keeps marketing moving. Private beta — 500 founders.">
++<title>Siyadah AI — Private pilot for AI-assisted operations.</title>
++<meta name="description" content="Siyadah AI is building a company workspace for reviewed actions. Request early access to a private pilot with optional Gmail sending.">
+@@ -14 +14 @@
+-<meta property="og:description" content="The team you can't afford to hire, inside a single chat. Private beta, 500 founders.">
++<meta property="og:description" content="Siyadah AI private pilot. Optional Gmail sending for selected users.">
+@@ -367 +367 @@
+-      <p class="idx fade">Private beta — 500 founders</p>
++      <p class="idx fade">Private beta — limited access</p>
+@@ -369,3 +369,3 @@
+-        <span class="rv"><span>Write one sentence.</span></span>
+-        <span class="rv" data-d="1"><span>Your operations</span></span>
+-        <span class="rv" data-d="2"><span>run themselves.</span></span>
++        <span class="rv"><span>Describe the work.</span></span>
++        <span class="rv" data-d="1"><span>Review the plan.</span></span>
++        <span class="rv" data-d="2"><span>See the result.</span></span>
+@@ -376 +376 @@
+-          <p class="lead">Siyadah AI is the team you can't afford to hire, working inside a single chat. It follows up with every lead in minutes, chases the invoices nobody wants to chase, answers your customers in seconds, and keeps your marketing moving — while you sleep.</p>
++          <p class="lead">Siyadah AI is building a company workspace that helps teams turn requests into reviewed actions. Our private pilot includes controlled Gmail sending for selected users; the other workflows on this page illustrate the product direction.</p>
+@@ -378 +378 @@
+-            <a href="#join" class="btn">Claim your founder seat <span class="drop"></span></a>
++            <a href="#join" class="btn">Join the waitlist <span class="drop"></span></a>
+@@ -381 +381 @@
+-          <p class="hero__fine"><span>Free to reserve.</span><span>No card required.</span><span>Founder pricing locked for life.</span></p>
++          <p class="hero__fine"><span>Free to request access.</span><span>No card required.</span><span>Pilot terms shared before access.</span></p>
+@@ -387 +387 @@
+-            <span class="drop"></span> Live session
++            <span class="drop"></span> Concept preview
+@@ -395 +395 @@
+-            <div class="status" id="status"><span class="drop"></span> Assembling departments</div>
++            <div class="status" id="status"><span class="drop"></span> Illustrating workflows</div>
+@@ -397,4 +397,4 @@
+-              <li class="unit"><span class="drop"></span><span class="unit__n">Sales follow-up</span><span class="unit__s">Live</span></li>
+-              <li class="unit"><span class="drop"></span><span class="unit__n">Invoice collection</span><span class="unit__s">Live</span></li>
+-              <li class="unit"><span class="drop"></span><span class="unit__n">Customer support</span><span class="unit__s">Live</span></li>
+-              <li class="unit"><span class="drop"></span><span class="unit__n">Marketing</span><span class="unit__s">Live</span></li>
++              <li class="unit"><span class="drop"></span><span class="unit__n">Sales follow-up</span><span class="unit__s">Example</span></li>
++              <li class="unit"><span class="drop"></span><span class="unit__n">Invoice collection</span><span class="unit__s">Example</span></li>
++              <li class="unit"><span class="drop"></span><span class="unit__n">Customer support</span><span class="unit__s">Example</span></li>
++              <li class="unit"><span class="drop"></span><span class="unit__n">Marketing</span><span class="unit__s">Example</span></li>
+@@ -403 +403 @@
+-              Four departments. Zero hires.
++              Illustrative workflows. Availability varies.
+@@ -410,7 +410 @@
+-      <div class="metrics">
+-        <div class="metric"><div class="metric__v"><span data-count="3">0</span> min</div><div class="metric__l">From first sentence to a working team</div></div>
+-        <div class="metric"><div class="metric__v"><span data-count="4">0</span></div><div class="metric__l">Departments running in parallel</div></div>
+-        <div class="metric"><div class="metric__v"><span data-count="24">0</span>/<span data-count="7">0</span></div><div class="metric__l">Running while you sleep or travel</div></div>
+-        <div class="metric"><div class="metric__v">Zero</div><div class="metric__l">New names on your payroll</div></div>
+-      </div>
+-    </div>
++
+@@ -454 +448 @@
+-    <p class="cost__close">Siyadah doesn't help you do this work faster. It takes the work off you.</p>
++    <p class="cost__close">Siyadah is being built to make repeatable work easier to plan, review and carry out.</p>
+@@ -462,2 +456,2 @@
+-    <h2 class="d2 rv" style="max-width:18ch"><span>Three minutes from overwhelmed to operational.</span></h2>
+-    <p class="lead" style="margin-top:24px">No integrations to configure. No workflows to map. You talk to Siyadah the way you'd talk to someone joining on their first day.</p>
++    <h2 class="d2 rv" style="max-width:18ch"><span>From a request to a reviewed action.</span></h2>
++    <p class="lead" style="margin-top:24px">Describe what you need in ordinary language. Available actions and tool connections depend on your pilot access and the permissions you grant.</p>
+@@ -481,2 +475,2 @@
+-          <h3 class="d3 step__h">Siyadah builds the team and shows you the plan</h3>
+-          <p class="step__p">It creates a dedicated agent per department, connects to the tools you already use — your inbox, WhatsApp, your sheets, your CRM — and shows you exactly what it intends to do before it does any of it. You approve, or you adjust it with a sentence.</p>
++          <h3 class="d3 step__h">Siyadah shows a proposed plan</h3>
++          <p class="step__p">Siyadah can organize a request into steps and show what needs your decision. In the private pilot, an optional Gmail connection supports a controlled send when you ask for it. Other integrations are being developed.</p>
+@@ -489,2 +483,2 @@
+-          <h3 class="d3 step__h">Go live, then go home</h3>
+-          <p class="step__p">The team starts immediately. Leads get followed up. Invoices get chased. Customers get answers. You go back to the work only a founder can do — and you get your evenings back.</p>
++          <h3 class="d3 step__h">Run the available action</h3>
++          <p class="step__p">When an action is available in your pilot account, Siyadah runs it after the required authorization and shows its result. Availability varies by tool and company.</p>
+@@ -501,2 +495,2 @@
+-    <h2 class="d2 rv" style="max-width:16ch"><span>One chat. Four departments. Zero employees.</span></h2>
+-    <p class="lead" style="margin-top:24px">Siyadah doesn't hand you advice. It does the operational work. Pick a department and see exactly what happens inside it.</p>
++    <h2 class="d2 rv" style="max-width:16ch"><span>Explore the workflows we are building.</span></h2>
++    <p class="lead" style="margin-top:24px">The examples below show intended workflows for different departments. They are illustrations, not a promise that every integration or action is active in the private pilot.</p>
+@@ -515 +509 @@
+-          <p class="panel__p">The fastest reply usually wins. Siyadah makes you the fastest one, even when the lead arrives at 3am.</p>
++          <p class="panel__p">Example: a sales workflow could prepare timely lead follow-up when the relevant connection and action are available.</p>
+@@ -576,2 +570,2 @@
+-    <h2 class="d2 rv" style="max-width:20ch"><span>The people who arrive early are treated differently.</span></h2>
+-    <p class="lead" style="margin-top:24px">These terms disappear the moment we open to the public. No exceptions, no reinstating them later.</p>
++    <h2 class="d2 rv" style="max-width:20ch"><span>Join the private pilot.</span></h2>
++    <p class="lead" style="margin-top:24px">Pilot access and any commercial terms are explained before you activate an account.</p>
+@@ -582,2 +576,2 @@
+-        <h3 class="perk__h">50% off, permanently</h3>
+-        <p class="perk__p">Public pricing will be meaningfully higher. The founder rate never rises — not as we add departments, integrations, or capabilities.</p>
++        <h3 class="perk__h">Private pilot terms</h3>
++        <p class="perk__p">We share the current pilot scope and terms before you decide whether to join.</p>
+@@ -588 +582 @@
+-        <p class="perk__p">Someone from the team configures your first departments live, with you. You leave with a team that's actually running, not an empty account.</p>
++        <p class="perk__p">Our team can explain access and available actions during the pilot.</p>
+@@ -597,13 +591 @@
+-    <div class="meter">
+-      <div class="meter__top">
+-        <span class="meter__v"><span id="claimed">0</span><small>/ 500</small></span>
+-        <span class="meter__l">founder seats claimed</span>
+-        <span class="meter__cd" id="cd">
+-          <span><b data-cd="d">--</b> days</span>
+-          <span><b data-cd="h">--</b> hrs</span>
+-          <span><b data-cd="m">--</b> min</span>
+-        </span>
+-      </div>
+-      <div class="bar"><i id="barfill"></i></div>
+-      <p class="meter__f"><span id="left">—</span> seats remaining. When they're gone, this tier closes for good.</p>
+-    </div>
++
+@@ -618,2 +600,3 @@
+-      <h2 class="d2 rv"><span>Reserve your seat before the door closes.</span></h2>
+-      <p class="lead" style="margin-top:24px">Reserving is completely free. You join the queue, we reach out when your wave opens, you try it, and then you decide.</p>
++      <h2 class="d2 rv"><span>Request early access.</span></h2>
++      <p class="lead" style="margin-top:24px">Requesting early access is free. We will contact selected participants when a suitable pilot opens.</p>
 +      <p>In a private pilot, Siyadah AI is testing an optional Gmail connection for email sends requested by the user. Joining this waitlist does not require Google access.</p>
-       <ul class="assure">
-         <li><span class="drop"></span> No card, no commitment, nothing to cancel</li>
-         <li><span class="drop"></span> Encrypted end to end. Your data never trains a model — ours or anyone else's</li>
-@@ -751,6 +752,7 @@
-     </div>
-     <div class="foot__bot">
-       <a href="mailto:info@siyadah-ai.com" class="mail">info@siyadah-ai.com</a>
+@@ -622,3 +605,3 @@
+-        <li><span class="drop"></span> Encrypted end to end. Your data never trains a model — ours or anyone else's</li>
+-        <li><span class="drop"></span> One email, and only one: when it's your turn</li>
+-        <li><span class="drop"></span> Founder pricing locked to your name the second you sign up</li>
++        <li><span class="drop"></span> Read how we handle data in our Privacy Policy before connecting a tool</li>
++        <li><span class="drop"></span> We contact you about your early-access request</li>
++        <li><span class="drop"></span> We explain pilot terms before activation</li>
+@@ -631 +614 @@
+-          <h3 class="d3 form__h">Claim your founder seat</h3>
++          <h3 class="d3 form__h">Join the waitlist</h3>
+@@ -690 +673 @@
+-          <button class="btn btn--wide" type="submit" id="submitBtn">Reserve my seat <span class="drop"></span></button>
++          <button class="btn btn--wide" type="submit" id="submitBtn">Join the waitlist <span class="drop"></span></button>
+@@ -697 +680 @@
+-        <h3 class="d3">Your seat is reserved</h3>
++        <h3 class="d3">Your request was received</h3>
+@@ -714 +697 @@
+-        <div class="q__a"><p>The repeatable part, yes, and reliably: following up, reminding, answering what repeats, sorting, logging, reporting. The big calls — pricing, strategy, the relationships that matter — stay with you. Siyadah isn't here to replace your judgement. It's here to remove the hours that exhaust it.</p></div>
++        <div class="q__a"><p>We are testing specific actions in a private pilot. Tasks that require a connection or approval are available only when that capability is enabled for your account. You remain responsible for important decisions.</p></div>
+@@ -717,2 +700,2 @@
+-        <button class="q__b" type="button" aria-expanded="false">How is this different from ChatGPT or Claude?<span class="sign"></span></button>
+-        <div class="q__a"><p>Chat tools give you an answer. Siyadah takes action: it sends the message, updates the customer record, triggers the follow-up sequence, and pursues the invoice inside your actual tools. It's the difference between asking a smart person for advice and hiring them to do the work.</p></div>
++        <button class="q__b" type="button" aria-expanded="false">What can Siyadah do today?<span class="sign"></span></button>
++        <div class="q__a"><p>The private pilot can connect Gmail for a controlled message send requested by the user. Siyadah records the request and result. Other workflows shown here are being developed and depend on tool access.</p></div>
+@@ -722 +705 @@
+-        <div class="q__a"><p>No. If you can explain a task to a new hire, you can run Siyadah. You describe what you want in ordinary language; it builds the agents, connects the tools, and shows you the plan before executing. During the beta, our team also sets up your first departments with you directly.</p></div>
++        <div class="q__a"><p>No technical background is needed to describe a task. Available tool connections and actions are shown in your pilot account; our team can explain setup when access opens.</p></div>
+@@ -726 +709 @@
+-        <div class="q__a"><p>Honestly: an early version won't be perfect. You'll find edge cases we didn't anticipate and want features we haven't built. That's exactly why we're capping this at 500 founders — so we can work closely with you before opening to the public. You get a serious discount in exchange for your feedback.</p></div>
++        <div class="q__a"><p>Honestly: an early version won't be perfect. You'll find edge cases we didn't anticipate and want features we haven't built. That's exactly why access is limited during the pilot — so we can work closely with you before opening to the public. We will share the current pilot terms before you decide.</p></div>
+@@ -730 +713 @@
+-        <div class="q__a"><p>Encrypted in transit and at rest, on SOC 2-aligned infrastructure, with data residency options. We never use your data to train models — not ours, not anyone else's. Your customer lists, financials, and conversations stay yours.</p></div>
++        <div class="q__a"><p>See our Privacy Policy for the data used in the waitlist and optional Gmail pilot, how we protect it, and how to request deletion.</p></div>
+@@ -734 +717 @@
+-        <div class="q__a"><p>Reserving costs nothing: no card, no commitment. When your wave opens you try it and decide then. If it isn't the right fit, you walk away at zero cost.</p></div>
++        <div class="q__a"><p>Submitting an early-access request costs nothing. We will explain any pilot terms before you decide to activate an account.</p></div>
+@@ -738 +721 @@
+-        <div class="q__a"><p>We open in small waves so every founder gets a proper setup. Order follows signup date, with priority to businesses that have clear daily operations Siyadah can take over from day one.</p></div>
++        <div class="q__a"><p>We review early-access requests and contact selected participants when a suitable pilot opens.</p></div>
+@@ -749 +732 @@
+-      <p class="foot__note">The operations team you couldn't afford, inside a single chat.</p>
++      <p class="foot__note">A private pilot for AI-assisted operations.</p>
+@@ -753,0 +737 @@
 +      <span><a href="https://siyadah-ai.com/privacy.html">Privacy Policy</a> · <a href="https://siyadah-ai.com/terms.html">Service Terms</a></span>
-       <span>© <span id="yr">2026</span> Siyadah AI. All rights reserved.</span>
-     </div>
-   </div>
+@@ -761 +745 @@
+-    <span class="sticky__t"><b id="leftMini">—</b> founder seats remaining · free to reserve</span>
++    <span class="sticky__t">Join the private pilot waitlist</span>
+@@ -781,4 +765 @@
+-  fallbackEmail: "anis@sondos-ai.com",
+-  seatsTotal: 500,
+-  seatsClaimed: 390,                       // ← illustrative, replace with the real number
+-  deadline: new Date(2026, 8, 30, 23, 59)  // month is 0-based: 8 = September
++  fallbackEmail: "anis@sondos-ai.com"
+@@ -913,21 +893,0 @@
+-  /* seats + countdown */
+-  var claimed = Math.min(CONFIG.seatsClaimed, CONFIG.seatsTotal);
+-  var left = Math.max(CONFIG.seatsTotal - claimed, 0);
+-  $("#left").textContent = left;
+-  $("#leftMini").textContent = left;
+-  var mio = new IntersectionObserver(function (es) {
+-    if (!es[0].isIntersecting) return;
+-    countTo($("#claimed"), claimed, 1500);
+-    $("#barfill").style.width = (claimed / CONFIG.seatsTotal * 100) + "%";
+-    mio.disconnect();
+-  }, { threshold: 0.4 });
+-  mio.observe($(".meter"));
+-
+-  function countdown() {
+-    var ms = CONFIG.deadline - new Date();
+-    if (ms < 0) ms = 0;
+-    $('[data-cd="d"]').textContent = two(Math.floor(ms / 864e5));
+-    $('[data-cd="h"]').textContent = two(Math.floor(ms / 36e5) % 24);
+-    $('[data-cd="m"]').textContent = two(Math.floor(ms / 6e4) % 60);
+-  }
+-  countdown(); setInterval(countdown, 30000);
 --- a/ar.html
 +++ b/ar.html
-@@ -612,6 +612,7 @@
-       <p class="idx">05 — قائمة الانتظار</p>
-       <h2 class="d2 rv"><span>احجز مقعدك قبل ما يُقفل الباب.</span></h2>
-       <p class="lead" style="margin-block-start:24px">الحجز مجاني بالكامل. تدخل القائمة، ونتواصل معك أول ما تفتح دفعتك، تجرّب، وبعدين تقرر.</p>
+@@ -6,2 +6,2 @@
+-<title>سيادة — اكتب جملة وحدة، وخلّ شركتك تشتغل بدونك</title>
+-<meta name="description" content="سيادة تبني لك فريق تشغيل بالذكاء الاصطناعي من محادثة واحدة: متابعة العملاء المحتملين، تحصيل الفواتير، دعم فوري، وتسويق مستمر. بيتا خاصة لـ 500 مؤسس.">
++<title>سيادة — تجربة خاصة لتشغيل العمل بمساعدة الذكاء الاصطناعي</title>
++<meta name="description" content="سيادة تجربة خاصة لتشغيل العمل بمساعدة الذكاء الاصطناعي. يمكن لمستخدمين محددين ربط Gmail لإرسال رسالة يطلبونها.">
+@@ -16 +16 @@
+-<meta property="og:description" content="الفريق اللي ما تقدر توظفه، داخل محادثة واحدة. بيتا خاصة لـ 500 مؤسس.">
++<meta property="og:description" content="تجربة خاصة لتشغيل العمل بمساعدة الذكاء الاصطناعي. تجربة خاصة. إرسال Gmail متاح لمستخدمين تجريبيين محددين.">
+@@ -365 +365 @@
+-    <p class="idx fade">بيتا خاصة — 500 مؤسس فقط</p>
++    <p class="idx fade">بيتا خاصة — وصول محدود</p>
+@@ -367,2 +367,2 @@
+-      <span class="rv"><span>اكتب جملة وحدة.</span></span>
+-      <span class="rv" data-d="1"><span>وخلّ شركتك تشتغل بدونك.</span></span>
++      <span class="rv"><span>اوصف الشغل.</span></span>
++      <span class="rv" data-d="1"><span>وراجع الخطوة القادمة.</span></span>
+@@ -373 +373 @@
+-        <p class="lead">سيادة هي الفريق اللي ما تقدر توظفه، شغّال داخل محادثة واحدة. يتابع كل عميل محتمل خلال دقائق، يطارد الفواتير اللي محد يبي يطاردها، يرد على عملائك في ثوانٍ، ويخلي تسويقك ما يسكت — وأنت نايم.</p>
++        <p class="lead">سيادة تطوّر مساحة عمل تساعد الشركات على تحويل الطلبات إلى إجراءات واضحة وقابلة للمراجعة. تشمل التجربة الخاصة إرسال Gmail بشكل مضبوط لمستخدمين محددين، أما بقية الأمثلة في الصفحة فتمثل اتجاه المنتج.</p>
+@@ -375 +375 @@
+-          <a href="#join" class="btn">احجز مقعد المؤسس <span class="drop"></span></a>
++          <a href="#join" class="btn">انضم للقائمة <span class="drop"></span></a>
+@@ -378 +378 @@
+-        <p class="hero__fine"><span>الحجز مجاني.</span><span>بدون بطاقة بنكية.</span><span>سعر المؤسس يثبت لك مدى الحياة.</span></p>
++        <p class="hero__fine"><span>الحجز مجاني.</span><span>بدون بطاقة بنكية.</span><span>نوضح شروط التجربة قبل التفعيل.</span></p>
+@@ -383 +383 @@
+-          <span class="drop"></span> جلسة حيّة
++          <span class="drop"></span> عرض توضيحي
+@@ -391 +391 @@
+-          <div class="status" id="status"><span class="drop"></span> سيادة تجهّز الأقسام</div>
++          <div class="status" id="status"><span class="drop"></span> عرض أمثلة لسير العمل</div>
+@@ -393,4 +393,4 @@
+-            <li class="unit"><span class="drop"></span><span class="unit__n">متابعة المبيعات</span><span class="unit__s">شغّال</span></li>
+-            <li class="unit"><span class="drop"></span><span class="unit__n">تحصيل الفواتير</span><span class="unit__s">شغّال</span></li>
+-            <li class="unit"><span class="drop"></span><span class="unit__n">دعم العملاء</span><span class="unit__s">شغّال</span></li>
+-            <li class="unit"><span class="drop"></span><span class="unit__n">التسويق</span><span class="unit__s">شغّال</span></li>
++            <li class="unit"><span class="drop"></span><span class="unit__n">متابعة المبيعات</span><span class="unit__s">مثال</span></li>
++            <li class="unit"><span class="drop"></span><span class="unit__n">تحصيل الفواتير</span><span class="unit__s">مثال</span></li>
++            <li class="unit"><span class="drop"></span><span class="unit__n">دعم العملاء</span><span class="unit__s">مثال</span></li>
++            <li class="unit"><span class="drop"></span><span class="unit__n">التسويق</span><span class="unit__s">مثال</span></li>
+@@ -399 +399 @@
+-            أربعة أقسام. صفر موظفين.
++            أمثلة توضيحية. يختلف توفر الميزات.
+@@ -406,6 +406 @@
+-    <div class="metrics">
+-      <div class="metric"><div class="metric__v"><span class="num" data-count="3">0</span> دقائق</div><div class="metric__l">من أول جملة إلى فريق شغّال</div></div>
+-      <div class="metric"><div class="metric__v"><span class="num" data-count="4">0</span> أقسام</div><div class="metric__l">تشتغل بالتوازي في نفس الوقت</div></div>
+-      <div class="metric"><div class="metric__v"><span class="num" data-count="24">0</span>/<span class="num" data-count="7">0</span></div><div class="metric__l">شغّال وأنت نايم أو مسافر</div></div>
+-      <div class="metric"><div class="metric__v">صفر</div><div class="metric__l">أسماء جديدة على كشف رواتبك</div></div>
+-    </div>
++
+@@ -457,2 +452,2 @@
+-    <h2 class="d2 rv" style="max-width:20ch"><span>ثلاث دقائق من الفوضى إلى فريق شغّال.</span></h2>
+-    <p class="lead" style="margin-block-start:24px">ما فيه تكاملات تعدّها. ما فيه مخططات ترسمها. تكلم سيادة مثل ما تكلم موظفًا جديدًا في أول يوم.</p>
++    <h2 class="d2 rv" style="max-width:20ch"><span>من الطلب إلى إجراء تراجعه.</span></h2>
++    <p class="lead" style="margin-block-start:24px">اوصف احتياجك بلغتك العادية. تعتمد الإجراءات والربط المتاحان على وصولك التجريبي والصلاحيات التي تمنحها.</p>
+@@ -476,2 +471,2 @@
+-          <h3 class="d3 step__h">سيادة تبني الفريق وتوريك الخطة</h3>
+-          <p class="step__p">تنشئ وكيلًا مخصصًا لكل قسم، تربطه بالأدوات اللي تستخدمها أصلًا — بريدك، واتساب، جداولك، نظام عملائك — وتعرض عليك بالضبط وش تنوي تسوي، قبل ما تسوي أي شيء. أنت توافق، أو تعدّل بجملة وحدة.</p>
++          <h3 class="d3 step__h">سيادة تعرض لك خطة مقترحة</h3>
++          <p class="step__p">تنظم سيادة طلبك في خطوات وتوضح ما يحتاج قرارك. في التجربة الخاصة يمكن ربط Gmail اختياريًا لإرسال رسالة محددة تطلبها. نعمل على بقية التكاملات تدريجيًا.</p>
+@@ -484,2 +479,2 @@
+-          <h3 class="d3 step__h">شغّل… وروّح</h3>
+-          <p class="step__p">الفريق يبدأ من نفس اللحظة. العملاء يتابَعون، الفواتير تتطالب، الدعم يُجاب. وأنت ترجع للشغل اللي ما يسويه إلا المؤسس — وترجع لك أمسياتك.</p>
++          <h3 class="d3 step__h">نفّذ الإجراء المتاح</h3>
++          <p class="step__p">إذا كان الإجراء متاحًا في حسابك التجريبي، تنفذه سيادة بعد الإذن المطلوب وتعرض نتيجته. يختلف توفر الأدوات والإجراءات بين الشركات.</p>
+@@ -496,2 +491,2 @@
+-    <h2 class="d2 rv" style="max-width:20ch"><span>محادثة وحدة. أربعة أقسام. صفر موظفين.</span></h2>
+-    <p class="lead" style="margin-block-start:24px">سيادة ما تعطيك نصائح. تنفّذ الشغل التشغيلي نفسه. اختر قسمًا وشوف وش يصير داخله بالضبط.</p>
++    <h2 class="d2 rv" style="max-width:20ch"><span>محادثة وحدة. أمثلة توضيحية. يختلف توفر الميزات.</span></h2>
++    <p class="lead" style="margin-block-start:24px">الأمثلة التالية توضح مسارات نعمل عليها للأقسام المختلفة، ولا تعني أن جميع الأدوات أو الإجراءات متاحة في التجربة الخاصة الآن.</p>
+@@ -571,2 +566,2 @@
+-    <h2 class="d2 rv" style="max-width:22ch"><span>اللي يوصل بدري، يتعامل معاملة ثانية.</span></h2>
+-    <p class="lead" style="margin-block-start:24px">هذي الشروط تختفي لحظة ما نفتح للعامة. بدون استثناءات، وبدون رجعة.</p>
++    <h2 class="d2 rv" style="max-width:22ch"><span>انضم إلى التجربة الخاصة.</span></h2>
++    <p class="lead" style="margin-block-start:24px">نوضح الوصول التجريبي وأي شروط تجارية قبل تفعيل الحساب.</p>
+@@ -577,2 +572,2 @@
+-        <h3 class="perk__h">خصم 50% بشكل دائم</h3>
+-        <p class="perk__p">السعر العام راح يكون أعلى بوضوح. وسعر المؤسس ما يرتفع أبدًا — حتى ونحن نضيف أقسامًا وتكاملات وقدرات جديدة.</p>
++        <h3 class="perk__h">شروط التجربة الخاصة</h3>
++        <p class="perk__p">نوضح نطاق التجربة وشروطها الحالية قبل أن تقرر الانضمام.</p>
+@@ -583 +578 @@
+-        <p class="perk__p">شخص من الفريق يجهّز معك أول أقسامك مباشرة. تطلع من الجلسة وعندك فريق شغّال فعليًا، لا حساب فاضي تحتار فيه.</p>
++        <p class="perk__p">حيثما تتوفر الخدمة، يساعدك فريقنا في إعداد الحساب التجريبي ويوضح الإجراءات الجاهزة للاستخدام.</p>
+@@ -592,13 +587 @@
+-    <div class="meter">
+-      <div class="meter__top">
+-        <span class="meter__v"><span id="claimed">0</span><small>/ 500</small></span>
+-        <span class="meter__l">مقعد مؤسس محجوز</span>
+-        <span class="meter__cd" id="cd">
+-          <span><b data-cd="d">--</b> يوم</span>
+-          <span><b data-cd="h">--</b> ساعة</span>
+-          <span><b data-cd="m">--</b> دقيقة</span>
+-        </span>
+-      </div>
+-      <div class="bar"><i id="barfill"></i></div>
+-      <p class="meter__f"><span id="left">—</span> مقعد باقي. لما تخلص، هذي المرحلة تُقفل نهائيًا.</p>
+-    </div>
++
+@@ -613,2 +596,3 @@
+-      <h2 class="d2 rv"><span>احجز مقعدك قبل ما يُقفل الباب.</span></h2>
+-      <p class="lead" style="margin-block-start:24px">الحجز مجاني بالكامل. تدخل القائمة، ونتواصل معك أول ما تفتح دفعتك، تجرّب، وبعدين تقرر.</p>
++      <h2 class="d2 rv"><span>اطلب الوصول المبكر.</span></h2>
++      <p class="lead" style="margin-block-start:24px">طلب الوصول المبكر مجاني. نتواصل مع المشاركين المختارين حين تتوفر تجربة مناسبة، ونوضح شروطها قبل التفعيل.</p>
 +      <p>في تجربة خاصة، تختبر سيادة (Siyadah AI) ربط Gmail اختياريًا لإرسال رسائل يطلبها المستخدم. الانضمام إلى قائمة الانتظار لا يتطلب منح صلاحية لحساب Google.</p>
-       <ul class="assure">
-         <li><span class="drop"></span> بدون بطاقة، بدون التزام، وما فيه شيء تلغيه</li>
-         <li><span class="drop"></span> تشفير كامل. بياناتك ما تدرّب أي نموذج — لا نموذجنا ولا غيره</li>
-@@ -745,6 +746,7 @@
-     </div>
-     <div class="foot__bot">
-       <a href="mailto:info@siyadah-ai.com" class="mail">info@siyadah-ai.com</a>
+@@ -617,3 +601,3 @@
+-        <li><span class="drop"></span> تشفير كامل. بياناتك ما تدرّب أي نموذج — لا نموذجنا ولا غيره</li>
+-        <li><span class="drop"></span> رسالة واحدة فقط: لما يجي دورك</li>
+-        <li><span class="drop"></span> سعر المؤسس يُقفل باسمك لحظة تسجيلك</li>
++        <li><span class="drop"></span> اقرأ سياسة الخصوصية لمعرفة كيف نعالج البيانات قبل ربط أي أداة</li>
++        <li><span class="drop"></span> نتواصل معك بشأن طلب الوصول المبكر</li>
++        <li><span class="drop"></span> نوضح شروط التجربة قبل التفعيل</li>
+@@ -626 +610 @@
+-          <h3 class="d3 form__h">احجز مقعد المؤسس</h3>
++          <h3 class="d3 form__h">انضم للقائمة</h3>
+@@ -684 +668 @@
+-          <button class="btn btn--wide" type="submit" id="submitBtn">احجز مقعدي <span class="drop"></span></button>
++          <button class="btn btn--wide" type="submit" id="submitBtn">انضم للقائمة <span class="drop"></span></button>
+@@ -691 +675 @@
+-        <h3 class="d3">تم حجز مقعدك</h3>
++        <h3 class="d3">استلمنا طلبك</h3>
+@@ -708 +692 @@
+-        <div class="q__a"><p>الجزء المتكرر منه، نعم، وبثبات: المتابعة، التذكير، الرد على المكرر، التصنيف، التسجيل، والتقارير. أما القرارات الكبيرة — التسعير، الاستراتيجية، العلاقات اللي تفرق — فتبقى لك. سيادة ما جات تستبدل حكمك، جات تشيل الساعات اللي تستهلك حكمك.</p></div>
++        <div class="q__a"><p>نختبر إجراءات محددة في تجربة خاصة. أي مهمة تحتاج ربطًا أو موافقة لا تتاح إلا عند تفعيلها لحسابك، وتبقى القرارات المهمة لك.</p></div>
+@@ -711,2 +695,2 @@
+-        <button class="q__b" type="button" aria-expanded="false">وش الفرق بينها وبين ChatGPT أو Claude؟<span class="sign"></span></button>
+-        <div class="q__a"><p>أدوات المحادثة تعطيك جوابًا. سيادة تنفّذ: ترسل الرسالة فعليًا، تحدّث سجل العميل، تشغّل سلسلة المتابعة، وتلاحق الفاتورة داخل أدواتك الحقيقية. الفرق مثل الفرق بين أن تسأل شخصًا ذكيًا عن رأيه، وأن توظفه ينفذ الشغل نيابة عنك.</p></div>
++        <button class="q__b" type="button" aria-expanded="false">وش تقدر تسوي سيادة اليوم؟<span class="sign"></span></button>
++        <div class="q__a"><p>في التجربة الخاصة يمكن ربط Gmail لإرسال رسالة محددة تطلبها، وتعرض سيادة الطلب ونتيجته. بقية المسارات المعروضة قيد التطوير وتعتمد على توفر الأدوات.</p></div>
+@@ -716 +700 @@
+-        <div class="q__a"><p>لا. لو تقدر تشرح مهمة لموظف جديد، تقدر تشغّل سيادة. تكتب طلبك بلغة عادية، وهي تبني الوكلاء وتربط الأدوات وتعرض عليك الخطة قبل التنفيذ. وفي البيتا، فريقنا يجهّز معك أول أقسامك بنفسه.</p></div>
++        <div class="q__a"><p>لا تحتاج خلفية تقنية لوصف المهمة. تظهر لك الأدوات والإجراءات المتاحة في حسابك التجريبي، ويمكن للفريق توضيح الإعداد عند فتح الوصول.</p></div>
+@@ -720 +704 @@
+-        <div class="q__a"><p>بصراحة: النسخة المبكرة ما راح تكون مثالية. راح تلقى حالات ما توقعناها، وتبي مزايا ما بنيناها بعد. عشان كذا حصرناها في 500 مؤسس — نشتغل معكم عن قرب قبل ما نفتح للعامة. أنت تاخذ خصمًا حقيقيًا مقابل ملاحظاتك.</p></div>
++        <div class="q__a"><p>بصراحة: النسخة المبكرة ما راح تكون مثالية. راح تلقى حالات ما توقعناها، وتبي مزايا ما بنيناها بعد. عشان كذا الوصول محدود خلال التجربة — نشتغل معكم عن قرب قبل ما نفتح للعامة. سنوضح شروط التجربة قبل أن تقرر.</p></div>
+@@ -724 +708 @@
+-        <div class="q__a"><p>تشفير أثناء النقل والتخزين، بنية تحتية مبنية على معايير SOC 2، وخيارات لموقع تخزين البيانات. ولا نستخدم بياناتك في تدريب أي نموذج — لا نموذجنا ولا نموذج غيرنا. قوائم عملائك وأرقامك ومحادثاتك تبقى ملكك.</p></div>
++        <div class="q__a"><p>توضح سياسة الخصوصية بيانات قائمة الانتظار وتجربة Gmail الاختيارية وكيفية حمايتها وطلب حذفها.</p></div>
+@@ -732 +716 @@
+-        <div class="q__a"><p>نفتح على دفعات صغيرة عشان كل مؤسس ياخذ إعدادًا صحيحًا. الترتيب حسب تاريخ التسجيل، مع أولوية للشركات اللي عندها عمليات يومية واضحة تقدر سيادة تشيلها من أول يوم.</p></div>
++        <div class="q__a"><p>نراجع طلبات الوصول المبكر ونتواصل مع المشاركين المناسبين عند فتح تجربة تلائم احتياجهم.</p></div>
+@@ -747,0 +732 @@
 +      <span><a href="https://siyadah-ai.com/privacy.html">سياسة الخصوصية</a> · <a href="https://siyadah-ai.com/terms.html">شروط الخدمة</a></span>
-       <span>© <span id="yr">2026</span> سيادة. جميع الحقوق محفوظة.</span>
-     </div>
-   </div>
+@@ -755 +740 @@
+-    <span class="sticky__t"><b id="leftMini">—</b> مقعد مؤسس باقي · الحجز مجاني</span>
++    <span class="sticky__t">انضم لقائمة التجربة الخاصة</span>
+@@ -775,4 +760 @@
+-  fallbackEmail: "anis@sondos-ai.com",
+-  seatsTotal: 500,
+-  seatsClaimed: 390,                       // ← رقم توضيحي، بدّله بالحقيقي
+-  deadline: new Date(2026, 8, 30, 23, 59)  // الشهر يبدأ من صفر: 8 = سبتمبر
++  fallbackEmail: "anis@sondos-ai.com"
+@@ -903,13 +884,0 @@
+-
+-  /* المقاعد والعدّاد */
+-  var claimed = Math.min(CONFIG.seatsClaimed, CONFIG.seatsTotal);
+-  var left = Math.max(CONFIG.seatsTotal - claimed, 0);
+-  $("#left").textContent = left;
+-  $("#leftMini").textContent = left;
+-  var mio = new IntersectionObserver(function (es) {
+-    if (!es[0].isIntersecting) return;
+-    countTo($("#claimed"), claimed, 1500);
+-    $("#barfill").style.width = (claimed / CONFIG.seatsTotal * 100) + "%";
+-    mio.disconnect();
+-  }, { threshold: 0.4 });
+-  mio.observe($(".meter"));
+@@ -917,8 +885,0 @@
+-  function countdown() {
+-    var ms = CONFIG.deadline - new Date();
+-    if (ms < 0) ms = 0;
+-    $('[data-cd="d"]').textContent = two(Math.floor(ms / 864e5));
+-    $('[data-cd="h"]').textContent = two(Math.floor(ms / 36e5) % 24);
+-    $('[data-cd="m"]').textContent = two(Math.floor(ms / 6e4) % 60);
+-  }
+-  countdown(); setInterval(countdown, 30000);
