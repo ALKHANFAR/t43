@@ -225,7 +225,7 @@
       "name": "إرسال بريد تجريبي من شركة 43",
       "aliases": ["رسالة Gmail التجريبية", "معرف رسالة Google", "Gmail pilot send", "شركة 43"],
       "state": "gap",
-      "meaning": "تجربة إرسال Gmail الوحيدة لشركة 43 نفذت فعليًا؛ Google أعادت معرف رسالة، لكن شات سيادة حفظ النتيجة unknown بسبب اعتماد قديم على output.status غير الموجود في Gmail. التحقق المصحح يستخدم step.status وdata.id، وزر تحقق يقرأ run السابق فقط ويصالح ledger إذا كان unknown ومطابقًا دون webhook جديد. Flow التجربة معطل بعد الإرسال، وموظفو الشركة ما زالوا مسودات.",
+      "meaning": "تجربة إرسال Gmail الوحيدة لشركة 43 نفذت فعليًا؛ Google أعادت معرف رسالة. التحقق المصحح يستخدم step.status وdata.id، وزر تحقق يقرأ run السابق فقط ويصالح ledger إذا كان unknown ومطابقًا دون webhook جديد. تحفظ رسالة الأمر والنتيجة في سجل المحادثة بهوية ثابتة كي تظهران بعد تحديث الصفحة، دون تكرار. Flow التجربة معطل بعد الإرسال، وموظفو الشركة ما زالوا مسودات.",
       "linear": "ABO-43",
       "locations": [
         {"role": "flow_gate", "path": "lib/gmail-send-pilot.mjs", "anchor": "export function validateGmailPilotFlow("},
@@ -234,6 +234,7 @@
         {"role": "execution", "path": "lib/gmail-pilot-runner.mjs", "anchor": "export function createGmailPilotRunner("},
         {"role": "reconciliation", "path": "server.mjs", "anchor": "const receipt=await runner.recover("},
         {"role": "ledger_reconciliation", "path": "lib/company-profile.mjs", "anchor": "async function reconcileVerifiedChatRequest("},
+        {"role": "conversation_persistence", "path": "lib/gmail-pilot-runner.mjs", "anchor": "export async function recordGmailPilotConversation("},
         {"role": "dedupe", "path": "lib/gmail-pilot-runner.mjs", "anchor": "export function gmailPilotLedgerIdentity("},
         {"role": "signed_payload", "path": "lib/gmail-send-pilot.mjs", "anchor": "export function signedGmailPilotWebhook("},
         {"role": "provider_receipt", "path": "lib/gmail-send-pilot.mjs", "anchor": "export function verifyGmailPilotRun("},

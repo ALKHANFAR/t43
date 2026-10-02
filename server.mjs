@@ -16,7 +16,7 @@ import {completedWithoutExecution,failedChatExecution} from './lib/chat-outcome.
 import {assertSchemaReady} from './lib/schema-ready.mjs';
 import {toolIcon} from './lib/tool-icons.mjs';
 import {createWaitlistProxy,WaitlistError} from './lib/waitlist.mjs';
-import {createGmailPilotRunner,GMAIL_PILOT_COMMAND,gmailPilotLedgerIdentity,gmailPilotSuccessResponse} from './lib/gmail-pilot-runner.mjs';
+import {createGmailPilotRunner,GMAIL_PILOT_COMMAND,gmailPilotLedgerIdentity,gmailPilotSuccessResponse,recordGmailPilotConversation} from './lib/gmail-pilot-runner.mjs';
 import {GMAIL_PILOT_COMPANY_ID,GMAIL_PILOT_REQUEST_ID,GmailPilotError} from './lib/gmail-send-pilot.mjs';
 
 const root=process.cwd();
@@ -372,11 +372,15 @@ async function publicChat(req,res){
           if(receipt){
             const response=gmailPilotSuccessResponse({conversationId:record.conversationId,receipt});
             const reconciled=await profiles.reconcileVerifiedChatRequest({companyId,requestId,conversationId:record.conversationId,requestHash:record.requestHash,response});
+            if(reconciled.status==='succeeded')await recordGmailPilotConversation({profiles,companyId,response:reconciled.response});
             return json(res,reconciled.httpStatus,reconciled.response,sessionHeaders);
           }
         }catch(error){console.error('gmail pilot readback failed',error?.code||error?.name||'unknown_error');}
       }
-      if(record.status!=='pending')return json(res,record.httpStatus||200,record.response,sessionHeaders);
+      if(record.status!=='pending'){
+        if(companyId===GMAIL_PILOT_COMPANY_ID&&requestId===GMAIL_PILOT_REQUEST_ID&&record.status==='succeeded')await recordGmailPilotConversation({profiles,companyId,response:record.response});
+        return json(res,record.httpStatus||200,record.response,sessionHeaders);
+      }
       return json(res,200,{ok:true,conversation_id:record.conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders);
     }
     if(input.op==='employee_state'){
@@ -409,15 +413,22 @@ async function publicChat(req,res){
         const {conversationId,requestId,requestHash}=gmailPilotLedgerIdentity();
         const profiles=await companyProfiles();
         const existing=await profiles.expireChatRequest({companyId,requestId});
-        if(existing)return existing.status==='pending'?json(res,200,{ok:true,conversation_id:conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders):json(res,existing.httpStatus||200,existing.response,sessionHeaders);
+        if(existing){
+          if(existing.status==='succeeded')await recordGmailPilotConversation({profiles,companyId,response:existing.response});
+          return existing.status==='pending'?json(res,200,{ok:true,conversation_id:conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders):json(res,existing.httpStatus||200,existing.response,sessionHeaders);
+        }
         const projects=await tenantProjects();
         const runner=createGmailPilotRunner({requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY,flowId:process.env.SIYADAH_GMAIL_PILOT_FLOW_ID,connectionId:process.env.SIYADAH_GMAIL_PILOT_CONNECTION_ID,secret:process.env.SIYADAH_GMAIL_PILOT_HMAC_SECRET});
         const prepared=await runner.preflight({companyId});
         const claim=await profiles.claimChatRequest({companyId,conversationId,requestId,requestHash});
-        if(!claim.claimed)return claim.status==='pending'?json(res,200,{ok:true,conversation_id:conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders):json(res,claim.httpStatus||200,claim.response,sessionHeaders);
+        if(!claim.claimed){
+          if(claim.status==='succeeded')await recordGmailPilotConversation({profiles,companyId,response:claim.response});
+          return claim.status==='pending'?json(res,200,{ok:true,conversation_id:conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders):json(res,claim.httpStatus||200,claim.response,sessionHeaders);
+        }
         activeRequest={companyId,requestId,conversationId,profiles,effectStarted:false,executionAttempt:true,claimToken:claim.claimToken};
         const receipt=await runner.send({companyId,prepared,onDispatch:()=>{activeRequest.effectStarted=true;}});
         const response=gmailPilotSuccessResponse({conversationId,receipt});
+        await recordGmailPilotConversation({profiles,companyId,response});
         const settled=await profiles.settleChatRequest({companyId,requestId,status:'succeeded',httpStatus:200,response,claimToken:claim.claimToken});
         activeRequest=null;
         return json(res,settled.httpStatus,settled.response,sessionHeaders);

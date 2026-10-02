@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {buildEmployeePrompt,createCompanyProfileService,normalizeAgentProfile,normalizeCompanyProfile,normalizeCompanySettings,recommendEmployees,selectCompanyUrls} from '../lib/company-profile.mjs';
+import {GMAIL_PILOT_COMMAND,gmailPilotLedgerIdentity,gmailPilotSuccessResponse,recordGmailPilotConversation} from '../lib/gmail-pilot-runner.mjs';
 
 test('selects bounded high-value pages from the same company site',()=>{
   const urls=selectCompanyUrls('https://example.com/',[
@@ -201,4 +202,12 @@ test('employee conversations persist idempotently inside the owning company',asy
   const alpha=await service.listConversations('company_alpha'),beta=await service.listConversations('company_beta');
   assert.equal(alpha.length,1);assert.equal(alpha[0].messages.length,2);assert.equal(alpha[0].messages[0].content,'تابع العميل');assert.equal(alpha[0].messages[1].content,'تم التنفيذ');
   assert.equal(beta.length,1);assert.equal(beta[0].id,'chat_two');assert.equal(beta[0].messages.length,2);
+  const pilotCompany='company_Vo6C04LfL8-hsuPAF_0y9f0N',pilotId=gmailPilotLedgerIdentity();
+  const response=gmailPilotSuccessResponse({conversationId:pilotId.conversationId,receipt:{runId:'IM2FOjaApVRHWWqAf8iO2',messageId:'1a0fc1b96c6e6f55'}});
+  await recordGmailPilotConversation({profiles:service,companyId:pilotCompany,response});
+  await recordGmailPilotConversation({profiles:service,companyId:pilotCompany,response});
+  const restored=await service.listConversations(pilotCompany);
+  assert.equal(restored.length,1);assert.equal(restored[0].id,pilotId.conversationId);
+  assert.deepEqual(restored[0].messages.map(message=>message.content),[GMAIL_PILOT_COMMAND,response.reply]);
+  await assert.rejects(()=>recordGmailPilotConversation({profiles:service,companyId:'company_other',response}),{code:'pilot_conversation_unverified'});
 });
