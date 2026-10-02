@@ -2,6 +2,8 @@
 
 Status: **review drafts; do not publish or submit to Google yet**. Related issue: [ABO-62](https://linear.app/abo-eyad/issue/ABO-62/tjhyz-sfhh-syadh-alaamh-wsyash-gmail-lqbwl-google).
 
+Start with [release-gates.md](release-gates.md) for the current evidence and factual gaps. [submission.md](submission.md) holds the unsubmitted Google justification and video checklist.
+
 ## Source and change
 
 The actual English and Arabic pages were downloaded read-only on 2 October 2026 from LWS cPanel's `/home/c1983949c/public_html/siyadah-ai.com/`. The live English `index.html` SHA-256 was `8f3e842bb51b73e200cae104819cfd98e4984753ad2afdae08a7cd22fa256880`; the Arabic `ar.html` SHA-256 was `d8cd883d83471a13f749309ad40bd1dcdd72a9f4b7fc220576f95ffe0e6292e7`. Local provenance snapshots are in the task artifact `artifacts/lws-public-site-20261002/`.
