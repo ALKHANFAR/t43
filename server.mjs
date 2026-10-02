@@ -150,6 +150,16 @@ async function waitlist(req,res){
   }
 }
 
+async function purgeExpiredWaitlist(){
+  try{
+    const pool=await database();
+    const removed=await createPublicWaitlist({query:(sql,values)=>pool.query(sql,values)}).purgeExpired();
+    if(removed)console.info('expired waitlist records removed',removed);
+  }catch(error){
+    console.error('waitlist retention cleanup failed',error?.code||error?.name||'unknown_error');
+  }
+}
+
 async function onboarding(req,res){
   let sessionHeaders={};
   try{
@@ -565,3 +575,8 @@ createServer((req,res)=>{
   if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{error:'method_not_allowed'});
   return staticFile(req,res);
 }).listen(port,'0.0.0.0');
+
+if(process.env.DATABASE_URL){
+  void purgeExpiredWaitlist();
+  setInterval(purgeExpiredWaitlist,60*60*1000).unref();
+}

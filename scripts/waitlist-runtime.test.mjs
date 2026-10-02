@@ -32,6 +32,15 @@ test('public waitlist does not claim acceptance when storage fails',async()=>{
   await assert.rejects(()=>store.submit(input),/database unavailable/);
 });
 
+test('public waitlist removes active records older than 90 days',async()=>{
+  const calls=[];
+  const store=createPublicWaitlist({query:async(sql)=>{calls.push(sql);return {rowCount:2};}});
+  assert.equal(await store.purgeExpired(),2);
+  assert.equal(calls.length,1);
+  assert.match(calls[0],/DELETE FROM siyadah_public_waitlist/);
+  assert.match(calls[0],/created_at < now\(\) - interval '90 days'/);
+});
+
 test('public site route stores leads and permits only the named site for CORS',async()=>{
   const source=await readFile(new URL('../server.mjs',import.meta.url),'utf8');
   assert.match(source,/createPublicWaitlist/);

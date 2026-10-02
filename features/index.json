@@ -129,7 +129,7 @@
     {
       "id": "public_waitlist_brand_boundary",
       "name": "تسجيل قائمة الانتظار عبر سيادة",
-      "aliases": ["قائمة الانتظار", "تسجيل الزائر", "نموذج الموقع", "waitlist", "same origin form"],
+      "aliases": ["قائمة الانتظار", "تسجيل الزائر", "نموذج الموقع", "حذف طلب الانتظار بعد 90 يوم", "waitlist", "same origin form"],
       "state": "draft_pr",
       "meaning": "متصفح الزائر يرسل إلى واجهة سيادة، والخادم يحفظ طلب الوصول المبكر في قاعدة بيانات سيادة قبل عرض حالة القبول. موقع LWS الحي لا ينتقل لهذا المسار حتى تُنشر نسخة الصفحة المراجعة ويُختبر إرسال حقيقي.",
       "linear": "ABO-62",
@@ -138,6 +138,7 @@
         {"role": "browser", "path": "site.js", "anchor": "endpoint: \"/siyadah-api/v1/waitlist\""},
         {"role": "route", "path": "server.mjs", "anchor": "async function waitlist(req,res)"},
         {"role": "store", "path": "lib/public-waitlist.mjs", "anchor": "export function createPublicWaitlist"},
+        {"role": "retention", "path": "lib/public-waitlist.mjs", "anchor": "async purgeExpired()"},
         {"role": "migration", "path": "migrations/0004-public-waitlist.sql", "anchor": "CREATE TABLE IF NOT EXISTS siyadah_public_waitlist"},
         {"role": "test", "path": "scripts/waitlist-runtime.test.mjs", "anchor": "public waitlist saves a bounded lead"}
       ]
