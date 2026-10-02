@@ -23,6 +23,11 @@ function fixture(){
     }
     if(sql.includes("SET status='succeeded'")){
       const row=rows.get(key);
+      if(sql.includes('request_hash=$4')){
+        if(!row||row.status!=='unknown'||row.conversation_id!==values[2]||row.request_hash!==values[3])return {rows:[]};
+        Object.assign(row,{status:'succeeded',http_status:200,response_json:JSON.parse(values[4])});
+        return {rows:[{request_id:values[1]}]};
+      }
       if(!row||row.status!=='unknown'||row.claim_token!==values[4])return {rows:[]};
       Object.assign(row,{status:'succeeded',http_status:values[2],response_json:JSON.parse(values[3])});
       return {rows:[{request_id:values[1]}]};
@@ -58,6 +63,22 @@ test('Gmail pilot shares one ledger key across two chat conversations',async()=>
   assert.equal(second.claimed,false);
   await service.completeChatRequest({companyId:'company_43',requestId:identity.requestId,status:'unknown',httpStatus:200,response:{work_status:'unknown'}});
   assert.equal((await service.claimChatRequest({companyId:'company_43',...gmailPilotLedgerIdentity()})).status,'unknown');
+});
+
+test('verified readback upgrades only the matching unknown pilot request',async()=>{
+  const {service}=fixture(),identity=gmailPilotLedgerIdentity(),companyId='company_43';
+  await service.claimChatRequest({companyId,...identity});
+  await service.completeChatRequest({companyId,requestId:identity.requestId,status:'unknown',httpStatus:200,response:{work_status:'unknown'}});
+  const response={request_status:'succeeded',outcome_kind:'external_run',run_id:'IM2FOjaApVRHWWqAf8iO2',provider_message_id:'1a0fc1b96c6e6f55'};
+  const input={companyId,...identity,response};
+  assert.equal((await service.reconcileVerifiedChatRequest(input)).status,'succeeded');
+  assert.equal((await service.reconcileVerifiedChatRequest(input)).response.provider_message_id,response.provider_message_id);
+  await assert.rejects(service.reconcileVerifiedChatRequest({...input,companyId:'company_other'}),{code:'request_scope_mismatch'});
+  await assert.rejects(service.reconcileVerifiedChatRequest({...input,response:{...response,provider_message_id:null}}),TypeError);
+  const failed={...identity,requestId:'failed_pilot'};
+  await service.claimChatRequest({companyId,...failed});
+  await service.completeChatRequest({companyId,requestId:failed.requestId,status:'failed',httpStatus:200,response:{work_status:'failed'}});
+  assert.equal((await service.reconcileVerifiedChatRequest({companyId,...failed,response})).status,'failed');
 });
 
 test('request ID cannot be reused for another conversation or payload',async()=>{

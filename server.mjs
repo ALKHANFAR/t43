@@ -16,8 +16,8 @@ import {completedWithoutExecution,failedChatExecution} from './lib/chat-outcome.
 import {assertSchemaReady} from './lib/schema-ready.mjs';
 import {toolIcon} from './lib/tool-icons.mjs';
 import {createWaitlistProxy,WaitlistError} from './lib/waitlist.mjs';
-import {createGmailPilotRunner,GMAIL_PILOT_COMMAND,gmailPilotLedgerIdentity} from './lib/gmail-pilot-runner.mjs';
-import {GMAIL_PILOT_COMPANY_ID,GmailPilotError} from './lib/gmail-send-pilot.mjs';
+import {createGmailPilotRunner,GMAIL_PILOT_COMMAND,gmailPilotLedgerIdentity,gmailPilotSuccessResponse} from './lib/gmail-pilot-runner.mjs';
+import {GMAIL_PILOT_COMPANY_ID,GMAIL_PILOT_REQUEST_ID,GmailPilotError} from './lib/gmail-send-pilot.mjs';
 
 const root=process.cwd();
 const port=Number(process.env.PORT||3000);
@@ -360,9 +360,22 @@ async function publicChat(req,res){
     if(input.op==='work'){
       const requestId=typeof input.request_id==='string'?input.request_id:typeof input.work_id==='string'&&input.work_id.startsWith('request_')?input.work_id.slice(8):'';
       if(!/^[A-Za-z0-9_-]{1,80}$/.test(requestId))throw new CompanyProfileError('invalid_request','معرّف الطلب غير صالح.',400);
-      const record=await (await companyProfiles()).expireChatRequest({companyId,requestId});
+      const profiles=await companyProfiles(),record=await profiles.expireChatRequest({companyId,requestId});
       if(!record)return json(res,200,{ok:true,request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified'},sessionHeaders);
       if(input.conversation_id&&record.conversationId!==input.conversation_id)throw new CompanyProfileError('request_scope_mismatch','معرّف الطلب مرتبط بمحادثة أخرى.',409);
+      const pilotIdentity=gmailPilotLedgerIdentity();
+      if(companyId===GMAIL_PILOT_COMPANY_ID&&requestId===GMAIL_PILOT_REQUEST_ID&&record.status==='unknown'&&record.conversationId===pilotIdentity.conversationId&&record.requestHash===pilotIdentity.requestHash){
+        try{
+          const projects=await tenantProjects();
+          const runner=createGmailPilotRunner({requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY,flowId:process.env.SIYADAH_GMAIL_PILOT_FLOW_ID,connectionId:process.env.SIYADAH_GMAIL_PILOT_CONNECTION_ID});
+          const receipt=await runner.recover({companyId,notBefore:record.createdAt});
+          if(receipt){
+            const response=gmailPilotSuccessResponse({conversationId:record.conversationId,receipt});
+            const reconciled=await profiles.reconcileVerifiedChatRequest({companyId,requestId,conversationId:record.conversationId,requestHash:record.requestHash,response});
+            return json(res,reconciled.httpStatus,reconciled.response,sessionHeaders);
+          }
+        }catch(error){console.error('gmail pilot readback failed',error?.code||error?.name||'unknown_error');}
+      }
       if(record.status!=='pending')return json(res,record.httpStatus||200,record.response,sessionHeaders);
       return json(res,200,{ok:true,conversation_id:record.conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders);
     }
@@ -404,8 +417,7 @@ async function publicChat(req,res){
         if(!claim.claimed)return claim.status==='pending'?json(res,200,{ok:true,conversation_id:conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders):json(res,claim.httpStatus||200,claim.response,sessionHeaders);
         activeRequest={companyId,requestId,conversationId,profiles,effectStarted:false,executionAttempt:true,claimToken:claim.claimToken};
         const receipt=await runner.send({companyId,prepared,onDispatch:()=>{activeRequest.effectStarted=true;}});
-        const reply='قبلت Google رسالة الاختبار للإرسال. معرّف الرسالة: '+receipt.messageId;
-        const response={ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',outcome_kind:'external_run',work_id:`work_${receipt.runId}`,reply,provider_message_id:receipt.messageId,run_id:receipt.runId};
+        const response=gmailPilotSuccessResponse({conversationId,receipt});
         const settled=await profiles.settleChatRequest({companyId,requestId,status:'succeeded',httpStatus:200,response,claimToken:claim.claimToken});
         activeRequest=null;
         return json(res,settled.httpStatus,settled.response,sessionHeaders);

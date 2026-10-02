@@ -36,10 +36,10 @@ test('pilot gate accepts only the exact company published single-send flow and e
 });
 
 test('provider receipt needs scoped successful run and Gmail message id',()=>{
-  const run={id:runId,flowId,projectId,status:'SUCCEEDED',steps:{trigger:{output:{body:{requestId:GMAIL_PILOT_REQUEST_ID}}},send_email_1:{output:{status:200,data:{id:'18af123',threadId:'18af123'}}}}};
+  const run={id:runId,flowId,projectId,status:'SUCCEEDED',steps:{trigger:{output:{body:{requestId:GMAIL_PILOT_REQUEST_ID}}},send_email_1:{status:'SUCCEEDED',output:{data:{id:'18af123',threadId:'18af123'}}}}};
   const input={run,projectId,flowId,requestId:GMAIL_PILOT_REQUEST_ID,actionName:'send_email_1'};
   assert.deepEqual(verifyGmailPilotRun(input),{runId,messageId:'18af123',threadId:'18af123',status:'accepted_by_google'});
-  for(const change of [x=>{x.run.projectId='Q'.repeat(21);},x=>{x.run.steps.trigger.output.body.requestId='other';},x=>{x.run.status='FAILED';},x=>{delete x.run.steps.send_email_1.output.data.id;},x=>{x.run.steps.send_email_1.output.status=400;},x=>{delete x.run.steps.send_email_1;}]){
+  for(const change of [x=>{x.run.projectId='Q'.repeat(21);},x=>{x.run.steps.trigger.output.body.requestId='other';},x=>{x.run.status='FAILED';},x=>{x.run.steps.send_email_1.status='FAILED';},x=>{delete x.run.steps.send_email_1.output.data.id;},x=>{x.run.steps.send_email_1.output.status=400;},x=>{delete x.run.steps.send_email_1;}]){
     const unsafe=structuredClone(input);change(unsafe);assert.throws(()=>verifyGmailPilotRun(unsafe),{name:'GmailPilotError'});
   }
 });
