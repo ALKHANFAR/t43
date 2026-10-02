@@ -88,9 +88,9 @@
       "name": "منع تكرار طلب الشات ومعرفة حالته",
       "aliases": ["حالة الطلب", "اعادة المحاولة", "request id", "idempotency"],
       "state": "draft_pr",
-      "meaning": "PR #13 يربط الطلب بالشركة ومعرّف ثابت؛ قراءة الحالة بالمعرّف نفسه لا ترسل العمل مرة ثانية.",
+      "meaning": "رأس المراجعة الموحد PR #24 يتضمن سجل طلبات PR #13: يربط الطلب بالشركة ومعرّف ثابت، وقراءة الحالة بالمعرّف نفسه لا ترسل العمل مرة ثانية. وجود الكود في الرأس أو نشره على خدمة لا يعني دمجه في فرع الأساس أو main.",
       "linear": "ABO-37",
-      "pr": "https://github.com/ALKHANFAR/t43/pull/13",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/24",
       "locations": [
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='work')"},
         {"role": "claim", "path": "lib/company-profile.mjs", "anchor": "async function claimChatRequest({companyId,conversationId,requestId,requestHash})"},
@@ -145,9 +145,9 @@
       "name": "نتيجة الطلب غير مؤكدة في شات سيادة",
       "aliases": ["لم نتأكد من نتيجة الطلب", "حالة الطلب غير معروفة", "التحقق من حالة الطلب", "unknown chat outcome", "unverified chat result"],
       "state": "draft_pr",
-      "meaning": "PR #14 يعرض نتيجة غير مؤكدة دون علامة نجاح ويعيد قراءة معرّف الطلب نفسه، دون إرسال تنفيذ جديد تلقائيًا. يدخل في إصدار المسودة الموحد #19 ولم يُنشر بعد.",
+      "meaning": "رأس المراجعة الموحد PR #24 يتضمن صياغة PR #14: يعرض النتيجة غير المؤكدة دون علامة نجاح ويعيد قراءة معرّف الطلب نفسه دون تنفيذ تلقائي جديد. فحص رسالة Gmail التجريبية يقرأ نتيجة المزود عند الطلب فقط. حالة النشر تُثبت مستقلة عن حالة دمج الفرع.",
       "linear": "ABO-44",
-      "pr": "https://github.com/ALKHANFAR/t43/pull/19",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/24",
       "locations": [
         {"role": "render", "path": "app/chat.js", "anchor": "function siyResultRow(data)"},
         {"role": "message", "path": "app/chat.js", "anchor": "if(!text&&data.request_status==='not_observed'&&state==='unknown')"},
