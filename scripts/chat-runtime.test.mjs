@@ -146,7 +146,7 @@ test('account loading error follows interface language without changing a saved 
 });
 
 test('saved connections use interface language while their real account and employee names survive switching',async()=>{
-  const connection={id:'C'.repeat(21),pieceName:'@activepieces/piece-gmail',displayName:'Gmail',status:'ACTIVE',scope:'PROJECT',flowIds:['flow-1']};
+  const connection={id:'C'.repeat(21),slug:'gmail',displayName:'Gmail',status:'ACTIVE',scope:'PROJECT',flowIds:['flow-1']};
   const saved={id:'locale-conversation',title:'عميل الرياض',messages:[{role:'assistant',content:'وصلنا الطلب من العميل',at:'09:01'}]};
   const p=await page({locale:'en',hydrate:{...empty,company:'شركة مدار',team:[employee],conversations:[saved]},integrations:{list:{ok:true,connections:[connection]}},hash:''});try{
     assert.match(p.d.querySelector('#toolsCnt').textContent,/1 saved connection/);
@@ -260,7 +260,7 @@ test('real account tools hide legacy demo employees and internal platform labels
   }finally{p.close();}
 });
 test('tool buttons show saved connection details without claiming a provider run',async()=>{
-  const connection={id:'C'.repeat(21),pieceName:'@activepieces/piece-gmail',displayName:'Gmail',status:'ACTIVE',scope:'PROJECT'};
+  const connection={id:'C'.repeat(21),slug:'gmail',displayName:'Gmail',status:'ACTIVE',scope:'PROJECT'};
   const p=await page({hydrate:{...empty,team:[employee]},integrations:{list:{ok:true,connections:[connection]}},pieces:[['gmail','Gmail','Email','communication','https://example.test/gmail.png','البريد',{pieceName:'@activepieces/piece-gmail'}]]});try{
     p.d.querySelector('#toolsLink').click();await flush();
     const details=p.d.querySelector('[data-tool-details="gmail"]');assert.ok(details);details.click();
@@ -286,7 +286,7 @@ test('Google connect popup opens in the submit gesture before OAuth preparation 
   }finally{p.close();}
 });
 test('tools page distinguishes a saved connection from one assigned to an employee flow',async()=>{
-  const flowId='F'.repeat(21),connection={id:'C'.repeat(21),pieceName:'@activepieces/piece-gmail',displayName:'Gmail',status:'ACTIVE',scope:'PROJECT',flowIds:[flowId]};
+  const flowId='F'.repeat(21),connection={id:'C'.repeat(21),slug:'gmail',displayName:'Gmail',status:'ACTIVE',scope:'PROJECT',flowIds:[flowId]};
   const p=await page({hydrate:{...empty,team:[{...employee,flowId,tools:[]}]},integrations:{list:{ok:true,connections:[connection]}}});try{
     p.d.querySelector('#toolsLink').click();await flush();
     assert.match(thread(p),/ضمن موظف/);
@@ -485,7 +485,7 @@ test('stable employee mapping rejects missing IDs and exact active status, no fa
   }finally{p.close();}
 });
 test('an employee tool appears ready only with a project connection readback',async()=>{
-  const connection={id:'C'.repeat(21),pieceName:'@activepieces/piece-http',displayName:'طلب ويب',status:'ACTIVE',scope:'PROJECT'};
+  const connection={id:'C'.repeat(21),slug:'http',displayName:'طلب ويب',status:'ACTIVE',scope:'PROJECT'};
   const p=await page({hydrate:{...empty,team:[{...employee,tools:['اتصال ويب']}]},integrations:{list:{ok:true,connections:[connection]}},pieces:[['http','طلب ويب','تنفيذ','developer','https://example.test/http.png','إرسال طلب إلى خدمة خارجية',{pieceName:'@activepieces/piece-http'}]]});try{
     p.d.querySelector('#emps .emp').click();assert.ok(p.d.querySelector('.chip:not(.chip--off) .chip__n'));assert.match(p.d.querySelector('.chip:not(.chip--off)').textContent,/اتصال ويب/);assert.equal(p.d.querySelector('.chip:not(.chip--off) [data-c]'),null);
   }finally{p.close();}

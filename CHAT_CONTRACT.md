@@ -1,6 +1,6 @@
-# Siyadah chat contract — draft for the final frontend
+# Siyadah chat contract — integrated review
 
-This contract belongs to `ALKHANFAR/t43`. The customer frontend may change later; these meanings must remain stable across it. `77766` is not part of this path. This document describes the draft PR #13 API; external provider verification remains a separate integration gate.
+This contract belongs to `ALKHANFAR/t43`. The customer frontend may change later; these meanings must remain stable across it. `77766` is not part of this path. The current integrated review head is [PR #24](https://github.com/ALKHANFAR/t43/pull/24); PRs #13, #14, #18 and #19 remain historical slices, not separate release heads.
 
 ## Request identity and company boundary
 
@@ -31,10 +31,10 @@ This contract belongs to `ALKHANFAR/t43`. The customer frontend may change later
 | Tool response without business proof | `request_status:not_observed`, `work_status:unknown`, optional `transport_receipt` | The tool replied, but the result is still being verified; do not dispatch again automatically. |
 | External flow | `outcome_kind:external_run` plus scoped `runId` and execution record | Show only the level actually verified. Activepieces run success alone is not proof of the provider result or business impact. |
 
-For a provider result, require a terminal scoped run, the relevant step output, and validation specific to that tool. A provider outcome must be read back separately before the UI says it succeeded. A customer-visible result and a KPI need their own evidence. Draft PR #14 currently updates unknown-result wording; further frontend work must reflect `not_started` before either PR is merged.
+For a provider result, require a terminal scoped run, the relevant step output, and validation specific to that tool. A provider outcome must be read back separately before the UI says it succeeded. A customer-visible result and a KPI need their own evidence. PR #24 includes the unknown-result wording and the `not_started` distinction; verify both against the served deployment before calling either a customer-visible result.
 
 Saving an employee draft requires the company database and does not provision Activepieces. A later preparation path must attach a company-owned flow to the saved employee ID, validate its tools, and then enable execution. A saved draft alone must never be described as execution-ready or activated.
 
 ## Release boundary
 
-This file is a contract draft. This release combines PR #13 with the pre-deploy migration from PR #18 and the dependent UI PR #14. Railway's connected branch can deploy automatically; verify its resolved pre-deploy command and complete the documented release gates before merging. Activepieces provider verification remains a separate release gate for runnable tool work.
+This contract is part of PR #24, whose base is `codex/siyadah-integration-20260930`. A deployed build, an open PR, and a merge into that base or `main` are separate facts. Before merging, compare the exact head and base, verify the resolved Railway pre-deploy command and schema, run the relevant acceptance tests, and read provider results at their own evidence level. The earlier PRs remain review history and must not be merged again as parallel releases.

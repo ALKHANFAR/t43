@@ -10,6 +10,12 @@ const gmail={name:'@activepieces/piece-gmail',displayName:'Gmail',version:'0.17.
 const slack={name:'@activepieces/piece-slack',displayName:'Slack',version:'0.1.0',auth:{type:'OAUTH2',authUrl:'https://slack.com/oauth/v2/authorize',scope:['chat:write'],props:{}}};
 
 function response(status,body){return {ok:status>=200&&status<300,status,json:async()=>body};}
+function assertCustomerConnection(connection,slug){
+  assert.equal(connection.slug,slug);
+  assert.equal(Object.hasOwn(connection,'pieceName'),false);
+  assert.equal(Object.hasOwn(connection,'pieceVersion'),false);
+  assert.doesNotMatch(JSON.stringify(connection),/@activepieces\//);
+}
 function harness(overrides={}){
   const calls=[];
   const pending=new Map(),attemptStore={save:async value=>{pending.set(value.state,value);},consume:async value=>{const prior=pending.get(value.state);if(!prior||prior.companyId!==value.companyId||prior.sessionBinding!==value.sessionBinding||prior.expiresAt<Date.now())return false;pending.delete(value.state);return true;}};
@@ -33,11 +39,12 @@ function harness(overrides={}){
 
 test('reads live auth schema and keeps secrets out of the response',async()=>{
   const {service}=harness(),methods=await service.methods({tenantId:'company-a',piece:'stripe'});
-  assert.equal(methods.pieceName,'stripe');
+  assert.equal(Object.hasOwn(methods,'pieceName'),false);
+  assert.equal(Object.hasOwn(methods,'pieceVersion'),false);
   assert.equal(methods.methods[0].fields[0].type,'password');
   const connected=await service.connect({tenantId:'company-a',piece:'stripe',type:'SECRET_TEXT',values:{secret_text:'sk_live_secret'}});
   assert.equal(connected.scope,'PROJECT');assert.equal(JSON.stringify(connected).includes('sk_live_secret'),false);
-  assert.equal(connected.pieceName,'stripe');
+  assertCustomerConnection(connected,'stripe');
   assert.doesNotMatch(JSON.stringify({methods,connected}),/activepieces/i);
 });
 
@@ -46,6 +53,7 @@ test('shows only valid flow references from a project-owned connection',async()=
   const connection=(await service.list('company-a'))[0];
   assert.equal(connection.scope,'PROJECT');
   assert.deepEqual(connection.flowIds,[FLOW]);
+  assertCustomerConnection(connection,'stripe');
 });
 
 test('builds custom auth only from authoritative fields',async()=>{
@@ -136,7 +144,9 @@ test('a shared provider result after create or revalidation is rejected',async()
 
 test('revalidates and disconnects only after ownership readback',async()=>{
   const {service,calls}=harness();
-  assert.equal((await service.revalidate({tenantId:'company-a',id:CONNECTION})).status,'ACTIVE');
+  const revalidated=await service.revalidate({tenantId:'company-a',id:CONNECTION});
+  assert.equal(revalidated.status,'ACTIVE');
+  assertCustomerConnection(revalidated,'stripe');
   assert.equal((await service.disconnect({tenantId:'company-a',id:CONNECTION})).disconnected,true);
   assert.equal(calls.filter(call=>call.options.method==='DELETE').length,1);
 });
