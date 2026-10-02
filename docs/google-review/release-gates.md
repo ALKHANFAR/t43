@@ -16,6 +16,8 @@ Railway CLI access to `siyadah-direct-mcp-lab / production` was confirmed. Its `
 
 Skyvern opened the saved authenticated Activepieces Cloud profile. In `سيادة — إثبات التشغيل`, nine visible automations were listed; searching `waitlist` returned no results. In `Personal Project`, the same search returned no results. This search does not prove that the public webhook's flow does not exist in another account or under an unrelated name. It does show that the saved Cloud profile has not yet identified its owner or downstream storage. The browser session was closed after the read-only inspection.
 
+The founder clarified that the Cloud account and the paid, self-hosted instance are separate, and that Siyadah should rely on the server instance for product execution. This is a target architecture decision, not proof that the live LWS waitlist has been migrated. Keep the existing public destination in the current-data-flow disclosure until a replacement is deployed and an actual submission is read back.
+
 Google asks the published policy to describe access, use, storage and sharing of Google data. Saudi SDAIA's privacy-policy guidance also calls for the controller, purpose and legal basis, disclosure recipients, geographic processing scope, retention period or criteria, destruction, rights and complaints path. A draft with these facts missing must remain marked as a draft. [Google verification requirements](https://support.google.com/cloud/answer/13464321?hl=en) · [SDAIA privacy policy guidance](https://dgp.sdaia.gov.sa/wps/portal/pdp/knowledgecenter/details/ElaborationandDevelopingPrivacyPolicyGuideline)
 
 ## Public homepage claims needing correction or proof
