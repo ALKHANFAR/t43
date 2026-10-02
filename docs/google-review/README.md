@@ -10,6 +10,8 @@ The actual English and Arabic pages were downloaded read-only on 2 October 2026 
 
 `public-site-links.patch` updates the live English and Arabic pages to identify the private pilot and optional Gmail sending, remove unsupported counters and claims, and add privacy and terms links. It applies with `patch -p1` to the exact downloaded LWS pages. The complete release copies are in the local task artifact `artifacts/lws-public-site-20261002/google-review-release/`, outside Git. The patch deliberately excludes the existing workflow URL. Do not copy the live page into Git or replace it with this repository's older landing page.
 
+The revised patch also removes a fabricated waitlist rank and prevents a failed submission or opened email draft from being reported as a received request. The page shows an error unless a configured destination returns a successful HTTP response. A successful webhook response still proves only that the destination accepted the request; downstream storage needs a separate readback.
+
 `privacy.html` and `terms.html` are bilingual review drafts with visible warnings and `noindex,nofollow`. They are **not approved legal pages** and must not be uploaded unchanged. Their contents were derived from the actual public form and the draft Gmail connection path, with unknowns left explicit.
 
 ## Gates before publication

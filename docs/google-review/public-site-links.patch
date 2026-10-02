@@ -124,12 +124,16 @@
 @@ -631 +614 @@
 -          <h3 class="d3 form__h">Claim your founder seat</h3>
 +          <h3 class="d3 form__h">Join the waitlist</h3>
-@@ -690 +673 @@
+@@ -690 +673,2 @@
 -          <button class="btn btn--wide" type="submit" id="submitBtn">Reserve my seat <span class="drop"></span></button>
 +          <button class="btn btn--wide" type="submit" id="submitBtn">Join the waitlist <span class="drop"></span></button>
-@@ -697 +680 @@
++          <p id="sendError" role="alert" hidden>We could not confirm your request. Please try again or email info@siyadah-ai.com.</p>
+@@ -697,3 +681,2 @@
 -        <h3 class="d3">Your seat is reserved</h3>
+-        <p>We've got it. You'll hear from us exactly once — when your wave opens.</p>
+-        <div class="done__no">Queue position <span id="rank">—</span></div>
 +        <h3 class="d3">Your request was received</h3>
++        <p>Your request was submitted. We will contact selected participants when a suitable pilot opens.</p>
 @@ -714 +697 @@
 -        <div class="q__a"><p>The repeatable part, yes, and reliably: following up, reminding, answering what repeats, sorting, logging, reporting. The big calls — pricing, strategy, the relationships that matter — stay with you. Siyadah isn't here to replace your judgement. It's here to remove the hours that exhaust it.</p></div>
 +        <div class="q__a"><p>We are testing specific actions in a private pilot. Tasks that require a connection or approval are available only when that capability is enabled for your account. You remain responsible for important decisions.</p></div>
@@ -189,6 +193,29 @@
 -    $('[data-cd="m"]').textContent = two(Math.floor(ms / 6e4) % 60);
 -  }
 -  countdown(); setInterval(countdown, 30000);
+@@ -956 +915,0 @@
+-    $("#rank").textContent = "#" + (claimed + 1);
+@@ -959,10 +917,0 @@
+-  function mailtoFallback(d) {
+-    var body = "Founder seat request%0D%0A%0D%0A"
+-      + "Name: " + d.name + "%0D%0A"
+-      + "Email: " + d.email + "%0D%0A"
+-      + "Phone: " + d.country_code + " " + d.phone + "%0D%0A"
+-      + "Company: " + (d.company || "-") + "%0D%0A"
+-      + "Role: " + d.role;
+-    window.location.href = "mailto:" + CONFIG.fallbackEmail
+-      + "?subject=" + encodeURIComponent("Founder seat - " + d.name) + "&body=" + body;
+-  }
+@@ -988 +937 @@
+-    if (!CONFIG.sheetUrl && !CONFIG.endpoint && !CONFIG.web3formsKey) { mailtoFallback(data); succeed(); return; }
++    if (!CONFIG.sheetUrl && !CONFIG.endpoint && !CONFIG.web3formsKey) { $("#sendError").hidden = false; return; }
+@@ -989,0 +939 @@
++    $("#sendError").hidden = true;
+@@ -1051,2 +1001,2 @@
+-      if (!anyOk) { mailtoFallback(data); }
+-      succeed();
++      if (anyOk) succeed();
++      else $("#sendError").hidden = false;
 --- a/ar.html
 +++ b/ar.html
 @@ -6,2 +6,2 @@
@@ -306,12 +333,16 @@
 @@ -626 +610 @@
 -          <h3 class="d3 form__h">احجز مقعد المؤسس</h3>
 +          <h3 class="d3 form__h">انضم للقائمة</h3>
-@@ -684 +668 @@
+@@ -684 +668,2 @@
 -          <button class="btn btn--wide" type="submit" id="submitBtn">احجز مقعدي <span class="drop"></span></button>
 +          <button class="btn btn--wide" type="submit" id="submitBtn">انضم للقائمة <span class="drop"></span></button>
-@@ -691 +675 @@
++          <p id="sendError" role="alert" hidden>لم نتمكن من تأكيد إرسال طلبك. حاول مرة أخرى أو راسل info@siyadah-ai.com.</p>
+@@ -691,3 +676,2 @@
 -        <h3 class="d3">تم حجز مقعدك</h3>
+-        <p>وصلنا طلبك. بتسمع منا مرة وحدة بالضبط — لما تفتح دفعتك.</p>
+-        <div class="done__no">ترتيبك في القائمة <span id="rank">—</span></div>
 +        <h3 class="d3">استلمنا طلبك</h3>
++        <p>أُرسل طلبك. سنتواصل مع المشاركين المختارين حين تتوفر تجربة مناسبة.</p>
 @@ -708 +692 @@
 -        <div class="q__a"><p>الجزء المتكرر منه، نعم، وبثبات: المتابعة، التذكير، الرد على المكرر، التصنيف، التسجيل، والتقارير. أما القرارات الكبيرة — التسعير، الاستراتيجية، العلاقات اللي تفرق — فتبقى لك. سيادة ما جات تستبدل حكمك، جات تشيل الساعات اللي تستهلك حكمك.</p></div>
 +        <div class="q__a"><p>نختبر إجراءات محددة في تجربة خاصة. أي مهمة تحتاج ربطًا أو موافقة لا تتاح إلا عند تفعيلها لحسابك، وتبقى القرارات المهمة لك.</p></div>
@@ -343,8 +374,7 @@
 -  seatsClaimed: 390,                       // ← رقم توضيحي، بدّله بالحقيقي
 -  deadline: new Date(2026, 8, 30, 23, 59)  // الشهر يبدأ من صفر: 8 = سبتمبر
 +  fallbackEmail: "anis@sondos-ai.com"
-@@ -903,13 +884,0 @@
--
+@@ -904,21 +885,0 @@
 -  /* المقاعد والعدّاد */
 -  var claimed = Math.min(CONFIG.seatsClaimed, CONFIG.seatsTotal);
 -  var left = Math.max(CONFIG.seatsTotal - claimed, 0);
@@ -357,7 +387,7 @@
 -    mio.disconnect();
 -  }, { threshold: 0.4 });
 -  mio.observe($(".meter"));
-@@ -917,8 +885,0 @@
+-
 -  function countdown() {
 -    var ms = CONFIG.deadline - new Date();
 -    if (ms < 0) ms = 0;
@@ -366,3 +396,26 @@
 -    $('[data-cd="m"]').textContent = two(Math.floor(ms / 6e4) % 60);
 -  }
 -  countdown(); setInterval(countdown, 30000);
+@@ -947 +907,0 @@
+-    $("#rank").textContent = "#" + (claimed + 1);
+@@ -950,10 +909,0 @@
+-  function mailtoFallback(d) {
+-    var body = "طلب حجز مقعد مؤسس%0D%0A%0D%0A"
+-      + "الاسم: " + d.name + "%0D%0A"
+-      + "البريد: " + d.email + "%0D%0A"
+-      + "الجوال: " + d.country_code + " " + d.phone + "%0D%0A"
+-      + "الشركة: " + (d.company || "-") + "%0D%0A"
+-      + "الدور: " + d.role;
+-    window.location.href = "mailto:" + CONFIG.fallbackEmail
+-      + "?subject=" + encodeURIComponent("حجز مقعد مؤسس — " + d.name) + "&body=" + body;
+-  }
+@@ -979 +929 @@
+-    if (!CONFIG.sheetUrl && !CONFIG.endpoint && !CONFIG.web3formsKey) { mailtoFallback(data); succeed(); return; }
++    if (!CONFIG.sheetUrl && !CONFIG.endpoint && !CONFIG.web3formsKey) { $("#sendError").hidden = false; return; }
+@@ -980,0 +931 @@
++    $("#sendError").hidden = true;
+@@ -1042,2 +993,2 @@
+-      if (!anyOk) { mailtoFallback(data); }
+-      succeed();
++      if (anyOk) succeed();
++      else $("#sendError").hidden = false;
