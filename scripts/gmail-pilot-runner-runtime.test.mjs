@@ -7,7 +7,7 @@ const companyId='company_Vo6C04LfL8-hsuPAF_0y9f0N',projectId='IgVzWxZU2AsDQMo6ZC
 const externalId=`siyadah-${companyId}-gmail`;
 const connection={id:connectionId,externalId,scope:'PROJECT',projectIds:[projectId],status:'ACTIVE',pieceName:'@activepieces/piece-gmail'};
 const flow={id:flowId,projectId,status:'ENABLED',publishedVersionId:versionId,version:{id:versionId,state:'LOCKED',connectionIds:[externalId],trigger:{type:'PIECE_TRIGGER',settings:{pieceName:'@activepieces/piece-webhook',triggerName:'catch_webhook',input:{authType:'hmac',authFields:{hmacHeaderName:'x-siyadah-signature',hmacAlgorithm:'sha256',hmacEncoding:'hex'}}},nextAction:{name:'step_1',type:'PIECE',settings:{pieceName:'@activepieces/piece-gmail',actionName:'send_email',errorHandlingOptions:{retryOnFailure:{value:false},continueOnFailure:{value:false}},input:{auth:`{{connections['${externalId}']}}`,receiver:['a@sondos-ai.com'],from:'a@sondos-ai.com',subject:'SIY-ABO61-PILOT-20261002',body_type:'plain_text',body:'اختبار إرسال سيادة من الشات للشركة 43',draft:false,retry:false}}}}}};
-const run={id:runId,projectId,flowId,status:'SUCCEEDED',steps:{trigger:{output:{body:{requestId:'gmail_send_pilot_v1'}}},step_1:{status:'SUCCEEDED',output:{data:{id:'gmail-message-1'}}}}};
+const run={id:runId,projectId,flowId,status:'SUCCEEDED',steps:{trigger:{output:{body:{requestId:'gmail_send_review_demo_v2'}}},step_1:{status:'SUCCEEDED',output:{data:{id:'gmail-message-1'}}}}};
 function harness({withRun=true,otherCompany=false,draft=false,logsDelayed=false,duplicateRun=false}={}){
   const calls=[];
   let detailReads=0;
@@ -28,14 +28,14 @@ function harness({withRun=true,otherCompany=false,draft=false,logsDelayed=false,
   return {runner,calls};
 }
 test('one exact signed dispatch returns only Gmail provider message id',async()=>{
-  assert.equal(GMAIL_PILOT_COMMAND,'أرسل رسالة اختبار إلى بريدي');
+  assert.equal(GMAIL_PILOT_COMMAND,'Send a test email to my inbox');
   const {runner,calls}=harness();let dispatches=0;
   const prepared=await runner.preflight({companyId});
   assert.deepEqual(await runner.send({companyId,prepared,onDispatch:()=>{dispatches++;}}),{runId,messageId:'gmail-message-1',threadId:null,status:'accepted_by_google'});
   assert.equal(dispatches,1);
   const webhooks=calls.filter(call=>call.url.includes('/webhooks/'));
   assert.equal(webhooks.length,1);
-  assert.equal(webhooks[0].options.body,'{"requestId":"gmail_send_pilot_v1","task":"gmail_send_pilot_v1"}');
+  assert.equal(webhooks[0].options.body,'{"requestId":"gmail_send_review_demo_v2","task":"gmail_send_review_demo_v2"}');
   assert.equal(webhooks[0].options.headers['x-siyadah-signature'],createHmac('sha256',secret).update(webhooks[0].options.body).digest('hex'));
   await assert.rejects(()=>runner.send({companyId,prepared,onDispatch:()=>{dispatches++;}}),{code:'pilot_preflight_required'});
   assert.equal(dispatches,1);

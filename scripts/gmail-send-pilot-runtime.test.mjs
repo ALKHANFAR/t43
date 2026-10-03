@@ -13,7 +13,7 @@ function fixture(){
 }
 
 test('pilot gate accepts only the exact company published single-send flow and exclusive connection',()=>{
-  const input=fixture();assert.equal(GMAIL_PILOT_REQUEST_ID,'gmail_send_pilot_v1');
+  const input=fixture();assert.equal(GMAIL_PILOT_REQUEST_ID,'gmail_send_review_demo_v2');
   assert.deepEqual(validateGmailPilotFlow(input),{actionName:'send_email_1',flowId,projectId,connectionId});
   for(const change of [
     x=>{x.allowedCompanyId='company_other';},

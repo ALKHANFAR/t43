@@ -574,9 +574,9 @@ var I = {
       if(pendAns&&pendAns.who===who){ var p=pendAns; pendAns=null; resolveWait(e,list,p.mi,"كتبت الجواب",list[p.mi].wait.r[0],true); return; }
       if(window.__SIY_REAL__){ siyChatReal(e,text,list); return; } /* رد فعلي من الخلفية */
       typeReply(e,list,function(){ return empReply(e,text); }); return; }
-    if(window.__SIY_REAL__&&text.trim()==='أرسل رسالة اختبار إلى بريدي'){
-      var pilotChatId='chat_gmail_send_pilot_v1';
-      if(!CHATS[pilotChatId]) CHATS[pilotChatId]={with:'siyadah',emp:null,t:'رسالة اختبار',when:'today',msgs:[]};
+    if(window.__SIY_REAL__&&text.trim()==='Send a test email to my inbox'){
+      var pilotChatId='chat_gmail_send_review_demo_v2';
+      if(!CHATS[pilotChatId]) CHATS[pilotChatId]={with:'siyadah',emp:null,t:'Gmail review demo',when:'today',msgs:[]};
       chatId=pilotChatId; live.siyadah=null;
     }
     list = chatId ? CHATS[chatId].msgs : (live.siyadah=live.siyadah||[]);
@@ -1438,9 +1438,9 @@ var I = {
   }
   function siyMessage(text,list,employeeId){
     var request={op:"message",message:text,conversation_id:list.siyConversationId||null,employee_id:employeeId||null,request_id:crypto.randomUUID()};
-    if(!employeeId&&text.trim()==='أرسل رسالة اختبار إلى بريدي'){
-      request.conversation_id='chat_gmail_send_pilot_v1';
-      request.request_id='gmail_send_pilot_v1';
+    if(!employeeId&&text.trim()==='Send a test email to my inbox'){
+      request.conversation_id='chat_gmail_send_review_demo_v2';
+      request.request_id='gmail_send_review_demo_v2';
     }
     if(list.siyLatestRequestId) request.prior_request_id=list.siyLatestRequestId;
     list.siyLatestRequestId=request.request_id;
