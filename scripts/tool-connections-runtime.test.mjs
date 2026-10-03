@@ -29,7 +29,7 @@ function harness(overrides={}){
     if(url.includes('/oauth2/authorization-url'))return response(200,{authorizationUrl:'https://accounts.google.com/o/oauth2/auth?client_id=google-client'});
     if(url.includes('/revalidate'))return response(200,{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:projects('revalidate')});
     if(options.method==='DELETE')return response(204,{});
-    if(url.includes(`/app-connections/${CONNECTION}`))return response(200,{id:CONNECTION,pieceName:'@activepieces/piece-stripe',scope:'PROJECT',projectIds:projects('get')});
+    if(url.includes(`/app-connections/${CONNECTION}`))return response(200,{id:CONNECTION,pieceName:'@activepieces/piece-stripe',scope:'PROJECT',projectIds:projects('get'),flowIds:overrides.getFlowIds||[]});
     if(url.includes('/app-connections?'))return response(200,{data:[{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:projects('list'),projectId:overrides.projectIdOnly?PROJECT:undefined,flowIds:[FLOW,'invalid']}]});
     if(url.endsWith('/api/v1/app-connections')){const b=JSON.parse(options.body);return response(201,{id:CONNECTION,pieceName:b.pieceName,pieceVersion:b.pieceVersion,displayName:b.displayName,status:'ACTIVE',scope:'PROJECT',projectIds:projects('create')});}
     throw new Error(`unexpected ${url}`);
@@ -149,4 +149,13 @@ test('revalidates and disconnects only after ownership readback',async()=>{
   assertCustomerConnection(revalidated,'stripe');
   assert.equal((await service.disconnect({tenantId:'company-a',id:CONNECTION})).disconnected,true);
   assert.equal(calls.filter(call=>call.options.method==='DELETE').length,1);
+});
+
+test('in-use connection stays attached and is not reported as disconnected',async()=>{
+  const {service,calls}=harness({getFlowIds:[FLOW]});
+  await assert.rejects(
+    ()=>service.disconnect({tenantId:'company-a',id:CONNECTION}),
+    error=>error.code==='connection_in_use'&&error.status===409
+  );
+  assert.equal(calls.some(call=>call.options.method==='DELETE'),false);
 });
