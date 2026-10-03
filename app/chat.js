@@ -1226,7 +1226,13 @@ var I = {
       var response=await fetch(url,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:abort.signal});
       if(response.status===401){location.replace("../auth.html");throw siyAccessError(ui("انتهت جلستك. سجّل الدخول من جديد.","Your session ended. Sign in again."));}
       if(response.status===403) throw siyAccessError(ui("تعذّر التحقق من صلاحية هذا الطلب لحسابك.","This request could not be authorized for your account."));
-      if(!response.ok) throw new Error(ui("تعذّر الاتصال بالخادم. أعد المحاولة.","Could not reach the server. Try again."));
+      if(!response.ok){
+        if(url==="/siyadah-api/v1/integrations"&&body.op==="disconnect"&&response.status===409){
+          var failure=await response.json().catch(function(){return null;});
+          if(failure&&failure.error==="connection_in_use")throw new Error(ui("الاتصال مستخدم في مهمة. أوقف المهمة أو تواصل مع الدعم قبل فصله.","A task still uses this connection. Stop the task or contact support before disconnecting."));
+        }
+        throw new Error(ui("تعذّر الاتصال بالخادم. أعد المحاولة.","Could not reach the server. Try again."));
+      }
       var data=await response.json();
       if(!data||data.ok!==true) throw new Error(ui("تعذّر إتمام الطلب. لم يتم تأكيد نجاحه.","The request was not confirmed as complete."));
       if(body.op==="work"&&!(data.request_status==="not_observed"&&data.work_status==="unknown")&&!(data.request_status==="succeeded"&&data.work_status==="not_started"&&["conversation_reply","employee_draft"].includes(data.outcome_kind))&&!["queued","running","succeeded","failed","awaiting_input","cancelled"].includes(data.work_status)) throw new Error(ui("وصلت حالة عمل غير مكتملة؛ لم نتأكد من النتيجة.","The work status is incomplete; the outcome is unverified."));

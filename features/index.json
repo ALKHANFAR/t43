@@ -119,6 +119,7 @@
         {"role": "owned_google_start", "path": "lib/tool-connections.mjs", "anchor": "async function oauthStart({tenantId,sessionBinding,requestOrigin,piece,values={}})"},
         {"role": "owned_google_finish", "path": "lib/tool-connections.mjs", "anchor": "async function oauthFinish({tenantId,sessionBinding,state,code})"},
         {"role": "disconnect_guard", "path": "lib/tool-connections.mjs", "anchor": "if(connection.flowIds.length)fail('connection_in_use'"},
+        {"role": "disconnect_customer_message", "path": "app/chat.js", "anchor": "if(failure&&failure.error===\"connection_in_use\")"},
         {"role": "single_use_attempt", "path": "lib/google-oauth-attempts.mjs", "anchor": "async consume({state,companyId,sessionBinding})"},
         {"role": "callback", "path": "server.mjs", "anchor": "async function googleOAuthCallback(req,res,url)"},
         {"role": "migration", "path": "migrations/0003-google-oauth-attempts.sql", "anchor": "CREATE TABLE IF NOT EXISTS siyadah_google_oauth_attempts"},
