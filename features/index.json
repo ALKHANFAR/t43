@@ -120,6 +120,7 @@
         {"role": "owned_google_finish", "path": "lib/tool-connections.mjs", "anchor": "async function oauthFinish({tenantId,sessionBinding,state,code})"},
         {"role": "disconnect_guard", "path": "lib/tool-connections.mjs", "anchor": "if(connection.flowIds.length)fail('connection_in_use'"},
         {"role": "disconnect_unknown_guard", "path": "lib/tool-connections.mjs", "anchor": "if(!Array.isArray(rawFlowIds)||rawFlowIds.some"},
+        {"role": "published_dependency_guard", "path": "lib/tool-connections.mjs", "anchor": "async function publishedFlowUsesConnection(projectId,externalId)"},
         {"role": "disconnect_customer_message", "path": "app/chat.js", "anchor": "if(failure&&failure.error===\"connection_in_use\")"},
         {"role": "disconnect_unknown_message", "path": "app/chat.js", "anchor": "if(failure&&failure.error===\"connection_usage_unknown\")"},
         {"role": "single_use_attempt", "path": "lib/google-oauth-attempts.mjs", "anchor": "async consume({state,companyId,sessionBinding})"},
@@ -130,6 +131,20 @@
         {"role": "disconnect_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "in-use connection stays attached and is not reported as disconnected"},
         {"role": "disconnect_unknown_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "unknown or malformed flow references fail closed before disconnect"},
         {"role": "ledger_test", "path": "scripts/google-oauth-attempts-runtime.test.mjs", "anchor": "OAuth attempt ledger stores hashes and consumes exactly once"}
+      ]
+    },
+    {
+      "id": "full_google_account_disconnect",
+      "name": "فصل حساب Google وكل أدواته",
+      "aliases": ["فصل قوقل بالكامل", "فصل جميع أدوات Google", "إلغاء وصول Google", "disconnect Google account", "revoke Google access"],
+      "state": "gap",
+      "meaning": "فصل الاتصال الفردي يرفض الاعتماد الظاهر في Activepieces، ويفحص أيضًا كل نسخ Flow المنشورة لأن قائمة flowIds قد تخفي مرجع نسخة منشورة عند وجود مسودة أحدث. فُحص الخلل حيًا في Activepieces 0.92.1 وصُحح الحارس في هذا الفرع محليًا. لا يوجد بعد مسار يحدد جميع اتصالات حساب Google نفسه ويلغي منحة Google؛ لذلك لا يُسمى الفصل الفردي فصلًا شاملًا.",
+      "linear": "ABO-63",
+      "locations": [
+        {"role": "published_dependency_guard", "path": "lib/tool-connections.mjs", "anchor": "async function publishedFlowUsesConnection(projectId,externalId)"},
+        {"role": "disconnect_gate", "path": "lib/tool-connections.mjs", "anchor": "if(await publishedFlowUsesConnection(projectId,externalId))"},
+        {"role": "published_dependency_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "published flow reference blocks disconnect even when connection flowIds omits it"},
+        {"role": "pagination_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "checks later pages of published flows before disconnect"}
       ]
     },
     {
