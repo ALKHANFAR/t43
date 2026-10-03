@@ -269,6 +269,17 @@ test('tool buttons show saved connection details without claiming a provider run
     assert.equal(p.d.querySelector('#input').value,'أحتاج أداة غير موجودة في القائمة: ');assert.equal(p.d.activeElement,p.d.querySelector('#input'));
   }finally{p.close();}
 });
+test('tool setup shows the server reason when preparation fails',async()=>{
+  const p=await page({integrations:{list:{ok:true,connections:[]},methods:{httpStatus:409,error:'team_plan_required',message:'تفعيل باقة Team مطلوب لإنشاء مشاريع العملاء.'}},hash:''});
+  try{
+    p.d.querySelector('#toolsLink').click();await flush();
+    p.d.querySelector('#allTgl').click();await flush();
+    p.d.querySelector('[data-c="gmail"]').click();await flush();
+    assert.match(p.d.querySelector('#mF').textContent,/تفعيل باقة Team مطلوب/);
+    assert.doesNotMatch(p.d.querySelector('#mF').textContent,/تعذّر الاتصال بالخادم/);
+  }finally{p.close();}
+});
+
 test('Google connect popup opens in the submit gesture before OAuth preparation returns',async()=>{
   let finishStart,opened=0;
   const start=new Promise(resolve=>{finishStart=resolve;});
