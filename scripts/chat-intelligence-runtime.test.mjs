@@ -1,13 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {conversationMemory,employeeRequestMode,flowName} from '../lib/chat-intelligence.mjs';
+import {conversationMemory,employeeRequestMode,flowName,wantsEmployeeExecution} from '../lib/chat-intelligence.mjs';
 
 const server=await readFile(new URL('../server.mjs',import.meta.url),'utf8');
 const chat=await readFile(new URL('../app/chat.js',import.meta.url),'utf8');
 
+test('account identity remains separate from researched website identity',()=>{
+  assert.match(server,/company:resolved\.account\.company_name,company_settings:/);
+  assert.match(server,/name:resolved\.account\.company_name,researchedWebsiteName:profile\?\.company_name\|\|null/g);
+  assert.match(server,/اسم الحساب في company\.name هو هوية العميل/);
+  assert.doesNotMatch(server,/profile\?\.company_name\|\|resolved\.account\.company_name/);
+});
+
 test('central chat uses company knowledge, settings and team instead of the rigid fallback',()=>{
-  assert.match(server,/deepseekReply\(\{company,settings,knowledge,team,history,message,employee=null\}\)/);
+  assert.match(server,/deepseekReply\(\{company,settings,knowledge,team,history,message,employee=null,employeeFlow=null\}\)/);
   assert.match(server,/profiles\.ownedKnowledge\(companyId\)/);
   assert.match(server,/profiles\.readSettings\(companyId\)/);
   assert.match(server,/profiles\.listEmployees\(companyId\)/);
@@ -28,10 +35,14 @@ test('central chat uses company knowledge, settings and team instead of the rigi
 
 test('employee exploration does not create a flow until the user gives an explicit creation command',()=>{
   assert.equal(employeeRequestMode('أبغى موظف يتابع العملاء وما يضيع أحد'),'explore');
+  assert.equal(employeeRequestMode('اريد موظف تسويق شاطر يجيب لي عملاء'),'explore');
+  assert.equal(employeeRequestMode('أريد موظف مسؤول عن التسويق'),'explore');
   assert.equal(employeeRequestMode('وش أفضل موظف رقمي للمبيعات؟'),'explore');
   assert.equal(employeeRequestMode('جهّز الموظف «منسق العملاء»'),'create');
   assert.equal(employeeRequestMode('أنشئ موظف رقمي للمبيعات'),'create');
+  assert.equal(employeeRequestMode('سوي لي موظف تسويق'),'create');
   assert.equal(flowName('جهّز الموظف «منسق العملاء»'),'منسق العملاء');
+  assert.equal(flowName('أنشئ موظف رقمي للمبيعات'),'موظف رقمي للمبيعات');
   assert.match(server,/employeeRequestMode\(input\.message\)==='create'/);
   assert.doesNotMatch(server,/if\(wantsEmployee\(input\.message\)\)/);
 });
@@ -55,11 +66,17 @@ test('employee instructions have a tenant-scoped verified write path',()=>{
 });
 
 test('employee conversation reads its saved instructions while external execution stays gated',()=>{
-  assert.match(server,/deepseekReply\(\{company,settings,knowledge,team,history,message,employee=null\}\)/);
+  assert.match(server,/deepseekReply\(\{company,settings,knowledge,team,history,message,employee=null,employeeFlow=null\}\)/);
   assert.match(server,/selectedEmployee=employee\?/);
   assert.match(server,/saved\.status==='active'&&wantsEmployeeExecution\(input\.message\)/);
   assert.match(server,/employee:saved/);
   assert.match(server,/instruction_version:Number\(saved\.prompt_version\|\|1\),external_execution:false/);
+  assert.match(server,/employeeFlowContext\(\{tenantId:companyId,flowId:saved\.activepieces_flow_id\}\)/);
+});
+
+test('questions about employee work never dispatch a flow',()=>{
+  for(const message of ['وش سجلت اليوم','ما الذي أرسلته؟','هل سجلت الطلب؟','كم طلب أرسلت؟','خبرني هل أرسلت','أرسل لي ما سجلت','لا ترسل الرسالة'])assert.equal(wantsEmployeeExecution(message),false);
+  assert.equal(wantsEmployeeExecution('أرسل الرد الآن'),true);
 });
 
 test('real account waiting state does not invent catalog scanning before server readback',()=>{

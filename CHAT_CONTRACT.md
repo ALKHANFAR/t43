@@ -1,10 +1,12 @@
 # Siyadah chat contract — integrated review
 
-This contract belongs to `ALKHANFAR/t43`. The customer frontend may change later; these meanings must remain stable across it. `77766` is not part of this path. The current integrated review head is [PR #24](https://github.com/ALKHANFAR/t43/pull/24); PRs #13, #14, #18 and #19 remain historical slices, not separate release heads.
+This contract belongs to `ALKHANFAR/t43`. The customer frontend may change later; these meanings must remain stable across it. `77766` is not part of this path. The current integrated review branch is `codex/abo64-acceptance-20261004`, built on the deployed branch and the read-only employee Flow slice from [PR #36](https://github.com/ALKHANFAR/t43/pull/36). Earlier PRs remain historical slices, not separate release heads.
 
 ## Request identity and company boundary
 
 - The server derives `companyId` from the signed session. The browser does not choose a tenant or Activepieces project.
+- The account name in chat and exports comes from the account record. The researched website may identify a different organization; its name stays a separate research fact and must not replace the account identity.
+- An employee draft is saved without an Activepieces project. The connections list may therefore be empty. Opening a connection method provisions or reuses a project for the signed company before checking that tool; a project is not a Flow, connection, run, or provider result.
 - A message supplies a stable `request_id` and `conversation_id`. Repeating **the same ID and content** reads the stored result; it does not dispatch again. Reusing the ID with different content or conversation returns 409.
 - `op:work` with the same `request_id` reads status. A missing record and an uncertain recorded outcome both use `request_status:not_observed` today; the UI must say the result is unverified and must not retry with a new ID automatically.
 - A *new* request ID is a new operation, even if the wording looks similar. The current `prior_request_id` field is not a cancellation guarantee.
@@ -35,6 +37,11 @@ For a provider result, require a terminal scoped run, the relevant step output, 
 
 Saving an employee draft requires the company database and does not provision Activepieces. A later preparation path must attach a company-owned flow to the saved employee ID, validate its tools, and then enable execution. A saved draft alone must never be described as execution-ready or activated.
 
+## Employee Flow questions
+
+When the customer asks a selected employee about its work, the server resolves the employee from the signed company session. If that employee has a Flow, the server reads the company-owned Flow and up to five recent run statuses. The chat receives only step labels, tool identifiers, Flow state/version, and scoped run IDs/statuses; it does not receive step settings, tokens, or run outputs. A run status is not a provider outcome. If the employee is still a local draft without a Flow, the chat receives `availability:not_prepared`. Recognized questions and negated commands do not dispatch a Flow. This read-only path does not modify instructions or the Flow draft; broader MCP capabilities remain in ABO-66's next stage.
+
+
 ## Release boundary
 
-This contract is part of PR #24, whose base is `codex/siyadah-integration-20260930`. A deployed build, an open PR, and a merge into that base or `main` are separate facts. Before merging, compare the exact head and base, verify the resolved Railway pre-deploy command and schema, run the relevant acceptance tests, and read provider results at their own evidence level. The earlier PRs remain review history and must not be merged again as parallel releases.
+This contract is part of the `codex/abo64-acceptance-20261004` review branch, whose base is the verified Railway deployment branch `codex/abo-38-isolation-gate-20261001`. A deployed build, an open PR, and a merge into that base or `main` are separate facts. Before merging, compare the exact head and base, verify the resolved Railway pre-deploy command and schema, run the relevant acceptance tests, and read provider results at their own evidence level. The earlier PRs remain review history and must not be merged again as parallel releases.

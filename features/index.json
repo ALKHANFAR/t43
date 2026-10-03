@@ -3,6 +3,23 @@
   "repository": "ALKHANFAR/t43",
   "features": [
     {
+      "id": "account_and_researched_company_identity",
+      "name": "اسم الحساب منفصل عن اسم الشركة في الموقع المحلل",
+      "aliases": ["اسم الشركة الخطأ", "هوية الحساب", "عشر أبعاد", "account identity", "researched website name"],
+      "state": "draft_pr",
+      "meaning": "يعرض التطبيق اسم الحساب من سجل الحساب فقط؛ يحتفظ باسم الجهة المكتشفة من الموقع كمعلومة بحث مستقلة في سياق المساعد. لا يثبت تطابق الموقع مع الحساب ولا يغير بيانات البحث أو شركة أخرى.",
+      "linear": "ABO-64",
+      "locations": [
+        {"role": "account_source", "path": "lib/account-auth.mjs", "anchor": "company_name"},
+        {"role": "research_source", "path": "lib/company-profile.mjs", "anchor": "company_name=EXCLUDED.company_name"},
+        {"role": "hydrate", "path": "server.mjs", "anchor": "company:resolved.account.company_name"},
+        {"role": "assistant_context", "path": "server.mjs", "anchor": "researchedWebsiteName:profile?.company_name||null"},
+        {"role": "account_display", "path": "app/chat.js", "anchor": "siyIdentity(companyName,dash.brain)"},
+        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "The account name in chat and exports comes from the account record."},
+        {"role": "test", "path": "scripts/chat-intelligence-runtime.test.mjs", "anchor": "account identity remains separate from researched website identity"}
+      ]
+    },
+    {
       "id": "chat_employee_approval",
       "name": "موافقة تجهيز الموظف التي تظهر في الشات",
       "aliases": ["موافقة الموظف", "موافقة على الموظف الي تظهر في الشات", "وافق وشغل", "اعتماد خطة الموظف", "employee approval in chat", "approve employee"],
@@ -15,6 +32,20 @@
         {"role": "request", "path": "app/chat.js", "anchor": "op:'approve'"},
         {"role": "test_mock_only", "path": "scripts/chat-runtime.test.mjs", "anchor": "data-siy-approval=\"approve\""},
         {"role": "server_entry", "path": "server.mjs", "anchor": "async function publicChat(req,res)"}
+      ]
+    },
+    {
+      "id": "employee_creation_intent",
+      "name": "طلب موظف تسويق في الشات لا ينشئ مسودة حتى يؤمر بالإنشاء",
+      "aliases": ["اريد موظف تسويق", "الإنشاء المبكر للموظف", "اسم الموظف جملة كاملة", "employee creation intent"],
+      "state": "draft_pr",
+      "meaning": "فرع ABO-64 يشترط كلمة أمر مستقلة عند إنشاء الموظف، فلا تُفسَّر كلمة تسويق كأمر سو. عند وجود أمر صريح يُستخرج الاسم من الطلب بدل حفظ الجملة كاملة. هذا يمنع الإنشاء المبكر ولا يجهز Flow.",
+      "linear": "ABO-64",
+      "locations": [
+        {"role": "intent", "path": "lib/chat-intelligence.mjs", "anchor": "export function employeeRequestMode(message)"},
+        {"role": "name", "path": "lib/chat-intelligence.mjs", "anchor": "export function flowName(message)"},
+        {"role": "route", "path": "server.mjs", "anchor": "employeeRequestMode(input.message)==='create'"},
+        {"role": "test", "path": "scripts/chat-intelligence-runtime.test.mjs", "anchor": "اريد موظف تسويق شاطر يجيب لي عملاء"}
       ]
     },
     {
@@ -84,6 +115,22 @@
       ]
     },
     {
+      "id": "employee_chat_flow_context",
+      "name": "سؤال الموظف عن عمله وطريقة عمله في الشات",
+      "aliases": ["وش سجلت اليوم", "ماذا فعل الموظف", "شات الموظف والـFlow نفسه", "employee flow question"],
+      "state": "draft_pr",
+      "meaning": "فرع ABO-66 يقرأ بنية Flow وسجل تشغيلاته قراءة فقط بعد التحقق من شركة الموظف. يعرض حالة التشغيل دون ادعاء نتيجة مزود أو أثر تجاري. هذا لا يغير Flow ولا يثبت سلوك شات سيادة الحي قبل النشر.",
+      "linear": "ABO-66",
+      "locations": [
+        {"role": "intent", "path": "lib/chat-intelligence.mjs", "anchor": "export function wantsEmployeeExecution(message)"},
+        {"role": "route", "path": "server.mjs", "anchor": "const employeeFlow=saved.activepieces_flow_id?"},
+        {"role": "tenant_scoped_read", "path": "lib/tenant-projects.mjs", "anchor": "async function employeeFlowContext({tenantId,flowId})"},
+        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "## Employee Flow questions"},
+        {"role": "isolation_test", "path": "scripts/tenant-projects-runtime.test.mjs", "anchor": "employee flow context is read only, tenant scoped and omits step secrets"},
+        {"role": "intent_test", "path": "scripts/chat-intelligence-runtime.test.mjs", "anchor": "questions about employee work never dispatch a flow"}
+      ]
+    },
+    {
       "id": "chat_request_identity",
       "name": "منع تكرار طلب الشات ومعرفة حالته",
       "aliases": ["حالة الطلب", "اعادة المحاولة", "request id", "idempotency"],
@@ -95,6 +142,7 @@
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='work')"},
         {"role": "claim", "path": "lib/company-profile.mjs", "anchor": "async function claimChatRequest({companyId,conversationId,requestId,requestHash})"},
         {"role": "result", "path": "lib/chat-outcome.mjs", "anchor": "export function failedChatExecution("},
+        {"role": "failed_message_context", "path": "server.mjs", "anchor": "if(status==='failed'&&typeof userMessage==='string'&&userMessage.trim())"},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "## Request identity and company boundary"},
         {"role": "test", "path": "scripts/chat-request-ledger-runtime.test.mjs", "anchor": "claimChatRequest(input)"}
       ]
@@ -104,7 +152,7 @@
       "name": "ربط أداة الشركة عند الحاجة",
       "aliases": ["ربط الأدوات", "اتصال أداة", "تسجيل دخول الأداة", "OAuth الأداة", "كتالوج الأدوات", "company tool connection", "tool catalog"],
       "state": "gap",
-      "meaning": "كتالوج الأدوات يعرض 762 أداة بأيقونات من نطاق سيادة. مسار Gmail OAuth الإنتاجي يطلب صلاحية الإرسال فقط، ويشترط تطابق نطاق الصفحة والعودة، ومحاولة واحدة مرتبطة بجلسة الشركة، ورفض اتصال مشترك. أثبتت شركة 43 ربطًا وإرسالًا حقيقيًا وظهور رسالة في الوارد؛ طلب مراجعة Google ما زال قيد النظر، ولا تثبت تجربة شركة واحدة عزل جميع العملاء. عند استخدام تدفق لاتصال، يرفض طلب الفصل برسالة واضحة ولا يدّعي نجاحه أو يحذف الاتصال؛ إزالة الاعتماد من التدفق قبل الفصل ما زالت تحتاج مسارًا وظيفيًا.",
+      "meaning": "كتالوج الأدوات يعرض 762 أداة بأيقونات من نطاق سيادة. في فرع مراجعة ABO-64، فتح القائمة قبل وجود مشروع يعيد اتصالات فارغة، واختيار طريقة ربط يجهز مشروع الشركة عند الحاجة عبر المسار الموجود؛ لم تُنشر هذه الإضافة بعد. مسار Gmail OAuth الإنتاجي يطلب صلاحية الإرسال فقط، ويشترط تطابق نطاق الصفحة والعودة، ومحاولة واحدة مرتبطة بجلسة الشركة، ورفض اتصال مشترك. أثبتت شركة 43 ربطًا وإرسالًا حقيقيًا وظهور رسالة في الوارد؛ لا تثبت تجربة شركة واحدة عزل جميع العملاء. عند استخدام تدفق لاتصال، يرفض طلب الفصل برسالة واضحة ولا يدّعي نجاحه أو يحذف الاتصال؛ إزالة الاعتماد من التدفق قبل الفصل ما زالت تحتاج مسارًا وظيفيًا.",
       "linear": "ABO-61",
       "pr": "https://github.com/ALKHANFAR/t43/pull/24",
       "locations": [
@@ -115,6 +163,9 @@
         {"role": "catalog_test", "path": "scripts/check-pieces.js", "anchor": "Customer catalog integrity"},
         {"role": "customer_action", "path": "app/chat.js", "anchor": "async function rcOAuth(values)"},
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='oauth_start')"},
+        {"role": "lazy_project", "path": "server.mjs", "anchor": "if(['methods','connect','oauth_start'].includes(input.op))"},
+        {"role": "setup_error", "path": "app/chat.js", "anchor": "if(locale==='ar'&&failure&&typeof failure.message"},
+        {"role": "setup_error_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "tool setup shows the server reason when preparation fails"},
         {"role": "tenant_scope", "path": "lib/tool-connections.mjs", "anchor": "async function selected({tenantId,piece,type})"},
         {"role": "owned_google_start", "path": "lib/tool-connections.mjs", "anchor": "async function oauthStart({tenantId,sessionBinding,requestOrigin,piece,values={}})"},
         {"role": "owned_google_finish", "path": "lib/tool-connections.mjs", "anchor": "async function oauthFinish({tenantId,sessionBinding,state,code})"},
