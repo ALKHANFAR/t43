@@ -138,9 +138,11 @@
       "name": "فصل حساب Google وكل أدواته",
       "aliases": ["فصل قوقل بالكامل", "فصل جميع أدوات Google", "إلغاء وصول Google", "disconnect Google account", "revoke Google access"],
       "state": "gap",
-      "meaning": "فصل الاتصال الفردي يرفض الاعتماد الظاهر في Activepieces، ويفحص جميع صفحات المسودات والنسخ المنشورة لأن قائمة flowIds قد تخفي مرجع نسخة منشورة عند وجود مسودة أحدث أو لا تكمل الجرد. ثبت سلوك النسخ حيًا في Activepieces 0.92.1، ويغلق حارس سيادة فجوة الفصل الفردي. لا يوجد بعد مسار يحدد جميع اتصالات حساب Google نفسه ويلغي منحة Google؛ لذلك لا يُسمى الفصل الفردي فصلًا شاملًا.",
+      "meaning": "فصل الاتصال الفردي يرفض الاعتماد الظاهر في Activepieces، ويفحص جميع صفحات المسودات والنسخ المنشورة لأن قائمة flowIds قد تخفي مرجع نسخة منشورة عند وجود مسودة أحدث أو لا تكمل الجرد. ثبت سلوك النسخ حيًا في Activepieces 0.92.1، ويغلق حارس سيادة فجوة الفصل الفردي. عقد دورة Google يحدد حدود فصل الأداة والشركة وإلغاء منحة Google، لكن لا يوجد بعد تنفيذ يثبت حساب Google عبر الشركات ويلغي المنحة؛ لذلك يبقى الفصل الشامل فجوة.",
       "linear": "ABO-63",
       "locations": [
+        {"role": "account_lifecycle_contract", "path": "GOOGLE-CONNECTION-LIFECYCLE.md", "anchor": "## Meaning of each action"},
+        {"role": "revocation_release_gate", "path": "GOOGLE-CONNECTION-LIFECYCLE.md", "anchor": "## Implementation gate"},
         {"role": "version_dependency_guard", "path": "lib/tool-connections.mjs", "anchor": "async function flowVersionsUseConnection(projectId,externalId)"},
         {"role": "disconnect_gate", "path": "lib/tool-connections.mjs", "anchor": "if(await flowVersionsUseConnection(projectId,externalId))"},
         {"role": "published_dependency_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "published flow reference blocks disconnect even when connection flowIds omits it"},
