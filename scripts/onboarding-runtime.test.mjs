@@ -13,7 +13,7 @@ test('onboarding uses live company enrichment and prepares one employee safely',
   assert.ok(!js.includes('pages:14'));
   assert.ok(!html.includes('وافق وشغّل'));
   assert.match(html,/هذه شركتك كما فهمناها/);
-  assert.equal((html.match(/data-step="/g)||[]).length,2);
+  assert.equal(new JSDOM(html).window.document.querySelectorAll('section.step[data-step]').length,2);
   assert.match(js,/chat\.html#e=/);
   assert.match(js,/أفضل بداية/);
   assert.match(js,/معلومات محفوظة/);

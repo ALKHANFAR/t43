@@ -111,10 +111,11 @@
     var sourced=Number(PROFILE.pagesRead||0)>0,verified=Number(PROFILE.factCount||0)>0;
     var status=sourced?(verified?t('fromSite'):t('siteEmpty')):t('fromDescription');
     var footer=sourced?(verified?(locale==='en'?'Reviewed '+esc(PROFILE.pagesRead||0)+' pages. Excluded '+esc(PROFILE.rejectedClaims||0)+' unsupported claims.':'راجعنا '+esc(PROFILE.pagesRead||0)+' صفحات. استبعدنا '+esc(PROFILE.rejectedClaims||0)+' معلومات بلا مصدر كافٍ.'):t('siteNoFacts')):t('descriptionFooter');
+    var coverage='<div class="coverage" role="img" aria-label="'+t('coverage')+(verified?esc(PROFILE.coverageScore||0)+'%':t('unavailable'))+'" style="--coverage:'+(verified?Math.min(100,Math.max(0,Number(PROFILE.coverageScore||0))):0)+'"><strong>'+(verified?esc(PROFILE.coverageScore||0)+'%':'—')+'</strong></div>';
+    var stats='<div class="kb__g"><div><div class="kb__v">'+esc(PROFILE.pagesRead||0)+'</div><div class="kb__l">'+t('pages')+'</div></div><div><div class="kb__v">'+esc(PROFILE.factCount||0)+'</div><div class="kb__l">'+t('facts')+'</div></div><div><div class="kb__v">v'+esc(PROFILE.knowledgeVersion||1)+'</div><div class="kb__l">'+t('knowledgeVersion')+'</div></div></div>';
     return '<div class="kb"><div class="kb__h"><span class="drop"></span><b>'+esc(PROFILE.companyName||t('company'))+'</b><span>'+status+'</span></div>'+
-      '<div class="kb__body"><div class="coverage" role="img" aria-label="'+t('coverage')+(verified?esc(PROFILE.coverageScore||0)+'%':t('unavailable'))+'" style="--coverage:'+(verified?Math.min(100,Math.max(0,Number(PROFILE.coverageScore||0))):0)+'"><strong>'+(verified?esc(PROFILE.coverageScore||0)+'%':'—')+'</strong></div><div><p class="kb__summary">'+esc(PROFILE.summary||t('summaryFallback'))+'</p><div class="kb__meta">'+meta+'</div></div></div>'+
-      '<div class="kb__g"><div><div class="kb__v">'+esc(PROFILE.pagesRead||0)+'</div><div class="kb__l">'+t('pages')+'</div></div><div><div class="kb__v">'+esc(PROFILE.factCount||0)+'</div><div class="kb__l">'+t('facts')+'</div></div><div><div class="kb__v">v'+esc(PROFILE.knowledgeVersion||1)+'</div><div class="kb__l">'+t('knowledgeVersion')+'</div></div></div>'+
-      '<div class="kb__f"><span class="drop"></span>'+footer+'</div></div>';
+      '<div class="kb__body'+(sourced?'':' kb__body--plain')+'">'+(sourced?coverage:'')+'<div><p class="kb__summary">'+esc(PROFILE.summary||t('summaryFallback'))+'</p><div class="kb__meta">'+meta+'</div></div></div>'+
+      (sourced?stats:'')+'<div class="kb__f"><span class="drop"></span>'+footer+'</div></div>';
   }
   function sourceUrl(value){try{var url=new URL(value);return /^https?:$/.test(url.protocol)?url.href:'';}catch(error){return '';}}
   function renderCompanyInsights(){

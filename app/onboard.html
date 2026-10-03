@@ -43,7 +43,14 @@ button{cursor:pointer}
 .prog{height:1.5px;background:var(--hair);margin:0 clamp(20px,4vw,48px)}
 .prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .6s var(--ease)}
 
-.wrap{max-width:760px;margin:0 auto;padding:clamp(32px,6vh,72px) 22px calc(132px + env(safe-area-inset-bottom))}
+.wrap{max-width:960px;margin:0 auto;padding:clamp(20px,4vh,44px) 22px calc(132px + env(safe-area-inset-bottom))}
+.step[data-step="1"]{max-width:680px;margin-inline:auto}
+.step[data-step="2"].on{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:22px}
+.step[data-step="2"]>.k,.step[data-step="2"]>h1,.step[data-step="2"]>.sub{grid-column:1/-1}
+.step[data-step="2"]>.sub{margin-block-end:22px}
+.step__review,.step__employee{min-width:0}
+.step__employee>.k{margin-block-end:11px}
+@media(max-width:760px){.step[data-step="2"].on{display:block}.step__review{margin-block-end:22px}}
 .step{display:none;animation:in .45s var(--ease)}
 .step.on{display:block}
 @keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -73,18 +80,19 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 .kb{border:1px solid var(--hair);margin-block-end:18px}
 .kb__h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-block-end:1px solid var(--hair);background:var(--wash);font-family:var(--f-display);font-size:.8rem;color:var(--ash)}
 .kb__h b{font-weight:400;color:var(--ink);font-size:.95rem}
-.kb__body{display:grid;grid-template-columns:110px 1fr;gap:22px;padding:20px;align-items:center}
-.coverage{--coverage:0;position:relative;width:92px;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--accent) calc(var(--coverage)*1%),var(--hair) 0)}
+.kb__body{display:grid;grid-template-columns:72px 1fr;gap:16px;padding:13px 16px;align-items:center}
+.kb__body--plain{display:block}
+.coverage{--coverage:0;position:relative;width:66px;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--accent) calc(var(--coverage)*1%),var(--hair) 0)}
 .coverage::after{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--paper)}
 .coverage strong{position:relative;z-index:1;font-family:var(--f-display);font-size:1.25rem;font-weight:300;font-variant-numeric:tabular-nums}
 .kb__summary{margin:0;color:var(--ink);font-size:.95rem;line-height:1.75}
 .kb__meta{display:flex;flex-wrap:wrap;gap:8px;margin-block-start:12px}
 .kb__meta span{font-size:.75rem;color:var(--ash);border:1px solid var(--hair);padding:3px 8px}
 .kb__g{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--hair)}
-.kb__g div{background:var(--paper);padding:12px 16px}
+.kb__g div{background:var(--paper);padding:8px 16px}
 .kb__v{font-family:var(--f-display);font-weight:300;font-size:1.35rem;line-height:1}
 .kb__l{font-size:.8rem;color:var(--ash);margin-block-start:5px}
-.kb__f{padding:11px 16px;font-size:.8rem;color:var(--ash);border-block-start:1px solid var(--hair);display:flex;align-items:center;gap:8px}
+.kb__f{padding:8px 16px;font-size:.8rem;color:var(--ash);border-block-start:1px solid var(--hair);display:flex;align-items:center;gap:8px}
 .kb__f b{color:var(--ink);font-weight:500}
 @media (max-width:600px){.kb__body{grid-template-columns:1fr}.coverage{width:76px}.kb__g{grid-template-columns:repeat(3,1fr)}.kb__g div{padding:10px}.kb__v{font-size:1.1rem}}
 
@@ -138,7 +146,7 @@ html[dir="ltr"] .fit i::after{transform-origin:left}
 
 /* الأزرار */
 .bar{position:fixed;inset-block-end:0;inset-inline:0;background:linear-gradient(to top,var(--paper) 70%,transparent);padding:18px 22px calc(20px + env(safe-area-inset-bottom))}
-.bar__in{max-width:680px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.bar__in{max-width:916px;margin:0 auto;display:flex;align-items:center;gap:12px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:49px;padding:10px 22px;border:1px solid var(--ink);border-radius:var(--radius-control);background:var(--ink);color:var(--paper);font-family:var(--f-display);font-weight:400;font-size:.94rem;transition:background .18s,border-color .18s,transform .18s}
 .btn:hover:not(:disabled){background:var(--accent);border-color:var(--accent);transform:translateY(-1px)}
 .btn:disabled{opacity:.35;cursor:not-allowed}
@@ -198,12 +206,16 @@ html[data-session="error"] .session-gate__actions{display:flex}
     <div class="k"><span class="drop"></span><span data-en="Your company">ملف شركتك</span></div>
     <h1 data-en="Your company, as we understand it.">هذه شركتك كما فهمناها.</h1>
     <p class="sub" data-en="Review what we found. Then choose your employee's first task.">راجع المعلومات، ثم اختر ما يبدأ به موظفك.</p>
+    <div class="step__review">
     <div id="companyRead"></div>
     <div id="identityNote" class="identity-note" hidden></div>
     <div id="companyInsights" class="insights"></div>
-    <div class="field"><label for="brief"><span data-en="What's the first task?">ما أول مهمة تريدها؟</span> <span class="optional" data-en="Optional">اختياري</span></label><textarea class="in" id="brief" placeholder="مثلًا: ابنِ لي موظف سوشيال ميديا." data-en-placeholder="For example: Build me a social media employee."></textarea></div>
+    </div>
+    <div class="step__employee">
+    <div class="field"><label for="brief"><span data-en="What's the first task?">ما أول مهمة تريدها؟</span> <span class="optional" data-en="Optional">اختياري</span></label><input class="in" id="brief" type="text" maxlength="500" placeholder="مثلًا: متابعة العملاء المحتملين" data-en-placeholder="For example: Follow up with new leads."></div>
     <div class="k"><span class="drop"></span><span data-en="Your first employee">موظفك الأول</span></div>
     <div id="plan"></div>
+    </div>
   </section>
 
   <p class="step-error" id="stepError" role="alert" hidden></p>

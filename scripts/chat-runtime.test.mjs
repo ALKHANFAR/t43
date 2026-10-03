@@ -71,6 +71,17 @@ test('selected real employee opens without placeholder metrics or invented activ
   }finally{p.close();}
 });
 
+test('new draft opens directly in chat with an unsent first question',async()=>{
+  const draft={...employee,status:'disabled',tools:[]};
+  const p=await page({hash:'#e='+encodeURIComponent(draft.recordId)+'&new=1',hydrate:{...empty,team:[draft]}});try{
+    assert.match(thread(p),/ابدأ بتجربة/);
+    assert.match(p.d.querySelector('#input').value,/وش تعرف عن شركتي/);
+    assert.equal(p.d.activeElement.id,'input');
+    assert.equal(p.requests.filter(request=>request.body.op==='message').length,0);
+    assert.match(p.d.querySelector('#startQuestion').textContent,/جهّز أول سؤال/);
+  }finally{p.close();}
+});
+
 test('routine draft work skips approval while severe final actions require it',()=>{
   assert.match(serverSource,/createManualEmployeeDraft/);
   assert.match(serverSource,/لم تُجهّز أدواته ولم يبدأ العمل بعد/);

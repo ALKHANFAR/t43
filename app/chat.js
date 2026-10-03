@@ -1599,7 +1599,7 @@ var I = {
     if(!window.__SIY_REAL__ && q.get("plan")){ PLAN.state=q.get("plan"); renderPlan(); openSheet("plan"); }
     if(q.get("tools")) openTools();
     if(window.__SIY_REAL__&&q.get("tool")){openTools();setTimeout(function(){openConnect(q.get("tool"));},0);}
-    if(q.get("e")&&emp(q.get("e"))){go(q.get("e"));if(q.get("new")==="1")$("#input").focus();}
+    if(q.get("e")&&emp(q.get("e"))){go(q.get("e"));if(q.get("new")==="1"){var firstInput=$("#input");if(emp(q.get("e")).draft&&!firstInput.value)firstInput.value=ui('وش تعرف عن شركتي من المعلومات المحفوظة؟ وما المعلومة الناقصة التي تحتاجها لتبدأ مهمتك؟','What do you know about my company from its saved information, and what do you still need to start?');firstInput.focus();}}
     if(q.get("say")){ if(window.__SIY_REAL__){ go("siyadah"); $("#input").value=q.get("say"); $("#input").focus(); } else setTimeout(function(){ send(q.get("say")); },200); }
     if(q.get("pal")){ $("#hq").value=q.get("pal")==="1"?"":q.get("pal"); $("#hq").focus(); openPal(); }
     if(!window.__SIY_REAL__ && q.get("run")==="build"&&!ranDemo.build){ ranDemo.build=true;

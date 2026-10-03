@@ -2,6 +2,7 @@
 import {createServer} from 'node:http';
 import {readFile, stat} from 'node:fs/promises';
 import {extname, resolve, sep} from 'node:path';
+import {recommendEmployees} from '../lib/company-profile.mjs';
 
 const root=resolve(import.meta.dirname,'..');
 const port=Number(process.env.SIYADAH_PREVIEW_PORT||8767);
@@ -14,12 +15,8 @@ let company='شركة مثال',description='نساعد الشركات على ت
 
 function json(res,status,value){res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store'});res.end(JSON.stringify(value));}
 async function readBody(req){let raw='';for await(const part of req){raw+=part;if(raw.length>8192)throw new Error('too_large');}return JSON.parse(raw||'{}');}
-function suggestions(){return [
-  {id:'marketing',roleKey:'marketing',name:'ريم',title:'موظفة التسويق',goal:'تجهز مسودات المحتوى للمراجعة.',reason:'مسودة محتوى من وصف شركتك.',confidence:80,knowledgeTopics:[]},
-  {id:'customer_support',roleKey:'customer_support',name:'فهد',title:'دعم العملاء',goal:'يرتب الأسئلة ويرفع ما يحتاج قرارك.',reason:'يبدأ من أسئلة العملاء المتكررة.',confidence:72,knowledgeTopics:[]},
-  {id:'operations',roleKey:'operations',name:'ليان',title:'العمليات',goal:'تنظم الطلبات ومراحل متابعتها.',reason:'تربط الطلب بخطوة واضحة.',confidence:64,knowledgeTopics:[]}
-];}
-function profile(){return {companyName:company,summary:description,pagesRead:0,factCount:0,coverageScore:0,knowledgeVersion:1,knowledgeAreas:[],rejectedClaims:0};}
+function profile(){return {companyName:company,summary:description,pagesRead:0,factCount:1,coverageScore:10,knowledgeVersion:1,knowledgeAreas:['company_profile'],rejectedClaims:0,facts:[{topic:'company_profile',value:description,sourceType:'user'}]};}
+function suggestions(goal=''){return recommendEmployees(profile(),goal||description);}
 async function api(req,res,path){
   if(path==='/siyadah-api/v1/auth/session'&&req.method==='GET')return json(res,200,{ok:true,preview:true});
   if(path==='/siyadah-api/v1/auth/logout'&&req.method==='POST')return json(res,200,{ok:true,preview:true});
@@ -32,7 +29,7 @@ async function api(req,res,path){
       description=String(input.description||description).trim().slice(0,1200)||description;
       return json(res,200,{ok:true,profile:profile(),suggestions:suggestions(),preview:true});
     }
-    if(input.op==='recommend_employees')return json(res,200,{ok:true,suggestions:suggestions(),preview:true});
+    if(input.op==='recommend_employees')return json(res,200,{ok:true,suggestions:suggestions(input.goal),preview:true});
     if(input.op==='select_employee'){
       const role=suggestions().find(item=>item.id===input.suggestion_id);
       if(!role)return json(res,400,{ok:false,error:'unknown_preview_role'});
