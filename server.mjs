@@ -443,7 +443,7 @@ async function publicChat(req,res){
           if(claim.status==='succeeded')await recordGmailPilotConversation({profiles,companyId,response:claim.response});
           return claim.status==='pending'?json(res,200,{ok:true,conversation_id:conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders):json(res,claim.httpStatus||200,claim.response,sessionHeaders);
         }
-        activeRequest={companyId,requestId,conversationId,profiles,effectStarted:false,executionAttempt:true,claimToken:claim.claimToken};
+        activeRequest={companyId,requestId,conversationId,profiles,userMessage:input.message,employeeId:null,effectStarted:false,executionAttempt:true,claimToken:claim.claimToken};
         const receipt=await runner.send({companyId,prepared,onDispatch:()=>{activeRequest.effectStarted=true;}});
         const response=gmailPilotSuccessResponse({conversationId,receipt});
         await recordGmailPilotConversation({profiles,companyId,response});
@@ -457,7 +457,7 @@ async function publicChat(req,res){
       const requestHash=createHash('sha256').update(JSON.stringify({message:input.message,employeeId:input.employee_id||null,priorRequestId:input.prior_request_id||null})).digest('hex');
       const profiles=await companyProfiles(),claim=await profiles.claimChatRequest({companyId,conversationId,requestId,requestHash});
       if(!claim.claimed)return claim.status==='pending'?json(res,200,{ok:true,conversation_id:conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders):json(res,claim.httpStatus||200,claim.response,sessionHeaders);
-      activeRequest={companyId,requestId,conversationId,profiles,effectStarted:false,executionAttempt:false,claimToken:claim.claimToken};
+      activeRequest={companyId,requestId,conversationId,profiles,userMessage:input.message,employeeId:null,effectStarted:false,executionAttempt:false,claimToken:claim.claimToken};
       const finish=async(status,response)=>{
         const settled=await profiles.settleChatRequest({companyId,requestId,status:'succeeded',httpStatus:status,response,claimToken:claim.claimToken});
         activeRequest=null;
@@ -466,6 +466,7 @@ async function publicChat(req,res){
       if(typeof input.employee_id==='string'&&input.employee_id){
         const saved=await profiles.findEmployee(companyId,input.employee_id);
         if(!saved)throw new CompanyProfileError('employee_not_found','الموظف غير موجود في شركتك.',404);
+        activeRequest.employeeId=saved.id;
         if(saved.status==='active'&&!saved.activepieces_flow_id)throw new CompanyProfileError('employee_not_ready','الموظف بلا طريقة عمل مهيأة.',409);
         if(saved.status!=='active'&&wantsEmployeeExecution(input.message)){
           const reply=saved.activepieces_flow_id?'الموظف متوقف الآن؛ فعّله بعد التحقق من أدواته قبل طلب التنفيذ.':'الموظف محفوظ كمسودة. لم تُجهّز أدواته وطريقة عمله بعد، ولم يبدأ تنفيذ المهمة.';
@@ -504,10 +505,17 @@ async function publicChat(req,res){
   }catch(error){
     if(activeRequest){
       console.error('chat request failed',error instanceof TenantProjectError||error instanceof CompanyProfileError?error.code:error?.name==='AbortError'?'AbortError':'unexpected_error');
-      const {companyId,requestId,conversationId,profiles,effectStarted,executionAttempt}=activeRequest;
+      const {companyId,requestId,conversationId,profiles,userMessage,employeeId,effectStarted,executionAttempt}=activeRequest;
       const status=effectStarted?'unknown':'failed',httpStatus=200;
       const response=failedChatExecution({conversationId,requestId,effectStarted,executionAttempt,transportReceipt:error?.transportReceipt});
-      try{const settled=await profiles.settleChatRequest({companyId,requestId,status,httpStatus,response});return json(res,settled.httpStatus,settled.response,sessionHeaders);}
+      try{
+        const settled=await profiles.settleChatRequest({companyId,requestId,status,httpStatus,response});
+        if(status==='failed'&&typeof userMessage==='string'&&userMessage.trim()){
+          try{await profiles.recordConversation({companyId,conversationId,employeeId,requestId,userMessage,assistantMessage:settled.response.reply});}
+          catch(saveError){console.error('failed chat conversation save failed',saveError?.code||saveError?.name||'unknown_error');}
+        }
+        return json(res,settled.httpStatus,settled.response,sessionHeaders);
+      }
       catch(completionError){console.error('chat request completion failed',completionError?.code||completionError?.name||'unknown_error');}
     }
     if(error instanceof TenantProjectError||error instanceof CompanyProfileError||error instanceof GmailPilotError)return json(res,error.status,{ok:false,error:error.code,message:error.message},sessionHeaders);

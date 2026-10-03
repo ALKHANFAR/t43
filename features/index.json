@@ -142,6 +142,7 @@
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='work')"},
         {"role": "claim", "path": "lib/company-profile.mjs", "anchor": "async function claimChatRequest({companyId,conversationId,requestId,requestHash})"},
         {"role": "result", "path": "lib/chat-outcome.mjs", "anchor": "export function failedChatExecution("},
+        {"role": "failed_message_context", "path": "server.mjs", "anchor": "if(status==='failed'&&typeof userMessage==='string'&&userMessage.trim())"},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "## Request identity and company boundary"},
         {"role": "test", "path": "scripts/chat-request-ledger-runtime.test.mjs", "anchor": "claimChatRequest(input)"}
       ]
