@@ -1230,6 +1230,7 @@ var I = {
         if(url==="/siyadah-api/v1/integrations"&&body.op==="disconnect"&&response.status===409){
           var failure=await response.json().catch(function(){return null;});
           if(failure&&failure.error==="connection_in_use")throw new Error(ui("الاتصال مستخدم في مهمة. أوقف المهمة أو تواصل مع الدعم قبل فصله.","A task still uses this connection. Stop the task or contact support before disconnecting."));
+          if(failure&&failure.error==="connection_usage_unknown")throw new Error(ui("تعذّر التأكد من المهام المرتبطة بالاتصال. بقي نشطًا؛ حاول مجددًا أو تواصل مع الدعم.","Could not verify tasks linked to this connection. It remains active; try again or contact support."));
         }
         throw new Error(ui("تعذّر الاتصال بالخادم. أعد المحاولة.","Could not reach the server. Try again."));
       }

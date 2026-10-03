@@ -119,13 +119,16 @@
         {"role": "owned_google_start", "path": "lib/tool-connections.mjs", "anchor": "async function oauthStart({tenantId,sessionBinding,requestOrigin,piece,values={}})"},
         {"role": "owned_google_finish", "path": "lib/tool-connections.mjs", "anchor": "async function oauthFinish({tenantId,sessionBinding,state,code})"},
         {"role": "disconnect_guard", "path": "lib/tool-connections.mjs", "anchor": "if(connection.flowIds.length)fail('connection_in_use'"},
+        {"role": "disconnect_unknown_guard", "path": "lib/tool-connections.mjs", "anchor": "if(!Array.isArray(rawFlowIds)||rawFlowIds.some"},
         {"role": "disconnect_customer_message", "path": "app/chat.js", "anchor": "if(failure&&failure.error===\"connection_in_use\")"},
+        {"role": "disconnect_unknown_message", "path": "app/chat.js", "anchor": "if(failure&&failure.error===\"connection_usage_unknown\")"},
         {"role": "single_use_attempt", "path": "lib/google-oauth-attempts.mjs", "anchor": "async consume({state,companyId,sessionBinding})"},
         {"role": "callback", "path": "server.mjs", "anchor": "async function googleOAuthCallback(req,res,url)"},
         {"role": "migration", "path": "migrations/0003-google-oauth-attempts.sql", "anchor": "CREATE TABLE IF NOT EXISTS siyadah_google_oauth_attempts"},
         {"role": "handoff", "path": "GOOGLE-OAUTH-PILOT.md", "anchor": "# Gmail connection under Siyadah"},
         {"role": "test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "owned Google Gmail OAuth is session-bound, single-use and project-exclusive"},
         {"role": "disconnect_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "in-use connection stays attached and is not reported as disconnected"},
+        {"role": "disconnect_unknown_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "unknown or malformed flow references fail closed before disconnect"},
         {"role": "ledger_test", "path": "scripts/google-oauth-attempts-runtime.test.mjs", "anchor": "OAuth attempt ledger stores hashes and consumes exactly once"}
       ]
     },
