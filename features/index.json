@@ -84,6 +84,22 @@
       ]
     },
     {
+      "id": "employee_chat_flow_context",
+      "name": "سؤال الموظف عن عمله وطريقة عمله في الشات",
+      "aliases": ["وش سجلت اليوم", "ماذا فعل الموظف", "شات الموظف والـFlow نفسه", "employee flow question"],
+      "state": "draft_pr",
+      "meaning": "فرع ABO-66 يقرأ بنية Flow وسجل تشغيلاته قراءة فقط بعد التحقق من شركة الموظف. يعرض حالة التشغيل دون ادعاء نتيجة مزود أو أثر تجاري. هذا لا يغير Flow ولا يثبت سلوك شات سيادة الحي قبل النشر.",
+      "linear": "ABO-66",
+      "locations": [
+        {"role": "intent", "path": "lib/chat-intelligence.mjs", "anchor": "export function wantsEmployeeExecution(message)"},
+        {"role": "route", "path": "server.mjs", "anchor": "const employeeFlow=saved.activepieces_flow_id?"},
+        {"role": "tenant_scoped_read", "path": "lib/tenant-projects.mjs", "anchor": "async function employeeFlowContext({tenantId,flowId})"},
+        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "## Employee Flow questions"},
+        {"role": "isolation_test", "path": "scripts/tenant-projects-runtime.test.mjs", "anchor": "employee flow context is read only, tenant scoped and omits step secrets"},
+        {"role": "intent_test", "path": "scripts/chat-intelligence-runtime.test.mjs", "anchor": "questions about employee work never dispatch a flow"}
+      ]
+    },
+    {
       "id": "chat_request_identity",
       "name": "منع تكرار طلب الشات ومعرفة حالته",
       "aliases": ["حالة الطلب", "اعادة المحاولة", "request id", "idempotency"],

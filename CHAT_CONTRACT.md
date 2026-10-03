@@ -35,6 +35,11 @@ For a provider result, require a terminal scoped run, the relevant step output, 
 
 Saving an employee draft requires the company database and does not provision Activepieces. A later preparation path must attach a company-owned flow to the saved employee ID, validate its tools, and then enable execution. A saved draft alone must never be described as execution-ready or activated.
 
+## Employee Flow questions
+
+When the customer asks a selected employee about its work, the server resolves the employee from the signed company session. If that employee has a Flow, the server reads the company-owned Flow and up to five recent run statuses. The chat receives only step labels, tool identifiers, Flow state/version, and scoped run IDs/statuses; it does not receive step settings, tokens, or run outputs. A run status is not a provider outcome. If the employee is still a local draft without a Flow, the chat receives `availability:not_prepared`. Recognized questions and negated commands do not dispatch a Flow. This read-only path does not modify instructions or the Flow draft; broader MCP capabilities remain in ABO-66's next stage.
+
+
 ## Release boundary
 
 This contract is part of PR #24, whose base is `codex/siyadah-integration-20260930`. A deployed build, an open PR, and a merge into that base or `main` are separate facts. Before merging, compare the exact head and base, verify the resolved Railway pre-deploy command and schema, run the relevant acceptance tests, and read provider results at their own evidence level. The earlier PRs remain review history and must not be merged again as parallel releases.

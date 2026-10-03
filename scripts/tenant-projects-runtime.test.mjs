@@ -103,6 +103,25 @@ test('lists only flows returned for the company stored project',async()=>{
   assert.equal((await service.listFlows('company_6006')).length,1);
 });
 
+test('employee flow context is read only, tenant scoped and omits step secrets',async()=>{
+  const flowId='F12345678901234567890',calls=[];
+  const flow={id:flowId,projectId,status:'DISABLED',version:{id:'draft_1',state:'DRAFT',trigger:{name:'trigger',type:'PIECE_TRIGGER',settings:{pieceName:'@activepieces/piece-webhook',token:'secret-trigger'},nextAction:{name:'step_1',type:'CODE',settings:{displayName:'تنظيم الطلب',code:'secret-code'}}}}};
+  const service=createTenantProjectService({query:async()=>({rows:[{activepieces_project_id:projectId,provision_status:'ready'}]}),activepiecesUrl:'https://activepieces.example',apiKey:'secret',fetchImpl:async(url,options={})=>{
+    calls.push({url,method:options.method||'GET'});
+    if(url.endsWith(`/flows/${flowId}`))return {ok:true,json:async()=>flow};
+    if(url.includes('/flow-runs?'))return {ok:true,json:async()=>({data:[{id:'run_1',projectId,flowId,status:'SUCCEEDED',created:'2026-10-04T00:00:00Z',steps:{step_1:{output:{token:'secret-output'}}}}]})};
+    throw new Error('unexpected request');
+  }});
+  const context=await service.employeeFlowContext({tenantId:'company_alpha',flowId});
+  assert.equal(context.status,'DISABLED');assert.equal(context.versionState,'DRAFT');
+  assert.deepEqual(context.steps.map(step=>step.name),['trigger','تنظيم الطلب']);
+  assert.deepEqual(context.runs.map(run=>run.id),['run_1']);
+  assert.doesNotMatch(JSON.stringify(context),/secret-/);
+  assert.deepEqual(calls.map(call=>call.method),['GET','GET']);
+  const foreign=createTenantProjectService({query:async()=>({rows:[{activepieces_project_id:'B12345678901234567890',provision_status:'ready'}]}),activepiecesUrl:'https://activepieces.example',apiKey:'secret',fetchImpl:async()=>({ok:true,json:async()=>flow})});
+  await assert.rejects(()=>foreign.employeeFlowContext({tenantId:'company_beta',flowId}),rejectsCode('flow_project_mismatch'));
+});
+
 test('two companies keep distinct projects and cannot receive each other flows',async()=>{
   const projects={
     company_alpha:'A12345678901234567890',
