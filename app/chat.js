@@ -361,7 +361,9 @@ var I = {
     if(who==="tools"){ t.innerHTML=toolsHtml(); bindTools(); return; }
     var list, w;
     if(isEmp()){ var e=emp(who); list=empThread(who); w=who;
-      t.innerHTML='<div class="col'+(window.__SIY_REAL__&&e.draft&&!list.length?' col--draft':'')+'">'+pinHtml(e)+'<div id="instrWrap" hidden>'+instrHtml(e)+'</div>'+list.map(function(m,i){return msgHtml(m,who,i)}).join("")+(window.__SIY_REAL__&&e.draft&&!list.length?'<div class="emp-start"><span class="drop" aria-hidden="true"></span><button type="button" id="reviewStart" aria-expanded="false" aria-controls="instrWrap">'+ui('راجع التعليمات','Review instructions')+'</button></div>':'')+siyEmployeeProofHtml(e,list)+'</div>';
+      var dash=window.__SIY_DASH__||{},researched=String(dash.researchedCompanyName||''),account=String(dash.company||'');
+      var sourceNote=window.__SIY_REAL__&&researched&&account&&researched.localeCompare(account,undefined,{sensitivity:'base'})!==0?'<div class="identity-note">'+ui('اسم الحساب: ','Account: ')+esc(account)+' · '+ui('المعرفة المقروءة من موقع: ','Website knowledge: ')+esc(researched)+'</div>':'';
+      t.innerHTML='<div class="col'+(window.__SIY_REAL__&&e.draft&&!list.length?' col--draft':'')+'">'+pinHtml(e)+sourceNote+'<div id="instrWrap" hidden>'+instrHtml(e)+'</div>'+list.map(function(m,i){return msgHtml(m,who,i)}).join("")+(window.__SIY_REAL__&&e.draft&&!list.length?'<div class="emp-start"><span class="drop" aria-hidden="true"></span><div><b>'+ui('ابدأ بتجربة ','Try a first conversation with ')+esc(e.n)+'</b><p>'+ui('اسأله عمّا يعرفه عن شركتك وما يحتاج منك توضيحه. أدواته لم تُربط بعد، ولن ينفذ إجراءً خارجيًا.','Ask what it knows about your company and what it needs clarified. Tools are not connected, so no external action will run.')+'</p><button type="button" id="startQuestion">'+ui('جهّز أول سؤال','Prepare first question')+'</button> · <button type="button" id="reviewStart" aria-expanded="false" aria-controls="instrWrap">'+ui('راجع التعليمات','Review instructions')+'</button></div></div>':'')+siyEmployeeProofHtml(e,list)+'</div>';
     } else {
       list = chatId ? CHATS[chatId].msgs : (live.siyadah||[]); w = chatId? CHATS[chatId].with : who;
       if(!list.length){ /* افتتاحية «اليوم»: سيادة تبدأ الكلام — كل أرقامها محسوبة من البيانات لحظتها */
@@ -890,6 +892,7 @@ var I = {
     /* «التفاصيل»: يفتح مربعات الأرقام الأربعة بدون إعادة رسم — ويرجع مطويًا مع كل زيارة */
     if(t.closest("#kpiTgl")){ var kw=$("#kpiWrap"), kb=$("#kpiTgl"); kw.hidden=!kw.hidden; kb.setAttribute("aria-expanded",String(!kw.hidden)); kpiOpen=kw.hidden?null:who; return; }
     if(t.closest("#draftTools")){ openTools(); return; }
+    if(t.closest("#startQuestion")){var input=$("#input");input.value=ui('وش تعرف عن شركتي من المعلومات المحفوظة؟ وما المعلومة الناقصة التي تحتاجها لتبدأ مهمتك؟','What do you know about my company from its saved information, and what do you still need to start?');input.focus();return;}
     if(t.closest("#reviewStart")){ var draftWrap=$("#instrWrap"), review=$("#reviewStart");draftWrap.hidden=!draftWrap.hidden;review.setAttribute('aria-expanded',String(!draftWrap.hidden));if(!draftWrap.hidden){$("#thread").scrollTop=0;$("#instr").focus();}return; }
     if(t.closest("#instrTgl")){ var w=$("#instrWrap"), b=$("#instrTgl"); w.hidden=!w.hidden; b.setAttribute("aria-expanded",String(!w.hidden)); if(!w.hidden){ $("#thread").scrollTop=0; $("#instr").focus(); } return; }
     if(t.closest("#onSw")){ if(window.__SIY_REAL__){ siySetEmployeeState(emp(who)); return; } var sw=$("#onSw"), eo=emp(who), v=sw.getAttribute("aria-checked")==="true"; sw.setAttribute("aria-checked",String(!v)); eo.on=!v; $("#onLbl").textContent=eo.on?(eo.f?"شغّالة":"شغّال"):(eo.f?"متوقفة":"متوقف"); renderSide(); siyPatch(eo.n,"status",eo.on?"نشط":"متوقف"); return; }
@@ -1332,6 +1335,7 @@ var I = {
       if(voice)voice.value=String(settings.voice||"");if(language)language.value=["ar","en","auto"].includes(settings.language)?settings.language:"ar";if(dialect)dialect.value=String(settings.dialect||"");
       if(preferred)preferred.value=Array.isArray(settings.preferredWords)?settings.preferredWords.join("، "):"";if(forbidden)forbidden.value=Array.isArray(settings.forbiddenWords)?settings.forbiddenWords.join("، "):"";
     }
+    if(typeof data.researchedCompanyName==='string')dash.researchedCompanyName=data.researchedCompanyName;
     EMPS.forEach(function(e){
       var verified=(dash.recent_work||[]).some(function(r){
         return r.employeeId===e.id && r.flowId===e.flowId && r.status==='succeeded' &&
@@ -1595,7 +1599,7 @@ var I = {
     if(!window.__SIY_REAL__ && q.get("plan")){ PLAN.state=q.get("plan"); renderPlan(); openSheet("plan"); }
     if(q.get("tools")) openTools();
     if(window.__SIY_REAL__&&q.get("tool")){openTools();setTimeout(function(){openConnect(q.get("tool"));},0);}
-    if(q.get("e")&&emp(q.get("e"))) go(q.get("e"));
+    if(q.get("e")&&emp(q.get("e"))){go(q.get("e"));if(q.get("new")==="1")$("#input").focus();}
     if(q.get("say")){ if(window.__SIY_REAL__){ go("siyadah"); $("#input").value=q.get("say"); $("#input").focus(); } else setTimeout(function(){ send(q.get("say")); },200); }
     if(q.get("pal")){ $("#hq").value=q.get("pal")==="1"?"":q.get("pal"); $("#hq").focus(); openPal(); }
     if(!window.__SIY_REAL__ && q.get("run")==="build"&&!ranDemo.build){ ranDemo.build=true;

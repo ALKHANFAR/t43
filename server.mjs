@@ -171,6 +171,8 @@ async function onboarding(req,res){
       coverageScore:profile.coverageScore,pagesRead:profile.pagesRead,knowledgeVersion:profile.knowledgeVersion,
       factCount:Array.isArray(profile.facts)?profile.facts.length:0,
       knowledgeAreas:Array.from(new Set((profile.facts||[]).map(item=>item.topic))).slice(0,6),
+      highlights:(profile.facts||[]).filter(item=>['services','products','target_customers','brand','faq','policies','delivery'].includes(item.topic))
+        .slice(0,3).map(item=>({topic:item.topic,value:String(item.value||'').slice(0,180),sourceType:item.sourceType,sourceUrl:item.sourceUrl||null})),
       proofScore:Number(profile.proofScore||0),rejectedClaims:Number(profile.rejectedClaims||0),
       conflictsCount:Array.isArray(profile.conflicts)?profile.conflicts.length:0,
       missingCritical:Array.isArray(profile.missingCritical)?profile.missingCritical.slice(0,6):[],
@@ -337,6 +339,7 @@ async function deepseekReply({company,settings,knowledge,team,history,message,em
   const memory=conversationMemory(history);
   const system=`أنت سيادة، شريك أعمال ذكي.
 أمامك سياق حي عن الشركة ومعرفتها وإعداداتها وفريقها، وعن الموظف المختار وتعليماته إن وُجد.
+اسم الحساب في company.name هو هوية العميل؛ اسم الموقع في company.researchedCompanyName قد يختلف. لا تنسب حقائق الموقع للحساب إذا اختلف الاسمان، واطلب من العميل تأكيد العلاقة عند الحاجة.
 افهم هدف المستخدم من المحادثة والسياق، ثم فكّر وتصرّف ورد بالطريقة التي تراها الأنسب.
 نفّذ طلب الرسالة الحالية أولًا، والتزم بطول وصيغة الإجابة التي يحددها المستخدم، ولا تكرر ما حُسم دون حاجة.
 ميّز بوضوح بين الاقتراح والتنفيذ، ولا تدّع تنفيذ إجراء خارجي دون دليل تشغيل فعلي.
@@ -370,7 +373,7 @@ async function publicChat(req,res){
     if(input.op==='hydrate'){
       const profiles=await companyProfiles(),saved=await profiles.listEmployees(companyId);
       const profile=await profiles.read(companyId),recentWork=await profiles.recentWork(companyId);
-      return json(res,200,{ok:true,company:profile?.company_name||resolved.account.company_name,company_settings:await profiles.readSettings(companyId),team:saved,memory:[],owned_knowledge:await profiles.ownedKnowledge(companyId),recent_work:recentWork,work_count:recentWork.length,conversations:await profiles.listConversations(companyId),pending_work:[]},sessionHeaders);
+      return json(res,200,{ok:true,company:resolved.account.company_name,researchedCompanyName:profile?.company_name||null,company_settings:await profiles.readSettings(companyId),team:saved,memory:[],owned_knowledge:await profiles.ownedKnowledge(companyId),recent_work:recentWork,work_count:recentWork.length,conversations:await profiles.listConversations(companyId),pending_work:[]},sessionHeaders);
     }
     if(input.op==='work'){
       const requestId=typeof input.request_id==='string'?input.request_id:typeof input.work_id==='string'&&input.work_id.startsWith('request_')?input.work_id.slice(8):'';
@@ -480,7 +483,7 @@ async function publicChat(req,res){
           return finish(200,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',outcome_kind:'external_run',work_id:proof.work_id,reply,employee:updated,recent_work:[proof]});
         }
         const profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId),conversations=await profiles.listConversations(companyId),conversation=conversations.find(item=>item.id===conversationId);
-        const reply=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history:conversation?.messages||[],message:input.message,employee:saved});
+        const reply=await deepseekReply({company:{name:resolved.account.company_name,researchedCompanyName:profile?.company_name||null,profile:profile?.profile_json||{}},settings,knowledge,team,history:conversation?.messages||[],message:input.message,employee:saved});
         await profiles.recordConversation({companyId,conversationId,employeeId:saved.id,requestId,userMessage:input.message,assistantMessage:reply});
         return finish(200,completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply,experience:{employee_conversation:true,employee_id:saved.id,instruction_version:Number(saved.prompt_version||1),external_execution:false}}));
       }
@@ -492,7 +495,7 @@ async function publicChat(req,res){
         return finish(201,completedWithoutExecution('employee_draft',{ok:true,conversation_id:conversationId,reply,employee:created}));
       }
       const profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId),conversations=await profiles.listConversations(companyId),conversation=conversations.find(item=>item.id===conversationId);
-      const reply=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history:conversation?.messages||[],message:input.message});
+      const reply=await deepseekReply({company:{name:resolved.account.company_name,researchedCompanyName:profile?.company_name||null,profile:profile?.profile_json||{}},settings,knowledge,team,history:conversation?.messages||[],message:input.message});
       await profiles.recordConversation({companyId,conversationId,employeeId:null,requestId,userMessage:input.message,assistantMessage:reply});
       return finish(200,completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply,experience:{understood_company:true,knowledge_version:Number(knowledge?.knowledgeVersion||0),catalog_reviewed:true}}));
     }

@@ -47,6 +47,14 @@ test('English task descriptions influence employee recommendations',()=>{
   assert.equal(suggestions[0].roleKey,'marketing');
 });
 
+test('recommended first task reflects a company fact without inventing a success rate',()=>{
+  const profile={companyName:'شركة اختبار',facts:[{topic:'services',value:'استشارات تأسيس الشركات',sourceType:'company_website'}]};
+  const suggestions=recommendEmployees(profile,'أريد متابعة العملاء');
+  assert.equal(suggestions[0].roleKey,'sales_leads');
+  assert.match(suggestions[0].firstTask,/استشارات تأسيس الشركات/);
+  assert.equal('confidence' in suggestions[0],false);
+});
+
 test('deep profile accepts only claims backed by an exact quote on an allowed page',()=>{
   const url='https://example.com/about';
   const profile=normalizeAgentProfile({claims:[

@@ -43,7 +43,7 @@ button{cursor:pointer}
 .prog{height:1.5px;background:var(--hair);margin:0 clamp(20px,4vw,48px)}
 .prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .6s var(--ease)}
 
-.wrap{max-width:680px;margin:0 auto;padding:clamp(40px,8vh,90px) 22px calc(132px + env(safe-area-inset-bottom))}
+.wrap{max-width:760px;margin:0 auto;padding:clamp(32px,6vh,72px) 22px calc(132px + env(safe-area-inset-bottom))}
 .step{display:none;animation:in .45s var(--ease)}
 .step.on{display:block}
 @keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -115,6 +115,12 @@ html[dir="ltr"] .fit i::after{transform-origin:left}
 .choice b{display:block;font-family:var(--f-display);font-size:.78rem;font-weight:400;color:var(--accent);margin-block-end:4px}
 .choice p{margin:0;color:var(--ink);font-size:.875rem;line-height:1.65}
 .choice small{display:block;color:var(--ash);margin-block-start:6px;font-size:.75rem}
+.insights{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-block-end:22px}
+.insight{border:1px solid var(--hair);padding:12px 14px;background:var(--paper)}
+.insight b{display:block;color:var(--ash);font-family:var(--f-display);font-size:.75rem;font-weight:400;margin-block-end:5px}
+.insight p{margin:0;font-size:.86rem;line-height:1.55}
+.insight a{display:inline-block;margin-block-start:5px;color:var(--accent);font-size:.72rem}
+.identity-note{border:1px solid var(--accent-edge);background:var(--accent-wash);padding:12px 14px;font-size:.83rem;margin-block-end:16px}
 .note{font-size:.8rem;color:var(--ash);display:flex;align-items:center;gap:8px;margin-block-end:22px}
 .step-error{margin:20px 0 0;padding:12px 16px;border:1px solid var(--error);border-radius:var(--radius-control);background:var(--error-wash);color:var(--error-ink);font-size:var(--type-label);line-height:var(--leading-note)}
 
@@ -165,7 +171,7 @@ html[data-session="error"] .session-gate__actions{display:flex}
 <div id="onboardApp">
 <a class="skip" href="#main" data-en="Skip to content">تجاوز إلى المحتوى</a>
 
-<header class="top"><span class="logo" role="img" aria-label="سيادة" data-en-aria-label="Siyadah"></span><div class="top__actions"><small id="stepLbl">1 من 4</small><div class="lang-switch" role="group" aria-label="اللغة" data-en-aria-label="Language"><button type="button" id="langAr" aria-pressed="true">عربي</button><button type="button" id="langEn" aria-pressed="false">EN</button></div><button class="top__logout" id="logoutBtn" type="button" data-en="Log out">خروج</button></div><p class="logout-status" id="logoutStatus" role="alert"></p></header>
+<header class="top"><span class="logo" role="img" aria-label="سيادة" data-en-aria-label="Siyadah"></span><div class="top__actions"><small id="stepLbl">1 من 2</small><div class="lang-switch" role="group" aria-label="اللغة" data-en-aria-label="Language"><button type="button" id="langAr" aria-pressed="true">عربي</button><button type="button" id="langEn" aria-pressed="false">EN</button></div><button class="top__logout" id="logoutBtn" type="button" data-en="Log out">خروج</button></div><p class="logout-status" id="logoutStatus" role="alert"></p></header>
 <div class="prog"><i id="prog"></i></div>
 
 <main class="wrap" id="main">
@@ -193,23 +199,11 @@ html[data-session="error"] .session-gate__actions{display:flex}
     <h1 data-en="Your company, as we understand it.">هذه شركتك كما فهمناها.</h1>
     <p class="sub" data-en="Review what we found. Then choose your employee's first task.">راجع المعلومات، ثم اختر ما يبدأ به موظفك.</p>
     <div id="companyRead"></div>
+    <div id="identityNote" class="identity-note" hidden></div>
+    <div id="companyInsights" class="insights"></div>
     <div class="field"><label for="brief"><span data-en="What's the first task?">ما أول مهمة تريدها؟</span> <span class="optional" data-en="Optional">اختياري</span></label><textarea class="in" id="brief" placeholder="مثلًا: ابنِ لي موظف سوشيال ميديا." data-en-placeholder="For example: Build me a social media employee."></textarea></div>
-  </section>
-
-  <!-- 3 — الخطة -->
-  <section class="step" data-step="3">
-    <div class="k"><span class="drop"></span><span data-en="Suggestions">اقتراحاتك</span></div>
-    <h1 id="h3" data-en="Choose your first employee.">اختر أول موظف.</h1>
-    <p class="sub" id="s3" data-en="Select a role to see why it fits.">اختر اقتراحًا لترى سبب ملاءمته.</p>
+    <div class="k"><span class="drop"></span><span data-en="Your first employee">موظفك الأول</span></div>
     <div id="plan"></div>
-  </section>
-
-  <!-- 4 — شغّل -->
-  <section class="step done" data-step="4">
-    <div class="av" id="doneAv">س</div>
-    <h1 id="doneH" data-en="Your employee draft is ready.">مسودة موظفك جاهزة.</h1>
-    <p class="sub" id="doneP" data-en="Review the role and company knowledge. Tools are not connected.">دوره ومعرفته جاهزان للمراجعة. أدواته غير متصلة.</p>
-    <div class="receipt" role="group" aria-label="حالة الموظف" data-en-aria-label="Employee status"><div class="receipt__h" data-en="Employee status">حالة الموظف</div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-10"/></svg><span data-en="Company knowledge">معرفة الشركة</span><small id="doneKnowledge">الإصدار 1</small></div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-10"/></svg><span data-en="Role and instructions">الدور والتعليمات</span><small data-en="Ready to review">جاهزة</small></div><div class="receipt__row"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4"/></svg><span data-en="Tools and execution">الأدوات والتنفيذ</span><small data-en="Not connected">بانتظار الربط</small></div></div>
   </section>
 
   <p class="step-error" id="stepError" role="alert" hidden></p>
@@ -240,6 +234,7 @@ html[data-session="error"] .session-gate__actions{display:flex}
     try{
       var response=await fetch('/siyadah-api/v1/auth/session',{credentials:'same-origin',signal:controller.signal});
       if(!response.ok)throw new Error(response.status===401?'expired':'unavailable');
+      var session=typeof response.json==='function'?await response.json().catch(function(){return {}; }):{};window.__SIY_ACCOUNT_NAME__=session&&session.account&&session.account.companyName||'';
       root.dataset.session='ready';
       var script=document.createElement('script');script.src='onboard.js?v=1.9.0';document.body.appendChild(script);
     }catch(error){

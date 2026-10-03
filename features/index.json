@@ -51,6 +51,23 @@
       ]
     },
     {
+      "id": "onboarding_compact_experience",
+      "name": "فهم الشركة واختيار الموظف ثم فتح الشات مباشرة",
+      "aliases": ["صفحة اثنين", "اقتراحات الموظفين", "أول موظف", "صفحة الموظف فاضية", "اسم شركة أخرى", "onboarding insights", "direct chat after draft"],
+      "state": "draft_pr",
+      "meaning": "تعديل ABO-64 يجمع ملخص الشركة وحقائقها المسندة والاقتراحات في خطوة ثانية واحدة، يزيل نسب الملاءمة غير المعايرة، ويحفظ المسودة ثم يفتح شات الموظف مباشرة. اسم الحساب يبقى منفصلًا عن اسم الموقع المقروء؛ الشات يعرض الاختلاف بوضوح. لا يعد تشغيل الأداة أو نتيجة خارجية.",
+      "linear": "ABO-64",
+      "locations": [
+        {"role": "screen", "path": "app/onboard.html", "anchor": "id=\"companyInsights\""},
+        {"role": "selection", "path": "app/onboard.js", "anchor": "async function refreshRecommendations()"},
+        {"role": "research", "path": "lib/company-profile.mjs", "anchor": "const AGENT_PROMPT="},
+        {"role": "recommendation", "path": "lib/company-profile.mjs", "anchor": "export function recommendEmployees(profile,goal='')"},
+        {"role": "account_identity", "path": "server.mjs", "anchor": "researchedCompanyName:profile?.company_name||null"},
+        {"role": "chat_start", "path": "app/chat.js", "anchor": "id=\"startQuestion\""},
+        {"role": "test", "path": "scripts/onboarding-runtime.test.mjs", "anchor": "step two shows sourced company details"}
+      ]
+    },
+    {
       "id": "legacy_employee_flow_inventory",
       "name": "فحص تدفقات الموظفين القديمة قبل نشر الحفظ المحلي",
       "aliases": ["التدفقات القديمة", "تدفق بلا موظف", "legacy employee flows", "migration gate"],
