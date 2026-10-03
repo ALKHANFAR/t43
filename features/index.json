@@ -104,7 +104,7 @@
       "name": "ربط أداة الشركة عند الحاجة",
       "aliases": ["ربط الأدوات", "اتصال أداة", "تسجيل دخول الأداة", "OAuth الأداة", "كتالوج الأدوات", "company tool connection", "tool catalog"],
       "state": "gap",
-      "meaning": "كتالوج الأدوات يعرض 762 أداة بأيقونات من نطاق سيادة. مسار Gmail OAuth التجريبي يطلب صلاحية الإرسال فقط، ويشترط تطابق نطاق الصفحة والعودة، ومحاولة واحدة مرتبطة بجلسة الشركة، ورفض اتصال مشترك. لم ينشأ عميل Google بديل بعد حذف العملاء الثلاثة، ولم تثبت عودة Google أو نتيجة أداة حية؛ بقية OAuth محجوبة.",
+      "meaning": "كتالوج الأدوات يعرض 762 أداة بأيقونات من نطاق سيادة. مسار Gmail OAuth الإنتاجي يطلب صلاحية الإرسال فقط، ويشترط تطابق نطاق الصفحة والعودة، ومحاولة واحدة مرتبطة بجلسة الشركة، ورفض اتصال مشترك. أثبتت شركة 43 ربطًا وإرسالًا حقيقيًا وظهور رسالة في الوارد؛ طلب مراجعة Google ما زال قيد النظر، ولا تثبت تجربة شركة واحدة عزل جميع العملاء. عند استخدام تدفق لاتصال، يرفض طلب الفصل برسالة واضحة ولا يدّعي نجاحه أو يحذف الاتصال؛ إزالة الاعتماد من التدفق قبل الفصل ما زالت تحتاج مسارًا وظيفيًا.",
       "linear": "ABO-61",
       "pr": "https://github.com/ALKHANFAR/t43/pull/24",
       "locations": [
@@ -118,11 +118,14 @@
         {"role": "tenant_scope", "path": "lib/tool-connections.mjs", "anchor": "async function selected({tenantId,piece,type})"},
         {"role": "owned_google_start", "path": "lib/tool-connections.mjs", "anchor": "async function oauthStart({tenantId,sessionBinding,requestOrigin,piece,values={}})"},
         {"role": "owned_google_finish", "path": "lib/tool-connections.mjs", "anchor": "async function oauthFinish({tenantId,sessionBinding,state,code})"},
+        {"role": "disconnect_guard", "path": "lib/tool-connections.mjs", "anchor": "if(connection.flowIds.length)fail('connection_in_use'"},
+        {"role": "disconnect_customer_message", "path": "app/chat.js", "anchor": "if(failure&&failure.error===\"connection_in_use\")"},
         {"role": "single_use_attempt", "path": "lib/google-oauth-attempts.mjs", "anchor": "async consume({state,companyId,sessionBinding})"},
         {"role": "callback", "path": "server.mjs", "anchor": "async function googleOAuthCallback(req,res,url)"},
         {"role": "migration", "path": "migrations/0003-google-oauth-attempts.sql", "anchor": "CREATE TABLE IF NOT EXISTS siyadah_google_oauth_attempts"},
         {"role": "handoff", "path": "GOOGLE-OAUTH-PILOT.md", "anchor": "# Gmail connection under Siyadah"},
         {"role": "test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "owned Google Gmail OAuth is session-bound, single-use and project-exclusive"},
+        {"role": "disconnect_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "in-use connection stays attached and is not reported as disconnected"},
         {"role": "ledger_test", "path": "scripts/google-oauth-attempts-runtime.test.mjs", "anchor": "OAuth attempt ledger stores hashes and consumes exactly once"}
       ]
     },
