@@ -138,7 +138,7 @@
       "name": "فصل حساب Google وكل أدواته",
       "aliases": ["فصل قوقل بالكامل", "فصل جميع أدوات Google", "إلغاء وصول Google", "disconnect Google account", "revoke Google access"],
       "state": "gap",
-      "meaning": "فصل الاتصال الفردي يرفض الاعتماد الظاهر في Activepieces، ويفحص أيضًا كل نسخ Flow المنشورة لأن قائمة flowIds قد تخفي مرجع نسخة منشورة عند وجود مسودة أحدث. فُحص الخلل حيًا في Activepieces 0.92.1 وصُحح الحارس في هذا الفرع محليًا. لا يوجد بعد مسار يحدد جميع اتصالات حساب Google نفسه ويلغي منحة Google؛ لذلك لا يُسمى الفصل الفردي فصلًا شاملًا.",
+      "meaning": "فصل الاتصال الفردي يرفض الاعتماد الظاهر في Activepieces، ويفحص أيضًا كل نسخ Flow المنشورة لأن قائمة flowIds قد تخفي مرجع نسخة منشورة عند وجود مسودة أحدث. ثبت هذا السلوك حيًا في Activepieces 0.92.1، ويغلق حارس سيادة فجوة الفصل الفردي. لا يوجد بعد مسار يحدد جميع اتصالات حساب Google نفسه ويلغي منحة Google؛ لذلك لا يُسمى الفصل الفردي فصلًا شاملًا.",
       "linear": "ABO-63",
       "locations": [
         {"role": "published_dependency_guard", "path": "lib/tool-connections.mjs", "anchor": "async function publishedFlowUsesConnection(projectId,externalId)"},
