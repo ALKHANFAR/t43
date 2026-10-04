@@ -214,7 +214,7 @@ async function integrations(req,res){
     if(input.op==='oauth_start')return json(res,200,{ok:true,...await service.oauthStart({tenantId,sessionBinding:oauthSessionBinding(req),requestOrigin:req.headers.origin,piece:input.piece,values:input.values})});
     if(input.op==='oauth_finish')throw new TenantProjectError('oauth_callback_required','أكمل الربط من نافذة Google.',409);
     if(input.op==='revalidate')return json(res,200,{ok:true,connection:await service.revalidate({tenantId,id:input.connection_id})});
-    if(input.op==='disconnect')return json(res,200,{ok:true,...await service.disconnect({tenantId,id:input.connection_id})});
+    if(input.op==='disconnect')return json(res,200,{ok:true,...await service.disconnect({tenantId,id:input.connection_id,confirmInUse:input.confirm_in_use===true})});
     return json(res,400,{ok:false,error:'unsupported_operation'});
   }catch(error){
     if(error instanceof TenantProjectError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
