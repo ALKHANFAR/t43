@@ -382,7 +382,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
     }
   }
   const readOnly=name=>/^ap_(?:search_|list_|get_|read_|research_|resolve_|flow_structure$|setup_guide$)/.test(name);
-  const tools=available.filter(tool=>/^ap_[a-z_]+$/.test(tool.name)&&(!employee||employee.status==='active'||readOnly(tool.name))).map(tool=>({type:'function',function:{name:tool.name,description:String(tool.description||'').slice(0,1000),parameters:tool.inputSchema||{type:'object',properties:{}}}}));
+  const tools=available.filter(tool=>/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(tool.name)&&(!employee||employee.status==='active'||readOnly(tool.name))).map(tool=>({type:'function',function:{name:tool.name,description:String(tool.description||'').slice(0,1000),parameters:tool.inputSchema||{type:'object',properties:{}}}}));
   if(tools.length)messages[0].content+='\nأدوات Activepieces متاحة لمشروع هذه الشركة فقط. استخدم الاكتشاف وفحص المدخلات والاتصال قبل أي إجراء. لا تفترض نجاحًا من الوصف أو اتصال محفوظ. أي أداة قد تغيّر حالة أو تستدعي تطبيقًا خارجيًا ستتوقف حتى موافقة واضحة؛ لا تعد المستخدم بأنها نُفذت قبل عودة نتيجتها.';
   try{
     for(let turn=0;turn<5;turn++){
