@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createToolConnectionService} from '../lib/tool-connections.mjs';
 
-const PROJECT='P'.repeat(21),OTHER='Q'.repeat(21),CONNECTION='C'.repeat(21),FLOW='F'.repeat(21);
+const PROJECT='P'.repeat(21),OTHER='Q'.repeat(21),CONNECTION='C'.repeat(21),FLOW='F'.repeat(21),SECOND_FLOW='G'.repeat(21);
 const stripe={name:'@activepieces/piece-stripe',displayName:'Stripe',version:'0.7.0',auth:{type:'SECRET_TEXT',displayName:'Secret API Key',required:true}};
 const whatsapp={name:'@activepieces/piece-whatsapp',displayName:'WhatsApp',version:'1.0.0',auth:{type:'CUSTOM_AUTH',required:true,props:{access_token:{displayName:'Access token',required:true,type:'SECRET_TEXT'},businessAccountId:{displayName:'Business ID',required:true,type:'SHORT_TEXT'}}}};
 const SEND_SCOPE='https://www.googleapis.com/auth/gmail.send',ORIGIN='https://accounts.siyadah-ai.com';
@@ -28,7 +28,9 @@ function harness(overrides={}){
     }
     if(url.includes('/oauth2/authorization-url'))return response(200,{authorizationUrl:'https://accounts.google.com/o/oauth2/auth?client_id=google-client'});
     if(url.includes('/revalidate'))return response(200,{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:projects('revalidate')});
-    if(options.method==='DELETE')return response(204,{});
+    if(url.endsWith(`/api/v1/flows/${FLOW}`)&&options.method==='POST')return response(200,overrides.pauseResponse??{id:FLOW,projectId:PROJECT,status:'DISABLED'});
+    if(url.endsWith(`/api/v1/flows/${SECOND_FLOW}`)&&options.method==='POST')return response(overrides.secondPauseStatus||200,{id:SECOND_FLOW,projectId:PROJECT,status:'DISABLED'});
+    if(options.method==='DELETE')return response(overrides.deleteStatus||204,{});
     if(url.includes(`/app-connections/${CONNECTION}`))return response(200,{id:CONNECTION,externalId:'company-a-stripe',pieceName:'@activepieces/piece-stripe',scope:'PROJECT',projectIds:projects('get'),flowIds:Object.hasOwn(overrides,'getFlowIds')?overrides.getFlowIds:[]});
     if(url.includes('/api/v1/flows?')){const query=new URL(url).searchParams,cursor=query.get('cursor'),state=query.get('versionState');return response(200,overrides.flowPages?.[state]?.[cursor||'first']??(state==='LOCKED'?overrides.publishedPages?.[cursor||'first']:undefined)??{data:[],next:null});}
     if(url.includes('/app-connections?'))return response(200,{data:[{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:projects('list'),projectId:overrides.projectIdOnly?PROJECT:undefined,flowIds:[FLOW,'invalid']}]});
@@ -152,24 +154,29 @@ test('revalidates and disconnects only after ownership readback',async()=>{
   assert.equal(calls.filter(call=>call.options.method==='DELETE').length,1);
 });
 
-test('in-use connection stays attached and is not reported as disconnected',async()=>{
-  const {service,calls}=harness({getFlowIds:[FLOW]});
+test('in-use connection requires explicit confirmation and pauses its enabled flow before deletion',async()=>{
+  const published={id:FLOW,projectId:PROJECT,status:'ENABLED',publishedVersionId:'V'.repeat(21),version:{id:'V'.repeat(21),state:'LOCKED',connectionIds:['company-a-stripe']}};
+  const {service,calls}=harness({getFlowIds:[FLOW],publishedPages:{first:{data:[published],next:null}}});
   await assert.rejects(
     ()=>service.disconnect({tenantId:'company-a',id:CONNECTION}),
     error=>error.code==='connection_in_use'&&error.status===409
   );
   assert.equal(calls.some(call=>call.options.method==='DELETE'),false);
+  const result=await service.disconnect({tenantId:'company-a',id:CONNECTION,confirmInUse:true});
+  assert.equal(result.pausedFlowCount,1);
+  assert.equal(calls.filter(call=>call.options.method==='POST'&&call.url.endsWith(`/flows/${FLOW}`)).length,1);
+  assert.equal(calls.filter(call=>call.options.method==='DELETE').length,1);
 });
 
 test('published flow reference blocks disconnect even when connection flowIds omits it',async()=>{
-  const published={id:FLOW,projectId:PROJECT,publishedVersionId:'V'.repeat(21),version:{id:'V'.repeat(21),state:'LOCKED',connectionIds:['company-a-stripe']}};
+  const published={id:FLOW,projectId:PROJECT,status:'DISABLED',publishedVersionId:'V'.repeat(21),version:{id:'V'.repeat(21),state:'LOCKED',connectionIds:['company-a-stripe']}};
   const {service,calls}=harness({getFlowIds:[],publishedPages:{first:{data:[published],next:null}}});
   await assert.rejects(()=>service.disconnect({tenantId:'company-a',id:CONNECTION}),error=>error.code==='connection_in_use'&&error.status===409);
   assert.equal(calls.some(call=>call.options.method==='DELETE'),false);
 });
 
 test('checks later pages of published flows before disconnect',async()=>{
-  const published={id:FLOW,projectId:PROJECT,publishedVersionId:'V'.repeat(21),version:{id:'V'.repeat(21),state:'LOCKED',connectionIds:['company-a-stripe']}};
+  const published={id:FLOW,projectId:PROJECT,status:'DISABLED',publishedVersionId:'V'.repeat(21),version:{id:'V'.repeat(21),state:'LOCKED',connectionIds:['company-a-stripe']}};
   const {service,calls}=harness({getFlowIds:[],publishedPages:{first:{data:[],next:'page-2'},'page-2':{data:[published],next:null}}});
   await assert.rejects(()=>service.disconnect({tenantId:'company-a',id:CONNECTION}),error=>error.code==='connection_in_use');
   assert.equal(calls.filter(call=>call.url.includes('/api/v1/flows?')).length,3);
@@ -177,10 +184,10 @@ test('checks later pages of published flows before disconnect',async()=>{
 });
 
 test('checks later pages of draft flows before disconnect',async()=>{
-  const draft={id:FLOW,projectId:PROJECT,version:{id:'V'.repeat(21),state:'DRAFT',connectionIds:['company-a-stripe']}};
+  const draft={id:FLOW,projectId:PROJECT,status:'DISABLED',version:{id:'V'.repeat(21),state:'DRAFT',connectionIds:['company-a-stripe']}};
   const {service,calls}=harness({getFlowIds:[],flowPages:{DRAFT:{first:{data:[],next:'page-2'},'page-2':{data:[draft],next:null}}}});
   await assert.rejects(()=>service.disconnect({tenantId:'company-a',id:CONNECTION}),error=>error.code==='connection_in_use');
-  assert.equal(calls.filter(call=>call.url.includes('/api/v1/flows?')).length,2);
+  assert.equal(calls.filter(call=>call.url.includes('/api/v1/flows?')).length,3);
   assert.equal(calls.some(call=>call.options.method==='DELETE'),false);
 });
 
@@ -201,4 +208,25 @@ test('unknown or malformed flow references fail closed before disconnect',async(
     );
     assert.equal(calls.some(call=>call.options.method==='DELETE'),false);
   }
+});
+
+test('failed flow pause preserves the connection even after confirmation',async()=>{
+  const published={id:FLOW,projectId:PROJECT,status:'ENABLED',publishedVersionId:'V'.repeat(21),version:{id:'V'.repeat(21),state:'LOCKED',connectionIds:['company-a-stripe']}};
+  const {service,calls}=harness({getFlowIds:[FLOW],publishedPages:{first:{data:[published],next:null}},pauseResponse:{id:FLOW,projectId:PROJECT,status:'ENABLED'}});
+  await assert.rejects(()=>service.disconnect({tenantId:'company-a',id:CONNECTION,confirmInUse:true}),error=>error.code==='flow_pause_unverified');
+  assert.equal(calls.some(call=>call.options.method==='DELETE'),false);
+});
+
+test('delete failure after a verified pause reports partial completion',async()=>{
+  const published={id:FLOW,projectId:PROJECT,status:'ENABLED',publishedVersionId:'V'.repeat(21),version:{id:'V'.repeat(21),state:'LOCKED',connectionIds:['company-a-stripe']}};
+  const {service}=harness({getFlowIds:[FLOW],publishedPages:{first:{data:[published],next:null}},deleteStatus:503});
+  await assert.rejects(()=>service.disconnect({tenantId:'company-a',id:CONNECTION,confirmInUse:true}),error=>error.code==='disconnect_partial'&&error.status===502);
+});
+
+test('second flow pause failure reports partial completion and keeps connection',async()=>{
+  const version={id:'V'.repeat(21),state:'LOCKED',connectionIds:['company-a-stripe']};
+  const flows=[FLOW,SECOND_FLOW].map(id=>({id,projectId:PROJECT,status:'ENABLED',publishedVersionId:version.id,version}));
+  const {service,calls}=harness({getFlowIds:[FLOW,SECOND_FLOW],publishedPages:{first:{data:flows,next:null}},secondPauseStatus:503});
+  await assert.rejects(()=>service.disconnect({tenantId:'company-a',id:CONNECTION,confirmInUse:true}),error=>error.code==='disconnect_partial'&&error.status===502);
+  assert.equal(calls.some(call=>call.options.method==='DELETE'),false);
 });

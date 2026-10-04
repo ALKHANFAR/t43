@@ -118,7 +118,7 @@
         {"role": "tenant_scope", "path": "lib/tool-connections.mjs", "anchor": "async function selected({tenantId,piece,type})"},
         {"role": "owned_google_start", "path": "lib/tool-connections.mjs", "anchor": "async function oauthStart({tenantId,sessionBinding,requestOrigin,piece,values={}})"},
         {"role": "owned_google_finish", "path": "lib/tool-connections.mjs", "anchor": "async function oauthFinish({tenantId,sessionBinding,state,code})"},
-        {"role": "disconnect_guard", "path": "lib/tool-connections.mjs", "anchor": "if(connection.flowIds.length)fail('connection_in_use'"},
+        {"role": "disconnect_guard", "path": "lib/tool-connections.mjs", "anchor": "if(dependent.size&&!confirmInUse)fail('connection_in_use'"},
         {"role": "disconnect_unknown_guard", "path": "lib/tool-connections.mjs", "anchor": "if(!Array.isArray(rawFlowIds)||rawFlowIds.some"},
         {"role": "version_dependency_guard", "path": "lib/tool-connections.mjs", "anchor": "async function flowVersionsUseConnection(projectId,externalId)"},
         {"role": "disconnect_customer_message", "path": "app/chat.js", "anchor": "if(failure&&failure.error===\"connection_in_use\")"},
@@ -128,7 +128,7 @@
         {"role": "migration", "path": "migrations/0003-google-oauth-attempts.sql", "anchor": "CREATE TABLE IF NOT EXISTS siyadah_google_oauth_attempts"},
         {"role": "handoff", "path": "GOOGLE-OAUTH-PILOT.md", "anchor": "# Gmail connection under Siyadah"},
         {"role": "test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "owned Google Gmail OAuth is session-bound, single-use and project-exclusive"},
-        {"role": "disconnect_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "in-use connection stays attached and is not reported as disconnected"},
+        {"role": "disconnect_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "in-use connection requires explicit confirmation"},
         {"role": "disconnect_unknown_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "unknown or malformed flow references fail closed before disconnect"},
         {"role": "ledger_test", "path": "scripts/google-oauth-attempts-runtime.test.mjs", "anchor": "OAuth attempt ledger stores hashes and consumes exactly once"}
       ]
@@ -144,10 +144,28 @@
         {"role": "account_lifecycle_contract", "path": "GOOGLE-CONNECTION-LIFECYCLE.md", "anchor": "## Meaning of each action"},
         {"role": "revocation_release_gate", "path": "GOOGLE-CONNECTION-LIFECYCLE.md", "anchor": "## Implementation gate"},
         {"role": "version_dependency_guard", "path": "lib/tool-connections.mjs", "anchor": "async function flowVersionsUseConnection(projectId,externalId)"},
-        {"role": "disconnect_gate", "path": "lib/tool-connections.mjs", "anchor": "if(await flowVersionsUseConnection(projectId,externalId))"},
+        {"role": "disconnect_gate", "path": "lib/tool-connections.mjs", "anchor": "if(dependent.size&&!confirmInUse)fail('connection_in_use'"},
         {"role": "published_dependency_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "published flow reference blocks disconnect even when connection flowIds omits it"},
         {"role": "pagination_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "checks later pages of published flows before disconnect"},
         {"role": "draft_pagination_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "checks later pages of draft flows before disconnect"}
+      ]
+    },
+    {
+      "id": "confirmed_single_tool_disconnect",
+      "name": "فصل أداة مستخدمة بعد تنبيه",
+      "aliases": ["الاتصال مستخدم في مهمة", "فصل Gmail", "إيقاف المهام وفصل الأداة", "disconnect in-use tool", "confirmed disconnect"],
+      "state": "draft_pr",
+      "meaning": "فرع مراجعة مستقل: يعرض أثر فصل الأداة داخل نافذتها، ثم يوقف تدفقات الشركة النشطة التي تستخدم اتصالها بواسطة Activepieces قبل حذف اتصال المشروع فقط. لا يحذف التدفقات أو سجلها ولا يلغي منحة Google العامة. لا يصبح حيًا قبل الدمج والنشر والتحقق بحساب العميل.",
+      "linear": "ABO-63",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/38",
+      "locations": [
+        {"role": "browser_warning", "path": "app/chat.js", "anchor": "id=\"mDisconnectConfirm\""},
+        {"role": "route", "path": "server.mjs", "anchor": "confirmInUse:input.confirm_in_use===true"},
+        {"role": "dependency_inventory", "path": "lib/tool-connections.mjs", "anchor": "async function flowVersionsUseConnection(projectId,externalId)"},
+        {"role": "native_pause", "path": "lib/tool-connections.mjs", "anchor": "type:'CHANGE_STATUS',request:{status:'DISABLED'}"},
+        {"role": "contract", "path": "GOOGLE-CONNECTION-LIFECYCLE.md", "anchor": "## Confirmed single-tool disconnect"},
+        {"role": "server_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "in-use connection requires explicit confirmation"},
+        {"role": "browser_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "disconnect shows the impact before requesting a confirmed deletion"}
       ]
     },
     {

@@ -21,3 +21,9 @@ Google states that revoking a token removes all OAuth grants for that user and G
 5. Test two companies sharing one Google account, two Google tools, a published Flow with a newer draft, a provider failure, and an interrupted retry before enabling the customer action.
 
 The runtime implementation remains a gap. This document is the release gate, not a claim that account-wide revocation works.
+
+## Confirmed single-tool disconnect — proposed branch
+
+When the customer selects **Disconnect** for one tool, Siyadah first shows a short warning and offers **Cancel** or **Disconnect tool**. The confirmed request inventories that company's draft and published Flow versions, pauses enabled dependent Flows using Activepieces `CHANGE_STATUS`, verifies each pause, then deletes only that project's connection. The Flow definitions and work history remain. Existing in-progress runs may be affected; the warning says so. A failed pause prevents deletion. If deletion fails after a pause, the response reports partial completion rather than success. Incomplete inventory or project ownership still blocks the operation. This action does not revoke Google's account-wide OAuth grant or disconnect other Google tools.
+
+This branch has local tests only until reviewed, merged, deployed, and exercised in a customer account. The full-account Google action above remains a separate gap.
