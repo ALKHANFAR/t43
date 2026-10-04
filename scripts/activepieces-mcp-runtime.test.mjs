@@ -6,7 +6,7 @@ const projectA='AAAAAAAAAAAAAAAAAAAAA',projectB='BBBBBBBBBBBBBBBBBBBBB';
 const token=project=>'header.'+Buffer.from(JSON.stringify({projectId:project})).toString('base64url')+'.signature';
 const json=value=>new Response(JSON.stringify(value),{status:200,headers:{'content-type':'application/json'}});
 
-function harness(tokenProject=projectA){
+function harness(tokenProject=projectA,sse=false){
   let grant=null,approval=null,mcpCalls=0;
   const query=async(sql,values=[])=>{
     if(sql.includes('INSERT INTO siyadah_mcp_grants')){grant={project_id:values[1],client_id:values[2],refresh_token_cipher:values[3]};return {rows:[]};}
@@ -21,7 +21,11 @@ function harness(tokenProject=projectA){
   const fetchImpl=async(url,options)=>{
     if(url.endsWith('/register'))return json({client_id:'siyadah-client'});
     if(url.endsWith('/token'))return json({access_token:token(tokenProject),refresh_token:'refresh-secret'});
-    if(url.endsWith('/mcp')){mcpCalls++;return json({jsonrpc:'2.0',id:1,result:options.body.includes('tools/list')?{tools:[{name:'ap_search_actions'}]}:{content:[{type:'text',text:'ok'}]}});}
+    if(url.endsWith('/mcp')){
+      mcpCalls++;
+      const payload={jsonrpc:'2.0',id:1,result:options.body.includes('tools/list')?{tools:[{name:'ap_search_actions'}]}:{content:[{type:'text',text:'ok'}]}};
+      return sse?new Response(`event: message\ndata: ${JSON.stringify(payload)}\n\n`,{status:200,headers:{'content-type':'text/event-stream'}}):json(payload);
+    }
     throw new Error('unexpected provider URL');
   };
   const service=createActivepiecesMcp({query,requireProject:async()=>projectA,activepiecesUrl:'https://ap.example.test',origin:'https://siyadah.example.test',secret:'s'.repeat(40),fetchImpl});
@@ -45,6 +49,13 @@ test('foreign project token is rejected before a grant is saved or MCP is called
   const state=new URL(url).searchParams.get('state');
   await assert.rejects(()=>h.service.complete(`/siyadah-api/v1/mcp/callback?state=${encodeURIComponent(state)}&code=once`),{code:'mcp_project_mismatch'});
   assert.equal(h.grant,null);assert.equal(h.mcpCalls,0);
+});
+
+test('MCP discovery accepts a streamed server response',async()=>{
+  const h=harness(projectA,true),url=await h.service.begin('company-a');
+  const state=new URL(url).searchParams.get('state');
+  await h.service.complete(`/siyadah-api/v1/mcp/callback?state=${encodeURIComponent(state)}&code=once`);
+  assert.equal((await h.service.call('company-a','tools/list',{})).tools[0].name,'ap_search_actions');
 });
 
 test('tool approval can be consumed only once in its company and conversation',async()=>{
