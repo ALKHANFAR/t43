@@ -52,7 +52,7 @@ async function toolConnections(){
     const projects=await tenantProjects(),pool=await database();
     const origin=publicOrigin(),redirectUrl=origin?new URL('/siyadah-api/v1/integrations/oauth/callback',origin).toString():'';
     const googleOAuth=process.env.SIYADAH_GOOGLE_OAUTH_CLIENT_ID&&process.env.SIYADAH_GOOGLE_OAUTH_CLIENT_SECRET?{clientId:process.env.SIYADAH_GOOGLE_OAUTH_CLIENT_ID,clientSecret:process.env.SIYADAH_GOOGLE_OAUTH_CLIENT_SECRET,redirectUrl}:undefined;
-    return createToolConnectionService({requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY,attemptSecret:process.env.SIYADAH_SESSION_SECRET,attemptStore:createGoogleOAuthAttemptStore({query:(sql,values)=>pool.query(sql,values)}),googleOAuth});
+    return createToolConnectionService({requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY,attemptSecret:process.env.SIYADAH_SESSION_SECRET,attemptStore:createGoogleOAuthAttemptStore({query:(sql,values)=>pool.query(sql,values)}),googleOAuth,customerOrigin:origin,gmailOAuthProvider:process.env.SIYADAH_GMAIL_OAUTH_PROVIDER||'activepieces'});
   })().catch(error=>{toolConnectionsPromise=null;throw error;});
   return toolConnectionsPromise;
 }
@@ -212,7 +212,7 @@ async function integrations(req,res){
     if(input.op==='methods')return json(res,200,{ok:true,...await service.methods({tenantId,piece:input.piece,requestOrigin:req.headers.origin})});
     if(input.op==='connect')return json(res,201,{ok:true,connection:await service.connect({tenantId,piece:input.piece,type:input.type,values:input.values})});
     if(input.op==='oauth_start')return json(res,200,{ok:true,...await service.oauthStart({tenantId,sessionBinding:oauthSessionBinding(req),requestOrigin:req.headers.origin,piece:input.piece,values:input.values})});
-    if(input.op==='oauth_finish')throw new TenantProjectError('oauth_callback_required','أكمل الربط من نافذة Google.',409);
+    if(input.op==='oauth_finish')return json(res,200,{ok:true,connection:await service.cloudOauthFinish({tenantId,sessionBinding:oauthSessionBinding(req),attempt:input.attempt,code:input.code})});
     if(input.op==='revalidate')return json(res,200,{ok:true,connection:await service.revalidate({tenantId,id:input.connection_id})});
     if(input.op==='disconnect')return json(res,200,{ok:true,...await service.disconnect({tenantId,id:input.connection_id})});
     return json(res,400,{ok:false,error:'unsupported_operation'});

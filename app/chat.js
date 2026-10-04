@@ -1024,7 +1024,15 @@ var I = {
       if(oauthOff)oauthOff();
       var timer=setTimeout(function(){if(oauthOff)oauthOff();try{popup.close();}catch(ignore){}button=$("#mOk");if(button)button.disabled=false;rcMsg(ui("استغرقت العملية وقتًا طويلًا. أعد المحاولة.","This is taking too long. Try again."));},10*60*1000);
       async function on(event){
-        if(event.origin!==started.allowedOrigin||event.source!==popup||event.data?.type!=="siyadah-oauth-result")return;
+        if(event.origin!==started.allowedOrigin||event.source!==popup)return;
+        if(started.provider==="cloud"){
+          var posted=oauthResult(event.data);
+          if(!posted.code)return;
+          oauthOff();try{popup.close();}catch(ignore){}
+          try{var finished=await integration({op:"oauth_finish",attempt:started.attempt,code:decodeURIComponent(posted.code)});await realTools();if(!window.__SIY_TOOLS_ERROR__&&tool.connection?.id===finished.connection?.id&&tool.connection.status==='ACTIVE'){rc=null;closeModal();renderThread();return;}}catch(error){rcMsg(error.message||ui("لم يكتمل الربط. حاول مرة ثانية.","The connection could not be completed. Try again."));}
+          button=$("#mOk");if(button)button.disabled=false;return;
+        }
+        if(event.data?.type!=="siyadah-oauth-result")return;
         oauthOff();try{popup.close();}catch(ignore){}
         if(event.data.connectionId){await realTools();if(!window.__SIY_TOOLS_ERROR__&&tool.connection?.id===event.data.connectionId&&tool.connection.status==='ACTIVE'){rc=null;closeModal();renderThread();return;}}
         button=$("#mOk");if(button)button.disabled=false;rcMsg(ui("لم يثبت حفظ الاتصال في مشروع شركتك. أعد المحاولة أو تواصل معنا.","The connection was not saved in your company's project. Try again or contact us."));

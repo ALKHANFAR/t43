@@ -22,7 +22,7 @@ function harness(overrides={}){
   const projects=stage=>Object.hasOwn(overrides,stage)?overrides[stage]:(overrides.foreign&&stage==='list'?[OTHER]:[PROJECT]);
   const fetchImpl=async(url,options={})=>{
     calls.push({url,options,body:options.body?JSON.parse(options.body):null});
-    if(url.startsWith('https://cloud.example/apps'))return response(200,{'@activepieces/piece-gmail':{clientId:'google-client'}});
+    if(url.startsWith('https://secrets.activepieces.com/apps'))return response(200,{'@activepieces/piece-gmail':{clientId:'google-client'},'@activepieces/piece-slack':{clientId:'slack-client'}});
     if(url.includes('/api/v1/pieces')){
       const name=new URL(url).searchParams.get('searchQuery');return response(200,[name==='stripe'?stripe:name==='whatsapp'?whatsapp:name==='slack'?slack:overrides.gmail||gmail]);
     }
@@ -31,12 +31,43 @@ function harness(overrides={}){
     if(options.method==='DELETE')return response(204,{});
     if(url.includes(`/app-connections/${CONNECTION}`))return response(200,{id:CONNECTION,externalId:'company-a-stripe',pieceName:'@activepieces/piece-stripe',scope:'PROJECT',projectIds:projects('get'),flowIds:Object.hasOwn(overrides,'getFlowIds')?overrides.getFlowIds:[]});
     if(url.includes('/api/v1/flows?')){const query=new URL(url).searchParams,cursor=query.get('cursor'),state=query.get('versionState');return response(200,overrides.flowPages?.[state]?.[cursor||'first']??(state==='LOCKED'?overrides.publishedPages?.[cursor||'first']:undefined)??{data:[],next:null});}
-    if(url.includes('/app-connections?'))return response(200,{data:[{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:projects('list'),projectId:overrides.projectIdOnly?PROJECT:undefined,flowIds:[FLOW,'invalid']}]});
+    if(url.includes('/app-connections?')){
+      const cursor=new URL(url).searchParams.get('cursor');
+      return response(200,overrides.connectionPages?.[cursor||'first']??{data:[{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:projects('list'),projectId:overrides.projectIdOnly?PROJECT:undefined,flowIds:[FLOW,'invalid']}],next:null});
+    }
     if(url.endsWith('/api/v1/app-connections')){const b=JSON.parse(options.body);return response(201,{id:CONNECTION,pieceName:b.pieceName,pieceVersion:b.pieceVersion,displayName:b.displayName,status:'ACTIVE',scope:'PROJECT',projectIds:projects('create')});}
     throw new Error(`unexpected ${url}`);
   };
-  return {calls,pending,service:createToolConnectionService({requireProject:async tenant=>tenant==='company-a'?PROJECT:OTHER,fetchImpl,activepiecesUrl:'https://ap.example',apiKey:'platform-key',attemptSecret:'s'.repeat(48),attemptStore,googleOAuth:overrides.googleOAuth})};
+  return {calls,pending,service:createToolConnectionService({requireProject:async tenant=>tenant==='company-a'?PROJECT:OTHER,fetchImpl,activepiecesUrl:'https://ap.example',apiKey:'platform-key',attemptSecret:'s'.repeat(48),attemptStore,googleOAuth:overrides.googleOAuth,customerOrigin:overrides.customerOrigin,gmailOAuthProvider:overrides.gmailOAuthProvider})};
 }
+
+test('Activepieces Gmail OAuth requests declared scopes, binds the attempt and preserves project isolation',async()=>{
+  const {service,calls,pending}=harness({customerOrigin:ORIGIN,gmailOAuthProvider:'activepieces'});
+  const method=(await service.methods({tenantId:'company-a',requestOrigin:ORIGIN,piece:'gmail'})).methods[0];
+  assert.equal(method.available,true);assert.deepEqual(method.scopes,gmail.auth[0].scope);assert.match(method.description,/Activepieces/);
+  const started=await service.oauthStart({tenantId:'company-a',sessionBinding:'session-a',requestOrigin:ORIGIN,piece:'gmail'});
+  assert.equal(started.provider,'cloud');assert.equal(started.allowedOrigin,'https://secrets.activepieces.com');assert.equal(pending.size,1);
+  const url=new URL(started.authorizationUrl);
+  assert.equal(url.hostname,'accounts.google.com');assert.equal(url.searchParams.get('scope'),gmail.auth[0].scope.join(' '));assert.equal(url.searchParams.get('redirect_uri'),'https://secrets.activepieces.com/redirect');assert.equal(url.searchParams.get('access_type'),'offline');
+  assert.equal(calls.some(call=>call.url.includes('/oauth2/authorization-url')),false);
+  await assert.rejects(()=>service.cloudOauthFinish({tenantId:'company-b',sessionBinding:'session-a',attempt:started.attempt,code:'code'}),error=>error.code==='invalid_oauth_state');
+  await assert.rejects(()=>service.cloudOauthFinish({tenantId:'company-a',sessionBinding:'session-b',attempt:started.attempt,code:'code'}),error=>error.code==='invalid_oauth_state');
+  const saved=await service.cloudOauthFinish({tenantId:'company-a',sessionBinding:'session-a',attempt:started.attempt,code:'code'});
+  assert.equal(saved.scope,'PROJECT');
+  const upsert=calls.find(call=>call.url.endsWith('/api/v1/app-connections')).body;
+  assert.equal(upsert.projectId,PROJECT);assert.equal(upsert.type,'CLOUD_OAUTH2');assert.equal(upsert.value.scope,gmail.auth[0].scope.join(' '));assert.equal(upsert.value.client_id,'google-client');
+  await assert.rejects(()=>service.cloudOauthFinish({tenantId:'company-a',sessionBinding:'session-a',attempt:started.attempt,code:'code'}),error=>error.code==='invalid_oauth_state');
+});
+
+test('the same connection path supports another OAuth app and keeps its declared scope',async()=>{
+  const {service,calls}=harness({customerOrigin:ORIGIN,gmailOAuthProvider:'activepieces'});
+  const method=(await service.methods({tenantId:'company-a',requestOrigin:ORIGIN,piece:'slack'})).methods[0];
+  assert.equal(method.available,true);assert.deepEqual(method.scopes,['chat:write']);
+  const started=await service.oauthStart({tenantId:'company-a',sessionBinding:'session-a',requestOrigin:ORIGIN,piece:'slack'});
+  assert.equal(new URL(started.authorizationUrl).hostname,'slack.com');assert.equal(new URL(started.authorizationUrl).searchParams.get('scope'),'chat:write');
+  await service.cloudOauthFinish({tenantId:'company-a',sessionBinding:'session-a',attempt:started.attempt,code:'slack-code'});
+  assert.equal(calls.find(call=>call.url.endsWith('/api/v1/app-connections')).body.pieceName,'@activepieces/piece-slack');
+});
 
 test('reads live auth schema and keeps secrets out of the response',async()=>{
   const {service}=harness(),methods=await service.methods({tenantId:'company-a',piece:'stripe'});
@@ -55,6 +86,24 @@ test('shows only valid flow references from a project-owned connection',async()=
   assert.equal(connection.scope,'PROJECT');
   assert.deepEqual(connection.flowIds,[FLOW]);
   assertCustomerConnection(connection,'stripe');
+});
+
+test('lists every page of the company project connections',async()=>{
+  const first={id:CONNECTION,pieceName:'@activepieces/piece-stripe',scope:'PROJECT',projectIds:[PROJECT]};
+  const second={id:'D'.repeat(21),pieceName:'@activepieces/piece-slack',scope:'PROJECT',projectIds:[PROJECT]};
+  const {service,calls}=harness({connectionPages:{first:{data:[first],next:'page-2'},'page-2':{data:[second],next:null}}});
+  assert.deepEqual((await service.list('company-a')).map(row=>row.slug),['stripe','slack']);
+  const pages=calls.filter(call=>call.url.includes('/app-connections?'));
+  assert.equal(pages.length,2);
+  assert.equal(new URL(pages[1].url).searchParams.get('cursor'),'page-2');
+  assert.equal(new URL(pages[1].url).searchParams.get('projectId'),PROJECT);
+});
+
+test('connection inventory rejects incomplete or repeated pages',async()=>{
+  for(const connectionPages of [{first:{data:[]}},{first:{data:[],next:'again'},again:{data:[],next:'again'}}]){
+    const {service}=harness({connectionPages});
+    await assert.rejects(()=>service.list('company-a'),error=>error.code==='connection_inventory_unknown');
+  }
 });
 
 test('builds custom auth only from authoritative fields',async()=>{
