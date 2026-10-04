@@ -254,6 +254,26 @@
       ]
     },
     {
+      "id": "chat_project_mcp",
+      "name": "قدرات أدوات مشروع الشركة في الشات",
+      "aliases": ["ربط الشات بـMCP", "أدوات الشات", "شات الموظف والأدوات", "project scoped MCP chat"],
+      "state": "draft_pr",
+      "meaning": "وصلة MCP واحدة من خادم سيادة إلى مشروع Activepieces الخاص بالشركة. يثبت الخادم Flow الموظف المحفوظ عند استدعاء أدواته وعند الموافقة، بينما يختار النموذج متى يشغّل Flow القائم. OAuth داخلي للمشروع، واكتشاف ديناميكي للأدوات، وموافقة مرة واحدة قبل أي استدعاء MCP قابل للتنفيذ. رد الأداة ليس إثبات نتيجة المزود. يحتاج منح OAuth واختبارًا حيًا قبل الإطلاق.",
+      "linear": "ABO-48",
+      "locations": [
+        {"role": "chat_route", "path": "server.mjs", "anchor": "async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,mcp=null"},
+        {"role": "approval_route", "path": "server.mjs", "anchor": "if(input.op==='approve')"},
+        {"role": "mcp_adapter", "path": "lib/activepieces-mcp.mjs", "anchor": "export function createActivepiecesMcp("},
+        {"role": "employee_flow_scope", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function scopeMcpTool("},
+        {"role": "connection_guard", "path": "lib/tool-connections.mjs", "anchor": "async function assertOwnedExternal({tenantId,externalId,pieceName})"},
+        {"role": "migration", "path": "migrations/0005-activepieces-mcp.sql", "anchor": "CREATE TABLE IF NOT EXISTS siyadah_mcp_grants"},
+        {"role": "client_approval", "path": "app/chat.js", "anchor": "if(data.approval.kind==='tool_action')"},
+        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "## Project MCP chat"},
+        {"role": "test", "path": "scripts/activepieces-mcp-runtime.test.mjs", "anchor": "MCP OAuth grant is bound to the server-owned company project"},
+        {"role": "employee_flow_test", "path": "scripts/mcp-flow-scope-runtime.test.mjs", "anchor": "employee Flow ID comes from its saved record"}
+      ]
+    },
+    {
       "id": "gmail_send_pilot_43",
       "name": "إرسال بريد تجريبي من شركة 43",
       "aliases": ["رسالة Gmail التجريبية", "معرف رسالة Google", "Gmail pilot send", "شركة 43"],

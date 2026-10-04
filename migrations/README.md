@@ -8,4 +8,6 @@ The current migration is additive: it creates missing tables and columns. The ol
 
 The integrated draft branch adds `siyadah_google_oauth_attempts` through the pre-deploy migration. It stores only hashes of the OAuth state and session binding, plus company ID and expiry. Callback consumption deletes the matching row atomically. The new image's `/health` rejects a database where that table is missing. This is local code readiness, not evidence of a configured Google client or successful provider connection.
 
+Migration `0005-activepieces-mcp.sql` adds project MCP grants and short-lived approvals. The grant's refresh token and approval arguments are encrypted in the server before storage. It is additive to the existing customer and Activepieces data; `/health` checks both new tables before serving the new chat path.
+
 Before merging into Railway's connected branch, confirm the production project, environment, service, GitHub trigger, pre-deploy command resolved from this file, database catalog, and an available restore point. The connected branch can deploy automatically without waiting for GitHub checks. Test the migration against a new and a representative existing PostgreSQL database, then verify `/health` returns 503 before and 200 after migration without any DDL in the health path.

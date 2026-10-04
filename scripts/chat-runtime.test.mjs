@@ -71,10 +71,11 @@ test('selected real employee opens without placeholder metrics or invented activ
   }finally{p.close();}
 });
 
-test('routine draft work skips approval while severe final actions require it',()=>{
+test('routine draft work skips approval while an MCP action is approval gated',()=>{
   assert.match(serverSource,/createManualEmployeeDraft/);
   assert.match(serverSource,/لم تُجهّز أدواته ولم يبدأ العمل بعد/);
-  assert.ok(!serverSource.includes("input.op==='approve'"));
+  assert.match(serverSource,/if\(input\.op==='approve'\)/);
+  assert.match(serverSource,/mcp\.consume\(\{tenantId:companyId,conversationId,id:approvalId\}\)/);
 });
 
 test('employee execution proof is scoped to the conversation that produced it',()=>{
@@ -335,6 +336,17 @@ test('customer-facing builder proposal hides platform vocabulary and renders pro
     const approval=p.requests.find(x=>x.body.op==='approve');assert.ok(approval.body.request_id);assert.equal(approval.body.conversation_id,'builder-conversation');assert.equal(approval.body.approval_id,'approval-1');assert.equal(approval.body.decision,'approve');
     assert.match(thread(p),/موظف قيد التجهيز|تجهيز/);assert.match(thread(p),/flow-proof/);assert.equal(p.d.querySelectorAll('[data-siy-approval]').length,0);
     assert.doesNotMatch(thread(p),/Activepieces|MCP|مسودة معطلة|الفلو/);
+  }finally{p.close();}
+});
+test('MCP action approval shows exact inputs and never places credentials in the browser',async()=>{
+  const proposal={ok:true,conversation_id:'chat-mcp',request_status:'succeeded',work_status:'awaiting_input',outcome_kind:'conversation_reply',reply:'راجع الإجراء.',approval:{required:true,kind:'tool_action',approval_id:'approval-mcp',summary:'اقرأ التقويم',details:'{"pieceName":"google-calendar","input":"<img src=x onerror=alert(1)>"}'}};
+  const p=await page({message:proposal,approve:{ok:true,conversation_id:'chat-mcp',request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',reply:'وصل رد الأداة، ولم نتحقق بعد من أثره لدى المزود.'}});try{
+    send(p,'وش عندي في التقويم؟');await flush();
+    const details=p.d.querySelector('.plan details');assert.ok(details);assert.match(details.textContent,/google-calendar/);assert.equal(details.querySelector('img'),null);
+    p.d.querySelector('[data-siy-approval="approve"]').click();await flush();
+    assert.equal(p.requests.find(row=>row.body.op==='approve').body.approval_id,'approval-mcp');
+    assert.match(thread(p),/لم نتحقق بعد/);assert.equal(p.d.querySelector('[data-siy-approval]'),null);
+    assert.equal(p.requests.some(row=>Object.hasOwn(row.body,'projectId')||Object.hasOwn(row.body,'token')),false);
   }finally{p.close();}
 });
 test('browser storage cannot supply company identity or suppress server hydration',async()=>{
