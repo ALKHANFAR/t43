@@ -285,6 +285,21 @@ test('Google connect popup opens in the submit gesture before OAuth preparation 
     await flush();
   }finally{p.close();}
 });
+test('cloud OAuth accepts only the opened popup and reads back the saved company connection',async()=>{
+  const connection={id:'C'.repeat(21),slug:'gmail',displayName:'Gmail',status:'ACTIVE',scope:'PROJECT'},popup={closed:false,close(){this.closed=true;},location:{replace(){}}};let lists=0;
+  const p=await page({integrations:{list:()=>({ok:true,connections:++lists===1?[]:[connection]}),methods:{ok:true,methods:[{type:'OAUTH2',available:true,displayName:'Google',fields:[]}]},oauth_start:{ok:true,provider:'cloud',attempt:'sealed-attempt',authorizationUrl:'https://accounts.google.com/o/oauth2/auth',allowedOrigin:'https://secrets.activepieces.com'},oauth_finish:{ok:true,connection}},hash:''});
+  try{
+    p.w.open=()=>popup;
+    p.d.querySelector('#toolsLink').click();await flush();p.d.querySelector('#allTgl').click();await flush();p.d.querySelector('[data-c="gmail"]').click();await flush();
+    p.d.querySelector('#mF form').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));await flush();
+    const post=(origin,source)=>{const event=new p.w.MessageEvent('message',{origin,data:{code:'oauth-code'}});Object.defineProperty(event,'source',{value:source});p.w.dispatchEvent(event);};
+    post('https://other.example',popup);post('https://secrets.activepieces.com',{});await flush();
+    assert.equal(p.requests.some(request=>request.body?.op==='oauth_finish'),false);
+    post('https://secrets.activepieces.com',popup);await flush();await flush();
+    const finish=p.requests.find(request=>request.body?.op==='oauth_finish');assert.deepEqual(finish.body,{op:'oauth_finish',attempt:'sealed-attempt',code:'oauth-code'});
+    assert.equal(popup.closed,true);assert.equal(p.d.querySelector('#modal').classList.contains('on'),false);
+  }finally{p.close();}
+});
 test('tools page distinguishes a saved connection from one assigned to an employee flow',async()=>{
   const flowId='F'.repeat(21),connection={id:'C'.repeat(21),slug:'gmail',displayName:'Gmail',status:'ACTIVE',scope:'PROJECT',flowIds:[flowId]};
   const p=await page({hydrate:{...empty,team:[{...employee,flowId,tools:[]}]},integrations:{list:{ok:true,connections:[connection]}}});try{
