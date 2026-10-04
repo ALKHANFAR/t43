@@ -377,7 +377,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   if(mcp&&companyId){
     try{available=(await mcp.call(companyId,'tools/list',{})).tools||[];}
     catch(error){
-      if(error.code!=='mcp_not_connected')throw error;
+      if(!['mcp_not_connected','project_not_ready','mcp_not_configured'].includes(error.code))throw error;
       messages[0].content+='\nلا يوجد اتصال MCP مهيأ لمشروع هذه الشركة. لا تدّع قراءة بيانات أي تطبيق، واطلب تهيئة الوصول عند الحاجة.';
     }
   }
