@@ -18,6 +18,7 @@ import {toolIcon} from './lib/tool-icons.mjs';
 import {createPublicWaitlist,PublicWaitlistError} from './lib/public-waitlist.mjs';
 import {createGmailPilotRunner,GMAIL_PILOT_COMMAND,gmailPilotLedgerIdentity,gmailPilotSuccessResponse,recordGmailPilotConversation} from './lib/gmail-pilot-runner.mjs';
 import {createActivepiecesMcp} from './lib/activepieces-mcp.mjs';
+import {employeeMcpToolReady,scopeMcpTool,visibleMcpTool} from './lib/mcp-flow-scope.mjs';
 import {GMAIL_PILOT_COMPANY_ID,GMAIL_PILOT_REQUEST_ID,GmailPilotError} from './lib/gmail-send-pilot.mjs';
 
 const root=process.cwd();
@@ -351,14 +352,11 @@ function employee(flow){
   const name=String(flow?.version?.displayName||flow?.displayName||'موظف').trim();
   return {recordId:`employee_${flow.id}`,flowId:flow.id,name,role:'موظف',initial:name.slice(0,1),status:String(flow.status||'DISABLED').toUpperCase()==='ENABLED'?'active':'disabled',tools:[],rules:[],instructions:'',how:[]};
 }
-function wantsEmployeeExecution(message){
-  return /(?:أرسل|ارسل|انشر|نف[ّ]?ذ|شغ[ّ]?ل|حد[ّ]?ث|سج[ّ]?ل|احجز|ألغ|الغ|اربط|افصل|أنشئ|انشئ|راسل|اتصل)/i.test(String(message||''));
-}
 async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,mcp=null,companyId=null,conversationId=null}){
   const key=process.env.DEEPSEEK_API_KEY;
   if(!key)throw new TenantProjectError('assistant_not_configured','مساعد سيادة غير مهيأ الآن.',503);
   const facts=(knowledge?.facts||[]).slice(0,40).map(item=>({topic:item.topic,value:item.value,source:item.sourceUrl,certainty:item.certainty}));
-  const selectedEmployee=employee?{id:employee.id,name:employee.name,role:employee.role_title,status:employee.status,instructions:employee.prompt,instructionSource:employee.prompt_source,instructionVersion:Number(employee.prompt_version||1),knowledgeTopics:employee.knowledge_topics_json||[],tools:employee.tools_json||[]}:null;
+  const selectedEmployee=employee?{id:employee.id,flowId:employee.activepieces_flow_id,name:employee.name,role:employee.role_title,status:employee.status,instructions:employee.prompt,instructionSource:employee.prompt_source,instructionVersion:Number(employee.prompt_version||1),knowledgeTopics:employee.knowledge_topics_json||[],tools:employee.tools_json||[]}:null;
   const context={company,selectedEmployee,settings,knowledge:{coverage:knowledge?.coverageScore||0,facts,missing:knowledge?.missingCritical||[]},team:(team||[]).map(item=>({id:item.recordId,name:item.name,role:item.role,status:item.status,tools:item.tools||[]}))};
   const memory=conversationMemory(history);
   const system=`أنت سيادة، شريك أعمال ذكي.
@@ -382,8 +380,10 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
     }
   }
   const readOnly=name=>/^ap_(?:search_|list_|get_|read_|research_|resolve_|flow_structure$|setup_guide$)/.test(name);
-  const tools=available.filter(tool=>/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(tool.name)&&(!employee||employee.status==='active'||readOnly(tool.name))).map(tool=>({type:'function',function:{name:tool.name,description:String(tool.description||'').slice(0,1000),parameters:tool.inputSchema||{type:'object',properties:{}}}}));
-  if(tools.length)messages[0].content+='\nأدوات Activepieces متاحة لمشروع هذه الشركة فقط. استخدم الاكتشاف وفحص المدخلات والاتصال قبل أي إجراء. لا تفترض نجاحًا من الوصف أو اتصال محفوظ. أي أداة قد تغيّر حالة أو تستدعي تطبيقًا خارجيًا ستتوقف حتى موافقة واضحة؛ لا تعد المستخدم بأنها نُفذت قبل عودة نتيجتها.';
+  const tools=available.filter(tool=>/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(tool.name)&&tool.name!=='siyadah_run_employee_flow'&&visibleMcpTool(tool,employee)&&(!employee||employeeMcpToolReady(tool,employee))).map(tool=>({type:'function',function:{name:tool.name,description:String(tool.description||'').slice(0,1000),parameters:tool.inputSchema||{type:'object',properties:{}}}}));
+  if(employee?.status==='active'&&employee.activepieces_flow_id)tools.push({type:'function',function:{name:'siyadah_run_employee_flow',description:'شغّل Flow هذا الموظف الموجود عندما يطلب المدير تنفيذ مهمته الآن. لا تستخدمه للسؤال أو لتعديل خطة العمل أو خطوات Flow.',parameters:{type:'object',properties:{},additionalProperties:false}}});
+  if(available.length)messages[0].content+='\nأدوات Activepieces متاحة لمشروع هذه الشركة فقط. استخدم الاكتشاف وفحص المدخلات والاتصال قبل أي إجراء. لا تفترض نجاحًا من الوصف أو اتصال محفوظ. أي أداة قد تغيّر حالة أو تستدعي تطبيقًا خارجيًا ستتوقف حتى موافقة واضحة؛ لا تعد المستخدم بأنها نُفذت قبل عودة نتيجتها.';
+  if(employee)messages[0].content+='\nهذه محادثة الموظف المحدد. عند قراءة طريقة عمله أو تعديلها، استخدم flowId الموجود في selectedEmployee فقط. إن غاب، صف حالة المسودة ولا تدّع وجود Flow جاهز.';
   try{
     for(let turn=0;turn<5;turn++){
       const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30_000);
@@ -404,8 +404,10 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
       for(const call of calls){
         const name=call?.function?.name;
         if(!tools.some(tool=>tool.function.name===name))throw new TenantProjectError('mcp_tool_invalid','اقتُرحت أداة غير متاحة لهذا المشروع.',502);
+        if(name==='siyadah_run_employee_flow')return {runRequested:true};
         let args;try{args=JSON.parse(call.function.arguments||'{}');}catch{throw new TenantProjectError('mcp_arguments_invalid','مدخلات الأداة غير صالحة.',502);}
         if(!args||typeof args!=='object'||Array.isArray(args))throw new TenantProjectError('mcp_arguments_invalid','مدخلات الأداة غير صالحة.',502);
+        args=scopeMcpTool(available.find(tool=>tool.name===name),args,employee);
         if(!readOnly(name)){
           const details=JSON.stringify(args);
           if(details.length>8_000)throw new TenantProjectError('mcp_arguments_too_large','الإجراء المقترح أكبر من أن يُراجع بأمان هنا.',409);
@@ -500,12 +502,15 @@ async function publicChat(req,res){
         const settled=await profiles.settleChatRequest({companyId,requestId,status:'succeeded',httpStatus:200,response,claimToken:claim.claimToken});activeRequest=null;
         return json(res,200,settled.response,sessionHeaders);
       }
+      let employee=null;
       if(pending.employeeId){
-        const employee=await profiles.findEmployee(companyId,pending.employeeId);
-        if(!employee||employee.status!=='active')throw new CompanyProfileError('employee_disabled','الموظف غير نشط الآن؛ لم يبدأ تنفيذ الأداة.',409);
+        employee=await profiles.findEmployee(companyId,pending.employeeId);
+        if(!employee)throw new CompanyProfileError('employee_not_found','الموظف غير موجود في شركتك.',404);
       }
       const available=await mcp.call(companyId,'tools/list',{});
-      if(!available.tools?.some(tool=>tool.name===pending.toolName))throw new TenantProjectError('mcp_tool_unavailable','لم تعد الأداة متاحة لهذا المشروع.',409);
+      const tool=available.tools?.find(tool=>tool.name===pending.toolName);
+      if(!tool||!visibleMcpTool(tool,employee)||employee&&!employeeMcpToolReady(tool,employee))throw new TenantProjectError('mcp_tool_unavailable','لم تعد الأداة متاحة لهذا المشروع.',409);
+      pending.args=scopeMcpTool(tool,pending.args,employee);
       if(pending.toolName==='ap_run_action'&&pending.args.connectionExternalId){
         const pieceName=String(pending.args.pieceName||'');
         const fullPiece=pieceName.startsWith('@activepieces/piece-')?pieceName:`@activepieces/piece-${pieceName}`;
@@ -562,12 +567,9 @@ async function publicChat(req,res){
         const saved=await profiles.findEmployee(companyId,input.employee_id);
         if(!saved)throw new CompanyProfileError('employee_not_found','الموظف غير موجود في شركتك.',404);
         if(saved.status==='active'&&!saved.activepieces_flow_id)throw new CompanyProfileError('employee_not_ready','الموظف بلا طريقة عمل مهيأة.',409);
-        if(saved.status!=='active'&&wantsEmployeeExecution(input.message)){
-          const reply=saved.activepieces_flow_id?'الموظف متوقف الآن؛ فعّله بعد التحقق من أدواته قبل طلب التنفيذ.':'الموظف محفوظ كمسودة. لم تُجهّز أدواته وطريقة عمله بعد، ولم يبدأ تنفيذ المهمة.';
-          await profiles.recordConversation({companyId,conversationId,employeeId:saved.id,requestId,userMessage:input.message,assistantMessage:reply});
-          return finish(200,completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply,experience:{employee_conversation:true,employee_id:saved.id,external_execution:false}}));
-        }
-        if(saved.status==='active'&&wantsEmployeeExecution(input.message)){
+        const profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId),conversations=await profiles.listConversations(companyId),conversation=conversations.find(item=>item.id===conversationId);
+        const answer=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history:conversation?.messages||[],message:input.message,employee:saved,mcp:await activepiecesMcp(),companyId,conversationId});
+        if(answer.runRequested){
           activeRequest.executionAttempt=true;
           const run=await (await tenantProjects()).runFlow({tenantId:companyId,flowId:saved.activepieces_flow_id,requestId,message:input.message,onDispatch:()=>{activeRequest.effectStarted=true;}});
           const tools=run.tool.pieceName==='@activepieces/piece-http'?['اتصال ويب']:[];
@@ -577,8 +579,6 @@ async function publicChat(req,res){
           await profiles.recordConversation({companyId,conversationId,employeeId:saved.id,requestId,userMessage:input.message,assistantMessage:reply});
           return finish(200,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',outcome_kind:'external_run',work_id:proof.work_id,reply,employee:updated,recent_work:[proof]});
         }
-        const profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId),conversations=await profiles.listConversations(companyId),conversation=conversations.find(item=>item.id===conversationId);
-        const answer=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history:conversation?.messages||[],message:input.message,employee:saved,mcp:await activepiecesMcp(),companyId,conversationId});
         await profiles.recordConversation({companyId,conversationId,employeeId:saved.id,requestId,userMessage:input.message,assistantMessage:answer.reply});
         return finish(200,{...completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply:answer.reply,experience:{employee_conversation:true,employee_id:saved.id,instruction_version:Number(saved.prompt_version||1),external_execution:false}}),...(answer.approval?{approval:answer.approval,work_status:'awaiting_input'}:{})});
       }

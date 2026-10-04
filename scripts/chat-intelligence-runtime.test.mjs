@@ -57,7 +57,9 @@ test('employee instructions have a tenant-scoped verified write path',()=>{
 test('employee conversation reads its saved instructions while external execution stays gated',()=>{
   assert.match(server,/deepseekReply\(\{company,settings,knowledge,team,history,message,employee=null,mcp=null,companyId=null,conversationId=null\}\)/);
   assert.match(server,/selectedEmployee=employee\?/);
-  assert.match(server,/saved\.status==='active'&&wantsEmployeeExecution\(input\.message\)/);
+  assert.match(server,/name:'siyadah_run_employee_flow'/);
+  assert.match(server,/if\(answer\.runRequested\)/);
+  assert.doesNotMatch(server,/wantsEmployeeExecution\(input\.message\)/);
   assert.match(server,/employee:saved/);
   assert.match(server,/instruction_version:Number\(saved\.prompt_version\|\|1\),external_execution:false/);
 });
