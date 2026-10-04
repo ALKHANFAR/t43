@@ -157,6 +157,7 @@
       "state": "draft_pr",
       "meaning": "فرع مراجعة مستقل: يعرض أثر فصل الأداة داخل نافذتها، ثم يوقف تدفقات الشركة النشطة التي تستخدم اتصالها بواسطة Activepieces قبل حذف اتصال المشروع فقط. لا يحذف التدفقات أو سجلها ولا يلغي منحة Google العامة. لا يصبح حيًا قبل الدمج والنشر والتحقق بحساب العميل.",
       "linear": "ABO-63",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/38",
       "locations": [
         {"role": "browser_warning", "path": "app/chat.js", "anchor": "id=\"mDisconnectConfirm\""},
         {"role": "route", "path": "server.mjs", "anchor": "confirmInUse:input.confirm_in_use===true"},
