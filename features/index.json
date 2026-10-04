@@ -104,7 +104,7 @@
       "name": "ربط أداة الشركة عند الحاجة",
       "aliases": ["ربط الأدوات", "اتصال أداة", "تسجيل دخول الأداة", "OAuth الأداة", "كتالوج الأدوات", "company tool connection", "tool catalog"],
       "state": "gap",
-      "meaning": "كتالوج الأدوات يعرض 762 أداة بأيقونات من نطاق سيادة. الفرع الحالي يعيد مسار OAuth الافتراضي في Activepieces للأدوات التي يعلنها الوسيط، ويطلب النطاقات التي تعلنها القطعة، مع محاولة واحدة مرتبطة بجلسة الشركة واتصال PROJECT حصري؛ لم تثبت بعد موافقة مزود حية أو تشغيل موظف دائم بهذا المسار. Gmail يختار Activepieces مرحليًا للربط الجديد، ومسار OAuth سيادة المحفوظ يطلب gmail.send فقط وينتظر موافقة Google. لا تحول تلقائيًا لاتصالات العملاء. التفويض الدائم لكل موظف وأداة يحتاج إنفاذًا في بوابة العمل، ولا تنشئ نافذة الربط وحدها هذا التفويض. عند استخدام تدفق لاتصال، يرفض طلب الفصل برسالة واضحة؛ إزالة الاعتماد من التدفق قبل الفصل ما زالت تحتاج مسارًا وظيفيًا.",
+      "meaning": "كتالوج الأدوات يعرض 762 أداة بأيقونات من نطاق سيادة. الفرع الحالي يعيد مسار OAuth الافتراضي في Activepieces للأدوات التي يعلنها الوسيط، ويطلب النطاقات التي تعلنها القطعة، مع محاولة واحدة مرتبطة بجلسة الشركة واتصال PROJECT حصري. تُقرأ صفحات اتصالات مشروع الشركة كلها قبل عرضها؛ لم تثبت بعد موافقة مزود حية أو تشغيل موظف دائم بهذا المسار. Gmail يختار Activepieces مرحليًا للربط الجديد، ومسار OAuth سيادة المحفوظ يطلب gmail.send فقط وينتظر موافقة Google. لا تحول تلقائيًا لاتصالات العملاء. التفويض الدائم لكل موظف وأداة يحتاج إنفاذًا في بوابة العمل، ولا تنشئ نافذة الربط وحدها هذا التفويض. عند استخدام تدفق لاتصال، يرفض طلب الفصل برسالة واضحة؛ إزالة الاعتماد من التدفق قبل الفصل ما زالت تحتاج مسارًا وظيفيًا.",
       "linear": "ABO-61",
       "pr": "https://github.com/ALKHANFAR/t43/pull/39",
       "locations": [
@@ -116,6 +116,8 @@
         {"role": "customer_action", "path": "app/chat.js", "anchor": "async function rcOAuth(values)"},
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='oauth_start')"},
         {"role": "tenant_scope", "path": "lib/tool-connections.mjs", "anchor": "async function selected({tenantId,piece,type})"},
+        {"role": "project_connections_list", "path": "lib/tool-connections.mjs", "anchor": "async function list(tenantId)"},
+        {"role": "project_connections_pagination_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "lists every page of the company project connections"},
         {"role": "owned_google_start", "path": "lib/tool-connections.mjs", "anchor": "async function oauthStart({tenantId,sessionBinding,requestOrigin,piece,values={}})"},
         {"role": "owned_google_finish", "path": "lib/tool-connections.mjs", "anchor": "async function oauthFinish({tenantId,sessionBinding,state,code})"},
         {"role": "cloud_oauth_start", "path": "lib/tool-connections.mjs", "anchor": "if(cloudFor(pieceName(piece)))"},

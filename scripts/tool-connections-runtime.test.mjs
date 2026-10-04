@@ -31,7 +31,10 @@ function harness(overrides={}){
     if(options.method==='DELETE')return response(204,{});
     if(url.includes(`/app-connections/${CONNECTION}`))return response(200,{id:CONNECTION,externalId:'company-a-stripe',pieceName:'@activepieces/piece-stripe',scope:'PROJECT',projectIds:projects('get'),flowIds:Object.hasOwn(overrides,'getFlowIds')?overrides.getFlowIds:[]});
     if(url.includes('/api/v1/flows?')){const query=new URL(url).searchParams,cursor=query.get('cursor'),state=query.get('versionState');return response(200,overrides.flowPages?.[state]?.[cursor||'first']??(state==='LOCKED'?overrides.publishedPages?.[cursor||'first']:undefined)??{data:[],next:null});}
-    if(url.includes('/app-connections?'))return response(200,{data:[{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:projects('list'),projectId:overrides.projectIdOnly?PROJECT:undefined,flowIds:[FLOW,'invalid']}]});
+    if(url.includes('/app-connections?')){
+      const cursor=new URL(url).searchParams.get('cursor');
+      return response(200,overrides.connectionPages?.[cursor||'first']??{data:[{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:projects('list'),projectId:overrides.projectIdOnly?PROJECT:undefined,flowIds:[FLOW,'invalid']}],next:null});
+    }
     if(url.endsWith('/api/v1/app-connections')){const b=JSON.parse(options.body);return response(201,{id:CONNECTION,pieceName:b.pieceName,pieceVersion:b.pieceVersion,displayName:b.displayName,status:'ACTIVE',scope:'PROJECT',projectIds:projects('create')});}
     throw new Error(`unexpected ${url}`);
   };
@@ -83,6 +86,24 @@ test('shows only valid flow references from a project-owned connection',async()=
   assert.equal(connection.scope,'PROJECT');
   assert.deepEqual(connection.flowIds,[FLOW]);
   assertCustomerConnection(connection,'stripe');
+});
+
+test('lists every page of the company project connections',async()=>{
+  const first={id:CONNECTION,pieceName:'@activepieces/piece-stripe',scope:'PROJECT',projectIds:[PROJECT]};
+  const second={id:'D'.repeat(21),pieceName:'@activepieces/piece-slack',scope:'PROJECT',projectIds:[PROJECT]};
+  const {service,calls}=harness({connectionPages:{first:{data:[first],next:'page-2'},'page-2':{data:[second],next:null}}});
+  assert.deepEqual((await service.list('company-a')).map(row=>row.slug),['stripe','slack']);
+  const pages=calls.filter(call=>call.url.includes('/app-connections?'));
+  assert.equal(pages.length,2);
+  assert.equal(new URL(pages[1].url).searchParams.get('cursor'),'page-2');
+  assert.equal(new URL(pages[1].url).searchParams.get('projectId'),PROJECT);
+});
+
+test('connection inventory rejects incomplete or repeated pages',async()=>{
+  for(const connectionPages of [{first:{data:[]}},{first:{data:[],next:'again'},again:{data:[],next:'again'}}]){
+    const {service}=harness({connectionPages});
+    await assert.rejects(()=>service.list('company-a'),error=>error.code==='connection_inventory_unknown');
+  }
 });
 
 test('builds custom auth only from authoritative fields',async()=>{
