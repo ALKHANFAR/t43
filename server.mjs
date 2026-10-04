@@ -17,6 +17,7 @@ import {assertSchemaReady} from './lib/schema-ready.mjs';
 import {toolIcon} from './lib/tool-icons.mjs';
 import {createPublicWaitlist,PublicWaitlistError} from './lib/public-waitlist.mjs';
 import {createGmailPilotRunner,GMAIL_PILOT_COMMAND,gmailPilotLedgerIdentity,gmailPilotSuccessResponse,recordGmailPilotConversation} from './lib/gmail-pilot-runner.mjs';
+import {createActivepiecesMcp} from './lib/activepieces-mcp.mjs';
 import {GMAIL_PILOT_COMPANY_ID,GMAIL_PILOT_REQUEST_ID,GmailPilotError} from './lib/gmail-send-pilot.mjs';
 
 const root=process.cwd();
@@ -30,6 +31,7 @@ let companyProfilesPromise;
 let accountAuthPromise;
 let databasePromise;
 let firecrawlClient;
+let mcpPromise;
 const mailer=createMailer({apiKey:process.env.RESEND_API_KEY,from:process.env.SIYADAH_MAIL_FROM,replyTo:process.env.SIYADAH_MAIL_REPLY_TO});
 
 function json(res,status,body,headers={}){res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...headers});res.end(JSON.stringify(body));}
@@ -55,6 +57,13 @@ async function toolConnections(){
     return createToolConnectionService({requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY,attemptSecret:process.env.SIYADAH_SESSION_SECRET,attemptStore:createGoogleOAuthAttemptStore({query:(sql,values)=>pool.query(sql,values)}),googleOAuth,customerOrigin:origin,gmailOAuthProvider:process.env.SIYADAH_GMAIL_OAUTH_PROVIDER||'activepieces'});
   })().catch(error=>{toolConnectionsPromise=null;throw error;});
   return toolConnectionsPromise;
+}
+async function activepiecesMcp(){
+  if(!mcpPromise)mcpPromise=(async()=>{
+    const projects=await tenantProjects(),pool=await database();
+    return createActivepiecesMcp({query:(sql,values)=>pool.query(sql,values),requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,origin:publicOrigin(),secret:process.env.SIYADAH_SESSION_SECRET});
+  })().catch(error=>{mcpPromise=null;throw error;});
+  return mcpPromise;
 }
 async function database(){
   if(!databasePromise)databasePromise=(async()=>{
@@ -118,6 +127,23 @@ async function provisionTenant(req,res){
     if(error instanceof TenantProjectError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
     console.error('tenant provision failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error'});
   }
+}
+async function beginMcpGrant(req,res){
+  if(!authorized(req))return json(res,401,{ok:false,error:'unauthorized'});
+  try{
+    const input=await body(req),url=await (await activepiecesMcp()).begin(input.tenantId);
+    return json(res,200,{ok:true,authorizationUrl:url});
+  }catch(error){
+    if(error instanceof TenantProjectError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
+    console.error('MCP grant start failed',error?.code||error?.name||'unknown_error');return json(res,502,{ok:false,error:'mcp_unavailable'});
+  }
+}
+async function finishMcpGrant(req,res){
+  let ok=false;
+  try{await (await activepiecesMcp()).complete(req.url);ok=true;}
+  catch(error){console.warn('MCP grant callback failed',error?.code||error?.name||'unknown_error');}
+  res.writeHead(ok?200:400,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','content-security-policy':"default-src 'none'; base-uri 'none'; frame-ancestors 'none'",'referrer-policy':'no-referrer','x-content-type-options':'nosniff'});
+  res.end(`<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><title>قدرات سيادة</title><p>${ok?'اكتمل ربط قدرات المشروع. يمكنك إغلاق النافذة.':'لم يكتمل ربط قدرات المشروع.'}</p></html>`);
 }
 
 async function scrapeWeb(req,res){
@@ -328,7 +354,7 @@ function employee(flow){
 function wantsEmployeeExecution(message){
   return /(?:أرسل|ارسل|انشر|نف[ّ]?ذ|شغ[ّ]?ل|حد[ّ]?ث|سج[ّ]?ل|احجز|ألغ|الغ|اربط|افصل|أنشئ|انشئ|راسل|اتصل)/i.test(String(message||''));
 }
-async function deepseekReply({company,settings,knowledge,team,history,message,employee=null}){
+async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,mcp=null,companyId=null,conversationId=null}){
   const key=process.env.DEEPSEEK_API_KEY;
   if(!key)throw new TenantProjectError('assistant_not_configured','مساعد سيادة غير مهيأ الآن.',503);
   const facts=(knowledge?.facts||[]).slice(0,40).map(item=>({topic:item.topic,value:item.value,source:item.sourceUrl,certainty:item.certainty}));
@@ -347,18 +373,56 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   const messages=[{role:'system',content:system}];
   for(const item of (history||[]).slice(-8))if(['user','assistant'].includes(item.role)&&typeof item.content==='string')messages.push({role:item.role,content:item.content.slice(0,3000)});
   messages.push({role:'user',content:String(message||'').slice(0,5000)});
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
+  let available=[];
+  if(mcp&&companyId){
+    try{available=(await mcp.call(companyId,'tools/list',{})).tools||[];}
+    catch(error){
+      if(error.code!=='mcp_not_connected')throw error;
+      messages[0].content+='\nلا يوجد اتصال MCP مهيأ لمشروع هذه الشركة. لا تدّع قراءة بيانات أي تطبيق، واطلب تهيئة الوصول عند الحاجة.';
+    }
+  }
+  const readOnly=name=>/^ap_(?:search_|list_|get_|read_|research_|resolve_|flow_structure$|setup_guide$)/.test(name);
+  const tools=available.filter(tool=>/^ap_[a-z_]+$/.test(tool.name)&&(!employee||employee.status==='active'||readOnly(tool.name))).map(tool=>({type:'function',function:{name:tool.name,description:String(tool.description||'').slice(0,1000),parameters:tool.inputSchema||{type:'object',properties:{}}}}));
+  if(tools.length)messages[0].content+='\nأدوات Activepieces متاحة لمشروع هذه الشركة فقط. استخدم الاكتشاف وفحص المدخلات والاتصال قبل أي إجراء. لا تفترض نجاحًا من الوصف أو اتصال محفوظ. أي أداة قد تغيّر حالة أو تستدعي تطبيقًا خارجيًا ستتوقف حتى موافقة واضحة؛ لا تعد المستخدم بأنها نُفذت قبل عودة نتيجتها.';
   try{
-    const response=await fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-v4-pro',messages,thinking:{type:'enabled'},reasoning_effort:'high',stream:false}),signal:controller.signal});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new TenantProjectError('assistant_unavailable','تعذّر إكمال التفكير الآن.',502);
-    const reply=String(data?.choices?.[0]?.message?.content||'').trim();
-    if(!reply)throw new TenantProjectError('assistant_empty','لم تصل إجابة مكتملة.',502);
-    return reply.slice(0,6000);
+    for(let turn=0;turn<5;turn++){
+      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30_000);
+      let data;
+      try{
+        const response=await fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-v4-pro',messages,thinking:{type:'enabled'},reasoning_effort:'high',stream:false,...(tools.length?{tools}:{})}),signal:controller.signal});
+        data=await response.json().catch(()=>({}));
+        if(!response.ok)throw new TenantProjectError('assistant_unavailable','تعذّر إكمال التفكير الآن.',502);
+      }finally{clearTimeout(timer);}
+      const answer=data?.choices?.[0]?.message;
+      const calls=Array.isArray(answer?.tool_calls)?answer.tool_calls:[];
+      if(!calls.length){
+        const reply=String(answer?.content||'').trim();
+        if(!reply)throw new TenantProjectError('assistant_empty','لم تصل إجابة مكتملة.',502);
+        return {reply:reply.slice(0,6000)};
+      }
+      messages.push({role:'assistant',content:answer.content||'',reasoning_content:answer.reasoning_content||'',tool_calls:calls});
+      for(const call of calls){
+        const name=call?.function?.name;
+        if(!tools.some(tool=>tool.function.name===name))throw new TenantProjectError('mcp_tool_invalid','اقتُرحت أداة غير متاحة لهذا المشروع.',502);
+        let args;try{args=JSON.parse(call.function.arguments||'{}');}catch{throw new TenantProjectError('mcp_arguments_invalid','مدخلات الأداة غير صالحة.',502);}
+        if(!args||typeof args!=='object'||Array.isArray(args))throw new TenantProjectError('mcp_arguments_invalid','مدخلات الأداة غير صالحة.',502);
+        if(!readOnly(name)){
+          const details=JSON.stringify(args);
+          if(details.length>8_000)throw new TenantProjectError('mcp_arguments_too_large','الإجراء المقترح أكبر من أن يُراجع بأمان هنا.',409);
+          const summary=`${String(message||'').slice(0,180)} · ${String(args.pieceName||'')} ${String(args.actionName||name)}`.trim();
+          const approvalId=await mcp.prepare({tenantId:companyId,conversationId,employeeId:employee?.id||null,toolName:name,args,summary});
+          return {reply:`حددت الإجراء المناسب: ${summary}. راجع بياناته ووافق قبل تشغيله.`,approval:{required:true,kind:'tool_action',approval_id:approvalId,summary,details}};
+        }
+        const result=await mcp.call(companyId,'tools/call',{name,arguments:args});
+        if(result.isError===true)throw new TenantProjectError('mcp_read_failed','أعادت الأداة خطأً؛ لم أستخرج منها معلومة مؤكدة.',502);
+        messages.push({role:'tool',tool_call_id:call.id,content:JSON.stringify(result).slice(0,12_000)});
+      }
+    }
+    return {reply:'قرأت الأدوات المتاحة، لكن لم أصل إلى إجابة مؤكدة ضمن حد خطوات المحادثة. حدّد الطلب أكثر لأتابع.'};
   }catch(error){
     if(error instanceof TenantProjectError)throw error;
     throw new TenantProjectError('assistant_unavailable','تعذّر إكمال التفكير الآن.',502);
-  }finally{clearTimeout(timer);}
+  }
 }
 async function publicChat(req,res){
   let sessionHeaders={};
@@ -422,6 +486,40 @@ async function publicChat(req,res){
       const name=profile?.company_name||resolved.account.company_name||'company',filename=`${String(name).replace(/[^\p{L}\p{N} _-]/gu,'').trim().slice(0,80)||'company'}-siyadah.json`;
       return json(res,200,{ok:true,filename,export:{schemaVersion:1,kind:'siyadah_customer_bundle',exportedAt:new Date().toISOString(),company:{name,settings,knowledge},employees,recentWork,manifest:{complete:false,employeeCount:employees.length,knowledgeVersion:Number(knowledge?.knowledgeVersion||0)}}},sessionHeaders);
     }
+    if(input.op==='approve'){
+      const conversationId=String(input.conversation_id||''),requestId=String(input.request_id||''),approvalId=String(input.approval_id||'');
+      if(!/^[A-Za-z0-9_-]{1,80}$/.test(conversationId)||!/^[A-Za-z0-9_-]{1,80}$/.test(requestId)||!/^[0-9a-f-]{36}$/i.test(approvalId)||!['approve','reject'].includes(input.decision))throw new CompanyProfileError('invalid_request','قرار الموافقة غير صالح.',400);
+      const profiles=await companyProfiles(),requestHash=createHash('sha256').update(JSON.stringify({approvalId,decision:input.decision})).digest('hex');
+      const claim=await profiles.claimChatRequest({companyId,conversationId,requestId,requestHash});
+      if(!claim.claimed)return claim.status==='pending'?json(res,200,{ok:true,conversation_id:conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders):json(res,claim.httpStatus||200,claim.response,sessionHeaders);
+      activeRequest={companyId,requestId,conversationId,profiles,effectStarted:false,executionAttempt:input.decision==='approve',claimToken:claim.claimToken};
+      const mcp=await activepiecesMcp(),pending=await mcp.consume({tenantId:companyId,conversationId,id:approvalId});
+      if(!pending)throw new CompanyProfileError('approval_expired','انتهت صلاحية الموافقة. اطلب تجهيز الإجراء من جديد.',409);
+      if(input.decision==='reject'){
+        const response=completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply:'ألغيت الإجراء. لم تُستخدم الأداة.'});
+        const settled=await profiles.settleChatRequest({companyId,requestId,status:'succeeded',httpStatus:200,response,claimToken:claim.claimToken});activeRequest=null;
+        return json(res,200,settled.response,sessionHeaders);
+      }
+      if(pending.employeeId){
+        const employee=await profiles.findEmployee(companyId,pending.employeeId);
+        if(!employee||employee.status!=='active')throw new CompanyProfileError('employee_disabled','الموظف غير نشط الآن؛ لم يبدأ تنفيذ الأداة.',409);
+      }
+      const available=await mcp.call(companyId,'tools/list',{});
+      if(!available.tools?.some(tool=>tool.name===pending.toolName))throw new TenantProjectError('mcp_tool_unavailable','لم تعد الأداة متاحة لهذا المشروع.',409);
+      if(pending.toolName==='ap_run_action'&&pending.args.connectionExternalId){
+        const pieceName=String(pending.args.pieceName||'');
+        const fullPiece=pieceName.startsWith('@activepieces/piece-')?pieceName:`@activepieces/piece-${pieceName}`;
+        await (await toolConnections()).assertOwnedExternal({tenantId:companyId,externalId:pending.args.connectionExternalId,pieceName:fullPiece});
+      }
+      activeRequest.effectStarted=true;
+      const result=await mcp.call(companyId,'tools/call',{name:pending.toolName,arguments:pending.args});
+      const raw=Array.isArray(result.content)?result.content.filter(item=>item?.type==='text').map(item=>item.text).join('\n'):JSON.stringify(result);
+      const reply=result.isError===true?'أعادت الأداة خطأً. راجع الإعداد أو الاتصال قبل المحاولة من جديد.':`وصل رد الأداة، ولم نتحقق بعد من أثره لدى المزود:\n${String(raw||'').slice(0,3000)}`;
+      const response={ok:true,conversation_id:conversationId,request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',work_id:`request_${requestId}`,reply};
+      await profiles.recordConversation({companyId,conversationId,employeeId:pending.employeeId,requestId,userMessage:pending.summary,assistantMessage:reply});
+      const settled=await profiles.settleChatRequest({companyId,requestId,status:'unknown',httpStatus:200,response,claimToken:claim.claimToken});activeRequest=null;
+      return json(res,200,settled.response,sessionHeaders);
+    }
     if(input.op==='message'){
       if(typeof input.message==='string'&&input.message.trim()===GMAIL_PILOT_COMMAND&&!input.employee_id){
         if(companyId!==GMAIL_PILOT_COMPANY_ID)throw new GmailPilotError('pilot_company_forbidden');
@@ -480,9 +578,9 @@ async function publicChat(req,res){
           return finish(200,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',outcome_kind:'external_run',work_id:proof.work_id,reply,employee:updated,recent_work:[proof]});
         }
         const profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId),conversations=await profiles.listConversations(companyId),conversation=conversations.find(item=>item.id===conversationId);
-        const reply=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history:conversation?.messages||[],message:input.message,employee:saved});
-        await profiles.recordConversation({companyId,conversationId,employeeId:saved.id,requestId,userMessage:input.message,assistantMessage:reply});
-        return finish(200,completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply,experience:{employee_conversation:true,employee_id:saved.id,instruction_version:Number(saved.prompt_version||1),external_execution:false}}));
+        const answer=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history:conversation?.messages||[],message:input.message,employee:saved,mcp:await activepiecesMcp(),companyId,conversationId});
+        await profiles.recordConversation({companyId,conversationId,employeeId:saved.id,requestId,userMessage:input.message,assistantMessage:answer.reply});
+        return finish(200,{...completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply:answer.reply,experience:{employee_conversation:true,employee_id:saved.id,instruction_version:Number(saved.prompt_version||1),external_execution:false}}),...(answer.approval?{approval:answer.approval,work_status:'awaiting_input'}:{})});
       }
       if(employeeRequestMode(input.message)==='create'){
         const created=await profiles.createManualEmployeeDraft({companyId,name:flowName(input.message),requestId});
@@ -492,9 +590,9 @@ async function publicChat(req,res){
         return finish(201,completedWithoutExecution('employee_draft',{ok:true,conversation_id:conversationId,reply,employee:created}));
       }
       const profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId),conversations=await profiles.listConversations(companyId),conversation=conversations.find(item=>item.id===conversationId);
-      const reply=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history:conversation?.messages||[],message:input.message});
-      await profiles.recordConversation({companyId,conversationId,employeeId:null,requestId,userMessage:input.message,assistantMessage:reply});
-      return finish(200,completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply,experience:{understood_company:true,knowledge_version:Number(knowledge?.knowledgeVersion||0),catalog_reviewed:true}}));
+      const answer=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history:conversation?.messages||[],message:input.message,mcp:await activepiecesMcp(),companyId,conversationId});
+      await profiles.recordConversation({companyId,conversationId,employeeId:null,requestId,userMessage:input.message,assistantMessage:answer.reply});
+      return finish(200,{...completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply:answer.reply,experience:{understood_company:true,knowledge_version:Number(knowledge?.knowledgeVersion||0),catalog_reviewed:true}}),...(answer.approval?{approval:answer.approval,work_status:'awaiting_input'}:{})});
     }
     return json(res,400,{ok:false,error:'unsupported_operation'},sessionHeaders);
   }catch(error){
@@ -565,6 +663,8 @@ createServer((req,res)=>{
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/auth/reset-password')return authRoute(req,res,'reset');
   if(req.method==='GET'&&req.url==='/siyadah-api/v1/auth/session')return authRoute(req,res,'session');
   if(req.method==='POST'&&req.url==='/internal/v1/tenants/provision')return provisionTenant(req,res);
+  if(req.method==='POST'&&req.url==='/internal/v1/mcp/connect')return beginMcpGrant(req,res);
+  if(req.method==='GET'&&pathname==='/siyadah-api/v1/mcp/callback')return finishMcpGrant(req,res);
   if(req.method==='POST'&&req.url==='/internal/v1/tenant-flows/create')return createTenantFlow(req,res);
   if(req.method==='POST'&&req.url==='/internal/v1/web/scrape')return scrapeWeb(req,res);
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/onboarding')return onboarding(req,res);

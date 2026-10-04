@@ -9,6 +9,14 @@ This contract belongs to `ALKHANFAR/t43`. The customer frontend may change later
 - `op:work` with the same `request_id` reads status. A missing record and an uncertain recorded outcome both use `request_status:not_observed` today; the UI must say the result is unverified and must not retry with a new ID automatically.
 - A *new* request ID is a new operation, even if the wording looks similar. The current `prior_request_id` field is not a cancellation guarantee.
 
+## Project MCP chat
+
+- The main chat and selected employee chat use the same server-side Activepieces MCP adapter. The server resolves the company project; no project ID, MCP token, or provider credential is accepted from the browser.
+- A platform operator starts a separate MCP OAuth grant for each company project through `POST /internal/v1/mcp/connect` with the existing internal bearer token and `{ "tenantId": "..." }`. The operator completes Activepieces consent. The callback accepts only a token whose project claim matches the server-owned company mapping. The encrypted refresh token stays in Siyadah's database. This is an operator setup path, not a customer self-service OAuth flow.
+- Discovery tools may be called from the chat. A tool capable of execution stops at a ten-minute, one-use approval tied to company and conversation. `op:approve` consumes that approval before dispatch. Repeating the same request ID returns its stored status; a new request ID cannot reuse the consumed approval.
+- The approval response is `outcome_kind:conversation_reply`, `work_status:awaiting_input`, and includes `approval.required=true`. After an MCP execution response, the customer sees the tool's reply labelled unverified, with `outcome_kind:unverified` and `work_status:unknown`. A tool response alone does not establish provider readback, run ID, or KPI.
+- This branch does not implement the three durable employee permission levels in ABO-67. Until that policy is enforced, each executable MCP tool call requires a separate approval. Do not describe this as permanent delegation or general customer launch readiness.
+
 ## Meaning of response fields
 
 | Field | Meaning | May prove an external action? |

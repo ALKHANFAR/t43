@@ -1402,6 +1402,8 @@ var I = {
   }
   function siyBuilderProposalHtml(data){
     if(!data||!data.approval||data.approval.required!==true||typeof data.approval.approval_id!=="string") return "";
+    if(data.approval.kind==='tool_action')return '<div class="plan nr" style="margin-top:10px"><div class="plan__h"><span class="drop"></span>'+ui('إجراء يحتاج موافقتك','Action needs your approval')+'</div><div class="prow"><b>'+ui('الإجراء','Action')+'</b><span>'+esc(customerText(data.approval.summary||''))+'</span></div><details><summary>'+ui('راجع بيانات الإجراء كاملة','Review exact action inputs')+'</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(data.approval.details||'')+'</pre></details></div>'+
+      '<div class="approve nr"><button type="button" class="bt" data-siy-approval="approve">'+I.check+ui('وافق على الإجراء','Approve action')+'</button><button type="button" class="bt bt--line" data-siy-approval="reject">'+ui('إلغاء','Cancel')+'</button></div>';
     var plan=data.flow_plan&&typeof data.flow_plan==="object"?data.flow_plan:{};
     var trigger=plan.trigger&&typeof plan.trigger==="object"?plan.trigger:{};
     var steps=Array.isArray(plan.steps)?plan.steps:[];
@@ -1430,11 +1432,12 @@ var I = {
   }
   async function siyDecideBuilder(row,decision){
     if(!row||!row.builderApproval||row.siyInFlight) return;
-    row.siyInFlight=true; row.t=siyReplyHtml(decision==='approve'?ui('جارٍ تجهيز الموظف داخل مساحة شركتك…','Preparing the employee in your workspace…'):ui('جارٍ إلغاء الخطة…','Cancelling the plan…')); siyDraw();
+    var requestId=row.siyApprovalRequestId||(row.siyApprovalRequestId=crypto.randomUUID());
+    row.siyInFlight=true; row.t=siyReplyHtml(decision==='approve'?ui('جارٍ تنفيذ الإجراء داخل مساحة شركتك…','Running the action in your workspace…'):ui('جارٍ إلغاء الإجراء…','Cancelling the action…')); siyDraw();
     try{
-      var data=await siyRequest({op:'approve',request_id:crypto.randomUUID(),conversation_id:row.builderApproval.conversationId,approval_id:row.builderApproval.id,decision:decision});
+      var data=await siyRequest({op:'approve',request_id:requestId,conversation_id:row.builderApproval.conversationId,approval_id:row.builderApproval.id,decision:decision});
       Object.assign(row,siyResultRow(data)); row.builderApproval=null; row.siyInFlight=false; siyDraw();
-    }catch(error){ row.siyInFlight=false; row.t=siyReplyHtml(error.message||ui('تعذر تنفيذ القرار.','Could not apply the decision.')); siyDraw(); }
+    }catch(error){ row.siyInFlight=false; row.t=siyReplyHtml(ui('نتحقق من نتيجة القرار بنفس الطلب، دون إعادة تشغيل الأداة.','Checking this decision with the same request, without running the tool again.')); siyDraw(); siyPoll('request_'+requestId,curList(),row,0); }
   }
   function siyPoll(workId,list,row,attempt){
     var generation=siyGeneration;

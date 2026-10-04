@@ -88,6 +88,15 @@ test('shows only valid flow references from a project-owned connection',async()=
   assertCustomerConnection(connection,'stripe');
 });
 
+test('one-shot action can use only an active external connection exclusive to its company project',async()=>{
+  const row={id:CONNECTION,externalId:'company-a-calendar',pieceName:'@activepieces/piece-google-calendar',status:'ACTIVE',scope:'PROJECT',projectIds:[PROJECT],flowIds:[]};
+  const {service}=harness({connectionPages:{first:{data:[row],next:null}}});
+  await service.assertOwnedExternal({tenantId:'company-a',externalId:row.externalId,pieceName:row.pieceName});
+  await assert.rejects(()=>service.assertOwnedExternal({tenantId:'company-b',externalId:row.externalId,pieceName:row.pieceName}),{code:'connection_project_mismatch'});
+  await assert.rejects(()=>service.assertOwnedExternal({tenantId:'company-a',externalId:row.externalId,pieceName:'@activepieces/piece-gmail'}),{code:'connection_not_owned'});
+  await assert.rejects(()=>service.assertOwnedExternal({tenantId:'company-a',externalId:'other',pieceName:row.pieceName}),{code:'connection_not_owned'});
+});
+
 test('lists every page of the company project connections',async()=>{
   const first={id:CONNECTION,pieceName:'@activepieces/piece-stripe',scope:'PROJECT',projectIds:[PROJECT]};
   const second={id:'D'.repeat(21),pieceName:'@activepieces/piece-slack',scope:'PROJECT',projectIds:[PROJECT]};
