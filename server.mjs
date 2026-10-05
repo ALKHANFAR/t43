@@ -383,6 +383,7 @@ async function successfulFlowTest(mcp,companyId,flowId,test){
   return detail?.isError!==true&&run?.id===runId&&run.flowId===flowId&&run.environment==='TESTING'&&run.status==='SUCCEEDED'&&Array.isArray(run.steps)&&run.steps.length>0;
 }
 async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null,mcp=null,companyId=null,conversationId=null,deadlineMs=null,excludedTools=[],onEffectStart=null,createDraft=null}){
+  mcp=mcp?.forRequest?.()||mcp;
   const key=process.env.DEEPSEEK_API_KEY;
   if(!key)throw new TenantProjectError('assistant_not_configured','مساعد سيادة غير مهيأ الآن.',503);
   const deadline=deadlineMs?Date.now()+deadlineMs:null;

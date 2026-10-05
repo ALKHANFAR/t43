@@ -3,14 +3,15 @@ import assert from 'node:assert/strict';
 import {createActivepiecesMcp} from '../lib/activepieces-mcp.mjs';
 
 const projectA='AAAAAAAAAAAAAAAAAAAAA',projectB='BBBBBBBBBBBBBBBBBBBBB';
-const token=project=>'header.'+Buffer.from(JSON.stringify({projectId:project})).toString('base64url')+'.signature';
+const token=project=>'header.'+Buffer.from(JSON.stringify({projectId:project,exp:Math.floor(Date.now()/1000)+900})).toString('base64url')+'.signature';
 const json=value=>new Response(JSON.stringify(value),{status:200,headers:{'content-type':'application/json'}});
 
 function harness(tokenProject=projectA,sse=false){
-  let grant=null,approval=null,mcpCalls=0;
+  let grant=null,approval=null,mcpCalls=0,refreshCalls=0,rejectMcp=false,rejectRefresh=false,lifetime=900,currentProject=projectA,rotate=false;
   const query=async(sql,values=[])=>{
     if(sql.includes('INSERT INTO siyadah_mcp_grants')){grant={project_id:values[1],client_id:values[2],refresh_token_cipher:values[3]};return {rows:[]};}
-    if(sql.includes('SELECT project_id,client_id,refresh_token_cipher'))return {rows:grant?[grant]:[]};
+    if(sql.includes('SELECT project_id,client_id,refresh_token_cipher'))return {rows:grant&&values[0]==='company-a'?[grant]:[]};
+    if(sql.includes('UPDATE siyadah_mcp_grants')){grant.refresh_token_cipher=values[0];return {rows:[]};}
     if(sql.includes('INSERT INTO siyadah_mcp_approvals')){approval={id:values[0],tenant_id:values[1],conversation_id:values[2],employee_id:values[3],tool_name:values[4],args_cipher:values[5],summary:values[6]};return {rows:[]};}
     if(sql.includes('DELETE FROM siyadah_mcp_approvals')){
       if(!approval||approval.id!==values[0]||approval.tenant_id!==values[1]||approval.conversation_id!==values[2])return {rows:[]};
@@ -20,16 +21,20 @@ function harness(tokenProject=projectA,sse=false){
   };
   const fetchImpl=async(url,options)=>{
     if(url.endsWith('/register'))return json({client_id:'siyadah-client'});
-    if(url.endsWith('/token'))return json({access_token:token(tokenProject),refresh_token:'refresh-secret'});
+    if(url.endsWith('/token')){
+      if(options.body.get('grant_type')==='refresh_token'){refreshCalls++;if(rejectRefresh)return new Response('{}',{status:400});}
+      return json({access_token:token(tokenProject),refresh_token:rotate?'refresh-secret-'+refreshCalls:'refresh-secret',expires_in:lifetime});
+    }
     if(url.endsWith('/mcp')){
       mcpCalls++;
+      if(rejectMcp)return new Response('{}',{status:401});
       const payload={jsonrpc:'2.0',id:1,result:options.body.includes('tools/list')?{tools:[{name:'ap_search_actions'}]}:{content:[{type:'text',text:'ok'}]}};
       return sse?new Response(`event: message\ndata: ${JSON.stringify(payload)}\n\n`,{status:200,headers:{'content-type':'text/event-stream'}}):json(payload);
     }
     throw new Error('unexpected provider URL');
   };
-  const service=createActivepiecesMcp({query,requireProject:async()=>projectA,activepiecesUrl:'https://ap.example.test',origin:'https://siyadah.example.test',secret:'s'.repeat(40),fetchImpl});
-  return {service,get grant(){return grant;},get mcpCalls(){return mcpCalls;}};
+  const service=createActivepiecesMcp({query,requireProject:async()=>currentProject,activepiecesUrl:'https://ap.example.test',origin:'https://siyadah.example.test',secret:'s'.repeat(40),fetchImpl});
+  return {service,get grant(){return grant;},get mcpCalls(){return mcpCalls;},get refreshCalls(){return refreshCalls;},dropGrant(){grant=null;},changeGrant(){grant.client_id+='-new';},foreignToken(){tokenProject=projectB;},rejectMcp(value){rejectMcp=value;},rejectRefresh(value){rejectRefresh=value;},setLifetime(value){lifetime=value;},changeProject(){currentProject=projectB;},rotate(){rotate=true;},corruptGrant(){grant.refresh_token_cipher+='x';}};
 }
 
 test('MCP OAuth grant is bound to the server-owned company project and stored encrypted',async()=>{
@@ -65,4 +70,89 @@ test('tool approval can be consumed only once in its company and conversation',a
   const approved=await h.service.consume({tenantId:'company-a',conversationId:'chat-a',id});
   assert.deepEqual(approved.args,{pieceName:'google-calendar'});
   assert.equal(await h.service.consume({tenantId:'company-a',conversationId:'chat-a',id}),null);
+});
+
+async function connect(h){
+  const state=new URL(await h.service.begin('company-a')).searchParams.get('state');
+  await h.service.complete(`/siyadah-api/v1/mcp/callback?state=${encodeURIComponent(state)}&code=once`);
+}
+
+test('one chat request shares a token across discovery and parallel tool calls; another request refreshes',async()=>{
+  const h=harness();await connect(h);
+  const request=h.service.forRequest();
+  await Promise.all([request.call('company-a','tools/list',{}),request.call('company-a','initialize',{})]);
+  await request.call('company-a','tools/call',{name:'ap_list_flows',arguments:{}});
+  assert.equal(h.refreshCalls,1);
+  await h.service.forRequest().call('company-a','tools/list',{});
+  assert.equal(h.refreshCalls,2);
+});
+
+test('expiry renews the token before the next tool call',async t=>{
+  t.mock.timers.enable({apis:['Date'],now:Date.now()});
+  const h=harness();await connect(h);const request=h.service.forRequest();
+  await request.call('company-a','tools/list',{});
+  t.mock.timers.tick(901_000);
+  await request.call('company-a','tools/list',{});
+  assert.equal(h.refreshCalls,2);
+});
+
+test('deleted and changed grants cannot reuse a cached authorization',async()=>{
+  const h=harness();await connect(h);const request=h.service.forRequest();
+  await request.call('company-a','tools/list',{});
+  h.changeGrant();await request.call('company-a','tools/list',{});
+  assert.equal(h.refreshCalls,2);
+  h.dropGrant();const calls=h.mcpCalls;
+  await assert.rejects(()=>request.call('company-a','tools/list',{}),{code:'mcp_not_connected'});
+  assert.equal(h.mcpCalls,calls);
+});
+
+test('another tenant and a foreign refreshed project never reach MCP through the cache',async()=>{
+  const h=harness();await connect(h);const request=h.service.forRequest();
+  await request.call('company-a','tools/list',{});const calls=h.mcpCalls;
+  await assert.rejects(()=>request.call('company-b','tools/list',{}),{code:'mcp_not_connected'});
+  h.changeGrant();h.foreignToken();
+  await assert.rejects(()=>request.call('company-a','tools/list',{}),{code:'mcp_project_mismatch'});
+  assert.equal(h.mcpCalls,calls);
+});
+
+test('a rejected cached token is discarded without replaying a write',async()=>{
+  const h=harness();await connect(h);const request=h.service.forRequest();
+  await request.call('company-a','tools/list',{});const calls=h.mcpCalls;
+  h.rejectMcp(true);
+  await assert.rejects(()=>request.call('company-a','tools/call',{name:'ap_build_flow',arguments:{}}),{code:'mcp_grant_expired'});
+  assert.equal(h.mcpCalls,calls+1);assert.equal(h.refreshCalls,1);
+  h.rejectMcp(false);await request.call('company-a','tools/list',{});
+  assert.equal(h.refreshCalls,2);
+});
+
+test('failed refresh is not retained, and missing lifetime is never reused',async()=>{
+  const h=harness();await connect(h);const request=h.service.forRequest();
+  h.rejectRefresh(true);
+  await assert.rejects(()=>request.call('company-a','tools/list',{}),{code:'mcp_provider_error'});
+  h.rejectRefresh(false);h.setLifetime(0);
+  await request.call('company-a','tools/list',{});await request.call('company-a','tools/list',{});
+  assert.equal(h.refreshCalls,3);
+});
+
+
+test('refresh token rotation updates storage without causing another refresh in the same request',async()=>{
+  const h=harness();await connect(h);h.rotate();const request=h.service.forRequest();
+  await request.call('company-a','tools/list',{});await request.call('company-a','tools/list',{});
+  assert.equal(h.refreshCalls,1);
+  await h.service.forRequest().call('company-a','tools/list',{});assert.equal(h.refreshCalls,2);
+});
+
+test('project remapping and encrypted grant tampering fail before another RPC',async()=>{
+  for(const change of ['changeProject','corruptGrant']){
+    const h=harness();await connect(h);const request=h.service.forRequest();
+    await request.call('company-a','tools/list',{});const calls=h.mcpCalls;h[change]();
+    await assert.rejects(()=>request.call('company-a','tools/list',{}),{code:change==='changeProject'?'mcp_not_connected':'mcp_state_invalid'});
+    assert.equal(h.mcpCalls,calls);
+  }
+});
+
+test('malformed expiry cannot retain a token for the request',async()=>{
+  const h=harness();await connect(h);h.setLifetime('invalid');const request=h.service.forRequest();
+  await request.call('company-a','tools/list',{});await request.call('company-a','tools/list',{});
+  assert.equal(h.refreshCalls,2);
 });
