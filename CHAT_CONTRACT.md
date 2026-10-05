@@ -59,3 +59,11 @@ Saving an employee draft requires the company database and does not provision Ac
 ## Release boundary
 
 Before merging, compare the exact head and base, verify the resolved Railway pre-deploy command and schema, run the relevant acceptance tests, and read provider results at their own evidence level. A deployed build, an open PR, a merged commit, an Activepieces Flow, and a provider outcome are separate facts.
+
+## Employee instructions — conversation context and Activepieces work
+
+`employee_instructions` saves the selected company's employee context in PostgreSQL. Its response has `instructions_verified:true` and `instruction_scope:conversation`; verification means the stored text was read back, not that an Activepieces step or shared Agent changed. The main-chat saved draft includes these instructions and their source/version, just as selected-employee chat does.
+
+To apply saved instructions to ongoing work, use the existing message route with the selected `employee_id`. The UI prepares the request without sending it automatically and requires unsaved edits to be saved first. The model reads the owned Flow and AI schema, edits the per-step prompt without dropping task variables, then reads back, tests and publishes through the existing MCP path. A `run_agent` step prompt is a per-Flow overlay; do not change a shared Agent's base instructions. No suitable AI step, a failed test, or uncertain readback must not be displayed as runtime adoption.
+
+The saved-context panel is not an authoritative projection of published Activepieces instructions. Runtime instructions and their draft/published version require actual AP readback; this PR does not claim automatic synchronization or complete ABO-65/66 acceptance.
