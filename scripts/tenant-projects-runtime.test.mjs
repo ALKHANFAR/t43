@@ -103,6 +103,26 @@ test('lists only flows returned for the company stored project',async()=>{
   assert.equal((await service.listFlows('company_6006')).length,1);
 });
 
+test('reads the requested published flow version only within its owning project',async()=>{
+  const flowId='F12345678901234567890',versionId='published_1';
+  const row={tenant_id:'company_alpha',external_id:'siyadah:company_alpha',activepieces_project_id:projectId,display_name:'شركة ألف',provision_status:'ready'};
+  const seen=[];
+  const service=createTenantProjectService({
+    query:async()=>({rows:[row]}),activepiecesUrl:'https://activepieces.example',apiKey:'secret',
+    fetchImpl:async url=>{
+      seen.push(url);
+      return {ok:true,status:200,json:async()=>({id:flowId,projectId,status:'ENABLED',version:{id:new URL(url).searchParams.get('versionId')||'draft_2',connectionIds:[]}})};
+    },
+  });
+  const owned=await service.ownedFlow('company_alpha',flowId,versionId);
+  assert.equal(owned.flow.version.id,versionId);
+  assert.equal(new URL(seen[0]).searchParams.get('versionId'),versionId);
+  const mismatched=createTenantProjectService({query:async()=>({rows:[row]}),activepiecesUrl:'https://activepieces.example',apiKey:'secret',fetchImpl:async()=>({ok:true,status:200,json:async()=>({id:flowId,projectId,status:'ENABLED',version:{id:'another_version'}})})});
+  await assert.rejects(()=>mismatched.ownedFlow('company_alpha',flowId,versionId),error=>error instanceof TenantProjectError&&error.code==='flow_version_mismatch');
+  const foreign=createTenantProjectService({query:async()=>({rows:[row]}),activepiecesUrl:'https://activepieces.example',apiKey:'secret',fetchImpl:async()=>({ok:true,status:200,json:async()=>({id:flowId,projectId:'ForeignProject123456789',version:{id:versionId}})})});
+  await assert.rejects(()=>foreign.ownedFlow('company_alpha',flowId,versionId),error=>error instanceof TenantProjectError&&error.code==='flow_project_mismatch');
+});
+
 test('two companies keep distinct projects and cannot receive each other flows',async()=>{
   const projects={
     company_alpha:'A12345678901234567890',

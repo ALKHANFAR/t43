@@ -14,6 +14,17 @@ function draftFixture(){
     if(sql.startsWith('SELECT * FROM siyadah_company_profiles'))return {rows:profiles[values[0]]?[profiles[values[0]]]:[]};
     if(sql.startsWith('SELECT id,creation_payload_key FROM siyadah_digital_employees'))return {rows:rows.filter(row=>row.company_id===values[0]&&row.creation_request_id===values[1]).map(row=>({id:row.id,creation_payload_key:row.creation_payload_key}))};
     if(sql.startsWith('SELECT id,activepieces_flow_id'))return {rows:rows.filter(row=>row.company_id===values[0])};
+    if(sql.startsWith('SELECT id,company_id,activepieces_flow_id'))return {rows:rows.filter(row=>row.company_id===values[0]&&row.id===values[1])};
+    if(sql.startsWith('UPDATE siyadah_digital_employees')&&sql.includes('activepieces_flow_id')){
+      const [companyId,employeeId,flowId]=values;
+      const row=rows.find(item=>item.company_id===companyId&&item.id===employeeId);
+      if(!row||row.activepieces_flow_id&&row.activepieces_flow_id!==flowId)return {rows:[]};
+      if(rows.some(item=>item!==row&&item.activepieces_flow_id===flowId)){
+        const error=new Error('duplicate flow');error.code='23505';throw error;
+      }
+      row.activepieces_flow_id=flowId;
+      return {rows:[{id:row.id}]};
+    }
     if(sql.startsWith('INSERT INTO siyadah_digital_employees')){
       const [id,company_id,creation_request_id,creation_payload_key]=values;
       if(rows.some(row=>row.company_id===company_id&&row.creation_request_id===creation_request_id))return {rows:[]};
@@ -51,6 +62,38 @@ test('manual chat draft is saved locally and replays under its company and reque
   assert.equal(h.rows[0].prompt_source,'manual_setup');
   await assert.rejects(()=>h.service.createManualEmployeeDraft({...input,name:'موظف آخر'}),error=>error instanceof CompanyProfileError&&error.code==='request_scope_mismatch');
   await assert.rejects(()=>h.service.createManualEmployeeDraft({...input,requestId:'bad id'}),error=>error instanceof CompanyProfileError&&error.code==='invalid_request');
+});
+
+test('linking a flow preserves the original employee and request replay',async()=>{
+  const h=draftFixture(),input={companyId:'company_alpha',name:'موظف متابعة',requestId:'chat_link_1'};
+  const draft=await h.service.createManualEmployeeDraft(input),flowId='F12345678901234567890';
+  const linked=await h.service.linkEmployeeFlow({companyId:input.companyId,employeeId:draft.recordId,flowId});
+  const replay=await h.service.linkEmployeeFlow({companyId:input.companyId,employeeId:draft.recordId,flowId});
+  const draftReplay=await h.service.createManualEmployeeDraft(input);
+  assert.equal(linked.recordId,draft.recordId);
+  assert.equal(linked.flowId,flowId);
+  assert.equal(replay.recordId,draft.recordId);
+  assert.equal(draftReplay.recordId,draft.recordId);
+  assert.equal(draftReplay.flowId,flowId);
+  assert.equal(h.rows.length,1);
+  assert.equal(h.rows[0].status,'draft');
+  assert.equal(h.calls.filter(call=>call.sql.startsWith('INSERT INTO siyadah_digital_employees')).length,1);
+});
+
+test('flow linking rejects another tenant, another flow, and a duplicate flow owner',async()=>{
+  const h=draftFixture();
+  const first=await h.service.createManualEmployeeDraft({companyId:'company_alpha',name:'ألف',requestId:'chat_link_2'});
+  const second=await h.service.createManualEmployeeDraft({companyId:'company_alpha',name:'ثان',requestId:'chat_link_3'});
+  const foreign=await h.service.createManualEmployeeDraft({companyId:'company_beta',name:'باء',requestId:'chat_link_4'});
+  const flowId='F12345678901234567890',otherFlowId='G12345678901234567890';
+  await h.service.linkEmployeeFlow({companyId:'company_alpha',employeeId:first.recordId,flowId});
+  await assert.rejects(()=>h.service.linkEmployeeFlow({companyId:'company_beta',employeeId:first.recordId,flowId:otherFlowId}),error=>error instanceof CompanyProfileError&&error.code==='employee_not_found');
+  await assert.rejects(()=>h.service.linkEmployeeFlow({companyId:'company_alpha',employeeId:first.recordId,flowId:otherFlowId}),error=>error instanceof CompanyProfileError&&error.code==='employee_flow_conflict');
+  await assert.rejects(()=>h.service.linkEmployeeFlow({companyId:'company_alpha',employeeId:second.recordId,flowId}),error=>error instanceof CompanyProfileError&&error.code==='employee_flow_conflict');
+  await assert.rejects(()=>h.service.linkEmployeeFlow({companyId:'company_beta',employeeId:foreign.recordId,flowId}),error=>error instanceof CompanyProfileError&&error.code==='employee_flow_conflict');
+  assert.equal(h.rows.find(row=>row.id===first.recordId).activepieces_flow_id,flowId);
+  assert.equal(h.rows.find(row=>row.id===second.recordId).activepieces_flow_id,null);
+  assert.equal(h.rows.find(row=>row.id===foreign.recordId).activepieces_flow_id,null);
 });
 
 test('migration is additive and retains existing employee flow references',async()=>{
