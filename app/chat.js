@@ -460,10 +460,10 @@ var I = {
   function instrHtml(e){
     if(window.__SIY_REAL__){
       var savedRules=e.rules.filter(function(r){return r[1];}).map(function(r){return esc(r[0]);});
-      var instructionSource=e.instrSource==='owner'?'تعديلك':e.instrSource==='manual_setup'?'مسودة أولية':'دور الموظف ومعرفة الشركة';
-      return '<div class="card"><div class="card__h">'+I.pen+'<b>تعليمات الموظف</b><span class="cnt">نسخة '+e.instrVersion+' · '+instructionSource+'</span></div>'+
-        '<div class="card__b"><textarea class="instr" id="instr" maxlength="12000" aria-label="تعليمات '+esc(e.n)+'">'+esc(e.instr)+'</textarea>'+
-        '<div class="instr__f" id="instrF"><span>مصدر البداية: الدور المختار ومعرفة شركتك. أي تعديل منك يُحفظ كنسخة جديدة.</span><button type="button" class="bts" id="instrSave">حفظ التعليمات</button></div></div>'+
+      var instructionSource=e.instrSource==='owner'?ui('تعديلك','Your edit'):e.instrSource==='manual_setup'?ui('مسودة أولية','Initial draft'):ui('دور الموظف ومعرفة الشركة','Employee role and company knowledge');
+      return '<div class="card"><div class="card__h">'+I.pen+'<b>'+ui('تعليمات المحادثة','Conversation instructions')+'</b><span class="cnt">'+ui('نسخة ','Version ')+e.instrVersion+' · '+instructionSource+'</span></div>'+
+        '<div class="card__b"><textarea class="instr" id="instr" maxlength="12000" aria-label="'+ui('تعليمات ','Instructions for ')+esc(e.n)+'">'+esc(e.instr)+'</textarea>'+
+        '<div class="instr__f" id="instrF"><span>'+ui('تُحفظ لسياق المحادثة؛ تطبيقها على طريقة العمل يحتاج مراجعة واختبارًا.','Saved for conversation context; applying them to the workflow requires review and testing.')+'</span><button type="button" class="bts" id="instrSave">'+ui('حفظ التعليمات','Save instructions')+'</button>'+(e.flowId?'<button type="button" class="bts bts--line" id="instrApply">'+ui('راجع وطبّق على طريقة العمل','Review and apply to workflow')+'</button>':'')+'</div></div>'+
         '<div class="card__h">'+I.shield+'<b>حدوده</b><span class="cnt">من السجل</span></div>'+
         '<div class="card__b"><p>الصلاحية المسجلة: '+esc(e.auto===null?'غير محددة':AUTON[e.auto])+'.</p>'+
         '<p>القيود المسجلة: '+(savedRules.length?savedRules.join('، '):'غير محددة')+'.</p>'+
@@ -892,6 +892,12 @@ var I = {
     if(t.closest("#reviewStart")){ var draftWrap=$("#instrWrap"), review=$("#reviewStart");draftWrap.hidden=!draftWrap.hidden;review.setAttribute('aria-expanded',String(!draftWrap.hidden));if(!draftWrap.hidden){$("#thread").scrollTop=0;$("#instr").focus();}return; }
     if(t.closest("#instrTgl")){ var w=$("#instrWrap"), b=$("#instrTgl"); w.hidden=!w.hidden; b.setAttribute("aria-expanded",String(!w.hidden)); if(!w.hidden){ $("#thread").scrollTop=0; $("#instr").focus(); } return; }
     if(t.closest("#onSw")){ if(window.__SIY_REAL__){ siySetEmployeeState(emp(who)); return; } var sw=$("#onSw"), eo=emp(who), v=sw.getAttribute("aria-checked")==="true"; sw.setAttribute("aria-checked",String(!v)); eo.on=!v; $("#onLbl").textContent=eo.on?(eo.f?"شغّالة":"شغّال"):(eo.f?"متوقفة":"متوقف"); renderSide(); siyPatch(eo.n,"status",eo.on?"نشط":"متوقف"); return; }
+    if(window.__SIY_REAL__&&t.closest("#instrApply")){
+      var current=emp(who), note=$("#instrF").firstChild;
+      if(!current||!current.flowId)return;
+      if($("#instrSave").disabled||$("#instr").value.trim()!==current.instr){note.textContent=ui('احفظ تعديلك أولًا، ثم اطلب تطبيق التعليمات المحفوظة.','Save your changes first, then request applying the saved instructions.');return;}
+      var composer=$("#input");composer.value=ui('راجع التعليمات المحفوظة لهذا الموظف وطبّقها على طريقة عمله المرتبطة، ثم اختبر التغييرات وأخبرني بما تأكدت منه.','Review this employee’s saved instructions and apply them to the linked workflow, then test the changes and report what you verified.');composer.focus();$("#thread").scrollTop=$("#thread").scrollHeight;return;
+    }
     if(t.closest("#instrSave")){ var e2=emp(who), nv=$("#instr").value.trim(); if(!nv||nv===e2.instr){ $("#instrF").firstChild.textContent="ما تغيّر شيء."; return; }
       if(window.__SIY_REAL__){ siySaveEmployeeInstructions(e2,nv); return; }
       var os=e2.instr.split(/(?<=[.؟!])\s+/), ns=nv.split(/(?<=[.؟!])\s+/), add=ns.filter(function(s){return os.indexOf(s)<0}).join(" "), del=os.filter(function(s){return ns.indexOf(s)<0}).join(" ");
@@ -1286,8 +1292,8 @@ var I = {
     button.disabled=true;button.textContent=ui("جارٍ الحفظ…","Saving…");note.textContent=ui("أحفظها داخل مساحة شركتك وأتحقق من القراءة…","Saving in your workspace and verifying the result…");
     try{
       var data=await siyRequest({op:'employee_instructions',employee_id:e.id,instructions:instructions});
-      if(!data.instructions_verified||!data.employee||data.employee.recordId!==e.id||data.employee.instructions!==instructions)throw new Error(ui('لم تتطابق قراءة التعليمات بعد الحفظ.','Saved instructions could not be verified.'));
-      e.instr=data.employee.instructions;e.instrSource=data.employee.instructionSource;e.instrVersion=data.employee.instructionVersion;e.ver+=1;note.textContent=ui("تم الحفظ والتحقق · النسخة ","Saved and verified · version ")+e.instrVersion+ui(" أصبحت النسخة المعتمدة."," is now current.");button.textContent=ui("تم الحفظ","Saved");
+      if(data.instruction_scope!=='conversation'||!data.instructions_verified||!data.employee||data.employee.recordId!==e.id||data.employee.instructions!==instructions)throw new Error(ui('لم تتطابق قراءة التعليمات بعد الحفظ.','Saved instructions could not be verified.'));
+      e.instr=data.employee.instructions;e.instrSource=data.employee.instructionSource;e.instrVersion=data.employee.instructionVersion;e.ver+=1;note.textContent=ui("حُفظت للمحادثة · النسخة ","Saved for conversation · version ")+e.instrVersion+ui(". تطبيقها على طريقة العمل لم يُتحقق منه.",". Application to the workflow is not verified.");button.textContent=ui("تم الحفظ","Saved");
     }catch(error){e.instr=previous;note.textContent=error.message||ui("تعذّر حفظ التعليمات.","Could not save instructions.");button.textContent=ui("أعد المحاولة","Try again");}
     finally{button.disabled=false;}
   }
