@@ -975,3 +975,37 @@ test('instruction application does not overwrite the manager’s unsent message'
     assert.equal(p.requests.filter(x=>x.body?.op==='message').length,0);
   }finally{p.close();}
 });
+
+const readyEmployee={...employee,flowId:'f'.repeat(21)};
+const readiness={employee_id:employee.recordId,flow_id:readyEmployee.flowId,published_version_id:'v'.repeat(21),test_run_id:'r'.repeat(21),test_environment:'TESTING',used_mock_trigger_data:true};
+test('employee readiness uses collapsed TESTING evidence without claiming provider or KPI success in RTL and LTR',async()=>{
+  for(const locale of ['ar','en']){
+    const p=await page({locale,hydrate:{...empty,team:[readyEmployee]},message:{ok:true,conversation_id:'ready',request_status:'succeeded',work_status:'succeeded',outcome_kind:'employee_ready',employee:readyEmployee,readiness_receipt:readiness,recent_work:[{...proof,flowId:readyEmployee.flowId}]}});try{
+      p.d.querySelector('#emps .emp').click();send(p,'جهّز الموظف');await flush();
+      const details=p.d.querySelector('.m__c .siyrefs');assert.ok(details);assert.equal(details.open,false);
+      assert.match(thread(p),locale==='ar'?/اختبرنا طريقة العمل وفعّلناها/:/tested and activated the workflow/);
+      assert.match(details.textContent,/TESTING/);assert.match(details.textContent,locale==='ar'?/بيانات مشغّل تجريبية/:/mock trigger data/);
+      assert.deepEqual([...details.querySelectorAll('code')].map(x=>x.textContent),[readiness.flow_id,readiness.published_version_id,readiness.test_run_id]);
+      assert.doesNotMatch(thread(p),/✓|فرصة أ|سُجلت الفرصة|KPI/);assert.equal(p.d.querySelector('.request-state'),null);
+      assert.equal(p.w.__SIY_DASH__.recent_work.length,0);
+    }finally{p.close();}
+  }
+});
+test('invalid readiness cannot claim preparation or display malicious IDs despite an old active employee',async()=>{
+  const invalid=[undefined,{...readiness,employee_id:'other'},{...readiness,flow_id:'<img src=x>'},{...readiness,published_version_id:42},{...readiness,test_run_id:'<svg onload=alert(1)>'},{...readiness,test_environment:'PRODUCTION'},{...readiness,used_mock_trigger_data:1}];
+  for(const receipt of invalid){
+    const p=await page({message:{ok:true,conversation_id:'invalid',request_status:'succeeded',work_status:'succeeded',outcome_kind:'employee_ready',employee:readyEmployee,readiness_receipt:receipt}});try{
+      send(p,'جهّز');await flush();assert.match(thread(p),/لم نتأكد من اختبار طريقة العمل/);assert.doesNotMatch(thread(p),/اختبرنا طريقة العمل وفعّلناها/);
+      assert.equal(p.d.querySelector('.m__c .siyrefs'),null);assert.equal(p.d.querySelector('.request-state').dataset.state,'unknown');
+      assert.equal(p.d.querySelector('.m__c img,.m__c svg'),null);
+    }finally{p.close();}
+  }
+});
+test('readiness preserves the model reply and does not complete an uncertain mixed request',async()=>{
+  const reply='تعليمات الشركة كما وردت: Activepieces MCP Flow <img src=x>.';
+  const p=await page({message:{ok:true,conversation_id:'mixed',request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',employee:readyEmployee,readiness_receipt:{...readiness,used_mock_trigger_data:false},reply,recent_work:[proof]}});try{
+    send(p,'جهّز وأرسل');await flush();assert.ok(thread(p).includes(reply));assert.equal(p.d.querySelector('.request-state').dataset.state,'unknown');
+    const details=p.d.querySelector('.m__c .siyrefs');assert.ok(details);assert.match(details.textContent,/TESTING/);assert.doesNotMatch(details.textContent,/بيانات مشغّل تجريبية/);
+    assert.doesNotMatch(thread(p),/اختبرنا طريقة العمل وفعّلناها|✓|فرصة أ/);assert.equal(p.d.querySelector('.m__c img'),null);
+  }finally{p.close();}
+});
