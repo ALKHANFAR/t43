@@ -1051,3 +1051,11 @@ test('reopening instructions refreshes publication and ignores an older response
     assert.match(p.d.querySelector('#publishedInstr').textContent,/latest published/);assert.doesNotMatch(p.d.querySelector('#publishedInstr').textContent,/MCP original/);assert.equal(p.d.querySelector('#instr').value,'still unsaved');assert.equal(count,2);
   }finally{p.close();}
 });
+
+
+test('published steps display server name when no display label exists',async()=>{
+  const p=await page({hash:'#e='+publishedEmployee.recordId,hydrate:{...empty,team:[publishedEmployee]},employee_instructions:{ok:true,published_instructions:{...publishedProjection,steps:[{name:'analysis_1',prompt:'first'},{name:'<img src=x>',prompt:'second'}]}}});try{
+    p.d.querySelector('#instrTgl').click();await flush();await flush();
+    assert.deepEqual(Array.from(p.d.querySelectorAll('#publishedInstr details.adv > summary'),el=>el.textContent),['analysis_1','<img src=x>']);assert.equal(p.d.querySelector('#publishedInstr img'),null);
+  }finally{p.close();}
+});
