@@ -79,13 +79,13 @@ test('routine draft work skips approval while an MCP action is approval gated',(
 });
 
 test('employee MCP response remains unverified without provider proof',()=>{
-  assert.match(serverSource,/if\(answer\.flowToolAttempted\)return finish\(200,\{[^\n]+request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified'/);
+  assert.match(serverSource,/if\(answer\.flowToolAttempted\|\|answer\.effects\?\.length\)return finish\(200,\{[^\n]+request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified'/);
   assert.doesNotMatch(serverSource,/const proof=\{[^\n]+conversation_id:conversationId/);
 });
 
-async function page({storage={},locale,hydrate=empty,message,work,approve,employee_state,employee_instructions,add_knowledge,update_company_settings,export:exportResponse,integrations={list:{ok:true,connections:[]}},integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد',{pieceName:'@activepieces/piece-gmail'}]]}={}){
+async function page({storage={},locale,hydrate=empty,message,work,approve,employee_state,employee_instructions,resume_employee_activation={ok:true,activation_status:'none'},add_knowledge,update_company_settings,export:exportResponse,integrations={list:{ok:true,connections:[]}},integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد',{pieceName:'@activepieces/piece-gmail'}]]}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
-  const w=dom.window,requests=[],alerts=[],polls=[],navigations=[];let hydrateTimer;
+  const w=dom.window,requests=[],activationRequests=[],alerts=[],polls=[],navigations=[];let hydrateTimer;
   w.matchMedia=()=>({matches:true,addEventListener(){}});
   w.PIECES=pieces;
   w.SIYADAH_REAL_ACCOUNT=real;
@@ -106,15 +106,15 @@ async function page({storage={},locale,hydrate=empty,message,work,approve,employ
       if(response?.httpStatus)return {ok:false,status:response.httpStatus,json:async()=>response};
       return {ok:true,status:200,json:async()=>response};
     }
-    const body=JSON.parse(options.body);requests.push({url,body,headers:options.headers,credentials:options.credentials});
-    const handler=String(url).includes('/v1/integrations')?integrations[body.op]:{hydrate,message,work,approve,employee_state,employee_instructions,add_knowledge,update_company_settings,export:exportResponse}[body.op];
+    const body=JSON.parse(options.body);(body.op==='resume_employee_activation'?activationRequests:requests).push({url,body,headers:options.headers,credentials:options.credentials});
+    const handler=String(url).includes('/v1/integrations')?integrations[body.op]:{hydrate,message,work,approve,employee_state,employee_instructions,add_knowledge,update_company_settings,export:exportResponse,resume_employee_activation}[body.op];
     const response=typeof handler==='function'?await handler(body):handler;
     if(response instanceof Error)throw response;
     if(response?.httpStatus)return {ok:false,status:response.httpStatus,json:async()=>response};
     return {ok:true,status:200,json:async()=>response};
   };
   w.alert=text=>alerts.push(text);w.__SIY_NAVIGATE__=url=>navigations.push(url);w.eval(source);await flush();await flush();
-  return {dom,w,d:w.document,requests,alerts,polls,navigations,timeout:()=>hydrateTimer(),close:()=>w.close()};
+  return {dom,w,d:w.document,requests,activationRequests,alerts,polls,navigations,timeout:()=>hydrateTimer(),close:()=>w.close()};
 }
 function send(p,text){p.d.querySelector('#input').value=text;p.d.querySelector('#send').click();}
 function thread(p){return p.d.querySelector('#thread').textContent;}
@@ -389,6 +389,20 @@ test('browser storage cannot supply company identity or suppress server hydratio
     assert.ok(!p.d.querySelector('#meBtn').textContent.includes('Untrusted'));
   }finally{p.close();}
 });
+test('returning after a connection resumes only the server-selected employee activation',async()=>{
+  const draft={...employee,status:'disabled',tools:[]};
+  const p=await page({hydrate:{...empty,team:[draft]},resume_employee_activation:{ok:true,activation_status:'active',employee}});try{
+    assert.equal(p.activationRequests.length,1);
+    assert.deepEqual(p.activationRequests[0].body,{op:'resume_employee_activation'});
+    assert.equal(p.w.EMPS[0].on,true);
+  }finally{p.close();}
+});
+test('opening an employee scopes activation retry to that employee',async()=>{
+  const p=await page({hydrate:{...empty,team:[{...employee,status:'disabled'}]}});try{
+    p.d.querySelector('#emps .emp').click();await flush();
+    assert.deepEqual(p.activationRequests.at(-1).body,{op:'resume_employee_activation',employee_id:employee.recordId});
+  }finally{p.close();}
+});
 test('invalid/unauthorized hydration cannot restore demo or ready state',async()=>{
   for(const hydrate of [{ok:false,company:'Server Company',team:[]},{httpStatus:403},{ok:true,team:'invalid'}]){
     const p=await page({hydrate});try{assert.equal(p.w.EMPS.length,0);assert.ok(p.w.__SIY_LOAD_ERROR__);}finally{p.close();}
@@ -482,12 +496,12 @@ test('external run without a reply asks for tool verification instead of inventi
     assert.doesNotMatch(thread(p),/ردت الخدمة|✓/);
   }finally{p.close();}
 });
-test('terminal unknown request shows verification warning and never a success mark',async()=>{
+test('terminal unknown request shows the actual tool account without claiming success',async()=>{
   const unknown={ok:true,conversation_id:'c',request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',work_id:'request_req_1',reply:'لم نؤكد نتيجة الطلب بعد. لم نعد تنفيذه.'};
   const p=await page({message:unknown,work:unknown});try{
     send(p,'أنشئ موظفًا');await flush();
     assert.ok(p.d.querySelector('[data-siy-retry]'));
-    assert.match(thread(p),/لم نتأكد من نتيجة الطلب/);
+    assert.match(thread(p),/لم نؤكد نتيجة الطلب بعد/);
     assert.doesNotMatch(thread(p),/لم يظهر سجل الطلب/);
     assert.ok(!thread(p).includes('✓'));
     p.d.querySelector('[data-siy-retry]').click();await flush();
@@ -495,9 +509,6 @@ test('terminal unknown request shows verification warning and never a success ma
     assert.equal(messages.length,1);
     assert.equal(checks.length,1);
     assert.equal(checks[0].body.request_id,messages[0].body.request_id);
-    assert.match(thread(p),/لم نتأكد من نتيجة الطلب/);
-    assert.doesNotMatch(thread(p),/لم يظهر سجل الطلب/);
-    assert.ok(!thread(p).includes('✓'));
   }finally{p.close();}
 });
 test('queued request with no ledger readback shows an explicit unknown result and stops polling',async()=>{

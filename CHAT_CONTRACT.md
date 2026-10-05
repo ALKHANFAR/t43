@@ -40,6 +40,7 @@ This contract belongs to `ALKHANFAR/t43`. The customer frontend may change later
 | Ordinary answer | `request_status:succeeded`, `outcome_kind:conversation_reply`, `work_status:not_started` | The answer was returned; no tool run is implied. |
 | Employee saved | `request_status:succeeded`, `outcome_kind:employee_draft`, `work_status:not_started`, `employee.status:disabled`, `employee.flowId:null` until prepared | The employee is saved as a draft in Siyadah; its tools and runnable flow are not ready and it has not acted. |
 | Flow draft linked | `outcome_kind:employee_draft`, `employee.status:disabled`, `employee.flowId` after owned Flow readback | The Flow was saved for this employee and remains disabled; no task or provider action is proven. |
+| Activation after connection | A newly built, linked, disabled employee Flow may carry `auto_activate_after_connection:true` with its exact employee and Flow IDs in the saved request receipt. `resume_employee_activation` returns `none`, `pending`, or `active`. | Only the single matching employee is tested and activated after every required connection is active; `pending` never means it has started. A test run can have real external effects even in TESTING. |
 | General Flow draft | `outcome_kind:conversation_reply`, `flow_id` after owned Flow readback, no employee | The Flow was saved disabled in this company's project; no task or provider action is proven. |
 | Uncertain outcome | `request_status:not_observed`, `outcome_kind:unverified`, `work_status:unknown` | The result is unverified; check the same request ID. |
 | Rejected before dispatch | `request_status:failed`, `outcome_kind:unverified`, `work_status:failed`, no `transport_receipt` | The employee's task did not start. |
@@ -48,7 +49,7 @@ This contract belongs to `ALKHANFAR/t43`. The customer frontend may change later
 
 For a provider result, require a terminal scoped run, the relevant step output, and validation specific to that tool. A provider outcome must be read back separately before the UI says it succeeded. A customer-visible result and a KPI need their own evidence.
 
-Saving an employee draft requires the company database and does not provision Activepieces. Building its disabled Flow requires an explicit user request and scoped MCP readback. A saved draft alone must never be described as execution-ready or activated.
+Saving an employee draft requires the company database and does not provision Activepieces. In main chat the model decides whether the user's goal calls for a Flow, then creates at most one employee draft when it invokes `ap_build_flow`; scoped MCP readback is required before linking. A saved draft alone must never be described as execution-ready or activated. A real test and provider result must precede the customer's decision to enable ongoing work.
 
 ## Release boundary
 
