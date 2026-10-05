@@ -427,6 +427,8 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
     }finally{clearTimeout(timer);}
   };
   let flowId=null,linked=null,statusChanged=false;
+  const effects=[];
+  const account=()=>`نُفّذت خطوات على مشروع شركتك (${[...new Set(effects)].join('، ')||'ap_build_flow'}) ثم توقف الطلب قبل كتابة الرد. اكتب «أكمل» لأقرأ الحالة وأتابع من حيث توقفت.`;
   // A Flow the model published or paused is the employee's real state; Siyadah's record follows it.
   const finish=async reply=>{
     const flow=employee?.activepieces_flow_id||flowId||draftEmployee?.activepieces_flow_id,id=employee?.id||linked?.recordId||(flow===draftEmployee?.activepieces_flow_id?draftEmployee?.id:null);
@@ -439,6 +441,8 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   };
   try{
     for(let turn=0;turn<40;turn++){
+      // Keep the last minute for the written account; a request never ends without one.
+      if(deadline&&deadline-Date.now()<75_000)break;
       const answer=await ask(true);
       const calls=Array.isArray(answer?.tool_calls)?answer.tool_calls:[];
       if(!calls.length){
@@ -463,7 +467,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
             await (await toolConnections()).assertOwnedExternal({tenantId:companyId,externalId:args.connectionExternalId,pieceName:pieceName.startsWith('@activepieces/piece-')?pieceName:`@activepieces/piece-${pieceName}`});
           }
           checkDeadline();
-          if(!readOnly(name))onEffectStart?.();
+          if(!readOnly(name)){onEffectStart?.();effects.push(name);}
           if(name==='ap_lock_and_publish'||name==='ap_change_flow_status')statusChanged=true;
           if(name==='ap_build_flow'&&!employee){
             // A Flow built in main chat belongs to an employee: the saved draft, or one named after the Flow the model designed.
@@ -481,11 +485,11 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
         messages.push({role:'tool',tool_call_id:call.id,content:JSON.stringify(result).slice(0,24_000)});
       }
     }
-    messages.push({role:'user',content:'وصلت إلى حد خطوات هذا الطلب. اكتب الآن ردك النهائي دون أدوات: ما نُفّذ فعلًا وتحققت منه، وما بقي، وما المطلوب من المستخدم.'});
-    return finish(String((await ask(false))?.content||'').trim()||'لم أصل إلى نتيجة مؤكدة ضمن حد خطوات هذا الطلب. حدّد الطلب أكثر لأتابع.');
+    messages.push({role:'user',content:'انتهى وقت أو خطوات هذا الطلب. اكتب الآن ردك النهائي دون أدوات: ما نُفّذ فعلًا وتحققت منه، وما بقي، وما المطلوب من المستخدم.'});
+    return finish(String((await ask(false))?.content||'').trim()||(flowId||effects.length?account():'لم أصل إلى نتيجة مؤكدة ضمن حد خطوات هذا الطلب. حدّد الطلب أكثر لأتابع.'));
   }catch(error){
     // A Flow that was already built and read back is reported even when the closing reply could not be written.
-    if(flowId)return finish('بُنيت طريقة العمل وحُفظت في مشروع شركتك، لكن تعذّر إكمال بقية الطلب. اطلب مني متابعتها من هذه المحادثة.');
+    if(flowId||effects.length)return finish(account());
     if(error instanceof TenantProjectError)throw error;
     throw new TenantProjectError('assistant_unavailable','تعذّر إكمال التفكير الآن.',502);
   }
