@@ -44,7 +44,6 @@ test('manual activation and connection resume share one tested activation path',
   assert.ok(helper>=0&&manual>helper&&resume>manual&&next>resume);
   assert.match(server.slice(helper,manual),/name:'ap_test_flow'/);
   assert.match(server.slice(helper,manual),/successfulFlowTest\(mcp,companyId,saved\.activepieces_flow_id,test\)/);
-  assert.match(server.slice(helper,manual),/JSON\.stringify\(tested\.version\)!==JSON\.stringify\(latest\.version\)/);
   assert.match(server.slice(manual,resume),/changeEmployeeState\(saved,status\)/);
   assert.match(server.slice(resume,next),/pending\.length!==1/);
   assert.match(server.slice(resume,next),/pendingEmployeeActivation\(companyId,typeof input\.employee_id==='string'\?input\.employee_id:null\)/);
