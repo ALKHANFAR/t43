@@ -349,7 +349,7 @@ test('builder labels hide platform vocabulary while assistant reply retains orig
     assert.doesNotMatch(thread(p),/Activepieces|MCP|cron_expression|@activepieces|\bCODE\b|المشغّل/);
     const button=p.d.querySelector('[data-siy-approval="approve"]');assert.ok(button);button.click();await flush();
     const approval=p.requests.find(x=>x.body.op==='approve');assert.ok(approval.body.request_id);assert.equal(approval.body.conversation_id,'builder-conversation');assert.equal(approval.body.approval_id,'approval-1');assert.equal(approval.body.decision,'approve');
-    assert.match(thread(p),/موظف قيد التجهيز|تجهيز/);assert.match(thread(p),/flow-proof/);assert.equal(p.d.querySelectorAll('[data-siy-approval]').length,0);
+    assert.match(thread(p),/لم تُختبر أو تُنشر بعد/);assert.match(thread(p),/flow-proof/);assert.equal(p.d.querySelectorAll('[data-siy-approval]').length,0);
     assert.ok(thread(p).includes(built.reply));
   }finally{p.close();}
 });
@@ -835,5 +835,50 @@ test('saved message timestamps display Riyadh time independently of browser time
     p.d.querySelector('[data-chat="riyadh-time"]').click();
     assert.equal(p.d.querySelector('.m--me .m__t').textContent,'03:05');
     assert.match(p.d.querySelector('.m:not(.m--me) .m__t').textContent,/00:05/);
+  }finally{p.close();}
+});
+
+
+test('real chat keeps composer focus and announces processing without invented explanation',async()=>{
+  let resolve;const waiting=new Promise(r=>resolve=r);
+  const p=await page({message:()=>waiting});try{
+    assert.match(thread(p),/وش هدفك اليوم/);
+    send(p,'اعرض المعلومات');await flush();
+    assert.equal(p.d.activeElement,p.d.querySelector('#input'));
+    assert.equal(p.d.querySelector('.think').getAttribute('role'),'status');
+    assert.doesNotMatch(thread(p),/راجعت.*أداة|كل حركة.*سطر|\d+٪/);
+    resolve({ok:true,conversation_id:'focus',request_status:'succeeded',work_status:'not_started',outcome_kind:'conversation_reply',reply:'جواب المصدر كما هو.'});await flush();
+    assert.equal(p.d.activeElement,p.d.querySelector('#input'));
+    assert.equal(p.d.querySelector('[data-why]'),null);
+    assert.match(thread(p),/جواب المصدر كما هو/);
+    assert.equal(p.d.querySelector('.request-state'),null);
+  }finally{p.close();}
+});
+test('actual queued status changes to running then disappears with final answer in both languages',async()=>{
+  for(const locale of ['ar','en']){
+    let calls=0;const p=await page({locale,message:{ok:true,conversation_id:'state',work_id:'w',work_status:'queued',reply:'استلمنا الطلب'},work:()=>++calls===1?{ok:true,work_status:'running',reply:'يعمل الآن'}:{ok:true,request_status:'succeeded',work_status:'succeeded',reply:'نتيجة المصدر'}});try{
+      send(p,'نفذ');await flush();assert.equal(p.d.querySelector('.request-state').dataset.state,'queued');
+      await p.polls.shift()();assert.equal(p.d.querySelector('.request-state').dataset.state,'running');
+      await p.polls.shift()();assert.equal(p.d.querySelector('.request-state'),null);assert.match(thread(p),/نتيجة المصدر/);
+      assert.equal(p.d.activeElement,p.d.querySelector('#input'));
+    }finally{p.close();}
+  }
+});
+test('polling preserves reading position instead of pulling user away from earlier messages',async()=>{
+  const p=await page({message:{ok:true,conversation_id:'scroll',work_id:'w',work_status:'running',reply:'جار العمل'},work:{ok:true,work_status:'succeeded',reply:'النتيجة'}});try{
+    send(p,'نفذ');await flush();const scroller=p.d.querySelector('#thread');
+    Object.defineProperties(scroller,{scrollHeight:{configurable:true,value:1800},clientHeight:{configurable:true,value:500}});scroller.scrollTop=200;
+    await p.polls.shift()();assert.equal(scroller.scrollTop,200);
+    send(p,'طلب جديد');await flush();assert.equal(scroller.scrollTop,1800);
+  }finally{p.close();}
+});
+test('real response is fully visible with reduced motion and does not animate history on refresh',async()=>{
+  const p=await page({message:{ok:true,conversation_id:'motion',reply:'النص الكامل بلا انتظار إضافي'}});try{
+    send(p,'سؤال');await flush();
+    assert.ok(p.d.body.classList.contains('chat-real'));
+    assert.equal(p.d.querySelector('.m--rev .w'),null);
+    assert.match(thread(p),/النص الكامل بلا انتظار إضافي/);
+    assert.match(html,/\.chat-real \.m\{animation:none\}/);
+    assert.match(html,/@media \(prefers-reduced-motion:reduce\)\{ \*\{animation:none !important;transition:none !important\}/);
   }finally{p.close();}
 });
