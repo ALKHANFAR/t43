@@ -258,7 +258,7 @@
       "name": "قدرات أدوات مشروع الشركة في الشات",
       "aliases": ["ربط الشات بـMCP", "أدوات الشات", "شات الموظف والأدوات", "project scoped MCP chat"],
       "state": "live_needs_change",
-      "meaning": "وصلة MCP واحدة إلى مشروع الشركة مع اكتشاف ديناميكي للأدوات. يبني الشات العام Flow جديدًا كمسودة متوقفة مباشرة، ويقرأه من مشروع الشركة قبل تأكيده؛ وإذا كان لموظف مسودة يربطه بنفس الصف. الأفعال الأخرى التي تغيّر الحالة تحتاج موافقة مستقلة. يؤكد إنشاء الجدول من قراءة ثانية ثم يكمل التخطيط. التفعيل يتطلب اتصالًا نشطًا وتحققًا ونشرًا صريحًا. هذا التغيير في PR مسودة ولم يثبت بعد باختبار عميل حي؛ منح MCP أو حفظ المسودة لا يثبت تشغيلًا أو نتيجة المزود.",
+      "meaning": "وصلة MCP واحدة إلى مشروع الشركة مع اكتشاف ديناميكي للأدوات ودليل الاستخدام الذي يرسله خادم Activepieces نفسه. بقرار المالك (2026-10-05) تُنفَّذ كل أدوات المشروع من الشات مباشرة دون موافقة مستقلة، بما فيها النشر والتنفيذ الخارجي، وتعود نتيجة كل أداة، حتى الخطأ، إلى النموذج ليصحح ويكمل ثم يكتب الرد من النتائج. يبقى نطاق الشركة محددًا من الخادم، وتبديل المشروع ممنوع، ويُتحقق من ملكية الاتصال قبل ap_run_action، ويُقرأ الـFlow المبني من مشروع الشركة قبل ربطه بمسودة الموظف. حالة الموظف في سيادة تتبع حالة الـFlow بعد النشر. الطلب الطويل يرد queued ويكمل في الخادم. مسار op:approve باقٍ للموافقات القديمة فقط. لم يثبت بعد باختبار عميل حي؛ رد الأداة لا يثبت نتيجة المزود.",
       "linear": "ABO-48",
       "locations": [
         {"role": "chat_route", "path": "server.mjs", "anchor": "async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null"},
@@ -273,7 +273,8 @@
         {"role": "client_approval", "path": "app/chat.js", "anchor": "if(data.approval.kind==='tool_action')"},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "## Project MCP chat"},
         {"role": "test", "path": "scripts/activepieces-mcp-runtime.test.mjs", "anchor": "MCP OAuth grant is bound to the server-owned company project"},
-        {"role": "employee_flow_test", "path": "scripts/mcp-flow-scope-runtime.test.mjs", "anchor": "employee Flow ID comes from its saved record"}
+        {"role": "employee_flow_test", "path": "scripts/mcp-flow-scope-runtime.test.mjs", "anchor": "employee Flow ID comes from its saved record"},
+        {"role": "open_tools_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "the model builds, validates and publishes in one request and writes the reply itself"}
       ]
     },
     {
