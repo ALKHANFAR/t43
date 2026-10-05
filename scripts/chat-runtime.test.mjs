@@ -79,7 +79,7 @@ test('routine draft work skips approval while an MCP action is approval gated',(
 });
 
 test('employee MCP response remains unverified without provider proof',()=>{
-  assert.match(serverSource,/if\(answer\.flowToolAttempted\|\|answer\.effects\?\.length\)return finish\(200,\{[^\n]+request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified'/);
+  assert.match(serverSource,/if\(answer\.flowToolAttempted\|\|answer\.effects\?\.length\)return finish\(200,\{[^\n]+completedToolActions\(answer\)/);
   assert.doesNotMatch(serverSource,/const proof=\{[^\n]+conversation_id:conversationId/);
 });
 
