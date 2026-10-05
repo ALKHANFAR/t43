@@ -340,7 +340,7 @@ test('real employee shows natural instructions without exposing a compiled promp
     assert.doesNotMatch(thread(p),/Prompt|Activepieces|MCP|# الهوية|# الصلاحية/);
   }finally{p.close();}
 });
-test('customer-facing builder proposal hides platform vocabulary and renders proof behind details',async()=>{
+test('builder labels hide platform vocabulary while assistant reply retains original wording',async()=>{
   const proposal={ok:true,conversation_id:'builder-conversation',work_id:'builder-work',interaction_state:'awaiting_approval',reply:'الخطة جاهزة.',flow_plan:{name:'Daily greeting',trigger:{piece_name:'@activepieces/piece-schedule',operation:'cron_expression'},steps:[{type:'CODE',display_name:'Greeting'}]},approval:{required:true,approval_id:'approval-1'}};
   const built={ok:true,conversation_id:'builder-conversation',work_id:'builder-work',work_status:'awaiting_input',interaction_state:'draft_ready',reply:'تم إنشاء مسودة معطلة عبر @activepieces/piece-slack وقراءتها من Activepieces MCP. لم تُختبر أو تُنشر بعد.',flow_id:'flow-proof',draft:{published:false,tested:false,validation:{valid:true},readback:{id:'flow-proof',status:'DISABLED'}}};
   const p=await page({message:proposal,approve:built});try{
@@ -350,7 +350,7 @@ test('customer-facing builder proposal hides platform vocabulary and renders pro
     const button=p.d.querySelector('[data-siy-approval="approve"]');assert.ok(button);button.click();await flush();
     const approval=p.requests.find(x=>x.body.op==='approve');assert.ok(approval.body.request_id);assert.equal(approval.body.conversation_id,'builder-conversation');assert.equal(approval.body.approval_id,'approval-1');assert.equal(approval.body.decision,'approve');
     assert.match(thread(p),/موظف قيد التجهيز|تجهيز/);assert.match(thread(p),/flow-proof/);assert.equal(p.d.querySelectorAll('[data-siy-approval]').length,0);
-    assert.doesNotMatch(thread(p),/Activepieces|MCP|مسودة معطلة|الفلو/);
+    assert.ok(thread(p).includes(built.reply));
   }finally{p.close();}
 });
 test('MCP action approval shows exact inputs and never places credentials in the browser',async()=>{
@@ -797,4 +797,43 @@ test('real notifications are unavailable without channel or scheduled delivery c
   control.click();assert.equal(p.requests.length,2);assert.equal(control.getAttribute('aria-checked'),'false');
  }finally{p.close();}
  const demo=await page({storage:{},hash:'',real:false});try{assert.equal(demo.d.querySelector('#notificationSwitch').disabled,false);assert.equal(demo.d.querySelector('#notificationSwitch').getAttribute('aria-checked'),'true');}finally{demo.close();}
+});
+
+
+test('provider reply tables preserve subjects, whitespace and escape HTML in RTL and LTR',async()=>{
+  const reply='آخر الرسائل\n\n| المرسل | الموضوع |\n| --- | --- |\n| **GitHub** | Activepieces MCP Flow — update |\n| Google | <img src=x onerror=alert(1)> & \"notice\" |\n| Name | left\\|right |\n\nنهاية  التقرير';
+  for(const locale of ['ar','en']){
+    const p=await page({locale,message:{ok:true,conversation_id:'table-reply',reply}});try{
+      send(p,'آخر الإيميلات');await flush();
+      const table=p.d.querySelector('.reply-table table');assert.ok(table);
+      assert.equal(table.querySelectorAll('tbody tr').length,3);
+      assert.equal(table.querySelector('th').getAttribute('scope'),'col');
+      assert.equal(table.querySelector('td').getAttribute('dir'),'auto');
+      assert.equal(table.querySelector('td strong').textContent,'GitHub');
+      assert.equal(table.querySelectorAll('td')[1].textContent,'Activepieces MCP Flow — update');
+      assert.equal(table.querySelectorAll('td')[3].textContent,'<img src=x onerror=alert(1)> & "notice"');
+      assert.equal(table.querySelectorAll('td')[5].textContent,'left|right');
+      assert.equal(table.querySelector('img'),null);assert.equal(table.querySelector('script'),null);
+      assert.ok(thread(p).includes('نهاية  التقرير'));
+      assert.equal(p.d.documentElement.dir,locale==='ar'?'rtl':'ltr');
+    }finally{p.close();}
+  }
+});
+test('malformed tables and raw HTML remain escaped reply text without active links',async()=>{
+  const reply='| x | y |\n| invalid | --- |\n<script>alert(1)</script> **<svg onload=alert(1)>** [click](javascript:alert(1))';
+  const p=await page({message:{ok:true,conversation_id:'unsafe-reply',reply}});try{
+    send(p,'اقرأ');await flush();
+    const body=p.d.querySelectorAll('.m__c');const last=body[body.length-1];
+    assert.equal(last.querySelector('table,script,svg,a,img'),null);
+    assert.ok(last.textContent.includes('<script>alert(1)</script>'));
+    assert.ok(last.textContent.includes('| invalid | --- |'));
+  }finally{p.close();}
+});
+test('saved message timestamps display Riyadh time independently of browser timezone',async()=>{
+  const saved={id:'riyadh-time',title:'وقت',messages:[{role:'user',content:'متى',at:'2026-10-05T00:05:00.000Z'},{role:'assistant',content:'الآن',at:'2026-10-05T21:05:00.000Z'}]};
+  const p=await page({hydrate:{...empty,conversations:[saved]}});try{
+    p.d.querySelector('[data-chat="riyadh-time"]').click();
+    assert.equal(p.d.querySelector('.m--me .m__t').textContent,'03:05');
+    assert.match(p.d.querySelector('.m:not(.m--me) .m__t').textContent,/00:05/);
+  }finally{p.close();}
 });
