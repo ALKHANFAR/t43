@@ -915,3 +915,15 @@ test('team summary exposes recorded draft and pause states without fabricated bi
     assert.doesNotMatch(failed.d.querySelector('#pane-plan').textContent,/0 موظف/);
   }finally{failed.close();}
 });
+
+
+test('limited native output notice accepts only true and escapes malicious receipt metadata',async()=>{
+  for(const locale of ['ar','en']){
+    const p=await page({locale,message:{ok:true,conversation_id:'limited',request_status:'succeeded',work_status:'succeeded',outcome_kind:'tool_result',reply:'نص المصدر الكامل كما عاد.',tool_receipts:[{name:'ap_run_action',status:'returned',output_limited:true},{name:'<img src=x onerror=alert(1)>',status:'returned',run_id:'<svg onload=alert(1)>',outcome:'<script>alert(1)</script>',output_limited:'true'},{name:'ap_run_action',status:'returned',output_limited:{value:true}}]}});try{
+      send(p,'اقرأ');await flush();const details=p.d.querySelector('.m__c details');assert.ok(details);assert.equal(details.open,false);
+      const notice=locale==='en'?'The service shortened some fields':'اختصرت الخدمة بعض الحقول';assert.equal(details.textContent.split(notice).length-1,1);
+      assert.equal(details.querySelector('img,svg,script'),null);assert.ok(details.textContent.includes('<img src=x onerror=alert(1)>'));
+      assert.ok(thread(p).includes('نص المصدر الكامل كما عاد.'));assert.doesNotMatch(details.textContent,/KPI|\d+٪/);
+    }finally{p.close();}
+  }
+});
