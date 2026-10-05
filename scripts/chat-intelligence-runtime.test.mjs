@@ -14,7 +14,7 @@ test('central chat uses company knowledge, settings and team instead of the rigi
   assert.match(server,/profiles\.recordConversation/);
   assert.doesNotMatch(server,/reply:'وصل طلبك\. إنشاء الموظفين متاح الآن/);
   assert.match(server,/model:'deepseek-v4-pro'/);
-  assert.match(server,/thinking:\{type:'enabled'\}/);
+  assert.match(server,/thinking:\{type:'disabled'\}/);
   assert.doesNotMatch(server,/جملتين إلى أربع جمل/);
   assert.match(server,/سياق العمل الحالي بصيغة JSON/);
   assert.match(server,/ذاكرة العمل من تعليمات المستخدم السابقة/);

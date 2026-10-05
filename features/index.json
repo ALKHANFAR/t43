@@ -258,10 +258,11 @@
       "name": "قدرات أدوات مشروع الشركة في الشات",
       "aliases": ["ربط الشات بـMCP", "أدوات الشات", "شات الموظف والأدوات", "project scoped MCP chat"],
       "state": "live_needs_change",
-      "meaning": "وصلة MCP واحدة إلى مشروع الشركة مع اكتشاف ديناميكي للأدوات وموافقة لكل فعل. يؤكد الشات إنشاء جدول من قراءة ثانية ثم يكمل التخطيط لمرة واحدة؛ بناء Flow تالٍ يحتاج موافقة مستقلة. الشات العام يستطيع اقتراح بناء Flow للموظف المسودّة ثم يربطه بنفس الصف بعد قراءة الملكية؛ التفعيل يتطلب اتصالًا نشطًا وتحققًا ونشرًا صريحًا. منح MCP وحده أو رد أداة لا يثبت بناء Flow أو نتيجة المزود؛ يلزم اختبار حي.",
+      "meaning": "وصلة MCP واحدة إلى مشروع الشركة مع اكتشاف ديناميكي للأدوات. يبني الشات العام Flow جديدًا كمسودة متوقفة مباشرة، ويقرأه من مشروع الشركة قبل تأكيده؛ وإذا كان لموظف مسودة يربطه بنفس الصف. الأفعال الأخرى التي تغيّر الحالة تحتاج موافقة مستقلة. يؤكد إنشاء الجدول من قراءة ثانية ثم يكمل التخطيط. التفعيل يتطلب اتصالًا نشطًا وتحققًا ونشرًا صريحًا. هذا التغيير في PR مسودة ولم يثبت بعد باختبار عميل حي؛ منح MCP أو حفظ المسودة لا يثبت تشغيلًا أو نتيجة المزود.",
       "linear": "ABO-48",
       "locations": [
         {"role": "chat_route", "path": "server.mjs", "anchor": "async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null"},
+        {"role": "draft_build", "path": "server.mjs", "anchor": "async function buildOwnedDraftFlow("},
         {"role": "approval_route", "path": "server.mjs", "anchor": "if(input.op==='approve')"},
         {"role": "table_readback", "path": "lib/chat-intelligence.mjs", "anchor": "export function createdTableReadback("},
         {"role": "table_continuation", "path": "server.mjs", "anchor": "if(pending.toolName==='ap_create_table')"},

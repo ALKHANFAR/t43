@@ -352,7 +352,30 @@ function employee(flow){
   const name=String(flow?.version?.displayName||flow?.displayName||'موظف').trim();
   return {recordId:`employee_${flow.id}`,flowId:flow.id,name,role:'موظف',initial:name.slice(0,1),status:String(flow.status||'DISABLED').toUpperCase()==='ENABLED'?'active':'disabled',tools:[],rules:[],instructions:'',how:[]};
 }
-async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null,mcp=null,companyId=null,conversationId=null,deadlineMs=null,excludedTools=[]}){
+async function buildOwnedDraftFlow({mcp,companyId,args,draftEmployee=null,onEffectStart}){
+  const client=draftEmployee?await (await database()).connect():null;
+  let locked=false;
+  try{
+    if(client){
+      locked=(await client.query('SELECT pg_try_advisory_lock(hashtext($1),hashtext($2)) AS locked',[companyId,draftEmployee.id])).rows?.[0]?.locked===true;
+      if(!locked)throw new CompanyProfileError('employee_build_busy','تجهيز هذا الموظف قيد التنفيذ. تحقّق من نتيجته قبل المحاولة مجددًا.',409);
+      const current=await (await companyProfiles()).findEmployee(companyId,draftEmployee.id);
+      if(current?.status!=='draft'||current.activepieces_flow_id)throw new CompanyProfileError('employee_flow_conflict','طريقة عمل هذا الموظف مجهزة بالفعل.',409);
+    }
+    onEffectStart();
+    const result=await mcp.call(companyId,'tools/call',{name:'ap_build_flow',arguments:args});
+    const built=builtFlowResult(result);
+    if(!built)throw new TenantProjectError('flow_build_unverified','تعذّر تأكيد إنشاء طريقة العمل؛ تحقّق من حالة الطلب قبل إعادته.',502);
+    const {flow}=await (await tenantProjects()).ownedFlow(companyId,built.flowId);
+    if(flow.status!=='DISABLED')throw new TenantProjectError('flow_state_invalid','طريقة العمل لم تُحفظ كمسودة متوقفة.',409);
+    const updated=draftEmployee?await (await companyProfiles()).linkEmployeeFlow({companyId,employeeId:draftEmployee.id,flowId:built.flowId}):null;
+    return {result,built,updated};
+  }finally{
+    if(locked)try{await client.query('SELECT pg_advisory_unlock(hashtext($1),hashtext($2))',[companyId,draftEmployee.id]);}catch(error){console.error('employee build lock release failed',error?.code||error?.name||'unknown_error');}
+    if(client)client.release();
+  }
+}
+async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null,mcp=null,companyId=null,conversationId=null,deadlineMs=null,excludedTools=[],onEffectStart=null}){
   const key=process.env.DEEPSEEK_API_KEY;
   if(!key)throw new TenantProjectError('assistant_not_configured','مساعد سيادة غير مهيأ الآن.',503);
   const deadline=deadlineMs?Date.now()+deadlineMs:null;
@@ -384,16 +407,16 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   const readOnly=name=>/^ap_(?:search_|list_|get_|read_|research_|resolve_|flow_structure$|validate_flow$|validate_step_config$|setup_guide$)/.test(name);
   const tools=available.filter(tool=>/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(tool.name)&&tool.name!=='siyadah_run_employee_flow'&&!excludedTools.includes(tool.name)&&!(draftEmployee?.activepieces_flow_id&&tool.name==='ap_build_flow')&&visibleMcpTool(tool,employee)&&(!employee||employeeMcpToolReady(tool,employee))).map(tool=>({type:'function',function:{name:tool.name,description:String(tool.description||'').slice(0,1000),parameters:tool.inputSchema||{type:'object',properties:{}}}}));
   if(employee?.status==='active'&&employee.activepieces_flow_id)tools.push({type:'function',function:{name:'siyadah_run_employee_flow',description:'شغّل Flow هذا الموظف الموجود عندما يطلب المدير تنفيذ مهمته الآن. لا تستخدمه للسؤال أو لتعديل خطة العمل أو خطوات Flow.',parameters:{type:'object',properties:{},additionalProperties:false}}});
-  if(available.length)messages[0].content+='\nأدوات Activepieces متاحة لمشروع هذه الشركة فقط. استخدم الاكتشاف وفحص المدخلات والاتصال قبل أي إجراء. لا تفترض نجاحًا من الوصف أو اتصال محفوظ. أي أداة قد تغيّر حالة أو تستدعي تطبيقًا خارجيًا ستتوقف حتى موافقة واضحة؛ لا تعد المستخدم بأنها نُفذت قبل عودة نتيجتها.';
-  if(draftEmployee)messages[0].content+='\nالمستخدم لديه مسودة موظف محفوظة باسم currentDraft. عند طلب تجهيزها ولا يوجد لها flowId، اكتشف الأدوات والاتصالات واستخدم ap_build_flow لبناء طريقة عملها الآن كمسودة؛ توقف عند الموافقة المطلوبة ولا تكتفِ بالوصف أو تدّع التنفيذ. إذا وُجد flowId، اقرأ طريقة العمل وعدّلها بالأدوات المناسبة بدل إنشاء Flow جديد. لا تنشئ موظفًا ثانيًا ولا تنشر أو تشغّل المسودة. إن غاب اتصال مطلوب، اشرح ما ينقص وأكمل ما تسمح به الأدوات كمسودة. احتفظ بالمحادثة العامة وقدراتها لبقية الطلبات.';
+  if(available.length)messages[0].content+='\nأدوات Activepieces متاحة لمشروع هذه الشركة فقط. استخدم الاكتشاف وفحص المدخلات والاتصال قبل أي إجراء. لا تفترض نجاحًا من الوصف أو اتصال محفوظ. إذا طلب المستخدم بناء طريقة عمل جديدة فاستخدم ap_build_flow لمسودة متوقفة؛ لا تعدّل طريقة عمل موجودة إلا بطلب صريح. إنشاء المسودة ينفذ مباشرة، أما تشغيلها أو أي إجراء خارجي فيتوقف حتى موافقة واضحة. لا تدّع نتيجة قبل التحقق منها.';
+  if(draftEmployee)messages[0].content+='\nالمستخدم لديه مسودة موظف محفوظة باسم currentDraft. عند طلب تجهيزها ولا يوجد لها flowId، اكتشف الأدوات والاتصالات واستخدم ap_build_flow لبناء طريقة عملها الآن كمسودة مباشرة؛ لا تكتفِ بالوصف أو تدّع التنفيذ. إذا وُجد flowId، اقرأ طريقة العمل وعدّلها بالأدوات المناسبة بدل إنشاء Flow جديد. لا تنشئ موظفًا ثانيًا ولا تنشر أو تشغّل المسودة. إن غاب اتصال مطلوب، اشرح ما ينقص وأكمل ما تسمح به الأدوات كمسودة. احتفظ بالمحادثة العامة وقدراتها لبقية الطلبات.';
   if(employee)messages[0].content+='\nهذه محادثة الموظف المحدد. عند قراءة طريقة عمله أو تعديلها، استخدم flowId الموجود في selectedEmployee فقط. إن غاب، صف حالة المسودة ولا تدّع وجود Flow جاهز.';
   try{
-    for(let turn=0;turn<5;turn++){
+    for(let turn=0;turn<8;turn++){
       checkDeadline();
       const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),deadline?Math.max(1,Math.min(30_000,deadline-Date.now())):30_000);
       let data;
       try{
-        const response=await fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-v4-pro',messages,thinking:{type:'enabled'},reasoning_effort:'high',stream:false,...(tools.length?{tools}:{})}),signal:controller.signal});
+        const response=await fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-v4-pro',messages,thinking:{type:'disabled'},stream:false,...(tools.length?{tools}:{})}),signal:controller.signal});
         data=await response.json().catch(()=>({}));
         if(!response.ok)throw new TenantProjectError('assistant_unavailable','تعذّر إكمال التفكير الآن.',502);
       }finally{clearTimeout(timer);}
@@ -413,9 +436,15 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
         let args;try{args=JSON.parse(call.function.arguments||'{}');}catch{throw new TenantProjectError('mcp_arguments_invalid','مدخلات الأداة غير صالحة.',502);}
         if(!args||typeof args!=='object'||Array.isArray(args))throw new TenantProjectError('mcp_arguments_invalid','مدخلات الأداة غير صالحة.',502);
         args=scopeMcpTool(available.find(tool=>tool.name===name),args,employee);
+        if(!readOnly(name)&&JSON.stringify(args).length>8_000)throw new TenantProjectError('mcp_arguments_too_large','مدخلات الأداة أكبر من الحد المسموح.',409);
+        if(name==='ap_build_flow'&&!employee){
+          checkDeadline();
+          const {built,updated}=await buildOwnedDraftFlow({mcp,companyId,args,draftEmployee,onEffectStart:()=>onEffectStart?.()});
+          const label=updated?.name||'طريقة العمل';
+          return {reply:built.incomplete?`حُفظت ${label} كمسودة في مشروع شركتك، وبعض خطواتها تحتاج إكمالًا قبل التشغيل.`:`بُنيت ${label} وحُفظت كمسودة متوقفة في مشروع شركتك. لم تُشغّل مهمة بعد.`,flowId:built.flowId,employee:updated};
+        }
         if(!readOnly(name)){
           const details=JSON.stringify(args);
-          if(details.length>8_000)throw new TenantProjectError('mcp_arguments_too_large','الإجراء المقترح أكبر من أن يُراجع بأمان هنا.',409);
           const summary=`${String(message||'').slice(0,180)} · ${String(args.pieceName||'')} ${String(args.actionName||name)}`.trim();
           checkDeadline();
           const approvalId=await mcp.prepare({tenantId:companyId,conversationId,employeeId:employee?.id||(name==='ap_build_flow'?draftEmployee?.id:null),toolName:name,args,summary});
@@ -557,26 +586,8 @@ async function publicChat(req,res){
         await (await toolConnections()).assertOwnedExternal({tenantId:companyId,externalId:pending.args.connectionExternalId,pieceName:fullPiece});
       }
       let result,built,updated;
-      if(buildingDraft){
-        const client=await (await database()).connect();
-        let locked=false;
-        try{
-          locked=(await client.query('SELECT pg_try_advisory_lock(hashtext($1),hashtext($2)) AS locked',[companyId,employee.id])).rows?.[0]?.locked===true;
-          if(!locked)throw new CompanyProfileError('employee_build_busy','تجهيز هذا الموظف قيد التنفيذ. تحقّق من نتيجته قبل المحاولة مجددًا.',409);
-          const current=await profiles.findEmployee(companyId,employee.id);
-          if(current?.status!=='draft'||current.activepieces_flow_id)throw new CompanyProfileError('employee_flow_conflict','طريقة عمل هذا الموظف مجهزة بالفعل.',409);
-          activeRequest.effectStarted=true;
-          result=await mcp.call(companyId,'tools/call',{name:pending.toolName,arguments:pending.args});
-          built=builtFlowResult(result);
-          if(built){
-            const {flow}=await (await tenantProjects()).ownedFlow(companyId,built.flowId);
-            if(flow.status!=='DISABLED')throw new TenantProjectError('employee_flow_state_invalid','طريقة العمل لم تُحفظ كمسودة متوقفة.',409);
-            updated=await profiles.linkEmployeeFlow({companyId,employeeId:employee.id,flowId:built.flowId});
-          }
-        }finally{
-          if(locked)try{await client.query('SELECT pg_advisory_unlock(hashtext($1),hashtext($2))',[companyId,employee.id]);}catch(error){console.error('employee build lock release failed',error?.code||error?.name||'unknown_error');}
-          client.release();
-        }
+      if(pending.toolName==='ap_build_flow'){
+        ({result,built,updated}=await buildOwnedDraftFlow({mcp,companyId,args:pending.args,draftEmployee:buildingDraft?employee:null,onEffectStart:()=>{activeRequest.effectStarted=true;}}));
       }else{
         activeRequest.effectStarted=true;
         result=await mcp.call(companyId,'tools/call',{name:pending.toolName,arguments:pending.args});
@@ -689,16 +700,16 @@ async function publicChat(req,res){
       const created=newEmployee?await profiles.createManualEmployeeDraft({companyId,name:flowName(input.message),requestId}):null;
       const draft=created?await profiles.findEmployee(companyId,created.recordId):existing?.status==='draft'?existing:null;
       let answer;
-      try{answer=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history:conversation?.messages||[],message:input.message,draftEmployee:draft,mcp:await activepiecesMcp(),companyId,conversationId,deadlineMs:45_000});}
+      try{answer=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history:conversation?.messages||[],message:input.message,draftEmployee:draft,mcp:await activepiecesMcp(),companyId,conversationId,deadlineMs:50_000,onEffectStart:()=>{activeRequest.effectStarted=true;activeRequest.executionAttempt=true;}});}
       catch(error){
-        if(!created)throw error;
+        if(!created||activeRequest.effectStarted)throw error;
         const reply=`حُفظ ${created.name} كمسودة داخل شركتك. تعذّر تجهيز طريقة عمله الآن؛ يمكنك المتابعة من هذه المحادثة.`;
         await profiles.recordConversation({companyId,conversationId,employeeId:null,requestId,userMessage:input.message,assistantMessage:reply});
         return finish(201,completedWithoutExecution('employee_draft',{ok:true,conversation_id:conversationId,reply,employee:created}));
       }
-      const reply=created?`حُفظ ${created.name} كمسودة داخل شركتك. ${answer.reply}`:answer.reply;
+      const reply=created&&!answer.employee?`حُفظ ${created.name} كمسودة داخل شركتك. ${answer.reply}`:answer.reply;
       await profiles.recordConversation({companyId,conversationId,employeeId:null,requestId,userMessage:input.message,assistantMessage:reply});
-      return finish(created?201:200,{...completedWithoutExecution(created?'employee_draft':'conversation_reply',{ok:true,conversation_id:conversationId,reply,...(created?{employee:created}:{experience:{understood_company:true,knowledge_version:Number(knowledge?.knowledgeVersion||0),catalog_reviewed:true}})}),...(answer.approval?{approval:answer.approval,work_status:'awaiting_input'}:{})});
+      return finish(created?201:200,{...completedWithoutExecution(created||answer.employee?'employee_draft':'conversation_reply',{ok:true,conversation_id:conversationId,reply,...(answer.flowId?{flow_id:answer.flowId,draft:true}:{}),...(created||answer.employee?{employee:answer.employee||created}:{experience:{understood_company:true,knowledge_version:Number(knowledge?.knowledgeVersion||0),catalog_reviewed:true}})}),...(answer.approval?{approval:answer.approval,work_status:'awaiting_input'}:{})});
     }
     return json(res,400,{ok:false,error:'unsupported_operation'},sessionHeaders);
   }catch(error){
