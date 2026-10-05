@@ -224,6 +224,20 @@
       ]
     },
     {
+      "id": "customer_project_on_demand",
+      "name": "تجهيز مشروع أدوات الشركة بعد تأكيد الحساب وعند أول اتصال",
+      "aliases": ["مشروع العميل الجديد", "تهيئة أدوات الشركة", "project provisioning", "first connection"],
+      "state": "draft_pr",
+      "meaning": "بعد تأكيد البريد تبدأ سيادة ensure الموجود دون تعطيل الرد، وعند فتح الاتصالات تعيد محاولته من جلسة الشركة؛ Activepieces ينشئ مشروعًا واحدًا بالمعرف الخارجي أو يعيده بعد تعارض إنشاء. حفظ مسودة الموظف لا ينتظر Activepieces. هذا لا ينشئ منحة MCP أو يثبت عمل أداة.",
+      "linear": "ABO-69",
+      "locations": [
+        {"role": "verify", "path": "server.mjs", "anchor": "customer project setup pending retry"},
+        {"role": "request", "path": "server.mjs", "anchor": "await (await tenantProjects()).ensure({tenantId,displayName:resolved.account.company_name})"},
+        {"role": "recovery", "path": "lib/tenant-projects.mjs", "anchor": "project=projectFrom(await provider("},
+        {"role": "test", "path": "scripts/tenant-projects-runtime.test.mjs", "anchor": "recovers the provider project after a concurrent or ambiguous create failure"}
+      ]
+    },
+    {
       "id": "exclusive_project_connections",
       "name": "عزل اتصال الأداة داخل مشروع شركة واحدة",
       "aliases": ["ملكية الاتصال", "اتصال مشترك", "عزل الأدوات", "connection scope", "shared connection"],

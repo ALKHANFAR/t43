@@ -52,6 +52,32 @@ test('adopts the exact existing provider project instead of creating a duplicate
   assert.equal(h.calls.length,1);
 });
 
+test('recovers the provider project after a concurrent or ambiguous create failure',async()=>{
+  const h=harness();
+  let reads=0,posts=0;
+  const service=createTenantProjectService({
+    query:async(text,values=[])=>{
+      if(text.startsWith('SELECT'))return {rows:h.rows.has(values[0])?[h.rows.get(values[0])]:[]};
+      if(text.startsWith('INSERT')){
+        const row={tenant_id:values[0],external_id:values[1],activepieces_project_id:values[2],display_name:values[3],provision_status:'ready'};
+        h.rows.set(values[0],row);return {rows:[row]};
+      }
+      throw new Error('unexpected query');
+    },
+    activepiecesUrl:'https://activepieces.example',apiKey:'secret',
+    fetchImpl:async(url,options={})=>{
+      if(options.method==='POST'){posts++;throw new DOMException('response lost after create','AbortError');}
+      reads++;
+      assert.equal(options.signal.aborted,false);
+      return {ok:true,status:200,json:async()=>({data:reads===1?[]:[{id:projectId,externalId:'siyadah:tenant_7007'}]})};
+    }
+  });
+  const result=await service.ensure({tenantId:'tenant_7007',displayName:'شركة الاختبار'});
+  assert.equal(result.activepieces_project_id,projectId);
+  assert.equal(result.created,false);
+  assert.equal(posts,1);assert.equal(reads,2);
+});
+
 test('coalesces concurrent signup retries so only one provider project is created',async()=>{
   const h=harness({createdProject:{id:projectId,externalId:'siyadah:tenant_4004'}});
   const [first,second]=await Promise.all([

@@ -234,7 +234,9 @@ async function integrations(req,res){
   try{
     const input=await body(req),resolved=await tenantSession(req);
     if(['companyId','tenantId','projectId','scope'].some(key=>Object.hasOwn(input,key)))throw new TenantProjectError('client_scope_forbidden','نطاق الشركة يحدده الخادم فقط.',400);
-    const service=await toolConnections(),tenantId=resolved.session.companyId;
+    const tenantId=resolved.session.companyId;
+    if(['list','methods','connect','oauth_start'].includes(input.op))await (await tenantProjects()).ensure({tenantId,displayName:resolved.account.company_name});
+    const service=await toolConnections();
     if(input.op==='list')return json(res,200,{ok:true,connections:await service.list(tenantId)});
     if(input.op==='methods')return json(res,200,{ok:true,...await service.methods({tenantId,piece:input.piece,requestOrigin:req.headers.origin})});
     if(input.op==='connect')return json(res,201,{ok:true,connection:await service.connect({tenantId,piece:input.piece,type:input.type,values:input.values})});
@@ -305,7 +307,8 @@ async function authRoute(req,res,operation){
     }
     const input=await body(req);
     if(operation==='verify'){
-      await service.verifyEmail(input.token);
+      const verified=await service.verifyEmail(input.token);
+      void service.read(verified.companyId).then(account=>tenantProjects().then(projects=>projects.ensure({tenantId:verified.companyId,displayName:account.company_name}))).catch(error=>console.error('customer project setup pending retry',error?.code||error?.name||'unknown_error'));
       return json(res,200,{ok:true,message:'تم تأكيد بريدك. سجّل الدخول للمتابعة.'},{'set-cookie':authCookie('',1,0)});
     }
     if(operation==='signup'){
