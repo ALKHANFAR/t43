@@ -896,7 +896,7 @@ var I = {
       var current=emp(who), note=$("#instrF").firstChild;
       if(!current||!current.flowId)return;
       if($("#instrSave").disabled||$("#instr").value.trim()!==current.instr){note.textContent=ui('احفظ تعديلك أولًا، ثم اطلب تطبيق التعليمات المحفوظة.','Save your changes first, then request applying the saved instructions.');return;}
-      var composer=$("#input");composer.value=ui('راجع التعليمات المحفوظة لهذا الموظف وطبّقها على طريقة عمله المرتبطة، ثم اختبر التغييرات وأخبرني بما تأكدت منه.','Review this employee’s saved instructions and apply them to the linked workflow, then test the changes and report what you verified.');composer.focus();$("#thread").scrollTop=$("#thread").scrollHeight;return;
+      var composer=$("#input");if(composer.value.trim()){note.textContent=ui("لديك رسالة لم ترسلها. أرسلها أو احفظ نصها قبل تجهيز طلب التعليمات.","You have an unsent message. Send it or save its text before preparing the instruction request.");composer.focus();return;}composer.value=ui('راجع التعليمات المحفوظة لهذا الموظف وطبّقها على طريقة عمله المرتبطة، ثم اختبر التغييرات وأخبرني بما تأكدت منه.','Review this employee’s saved instructions and apply them to the linked workflow, then test the changes and report what you verified.');composer.focus();$("#thread").scrollTop=$("#thread").scrollHeight;return;
     }
     if(t.closest("#instrSave")){ var e2=emp(who), nv=$("#instr").value.trim(); if(!nv||nv===e2.instr){ $("#instrF").firstChild.textContent="ما تغيّر شيء."; return; }
       if(window.__SIY_REAL__){ siySaveEmployeeInstructions(e2,nv); return; }

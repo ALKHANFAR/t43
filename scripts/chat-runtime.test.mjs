@@ -962,3 +962,16 @@ test('instruction save rejects an incompatible scope and a missing workflow has 
     assert.match(p.d.querySelector('#instrF').textContent,/لم تتطابق قراءة التعليمات/);assert.doesNotMatch(p.d.querySelector('#instrF').textContent,/حُفظت للمحادثة/);
   }finally{p.close();}
 });
+
+
+test('instruction application does not overwrite the manager’s unsent message',async()=>{
+  const p=await page({hydrate:{...empty,team:[{...employee,instructions:'تعليمات محفوظة'}]}});try{
+    p.d.querySelector('#emps .emp').click();p.d.querySelector('#instrTgl').click();
+    const composer=p.d.querySelector('#input');composer.value='سؤالي الذي لم أرسله';
+    p.d.querySelector('#instrApply').click();
+    assert.equal(composer.value,'سؤالي الذي لم أرسله');
+    assert.equal(p.d.activeElement,composer);
+    assert.match(p.d.querySelector('#instrF').textContent,/رسالة لم ترسلها/);
+    assert.equal(p.requests.filter(x=>x.body?.op==='message').length,0);
+  }finally{p.close();}
+});
