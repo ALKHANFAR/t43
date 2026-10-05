@@ -90,7 +90,7 @@ test('chat shows only safe tool receipt metadata while the request remains unver
     const details=p.d.querySelector('#thread details.plan');
     assert.ok(details);
     assert.match(details.textContent,/استدعاءات الأدوات · 2/);
-    assert.match(details.textContent,/أعادت خطأ/);
+    assert.match(details.textContent,/تعذّر الاستدعاء/);
     assert.match(details.textContent,/رد الأداة وحده لا يثبت نتيجة الخدمة/);
     assert.doesNotMatch(details.textContent,/secret/);
     assert.equal(details.querySelector('bad'),null);
@@ -880,5 +880,24 @@ test('real response is fully visible with reduced motion and does not animate hi
     assert.match(thread(p),/النص الكامل بلا انتظار إضافي/);
     assert.match(html,/\.chat-real \.m\{animation:none\}/);
     assert.match(html,/@media \(prefers-reduced-motion:reduce\)\{ \*\{animation:none !important;transition:none !important\}/);
+  }finally{p.close();}
+});
+
+
+test('completed native action without text uses action wording and no provider or flow proof',async()=>{
+  const p=await page({message:{ok:true,conversation_id:'native',request_status:'succeeded',work_status:'succeeded',outcome_kind:'tool_result'}});try{
+    send(p,'اقرأ');await flush();
+    assert.match(thread(p),/اكتمل استدعاء الأداة/);assert.doesNotMatch(thread(p),/سُجّل التشغيل|✓|نتيجة.*مثبتة/);
+    assert.equal(p.d.querySelector('.request-state'),null);
+  }finally{p.close();}
+});
+test('ActionRun metadata stays inside technical details without KPI proof or unsafe IDs',async()=>{
+  const run='m1rtHgkyZhT0Mr3kWJwty';
+  const p=await page({message:{ok:true,conversation_id:'native',request_status:'succeeded',work_status:'succeeded',outcome_kind:'tool_result',reply:'هذا رد المصدر.',tool_receipts:[{name:'ap_run_action',status:'returned',run_id:run,outcome:'action_completed'},{name:'ap_run_action',status:'error',run_id:'<img src=x onerror=alert(1)>',outcome:'unverified',effect_attempted:true}]}});try{
+    send(p,'اقرأ');await flush();const details=p.d.querySelector('.m__c details');assert.ok(details);assert.equal(details.open,false);
+    assert.match(details.textContent,/اكتمل استدعاء الإجراء/);assert.match(details.textContent,/تعذّر الاستدعاء/);
+    assert.equal(details.querySelector('code').textContent,run);assert.equal(details.querySelectorAll('code').length,1);
+    assert.equal(details.querySelector('img'),null);assert.doesNotMatch(thread(p),/✓|KPI|FlowRun/);
+    assert.ok(thread(p).includes('هذا رد المصدر.'));
   }finally{p.close();}
 });
