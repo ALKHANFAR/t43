@@ -462,7 +462,7 @@ var I = {
       var savedRules=e.rules.filter(function(r){return r[1];}).map(function(r){return esc(r[0]);});
       var instructionSource=e.instrSource==='owner'?ui('تعديلك','Your edit'):e.instrSource==='manual_setup'?ui('مسودة أولية','Initial draft'):ui('دور الموظف ومعرفة الشركة','Employee role and company knowledge');
       return '<div class="card"><div class="card__h">'+I.pen+'<b>'+ui('تعليمات المحادثة','Conversation instructions')+'</b><span class="cnt">'+ui('نسخة ','Version ')+e.instrVersion+' · '+instructionSource+'</span></div>'+
-        '<div class="card__b"><textarea class="instr" id="instr" maxlength="12000" aria-label="'+ui('تعليمات ','Instructions for ')+esc(e.n)+'">'+esc(e.instr)+'</textarea>'+
+        '<div class="card__b"><div id="publishedInstr" aria-live="polite"></div><textarea class="instr" id="instr" maxlength="12000" aria-label="'+ui('تعليمات ','Instructions for ')+esc(e.n)+'">'+esc(e.instr)+'</textarea>'+
         '<div class="instr__f" id="instrF"><span>'+ui('تُحفظ لسياق المحادثة؛ تطبيقها على طريقة العمل يحتاج مراجعة واختبارًا.','Saved for conversation context; applying them to the workflow requires review and testing.')+'</span><button type="button" class="bts" id="instrSave">'+ui('حفظ التعليمات','Save instructions')+'</button>'+(e.flowId?'<button type="button" class="bts bts--line" id="instrApply">'+ui('راجع وطبّق على طريقة العمل','Review and apply to workflow')+'</button>':'')+'</div></div>'+
         '<div class="card__h">'+I.shield+'<b>حدوده</b><span class="cnt">من السجل</span></div>'+
         '<div class="card__b"><p>الصلاحية المسجلة: '+esc(e.auto===null?'غير محددة':AUTON[e.auto])+'.</p>'+
@@ -889,8 +889,8 @@ var I = {
     /* «التفاصيل»: يفتح مربعات الأرقام الأربعة بدون إعادة رسم — ويرجع مطويًا مع كل زيارة */
     if(t.closest("#kpiTgl")){ var kw=$("#kpiWrap"), kb=$("#kpiTgl"); kw.hidden=!kw.hidden; kb.setAttribute("aria-expanded",String(!kw.hidden)); kpiOpen=kw.hidden?null:who; return; }
     if(t.closest("#draftTools")){ openTools(); return; }
-    if(t.closest("#reviewStart")){ var draftWrap=$("#instrWrap"), review=$("#reviewStart");draftWrap.hidden=!draftWrap.hidden;review.setAttribute('aria-expanded',String(!draftWrap.hidden));if(!draftWrap.hidden){$("#thread").scrollTop=0;$("#instr").focus();}return; }
-    if(t.closest("#instrTgl")){ var w=$("#instrWrap"), b=$("#instrTgl"); w.hidden=!w.hidden; b.setAttribute("aria-expanded",String(!w.hidden)); if(!w.hidden){ $("#thread").scrollTop=0; $("#instr").focus(); } return; }
+    if(t.closest("#reviewStart")){ var draftWrap=$("#instrWrap"), review=$("#reviewStart");draftWrap.hidden=!draftWrap.hidden;review.setAttribute('aria-expanded',String(!draftWrap.hidden));if(!draftWrap.hidden){$("#thread").scrollTop=0;$("#instr").focus();if(window.__SIY_REAL__)siyReadPublishedInstructions(emp(who));}return; }
+    if(t.closest("#instrTgl")){ var w=$("#instrWrap"), b=$("#instrTgl"); w.hidden=!w.hidden; b.setAttribute("aria-expanded",String(!w.hidden)); if(!w.hidden){ $("#thread").scrollTop=0; $("#instr").focus();if(window.__SIY_REAL__)siyReadPublishedInstructions(emp(who)); } return; }
     if(t.closest("#onSw")){ if(window.__SIY_REAL__){ siySetEmployeeState(emp(who)); return; } var sw=$("#onSw"), eo=emp(who), v=sw.getAttribute("aria-checked")==="true"; sw.setAttribute("aria-checked",String(!v)); eo.on=!v; $("#onLbl").textContent=eo.on?(eo.f?"شغّالة":"شغّال"):(eo.f?"متوقفة":"متوقف"); renderSide(); siyPatch(eo.n,"status",eo.on?"نشط":"متوقف"); return; }
     if(window.__SIY_REAL__&&t.closest("#instrApply")){
       var current=emp(who), note=$("#instrF").firstChild;
@@ -1285,6 +1285,19 @@ var I = {
     }finally{
       delete siyEmployeeStatePending[id]; if(generation===siyGeneration) siyDraw();
     }
+  }
+  async function siyReadPublishedInstructions(e){
+    var target=$("#publishedInstr");if(!e||!target)return;var readId=target.siyReadId=(target.siyReadId||0)+1;
+    target.textContent=ui('نقرأ تعليمات طريقة العمل المنشورة…','Reading published workflow instructions…');
+    try{
+      var data=await siyRequest({op:'employee_instructions',employee_id:e.id,read_published:true}),p=data.published_instructions;
+      if(!target.isConnected||who!==e.id||$("#publishedInstr")!==target||target.siyReadId!==readId)return;
+      if(!p||p.flow_id!==e.flowId||!['verified','not_published','unavailable'].includes(p.read_status))throw new Error();
+      if(p.read_status!=='verified'){target.textContent=p.read_status==='not_published'?ui('لا توجد نسخة منشورة لطريقة العمل.','The workflow has no published version.'):ui('تعذّرت قراءة تعليمات طريقة العمل المنشورة.','Published workflow instructions could not be read.');return;}
+      if(!/^[A-Za-z0-9]{21}$/.test(p.flow_id)||!/^[A-Za-z0-9]{21}$/.test(p.published_version_id)||!['ENABLED','DISABLED'].includes(p.flow_status)||!Array.isArray(p.steps)||p.steps.some(function(step){return !step||typeof step.prompt!=='string';}))throw new Error();
+      var steps=p.steps.filter(function(step){return step&&typeof step.prompt==='string';});
+      target.innerHTML='<b>'+ui('تعليمات طريقة العمل المنشورة','Published workflow instructions')+'</b><p>'+ui('هذه قراءة للنسخة المنشورة؛ ليست إثباتًا لنتيجة تنفيذ.','This reads the published version; it does not prove an execution result.')+(p.flow_status==='DISABLED'?ui(' طريقة العمل متوقفة.',' The workflow is disabled.'):'')+'</p>'+steps.map(function(step){return '<details class="adv"><summary>'+esc(step.display_name||step.name||step.step_name||ui('خطوة الذكاء الاصطناعي','AI step'))+'</summary><div class="prompt">'+esc(step.prompt)+'</div>'+(step.agent_instructions_unverified===true?'<p>'+ui('هذا مدخل مهمة للوكيل؛ تعليمات الوكيل المحفوظ نفسه لم تُتحقق هنا.','This is the agent’s task input; the saved agent’s own instructions are unverified here.')+'</p>':'')+'</details>';}).join('')+(steps.length?'':'<p>'+ui('لا توجد تعليمات خطوات ذكاء اصطناعي قابلة للعرض في هذه النسخة.','This version has no AI-step instructions available to display.')+'</p>')+siyRefsHtml([[ui('طريقة العمل','Workflow'),p.flow_id],[ui('النسخة المنشورة','Published version'),p.published_version_id]]);
+    }catch(error){if(target.isConnected&&who===e.id&&$("#publishedInstr")===target&&target.siyReadId===readId)target.textContent=ui('تعذّرت قراءة تعليمات طريقة العمل المنشورة. أعد فتح التعليمات للمحاولة.','Published workflow instructions could not be read. Reopen instructions to retry.');}
   }
   async function siySaveEmployeeInstructions(e,instructions){
     var button=$("#instrSave"),note=$("#instrF").firstChild,previous=e.instr;
