@@ -11,7 +11,7 @@ import {createFirecrawlClient,FirecrawlError} from './lib/firecrawl.mjs';
 import {createCompanyProfileService,CompanyProfileError} from './lib/company-profile.mjs';
 import {createAccountAuthService,AccountAuthError} from './lib/account-auth.mjs';
 import {createMailer,MailerError} from './lib/mailer.mjs';
-import {builtFlowResult,conversationMemory,createdTableReadback,flowName,hasActiveFlowConnections} from './lib/chat-intelligence.mjs';
+import {builtFlowResult,conversationMemory,createdTableReadback,flowName,hasActiveFlowConnections,publishedAIInstructionSteps} from './lib/chat-intelligence.mjs';
 import {completedWithoutExecution,failedChatExecution,nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget} from './lib/chat-outcome.mjs';
 import {assertSchemaReady} from './lib/schema-ready.mjs';
 import {toolIcon} from './lib/tool-icons.mjs';
@@ -650,6 +650,21 @@ async function publicChat(req,res){
       }
     }
     if(input.op==='employee_instructions'){
+      if(input.read_published===true){
+        const profiles=await companyProfiles(),saved=await profiles.findEmployee(companyId,input.employee_id);
+        if(!saved)throw new CompanyProfileError('employee_not_found','الموظف غير موجود في شركتك.',404);
+        const published={flow_id:saved.activepieces_flow_id||null,published_version_id:null,flow_status:null,read_status:'not_published',steps:[]};
+        if(saved.activepieces_flow_id)try{
+          const projects=await tenantProjects(),current=(await projects.ownedFlow(companyId,saved.activepieces_flow_id)).flow;
+          published.flow_status=current.status;published.published_version_id=current.publishedVersionId||null;
+          if(current.publishedVersionId){
+            const snapshot=(await projects.ownedFlow(companyId,saved.activepieces_flow_id,current.publishedVersionId)).flow;
+            if(snapshot.publishedVersionId!==current.publishedVersionId)throw new TenantProjectError('flow_version_mismatch','تغيّرت نسخة طريقة العمل المنشورة أثناء القراءة.',409);
+            published.flow_status=snapshot.status;published.steps=publishedAIInstructionSteps(snapshot.version);published.read_status='verified';
+          }
+        }catch(error){published.read_status='unavailable';console.warn('published employee instructions unavailable',error?.code||error?.name||'unknown_error');}
+        return json(res,200,{ok:true,published_instructions:published},sessionHeaders);
+      }
       const instructions=typeof input.instructions==='string'?input.instructions.trim():'';
       if(!instructions||instructions.length>12_000)throw new CompanyProfileError('invalid_employee_instructions','اكتب تعليمات واضحة لا تتجاوز 12,000 حرف.',400);
       const profiles=await companyProfiles(),updated=await profiles.updateEmployeeInstructions({companyId,employeeId:input.employee_id,instructions});
