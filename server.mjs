@@ -33,6 +33,9 @@ let accountAuthPromise;
 let databasePromise;
 let firecrawlClient;
 let mcpPromise;
+// Companies with a chat request still calling tools. Two requests editing the same project at once
+// produced duplicate tables and Flows, so a second one is answered and not started.
+const workingCompanies=new Set();
 const mailer=createMailer({apiKey:process.env.RESEND_API_KEY,from:process.env.SIYADAH_MAIL_FROM,replyTo:process.env.SIYADAH_MAIL_REPLY_TO});
 
 function json(res,status,body,headers={}){if(res.headersSent)return;res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...headers});res.end(JSON.stringify(body));}
@@ -496,7 +499,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
 }
 async function publicChat(req,res){
   let sessionHeaders={};
-  let activeRequest=null,waiting=null;
+  let activeRequest=null,waiting=null,working=null;
   try{
     const input=await body(req),resolved=await tenantSession(req);sessionHeaders=resolved.headers;
     if(Object.hasOwn(input,'companyId')||Object.hasOwn(input,'tenantId')||Object.hasOwn(input,'projectId'))throw new TenantProjectError('client_scope_forbidden','نطاق الشركة يحدده الخادم فقط.',400);
@@ -703,11 +706,13 @@ async function publicChat(req,res){
       // Building and publishing takes minutes. The browser gets `queued` and reads the same request ID; the work continues here.
       waiting=setTimeout(()=>json(res,200,{ok:true,conversation_id:conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders),20_000);
       const finish=async(status,response)=>{
-        clearTimeout(waiting);
+        clearTimeout(waiting);if(working){workingCompanies.delete(working);working=null;}
         const settled=await profiles.settleChatRequest({companyId,requestId,status:'succeeded',httpStatus:status,response,claimToken:claim.claimToken});
         activeRequest=null;
         return json(res,settled.httpStatus,settled.response,sessionHeaders);
       };
+      if(workingCompanies.has(companyId))return finish(200,completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply:'ما زلت أنفّذ طلبك السابق، وسيظهر ردّه هنا عند اكتماله. أرسل طلبك التالي بعده حتى لا يتكرر العمل.'}));
+      workingCompanies.add(companyId);working=companyId;
       if(typeof input.employee_id==='string'&&input.employee_id){
         const saved=await profiles.findEmployee(companyId,input.employee_id);
         if(!saved)throw new CompanyProfileError('employee_not_found','الموظف غير موجود في شركتك.',404);
@@ -743,11 +748,11 @@ async function publicChat(req,res){
       }
       const reply=created&&!answer.employee?`حُفظ ${created.name} كمسودة داخل شركتك. ${answer.reply}`:answer.reply;
       await profiles.recordConversation({companyId,conversationId,employeeId:null,requestId,userMessage:input.message,assistantMessage:reply});
-      return finish(created?201:200,{...completedWithoutExecution(created||answer.employee?'employee_draft':'conversation_reply',{ok:true,conversation_id:conversationId,reply,...(answer.flowId?{flow_id:answer.flowId,draft:answer.employee?.status!=='active'}:{}),...(created||answer.employee?{employee:answer.employee||created}:{experience:{understood_company:true,knowledge_version:Number(knowledge?.knowledgeVersion||0),catalog_reviewed:true}})}),...(answer.approval?{approval:answer.approval,work_status:'awaiting_input'}:{})});
+      return finish(created?201:200,{...completedWithoutExecution((created||answer.employee)&&answer.employee?.status!=='active'?'employee_draft':'conversation_reply',{ok:true,conversation_id:conversationId,reply,...(answer.flowId?{flow_id:answer.flowId,draft:answer.employee?.status!=='active'}:{}),...(created||answer.employee?{employee:answer.employee||created}:{experience:{understood_company:true,knowledge_version:Number(knowledge?.knowledgeVersion||0),catalog_reviewed:true}})}),...(answer.approval?{approval:answer.approval,work_status:'awaiting_input'}:{})});
     }
     return json(res,400,{ok:false,error:'unsupported_operation'},sessionHeaders);
   }catch(error){
-    clearTimeout(waiting);
+    clearTimeout(waiting);if(working)workingCompanies.delete(working);
     if(activeRequest){
       console.error('chat request failed',error instanceof TenantProjectError||error instanceof CompanyProfileError?error.code:error?.name==='AbortError'?'AbortError':'unexpected_error');
       const {companyId,requestId,conversationId,profiles,effectStarted,executionAttempt}=activeRequest;
