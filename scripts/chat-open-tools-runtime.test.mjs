@@ -57,7 +57,7 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false}={})
     toolConnections:async()=>({assertOwnedExternal:async({externalId})=>{if(externalId==='foreign')throw new TenantProjectError('connection_not_owned','الاتصال لا يخص هذه الشركة.',403);}}),
   };
   const deepseekReply=runInNewContext(`${source.slice(start,end)}; deepseekReply`,ctx);
-  const run=(extra={})=>deepseekReply({company:{name:'شركة'},settings:{},knowledge:{},team:[],history:[],message:'جهّز الموظف',mcp,companyId:'company-1',conversationId:'c1',deadlineMs:60_000,onEffectStart:()=>{log.effects++;},...extra});
+  const run=(extra={})=>deepseekReply({company:{name:'شركة'},settings:{},knowledge:{},team:[],history:[],message:'جهّز الموظف',mcp,companyId:'company-1',conversationId:'c1',deadlineMs:600_000,onEffectStart:()=>{log.effects++;},...extra});
   return {run,log};
 }
 const toolMessages=request=>request.messages.filter(item=>item.role==='tool').map(item=>item.content);
@@ -133,6 +133,17 @@ test('the step limit ends with a written account instead of a fixed sentence',as
   assert.equal(answer.reply,'قرأت الكتالوج ولم أبنِ شيئًا بعد.');
   assert.equal(log.tools.length,40);
   assert.equal(log.model.at(-1).tools,undefined);
+});
+
+test('a request that runs out of time still ends with an account of what ran',async()=>{
+  const near=setup({script:[request=>request.tools?use(['ap_add_step',{flowId}]):say('أضفت خطوة واحدة وبقي النشر.')]});
+  const written=await near.run({deadlineMs:60_000});
+  assert.equal(written.reply,'أضفت خطوة واحدة وبقي النشر.');
+  assert.equal(near.log.tools.length,0);
+  const late=setup({script:[use(['ap_add_step',{flowId}])],toolResults:{ap_add_step:async()=>{await new Promise(resolve=>setTimeout(resolve,30));return {content:[{type:'text',text:'ok'}]};}}});
+  const fallback=await late.run({deadlineMs:75_020});
+  assert.match(fallback.reply,/ap_add_step/);
+  assert.match(fallback.reply,/أكمل/);
 });
 
 test('selected employee chat stays on its own Flow and can still ask for a run',async()=>{
