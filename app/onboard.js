@@ -113,10 +113,10 @@
   }
   function renderSuggestions(){
     var selected=SUGGESTIONS.find(function(item){return item.id===SELECTED;});
-    $('#plan').innerHTML='<div class="plan">'+SUGGESTIONS.slice(0,3).map(function(item,index){
+    $('#plan').innerHTML='<div class="plan">'+SUGGESTIONS.slice(0,3).map(function(item){
       var pressed=SELECTED===item.id;
-      return '<button type="button" class="prow rolepick" data-suggestion="'+esc(item.id)+'" aria-pressed="'+pressed+'"><span class="av">'+esc(role(item,'name').slice(0,1))+'</span><div><b>'+esc(role(item,'name'))+' · '+esc(role(item,'title'))+(index===0?'<span class="rank">'+t('best')+'</span>':'')+'</b><p>'+esc(role(item,'goal'))+'</p><div class="fit"><i style="--fit:'+Number(item.confidence||0)+'%"></i><span>'+esc(item.confidence)+'%</span></div></div></button>';
-    }).join('')+'</div>'+(selected?'<div class="choice"><b>'+t('why')+esc(role(selected,'name'))+(locale==='en'?'?':'؟')+'</b><p>'+esc(locale==='en'?englishReason(selected):selected.reason)+'</p><small>'+t('reads')+(selected.knowledgeTopics||[]).slice(0,3).map(function(key){return esc(topic(key));}).join(' · ')+'</small></div>':'')+'<div class="note"><span class="drop"></span>'+t('note')+'</div>';
+      return '<button type="button" class="prow rolepick" data-suggestion="'+esc(item.id)+'" aria-pressed="'+pressed+'"><span class="av">'+esc(role(item,'name').slice(0,1))+'</span><div><b>'+esc(role(item,'name'))+' · '+esc(role(item,'title'))+'</b><p>'+esc(role(item,'goal'))+'</p></div></button>';
+    }).join('')+'</div>'+(selected?'<div class="choice"><b>'+t('why')+esc(role(selected,'name'))+(locale==='en'?'?':'؟')+'</b><p>'+esc(locale==='en'?englishReason(selected):selected.reason||'')+'</p><small>'+t('reads')+(selected.knowledgeTopics||[]).slice(0,3).map(function(key){return esc(topic(key));}).join(' · ')+'</small></div>':'')+'<div class="note"><span class="drop"></span>'+t('note')+'</div>';
   }
   function englishReason(item){
     var matched=(item.knowledgeTopics||[]).filter(function(key){return (PROFILE&&PROFILE.knowledgeAreas||[]).includes(key);}).slice(0,3).map(topic);

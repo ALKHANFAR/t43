@@ -44,6 +44,7 @@
       "pr": "https://github.com/ALKHANFAR/t43/pull/17",
       "locations": [
         {"role": "screen", "path": "app/onboard.js", "anchor": "op:'select_employee'"},
+        {"role": "recommendation_reason", "path": "app/onboard.js", "anchor": "function renderSuggestions()"},
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='select_employee')"},
         {"role": "storage", "path": "lib/company-profile.mjs", "anchor": "async function createEmployeeDraft({companyId,suggestionId,requestId})"},
         {"role": "request_identity", "path": "app/onboard.js", "anchor": "function employeeSelectionRequestId()"},
@@ -96,7 +97,9 @@
         {"role": "claim", "path": "lib/company-profile.mjs", "anchor": "async function claimChatRequest({companyId,conversationId,requestId,requestHash})"},
         {"role": "result", "path": "lib/chat-outcome.mjs", "anchor": "export function failedChatExecution("},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "## Request identity and company boundary"},
-        {"role": "test", "path": "scripts/chat-request-ledger-runtime.test.mjs", "anchor": "claimChatRequest(input)"}
+        {"role": "test", "path": "scripts/chat-request-ledger-runtime.test.mjs", "anchor": "claimChatRequest(input)"},
+        {"role": "pending_restore", "path": "lib/company-profile.mjs", "anchor": "async function pendingChatWork(companyId)"},
+        {"role": "ordered_history", "path": "lib/company-profile.mjs", "anchor": "async function conversationHistory({companyId,conversationId,requestId})"}
       ]
     },
     {
@@ -186,7 +189,9 @@
         {"role": "message", "path": "app/chat.js", "anchor": "if(!text&&data.request_status==='not_observed'&&state==='unknown')"},
         {"role": "retry", "path": "app/chat.js", "anchor": "row.siyRetry=function(){submit(true);}"},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "| Uncertain outcome |"},
-        {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "terminal unknown request shows the actual tool account without claiming success"}
+        {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "terminal unknown request shows the actual tool account without claiming success"},
+        {"role": "request_state", "path": "app/chat.js", "anchor": "function siyRequestStateHtml(state)"},
+        {"role": "recorded_team", "path": "app/chat.js", "anchor": "function renderPlan()"}
       ]
     },
     {
@@ -299,7 +304,10 @@
         {"role": "open_tools_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "the model builds, tests and publishes in one request and writes the reply itself"},
         {"role": "activation_resume", "path": "server.mjs", "anchor": "if(input.op==='resume_employee_activation')"},
         {"role": "activation_intent", "path": "lib/company-profile.mjs", "anchor": "async function pendingEmployeeActivation(companyId,employeeId=null)"},
-        {"role": "activation_resume_test", "path": "scripts/employee-activation-resume-runtime.test.mjs", "anchor": "manual activation and connection resume share one tested activation path"}
+        {"role": "activation_resume_test", "path": "scripts/employee-activation-resume-runtime.test.mjs", "anchor": "manual activation and connection resume share one tested activation path"},
+        {"role": "native_receipt", "path": "lib/chat-outcome.mjs", "anchor": "export function nativeActionReceipt(name,result)"},
+        {"role": "usage", "path": "server.mjs", "anchor": "console.info('chat_model_usage'"},
+        {"role": "outcome_test", "path": "scripts/chat-outcome-runtime.test.mjs", "anchor": "native ActionRun completion is distinct from provider or FlowRun proof"}
       ]
     },
     {

@@ -216,3 +216,17 @@ test('English onboarding keeps its labels, role choices, and draft status in LTR
   assert.match(w.document.querySelector('[data-step="4"]').textContent,/أدواته غير متصلة/);
   dom.window.close();
 });
+
+test('suggestions omit uncalibrated scores and show the supplied reason safely',async()=>{
+  const [html,js]=await Promise.all([readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),readFile(new URL('../app/onboard.js',import.meta.url),'utf8')]);
+  const suggestion={id:'sales',roleKey:'sales',name:'سعد',title:'المبيعات',goal:'متابعة العملاء',reason:'لوجود طلبات تحتاج متابعة <script>alert(1)</script>',confidence:95,knowledgeTopics:['services']};
+  const profile={companyName:'مثال',knowledgeAreas:['services'],factCount:1};
+  const dom=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html',runScripts:'outside-only'}),w=dom.window;
+  w.scrollTo=()=>{};w.fetch=async(_url,options)=>({ok:true,json:async()=>JSON.parse(options.body).op==='check_company_enrichment'?{ok:true,status:'ready',profile}:{ok:true,suggestions:[suggestion]}});
+  try{
+    w.eval(js);await new Promise(resolve=>setImmediate(resolve));w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+    const panel=w.document.querySelector('#plan');assert.equal(panel.querySelector('.fit,.rank'),null);assert.doesNotMatch(panel.textContent,/95%|أفضل بداية/);
+    w.document.querySelector('[data-suggestion="sales"]').click();assert.ok(panel.textContent.includes(suggestion.reason));assert.equal(panel.querySelector('script'),null);
+    assert.match(w.document.querySelector('#next').textContent,/احفظ مسودة سعد/);
+  }finally{w.close();}
+});

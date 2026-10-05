@@ -79,7 +79,7 @@ test('routine draft work skips approval while an MCP action is approval gated',(
 });
 
 test('employee MCP response remains unverified without provider proof',()=>{
-  assert.match(serverSource,/if\(answer\.flowToolAttempted\|\|answer\.effects\?\.length\)return finish\(200,\{[^\n]+request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified'/);
+  assert.match(serverSource,/if\(answer\.flowToolAttempted\|\|answer\.effects\?\.length\)return finish\(200,\{[^\n]+completedToolActions\(answer\)/);
   assert.doesNotMatch(serverSource,/const proof=\{[^\n]+conversation_id:conversationId/);
 });
 
@@ -90,7 +90,7 @@ test('chat shows only safe tool receipt metadata while the request remains unver
     const details=p.d.querySelector('#thread details.plan');
     assert.ok(details);
     assert.match(details.textContent,/استدعاءات الأدوات · 2/);
-    assert.match(details.textContent,/أعادت خطأ/);
+    assert.match(details.textContent,/تعذّر الاستدعاء/);
     assert.match(details.textContent,/رد الأداة وحده لا يثبت نتيجة الخدمة/);
     assert.doesNotMatch(details.textContent,/secret/);
     assert.equal(details.querySelector('bad'),null);
@@ -349,7 +349,7 @@ test('builder labels hide platform vocabulary while assistant reply retains orig
     assert.doesNotMatch(thread(p),/Activepieces|MCP|cron_expression|@activepieces|\bCODE\b|المشغّل/);
     const button=p.d.querySelector('[data-siy-approval="approve"]');assert.ok(button);button.click();await flush();
     const approval=p.requests.find(x=>x.body.op==='approve');assert.ok(approval.body.request_id);assert.equal(approval.body.conversation_id,'builder-conversation');assert.equal(approval.body.approval_id,'approval-1');assert.equal(approval.body.decision,'approve');
-    assert.match(thread(p),/موظف قيد التجهيز|تجهيز/);assert.match(thread(p),/flow-proof/);assert.equal(p.d.querySelectorAll('[data-siy-approval]').length,0);
+    assert.match(thread(p),/لم تُختبر أو تُنشر بعد/);assert.match(thread(p),/flow-proof/);assert.equal(p.d.querySelectorAll('[data-siy-approval]').length,0);
     assert.ok(thread(p).includes(built.reply));
   }finally{p.close();}
 });
@@ -758,7 +758,7 @@ test('knowledge pricing facts retain distinct evidence labels and hide technical
 
 test('real billing stays unknown despite actual employees and work evidence without invented quotas',async()=>{
  const p=await page({hydrate:{...empty,team:[employee,{...employee,recordId:'second'}],recent_work:[proof]}});try{
-  const plan=p.d.querySelector('#pane-plan');assert.match(plan.textContent,/بيانات الاشتراك غير متاحة/);assert.match(plan.textContent,/الاستخدام غير متحقق/);assert.match(plan.textContent,/2 موظف مسجل/);
+  const plan=p.d.querySelector('#pane-plan');assert.match(plan.textContent,/بيانات الاشتراك والاستخدام غير متاحة/);assert.match(plan.textContent,/سارة.*نشط في السجل/);assert.match(plan.textContent,/2 موظف مسجل/);
   for(const claim of ['تنتهي خلال','9 أيام','0 /','ر.س','يتجدد'])assert.ok(!plan.textContent.includes(claim));
   assert.equal(p.w.PLAN.actions.used,null);assert.equal(p.d.querySelector('#pban').hidden,true);assert.equal(plan.querySelector('[role="progressbar"]'),null);
   p.w.PLAN.state='over';p.w.renderPlan();assert.equal(p.d.querySelector('#pban').hidden,true);
@@ -769,7 +769,7 @@ test('unavailable actions cannot mutate and hiring opens central composer withou
  const p=await page({hydrate:{...empty,team:[employee]}});try{
   p.d.querySelector('#emps .emp').click();p.d.querySelector('[data-open="plan"]').click();
   const unavailable=[p.d.querySelector('#attachBtn'),p.d.querySelector('#deleteAccountBtn'),...p.d.querySelectorAll('#pane-plan button[disabled]')];
-  assert.equal(unavailable.length,4);for(const button of unavailable){assert.equal(button.disabled,true);button.click();}
+  assert.equal(unavailable.length,2);for(const button of unavailable){assert.equal(button.disabled,true);button.click();}
   assert.match(p.d.querySelector('#attachBtn').getAttribute('aria-label'),/غير متاح/);assert.equal(p.requests.length,2);
   p.d.querySelector('#hireFromPlan').click();assert.equal(p.d.activeElement.id,'input');assert.match(p.d.querySelector('#input').placeholder,/مهمة الموظف/);assert.equal(p.requests.length,2);assert.equal(p.d.querySelector('#thread').classList.contains('thread--emp'),false);
   assert.equal(p.d.querySelector('#exportBtn').disabled,false);
@@ -836,4 +836,94 @@ test('saved message timestamps display Riyadh time independently of browser time
     assert.equal(p.d.querySelector('.m--me .m__t').textContent,'03:05');
     assert.match(p.d.querySelector('.m:not(.m--me) .m__t').textContent,/00:05/);
   }finally{p.close();}
+});
+
+
+test('real chat keeps composer focus and announces processing without invented explanation',async()=>{
+  let resolve;const waiting=new Promise(r=>resolve=r);
+  const p=await page({message:()=>waiting});try{
+    assert.match(thread(p),/وش هدفك اليوم/);
+    send(p,'اعرض المعلومات');await flush();
+    assert.equal(p.d.activeElement,p.d.querySelector('#input'));
+    assert.equal(p.d.querySelector('.think').getAttribute('role'),'status');
+    assert.doesNotMatch(thread(p),/راجعت.*أداة|كل حركة.*سطر|\d+٪/);
+    resolve({ok:true,conversation_id:'focus',request_status:'succeeded',work_status:'not_started',outcome_kind:'conversation_reply',reply:'جواب المصدر كما هو.'});await flush();
+    assert.equal(p.d.activeElement,p.d.querySelector('#input'));
+    assert.equal(p.d.querySelector('[data-why]'),null);
+    assert.match(thread(p),/جواب المصدر كما هو/);
+    assert.equal(p.d.querySelector('.request-state'),null);
+  }finally{p.close();}
+});
+test('actual queued status changes to running then disappears with final answer in both languages',async()=>{
+  for(const locale of ['ar','en']){
+    let calls=0;const p=await page({locale,message:{ok:true,conversation_id:'state',work_id:'w',work_status:'queued',reply:'استلمنا الطلب'},work:()=>++calls===1?{ok:true,work_status:'running',reply:'يعمل الآن'}:{ok:true,request_status:'succeeded',work_status:'succeeded',reply:'نتيجة المصدر'}});try{
+      send(p,'نفذ');await flush();assert.equal(p.d.querySelector('.request-state').dataset.state,'queued');
+      await p.polls.shift()();assert.equal(p.d.querySelector('.request-state').dataset.state,'running');
+      await p.polls.shift()();assert.equal(p.d.querySelector('.request-state'),null);assert.match(thread(p),/نتيجة المصدر/);
+      assert.equal(p.d.activeElement,p.d.querySelector('#input'));
+    }finally{p.close();}
+  }
+});
+test('polling preserves reading position instead of pulling user away from earlier messages',async()=>{
+  const p=await page({message:{ok:true,conversation_id:'scroll',work_id:'w',work_status:'running',reply:'جار العمل'},work:{ok:true,work_status:'succeeded',reply:'النتيجة'}});try{
+    send(p,'نفذ');await flush();const scroller=p.d.querySelector('#thread');
+    Object.defineProperties(scroller,{scrollHeight:{configurable:true,value:1800},clientHeight:{configurable:true,value:500}});scroller.scrollTop=200;
+    await p.polls.shift()();assert.equal(scroller.scrollTop,200);
+    send(p,'طلب جديد');await flush();assert.equal(scroller.scrollTop,1800);
+  }finally{p.close();}
+});
+test('real response is fully visible with reduced motion and does not animate history on refresh',async()=>{
+  const p=await page({message:{ok:true,conversation_id:'motion',reply:'النص الكامل بلا انتظار إضافي'}});try{
+    send(p,'سؤال');await flush();
+    assert.ok(p.d.body.classList.contains('chat-real'));
+    assert.equal(p.d.querySelector('.m--rev .w'),null);
+    assert.match(thread(p),/النص الكامل بلا انتظار إضافي/);
+    assert.match(html,/\.chat-real \.m\{animation:none\}/);
+    assert.match(html,/@media \(prefers-reduced-motion:reduce\)\{ \*\{animation:none !important;transition:none !important\}/);
+  }finally{p.close();}
+});
+
+
+test('completed native action without text uses action wording and no provider or flow proof',async()=>{
+  const p=await page({message:{ok:true,conversation_id:'native',request_status:'succeeded',work_status:'succeeded',outcome_kind:'tool_result'}});try{
+    send(p,'اقرأ');await flush();
+    assert.match(thread(p),/اكتمل استدعاء الأداة/);assert.doesNotMatch(thread(p),/سُجّل التشغيل|✓|نتيجة.*مثبتة/);
+    assert.equal(p.d.querySelector('.request-state'),null);
+  }finally{p.close();}
+});
+test('ActionRun metadata stays inside technical details without KPI proof or unsafe IDs',async()=>{
+  const run='m1rtHgkyZhT0Mr3kWJwty';
+  const p=await page({message:{ok:true,conversation_id:'native',request_status:'succeeded',work_status:'succeeded',outcome_kind:'tool_result',reply:'هذا رد المصدر.',tool_receipts:[{name:'ap_run_action',status:'returned',run_id:run,outcome:'action_completed'},{name:'ap_run_action',status:'error',run_id:'<img src=x onerror=alert(1)>',outcome:'unverified',effect_attempted:true}]}});try{
+    send(p,'اقرأ');await flush();const details=p.d.querySelector('.m__c details');assert.ok(details);assert.equal(details.open,false);
+    assert.match(details.textContent,/اكتمل استدعاء الإجراء/);assert.match(details.textContent,/تعذّر الاستدعاء/);
+    assert.equal(details.querySelector('code').textContent,run);assert.equal(details.querySelectorAll('code').length,1);
+    assert.equal(details.querySelector('img'),null);assert.doesNotMatch(thread(p),/✓|KPI|FlowRun/);
+    assert.ok(thread(p).includes('هذا رد المصدر.'));
+  }finally{p.close();}
+});
+
+
+test('team summary exposes recorded draft and pause states without fabricated billing controls',async()=>{
+  const p=await page({hydrate:{...empty,team:[{...employee,recordId:'draft',name:'مسودة <img src=x>',status:'disabled',tools:[]},{...employee,recordId:'paused',name:'متوقف',status:'disabled',tools:['gmail']}]}});try{
+    const panel=p.d.querySelector('#pane-plan');assert.match(panel.textContent,/مسودة محفوظة/);assert.match(panel.textContent,/متوقف في السجل/);
+    assert.match(panel.textContent,/مسودة <img src=x>/);assert.equal(panel.querySelector('img'),null);
+    assert.equal(panel.querySelectorAll('button[disabled]').length,0);assert.ok(panel.querySelector('#hireFromPlan'));
+    assert.equal(panel.querySelectorAll('.srow').length,2);assert.doesNotMatch(panel.textContent,/ر.س|الرصيد المسبق|قيد العمل/);
+  }finally{p.close();}
+  const failed=await page({hydrate:Error('offline')});try{
+    assert.match(failed.d.querySelector('#pane-plan').textContent,/تعذّر تحميل الفريق/);
+    assert.doesNotMatch(failed.d.querySelector('#pane-plan').textContent,/0 موظف/);
+  }finally{failed.close();}
+});
+
+
+test('limited native output notice accepts only true and escapes malicious receipt metadata',async()=>{
+  for(const locale of ['ar','en']){
+    const p=await page({locale,message:{ok:true,conversation_id:'limited',request_status:'succeeded',work_status:'succeeded',outcome_kind:'tool_result',reply:'نص المصدر الكامل كما عاد.',tool_receipts:[{name:'ap_run_action',status:'returned',output_limited:true},{name:'<img src=x onerror=alert(1)>',status:'returned',run_id:'<svg onload=alert(1)>',outcome:'<script>alert(1)</script>',output_limited:'true'},{name:'ap_run_action',status:'returned',output_limited:{value:true}}]}});try{
+      send(p,'اقرأ');await flush();const details=p.d.querySelector('.m__c details');assert.ok(details);assert.equal(details.open,false);
+      const notice=locale==='en'?'The service shortened some fields':'اختصرت الخدمة بعض الحقول';assert.equal(details.textContent.split(notice).length-1,1);
+      assert.equal(details.querySelector('img,svg,script'),null);assert.ok(details.textContent.includes('<img src=x onerror=alert(1)>'));
+      assert.ok(thread(p).includes('نص المصدر الكامل كما عاد.'));assert.doesNotMatch(details.textContent,/KPI|\d+٪/);
+    }finally{p.close();}
+  }
 });

@@ -5,6 +5,7 @@ import {runInNewContext} from 'node:vm';
 import {builtFlowResult,conversationMemory} from '../lib/chat-intelligence.mjs';
 import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool} from '../lib/mcp-flow-scope.mjs';
 import {TenantProjectError} from '../lib/tenant-projects.mjs';
+import {nativeActionReceipt,completedToolActions,chatExecutionBudget,failedChatExecution} from '../lib/chat-outcome.mjs';
 import {CompanyProfileError} from '../lib/company-profile.mjs';
 
 // Runs the real chat loop from server.mjs against a scripted model and a scripted Activepieces MCP.
@@ -49,7 +50,7 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false,edit
   const ctx={
     console:{error:()=>{},info:()=>{},warn:()=>{}},process:{env:{DEEPSEEK_API_KEY:'test-key'}},
     AbortController,setTimeout,clearTimeout,Date,JSON,String,Array,Object,Math,
-    TenantProjectError,CompanyProfileError,builtFlowResult,conversationMemory,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,
+    TenantProjectError,CompanyProfileError,nativeActionReceipt,builtFlowResult,conversationMemory,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,
     fetch:async(url,options)=>{
       const request=JSON.parse(options.body);log.model.push(request);
       const message=script[Math.min(step++,script.length-1)];
@@ -177,7 +178,8 @@ test('invalid calls and company boundaries are answered to the model without dis
   const answer=await run();
   assert.equal(answer.reply,'لم يُنفّذ شيء خارج مشروع الشركة.');
   assert.deepEqual(log.tools,[]);
-  assert.deepEqual(JSON.parse(JSON.stringify(answer.toolReceipts)),[]);
+  assert.equal(answer.toolReceipts.length,4);
+  assert.ok(answer.toolReceipts.every(item=>item.status==='error'&&!item.effect_attempted));
   const replies=toolMessages(log.model[1]);
   assert.equal(replies.length,4);
   assert.match(replies[0],/mcp_tool_invalid/);assert.match(replies[2],/mcp_arguments_invalid/);assert.match(replies[3],/connection_not_owned/);
@@ -191,7 +193,7 @@ test('the chat keeps ordered MCP results without storing tool inputs or claiming
     say('المحاولة الأولى أخطأت، والثانية أعادت ردًا.'),
   ],toolResults:{ap_run_action:()=>++calls===1?{isError:true,content:[{type:'text',text:'invalid_request: private detail'}]}:{content:[{type:'text',text:'✅ Get Profile completed (run RRR). private result'}]}}});
   const answer=await run();
-  assert.deepEqual(JSON.parse(JSON.stringify(answer.toolReceipts)),[{name:'ap_run_action',status:'error'},{name:'ap_run_action',status:'returned'}]);
+  assert.deepEqual(JSON.parse(JSON.stringify(answer.toolReceipts)),[{name:'ap_run_action',status:'error',effect_attempted:true},{name:'ap_run_action',status:'returned',effect_attempted:true}]);
   assert.equal(calls,2);
   assert.doesNotMatch(JSON.stringify(answer.toolReceipts),/private|connectionExternalId|owned|invalid_request/);
 });
@@ -236,20 +238,20 @@ test('a long request answers queued once, keeps working, and settles the same re
     claimChatRequest:async()=>({claimed:true,claimToken:'t'}),
     earlierPendingChatRequest:async()=>null,
     settleChatRequest:async entry=>{settled.push(entry);return {status:entry.status,httpStatus:entry.httpStatus,response:entry.response};},
-    read:async()=>({company_name:'شركة'}),readSettings:async()=>({}),ownedKnowledge:async()=>({}),listEmployees:async()=>[],listConversations:async()=>[],
+    read:async()=>({company_name:'شركة'}),readSettings:async()=>({}),ownedKnowledge:async()=>({}),listEmployees:async()=>[],listConversations:async()=>[],conversationHistory:async()=>[],
     findConversationDraft:async()=>null,recordConversation:async entry=>{recorded.push(entry);},
   };
   const ctx={
     console:{error:()=>{},info:()=>{},warn:()=>{}},JSON,String,Object,Number,Array,Boolean,
     setTimeout:(fn,ms)=>{timers.push({fn,ms});return timers.length;},clearTimeout:id=>{if(timers[id-1])timers[id-1].cleared=true;},
     randomUUID:()=>'11111111-1111-4111-8111-111111111111',createHash:()=>({update(){return this;},digest:()=>'hash'}),
-    TenantProjectError,CompanyProfileError,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
+    TenantProjectError,CompanyProfileError,chatExecutionBudget,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
     body:async()=>({op:'message',message:'ابنِ طريقة عمل كاملة',conversation_id:'c1',request_id:'r1'}),
     tenantSession:async()=>({session:{companyId:'company-1'},account:{company_name:'شركة'},headers:{}}),
     companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),
     employeeRequestMode:()=>'explore',explicitNewEmployee:()=>false,flowName:()=>'x',
     completedWithoutExecution:(kind,response)=>({...response,request_status:'succeeded',outcome_kind:kind,work_status:'not_started'}),
-    failedChatExecution:()=>({ok:true,request_status:'failed'}),
+    failedChatExecution,
     deepseekReply:()=>new Promise(resolve=>{release=resolve;}),
   };
   const publicChat=runInNewContext(`${source.slice(jsonStart,jsonEnd)}\n${source.slice(chatStart,chatEnd)}; publicChat`,ctx);
@@ -269,8 +271,16 @@ test('a long request answers queued once, keeps working, and settles the same re
   assert.equal(settled[0].status,'succeeded');
   assert.equal(settled[0].response.reply,'بُنيت ونُشرت.');
   assert.equal(settled[0].response.flow_id,flowId);
-  assert.equal(recorded[0].assistantMessage,'بُنيت ونُشرت.');
+  assert.equal(recorded.at(-1).assistantMessage,'بُنيت ونُشرت.');
   assert.ok(wait.cleared);
+  // A failed accepted message survives reload too; it is not left as an unanswered user row.
+  ctx.deepseekReply=async()=>{throw new Error('model unavailable');};
+  const failedWrites=[];
+  const failedRes={headersSent:false,writeHead(status){this.headersSent=true;failedWrites.push({status});},end(text){failedWrites.at(-1).body=JSON.parse(text);}};
+  await publicChat({headers:{}},failedRes);
+  assert.equal(failedWrites[0].body.request_status,'failed');
+  assert.equal(recorded.at(-1).assistantMessage,failedWrites[0].body.reply);
+  assert.match(recorded.at(-1).assistantMessage,/تعذّر إكمال الطلب/);
 });
 
 test('a second message waits for the first result before reaching the model',async()=>{
@@ -282,13 +292,13 @@ test('a second message waits for the first result before reaching the model',asy
     earlierPendingChatRequest:async({requestId})=>requestId==='r2'&&!firstDone?'r1':null,
     settleChatRequest:async entry=>{if(entry.requestId==='r1')firstDone=true;return {httpStatus:entry.httpStatus,response:entry.response};},
     read:async()=>({company_name:'شركة'}),readSettings:async()=>({}),ownedKnowledge:async()=>({}),listEmployees:async()=>[],
-    listConversations:async()=>[{id:'c1',messages:[...messages]}],findConversationDraft:async()=>null,
-    recordConversation:async entry=>{messages.push({role:'user',content:entry.userMessage},{role:'assistant',content:entry.assistantMessage});},
+    listConversations:async()=>[{id:'c1',messages:[...messages]}],conversationHistory:async({requestId})=>messages.filter(m=>m.requestId<requestId).map(({role,content})=>({role,content})),expireChatRequest:async()=>{},findConversationDraft:async()=>null,
+    recordConversation:async entry=>{for(const [role,content] of [['user',entry.userMessage],['assistant',entry.assistantMessage]])if(content!==undefined&&!messages.some(m=>m.requestId===entry.requestId&&m.role===role))messages.push({requestId:entry.requestId,role,content});},
   };
   const ctx={console:{error:()=>{}},JSON,String,Object,Number,Array,Boolean,Date,
     setTimeout:(fn,ms)=>ms===1000?setTimeout(fn,1):1,clearTimeout:()=>{},
     randomUUID:()=> 'u1',createHash:()=>({update(){return this;},digest:()=> 'hash'}),
-    TenantProjectError,CompanyProfileError,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
+    TenantProjectError,CompanyProfileError,chatExecutionBudget,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
     body:async req=>({op:'message',message:req.id,conversation_id:'c1',request_id:req.id}),
     tenantSession:async()=>({session:{companyId:'company-1'},account:{company_name:'شركة'},headers:{}}),
     companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),
