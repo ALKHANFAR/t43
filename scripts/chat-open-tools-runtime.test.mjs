@@ -307,3 +307,14 @@ test('a second message waits for the first result before reaching the model',asy
   assert.equal(modelCalls,2);
   assert.equal(messages.at(-1).content,'رد r2: 2');
 });
+
+
+test('large MCP results reach the model as complete JSON with every returned record',async()=>{
+  const records=Array.from({length:5},(_,i)=>({id:String(i),subject:`subject ${i}`,body:'x'.repeat(8000)}));
+  const native={content:[{type:'text',text:JSON.stringify(records)}]};
+  const {run}=setup({toolResults:{ap_run_action:native},script:[
+    use(['ap_run_action',{pieceName:'gmail',actionName:'gmail_search_email',input:{max_results:5}}]),
+    request=>{const received=JSON.parse(toolMessages(request).at(-1));assert.deepEqual(JSON.parse(received.content[0].text),records);return say('خمسة سجلات كاملة.');},
+  ]});
+  assert.equal((await run()).reply,'خمسة سجلات كاملة.');
+});

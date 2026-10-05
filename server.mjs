@@ -515,7 +515,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           if(!known)console.error('chat tool call failed',name,error?.code||error?.name||'unknown_error');
           result={isError:true,content:[{type:'text',text:error?.name==='TimeoutError'?'انتهت مهلة الأداة ونتيجتها غير معروفة. اقرأ الحالة الحالية قبل أي محاولة جديدة.':known?`${error.code}: ${error.message}`:'تعذّر تنفيذ الأداة.'}]};
         }
-        messages.push({role:'tool',tool_call_id:call.id,content:JSON.stringify(result).slice(0,24_000)});
+        messages.push({role:'tool',tool_call_id:call.id,content:JSON.stringify(result)});
       }
     }
     messages.push({role:'user',content:'انتهى وقت أو خطوات هذا الطلب. اكتب الآن ردك النهائي دون أدوات: ما نُفّذ فعلًا وتحققت منه، وما بقي، وما المطلوب من المستخدم.'});
