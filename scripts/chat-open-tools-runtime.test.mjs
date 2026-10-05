@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {builtFlowResult,conversationMemory} from '../lib/chat-intelligence.mjs';
-import {employeeMcpToolReady,scopeMcpTool,visibleMcpTool} from '../lib/mcp-flow-scope.mjs';
+import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool} from '../lib/mcp-flow-scope.mjs';
 import {TenantProjectError} from '../lib/tenant-projects.mjs';
 import {CompanyProfileError} from '../lib/company-profile.mjs';
 
@@ -12,6 +12,8 @@ const source=readFileSync(new URL('../server.mjs',import.meta.url),'utf8');
 const start=source.indexOf('async function buildOwnedDraftFlow('),end=source.indexOf('async function publicChat(',start);
 assert.ok(start>0&&end>start);
 const flowId='F'.repeat(21);
+const publishedFlow={id:flowId,status:'ENABLED',publishedVersionId:'v1',version:{id:'v1',displayName:'نور',trigger:{settings:{pieceName:'@activepieces/piece-mcp',triggerName:'mcp_tool',input:{toolName:'nour',returnsResponse:true}}}}};
+const flowToolName=employeeFlowMcpToolName(publishedFlow);
 const hint=readOnlyHint=>({annotations:{readOnlyHint}});
 const catalog=[
   {name:'ap_list_connections',...hint(true),inputSchema:{type:'object',properties:{}}},
@@ -22,6 +24,7 @@ const catalog=[
   {name:'ap_lock_and_publish',...hint(false),inputSchema:{type:'object',properties:{flowId:{type:'string'}}}},
   {name:'ap_run_action',...hint(false)},
   {name:'ap_set_project_context',...hint(false)},
+  {name:flowToolName,...hint(false),inputSchema:{type:'object',properties:{task:{type:'string'}}}},
 ];
 const say=content=>({content});
 const use=(...calls)=>({content:'',tool_calls:calls.map(([name,args],index)=>({id:`call_${name}_${index}`,function:{name,arguments:typeof args==='string'?args:JSON.stringify(args||{})}}))});
@@ -41,7 +44,7 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false}={})
   const ctx={
     console:{error:()=>{},info:()=>{},warn:()=>{}},process:{env:{DEEPSEEK_API_KEY:'test-key'}},
     AbortController,setTimeout,clearTimeout,Date,JSON,String,Array,Object,Math,
-    TenantProjectError,CompanyProfileError,builtFlowResult,conversationMemory,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,
+    TenantProjectError,CompanyProfileError,builtFlowResult,conversationMemory,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,
     fetch:async(url,options)=>{
       const request=JSON.parse(options.body);log.model.push(request);
       const message=script[Math.min(step++,script.length-1)];
@@ -53,7 +56,7 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false}={})
       linkEmployeeFlow:async({flowId:id})=>({recordId:'employee-1',flowId:id,name:'أمين المحتوى',status:'disabled'}),
       setEmployeeState:async({employeeId,status:next})=>{log.states.push([employeeId,next]);return {recordId:employeeId,flowId,name:'أمين المحتوى',status:next};},
     }),
-    tenantProjects:async()=>({ownedFlow:async(_company,id)=>{log.owned.push(id);return {flow:{id,status,publishedVersionId}};}}),
+    tenantProjects:async()=>({ownedFlow:async(_company,id)=>{log.owned.push(id);return {flow:{...publishedFlow,id,status,publishedVersionId}};}}),
     toolConnections:async()=>({assertOwnedExternal:async({externalId})=>{if(externalId==='foreign')throw new TenantProjectError('connection_not_owned','الاتصال لا يخص هذه الشركة.',403);}}),
   };
   const deepseekReply=runInNewContext(`${source.slice(start,end)}; deepseekReply`,ctx);
@@ -146,13 +149,16 @@ test('a request that runs out of time still ends with an account of what ran',as
   assert.match(fallback.reply,/أكمل/);
 });
 
-test('selected employee chat stays on its own Flow and can still ask for a run',async()=>{
+test('selected employee chat calls only its published native MCP Flow tool',async()=>{
   const employee={id:'employee-9',name:'نور',status:'active',activepieces_flow_id:flowId};
-  const {run,log}=setup({script:[use(['ap_add_step',{flowId:'G'.repeat(21)}],['ap_add_step',{}]),use(['siyadah_run_employee_flow',{}])]});
+  const {run,log}=setup({flowStatus:'ENABLED',published:true,script:[use(['ap_add_step',{flowId:'G'.repeat(21)}],['ap_add_step',{}]),use([flowToolName,{task:'نفذ'}]),say('وصل رد الأداة.')]});
   const answer=await run({employee});
-  assert.equal(answer.runRequested,true);
-  assert.deepEqual(log.tools,[['ap_add_step',{flowId}]]);
+  assert.equal(answer.flowToolAttempted,true);
+  assert.deepEqual(log.tools,[['ap_add_step',{flowId}],[flowToolName,{task:'نفذ'}]]);
   assert.match(toolMessages(log.model[1])[0],/employee_flow_scope/);
+  assert.match(toolMessages(log.model.at(-1)).at(-1),new RegExp(`ok ${flowToolName}`));
+  assert.ok(log.model[0].tools.some(tool=>tool.function.name===flowToolName));
+  assert.ok(!log.model[0].tools.some(tool=>tool.function.name==='siyadah_run_employee_flow'));
 });
 
 test('a long request answers queued once, keeps working, and settles the same request ID',async()=>{

@@ -16,9 +16,9 @@ import {completedWithoutExecution,failedChatExecution} from './lib/chat-outcome.
 import {assertSchemaReady} from './lib/schema-ready.mjs';
 import {toolIcon} from './lib/tool-icons.mjs';
 import {createPublicWaitlist,PublicWaitlistError} from './lib/public-waitlist.mjs';
-import {createGmailPilotRunner,GMAIL_PILOT_COMMAND,gmailPilotLedgerIdentity,gmailPilotSuccessResponse,recordGmailPilotConversation} from './lib/gmail-pilot-runner.mjs';
+import {createGmailPilotRunner,gmailPilotLedgerIdentity,gmailPilotSuccessResponse,recordGmailPilotConversation} from './lib/gmail-pilot-runner.mjs';
 import {createActivepiecesMcp} from './lib/activepieces-mcp.mjs';
-import {employeeMcpToolReady,scopeMcpTool,visibleMcpTool} from './lib/mcp-flow-scope.mjs';
+import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool} from './lib/mcp-flow-scope.mjs';
 import {GMAIL_PILOT_COMPANY_ID,GMAIL_PILOT_REQUEST_ID,GmailPilotError} from './lib/gmail-send-pilot.mjs';
 
 const root=process.cwd();
@@ -398,6 +398,14 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   for(const item of (history||[]).slice(-16))if(['user','assistant'].includes(item.role)&&typeof item.content==='string')messages.push({role:item.role,content:item.content.slice(0,4000)});
   messages.push({role:'user',content:String(message||'').slice(0,5000)});
   let available=[];
+  let flowToolName=null;
+  if(employee?.status==='active'&&employee.activepieces_flow_id){
+    const projects=await tenantProjects(),{flow}=await projects.ownedFlow(companyId,employee.activepieces_flow_id);
+    if(flow.status==='ENABLED'&&flow.publishedVersionId){
+      const published=await projects.ownedFlow(companyId,employee.activepieces_flow_id,flow.publishedVersionId);
+      flowToolName=employeeFlowMcpToolName(published.flow);
+    }
+  }
   if(mcp&&companyId){
     try{
       checkDeadline();available=(await mcp.call(companyId,'tools/list',{})).tools||[];checkDeadline();
@@ -411,11 +419,11 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   }
   // Activepieces labels every tool with readOnlyHint; the name pattern only covers a server that omits it.
   const readOnly=name=>{const hint=available.find(tool=>tool.name===name)?.annotations?.readOnlyHint;return typeof hint==='boolean'?hint:/^ap_(?:search_|list_|get_|read_|research_|resolve_|find_|flow_structure$|validate_flow$|validate_step_config$|setup_guide$)/.test(name);};
-  const tools=available.filter(tool=>/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(tool.name)&&tool.name!=='siyadah_run_employee_flow'&&!excludedTools.includes(tool.name)&&!(draftEmployee?.activepieces_flow_id&&tool.name==='ap_build_flow')&&visibleMcpTool(tool,employee)&&(!employee||employeeMcpToolReady(tool,employee))).map(tool=>({type:'function',function:{name:tool.name,description:String(tool.description||'').slice(0,4000),parameters:tool.inputSchema||{type:'object',properties:{}}}}));
-  if(employee?.status==='active'&&employee.activepieces_flow_id)tools.push({type:'function',function:{name:'siyadah_run_employee_flow',description:'شغّل Flow هذا الموظف الموجود عندما يطلب المدير تنفيذ مهمته الآن. لا تستخدمه للسؤال أو لتعديل خطة العمل أو خطوات Flow.',parameters:{type:'object',properties:{},additionalProperties:false}}});
+  const tools=available.filter(tool=>/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(tool.name)&&!excludedTools.includes(tool.name)&&!(draftEmployee?.activepieces_flow_id&&tool.name==='ap_build_flow')&&visibleMcpTool(tool,employee,flowToolName)&&(!employee||employeeMcpToolReady(tool,employee))).map(tool=>({type:'function',function:{name:tool.name,description:String(tool.description||'').slice(0,4000),parameters:tool.inputSchema||{type:'object',properties:{}}}}));
   if(available.length)messages[0].content+='\nأدوات Activepieces متاحة لمشروع هذه الشركة فقط، وتُنفَّذ مباشرة، ونتيجة كل أداة تعود إليك. اعمل بدليل الخادم أعلاه: اكتشف، اقرأ الحقول، ابنِ، تحقق، ثم انشر. اختر الأنسب للهدف من الكتالوج كله ولا تحصر التصميم في الاتصالات الموجودة. لطلب جديد ابنِ Flow جديدًا بـ ap_build_flow، ولا تعدّل أو تعيد تسمية Flow موجودًا إلا إذا طلب المستخدم تعديله هو أو كان هو currentDraft. ابنِ طريقة العمل كاملة بكل ما وعدت به المستخدم؛ وإن أعادت أداة خطأً فاقرأه وصحّح وأكمل. بعد البناء اقرأ الناتج وتحقق منه وانشره إن اكتمل. إن نقص اتصال فأكمل ما يمكن وسمِّ للمستخدم ما يجب ربطه، ومتى رُبط أكمل الخطوة وانشر. اكتب ردك الأخير من نتائج الأدوات فقط: ما بُني فعلًا خطوةً خطوة، وحالته، وما المطلوب من المستخدم.';
-  if(draftEmployee)messages[0].content+='\nللمستخدم مسودة موظف محفوظة في currentDraft. إن لم يكن لها flowId فابنِ طريقة عملها بـ ap_build_flow وستُربط بها؛ وإن وُجد flowId فاقرأها وعدّلها بأدوات التعديل ولا تنشئ لها Flow ثانيًا.';
+  if(draftEmployee)messages[0].content+='\nللمستخدم مسودة موظف محفوظة في currentDraft. إن لم يكن لها flowId فابنِ طريقة عملها بـ ap_build_flow وستُربط بها؛ وإن وُجد flowId فاقرأها وعدّلها بأدوات التعديل ولا تنشئ لها Flow ثانيًا. إن كان سيستقبل مهام من شاته فاجعل مشغّل الفلو MCP Tool مع Wait for Response وأضف Reply to MCP Client؛ اكتشف حقول القطعتين من Activepieces قبل البناء.';
   if(employee)messages[0].content+='\nهذه محادثة الموظف المحدد. عند قراءة طريقة عمله أو تعديلها، استخدم flowId الموجود في selectedEmployee فقط. إن غاب، صف حالة المسودة ولا تدّع وجود Flow جاهز.';
+  if(employee?.status==='active'&&!flowToolName)messages[0].content+='\nطريقة عمل هذا الموظف ليست منشورة كأداة MCP تعيد نتيجةً بعد التنفيذ. لا تدّع تشغيلها؛ أخبر المستخدم أنها تحتاج مشغّل MCP Tool وخطوة Reply to MCP Client.';
   const ask=async withTools=>{
     checkDeadline();
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),deadline?Math.max(1,Math.min(120_000,deadline-Date.now())):120_000);
@@ -426,7 +434,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
       return data?.choices?.[0]?.message;
     }finally{clearTimeout(timer);}
   };
-  let flowId=null,linked=null,statusChanged=false;
+  let flowId=null,linked=null,statusChanged=false,flowToolAttempted=false;
   const effects=[];
   const account=()=>`نُفّذت خطوات على مشروع شركتك (${[...new Set(effects)].join('، ')||'ap_build_flow'}) ثم توقف الطلب قبل كتابة الرد. اكتب «أكمل» لأقرأ الحالة وأتابع من حيث توقفت.`;
   // A Flow the model published or paused is the employee's real state; Siyadah's record follows it.
@@ -437,7 +445,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
       if(state.status==='ENABLED'&&state.publishedVersionId)linked=await (await companyProfiles()).setEmployeeState({companyId,employeeId:id,status:'active'});
       else if(employee?.status==='active')linked=await (await companyProfiles()).setEmployeeState({companyId,employeeId:id,status:'disabled'});
     }catch(error){console.error('employee state readback failed',error?.code||error?.name||'unknown_error');}
-    return {reply:String(reply).slice(0,6000),...(flowId?{flowId}:{}),...(linked?{employee:linked}:{})};
+    return {reply:String(reply).slice(0,6000),flowToolAttempted,...(flowId?{flowId}:{}),...(linked?{employee:linked}:{})};
   };
   try{
     for(let turn=0;turn<40;turn++){
@@ -453,7 +461,6 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
       messages.push({role:'assistant',content:answer.content||'',reasoning_content:answer.reasoning_content||'',tool_calls:calls});
       for(const call of calls){
         const name=call?.function?.name;
-        if(name==='siyadah_run_employee_flow'&&tools.some(tool=>tool.function.name===name))return {runRequested:true};
         // Every result, a failed one included, returns to the model: Activepieces writes its errors as
         // instructions for the next call, and the model corrects itself from them.
         let result;
@@ -461,13 +468,14 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           if(!tools.some(tool=>tool.function.name===name))throw new TenantProjectError('mcp_tool_invalid','هذه الأداة غير متاحة في هذه المحادثة.',502);
           let args;try{args=JSON.parse(call.function.arguments||'{}');}catch{args=null;}
           if(!args||typeof args!=='object'||Array.isArray(args))throw new TenantProjectError('mcp_arguments_invalid','مدخلات الأداة يجب أن تكون كائن JSON واحدًا.',502);
-          args=scopeMcpTool(available.find(tool=>tool.name===name),args,employee);
+          args=scopeMcpTool(available.find(tool=>tool.name===name),args,employee,flowToolName);
           if(name==='ap_run_action'&&args.connectionExternalId){
             const pieceName=String(args.pieceName||'');
             await (await toolConnections()).assertOwnedExternal({tenantId:companyId,externalId:args.connectionExternalId,pieceName:pieceName.startsWith('@activepieces/piece-')?pieceName:`@activepieces/piece-${pieceName}`});
           }
           checkDeadline();
           if(!readOnly(name)){onEffectStart?.();effects.push(name);}
+          if(name===flowToolName)flowToolAttempted=true;
           if(name==='ap_lock_and_publish'||name==='ap_change_flow_status')statusChanged=true;
           if(name==='ap_build_flow'&&!employee){
             // A Flow built in main chat belongs to an employee: the saved draft, or one named after the Flow the model designed.
@@ -668,31 +676,6 @@ async function publicChat(req,res){
       return json(res,200,settled.response,sessionHeaders);
     }
     if(input.op==='message'){
-      if(typeof input.message==='string'&&input.message.trim()===GMAIL_PILOT_COMMAND&&!input.employee_id){
-        if(companyId!==GMAIL_PILOT_COMPANY_ID)throw new GmailPilotError('pilot_company_forbidden');
-        const {conversationId,requestId,requestHash}=gmailPilotLedgerIdentity();
-        const profiles=await companyProfiles();
-        const existing=await profiles.expireChatRequest({companyId,requestId});
-        if(existing){
-          if(existing.status==='succeeded')await recordGmailPilotConversation({profiles,companyId,response:existing.response});
-          return existing.status==='pending'?json(res,200,{ok:true,conversation_id:conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders):json(res,existing.httpStatus||200,existing.response,sessionHeaders);
-        }
-        const projects=await tenantProjects();
-        const runner=createGmailPilotRunner({requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY,flowId:process.env.SIYADAH_GMAIL_PILOT_FLOW_ID,connectionId:process.env.SIYADAH_GMAIL_PILOT_CONNECTION_ID,secret:process.env.SIYADAH_GMAIL_PILOT_HMAC_SECRET});
-        const prepared=await runner.preflight({companyId});
-        const claim=await profiles.claimChatRequest({companyId,conversationId,requestId,requestHash});
-        if(!claim.claimed){
-          if(claim.status==='succeeded')await recordGmailPilotConversation({profiles,companyId,response:claim.response});
-          return claim.status==='pending'?json(res,200,{ok:true,conversation_id:conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders):json(res,claim.httpStatus||200,claim.response,sessionHeaders);
-        }
-        activeRequest={companyId,requestId,conversationId,profiles,effectStarted:false,executionAttempt:true,claimToken:claim.claimToken};
-        const receipt=await runner.send({companyId,prepared,onDispatch:()=>{activeRequest.effectStarted=true;}});
-        const response=gmailPilotSuccessResponse({conversationId,receipt});
-        await recordGmailPilotConversation({profiles,companyId,response});
-        const settled=await profiles.settleChatRequest({companyId,requestId,status:'succeeded',httpStatus:200,response,claimToken:claim.claimToken});
-        activeRequest=null;
-        return json(res,settled.httpStatus,settled.response,sessionHeaders);
-      }
       const conversationId=typeof input.conversation_id==='string'&&input.conversation_id?input.conversation_id:`chat_${randomUUID()}`;
       const requestId=typeof input.request_id==='string'&&input.request_id?input.request_id:randomUUID();
       if(!/^[A-Za-z0-9_-]{1,80}$/.test(requestId)||!/^[A-Za-z0-9_-]{1,80}$/.test(conversationId))throw new CompanyProfileError('invalid_request','معرّف الطلب أو المحادثة غير صالح.',400);
@@ -714,17 +697,8 @@ async function publicChat(req,res){
         if(saved.status==='active'&&!saved.activepieces_flow_id)throw new CompanyProfileError('employee_not_ready','الموظف بلا طريقة عمل مهيأة.',409);
         const profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId),conversations=await profiles.listConversations(companyId),conversation=conversations.find(item=>item.id===conversationId);
         const answer=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history:conversation?.messages||[],message:input.message,employee:saved,mcp:await activepiecesMcp(),companyId,conversationId,deadlineMs:600_000,onEffectStart:()=>{activeRequest.effectStarted=true;activeRequest.executionAttempt=true;}});
-        if(answer.runRequested){
-          activeRequest.executionAttempt=true;
-          const run=await (await tenantProjects()).runFlow({tenantId:companyId,flowId:saved.activepieces_flow_id,requestId,message:input.message,onDispatch:()=>{activeRequest.effectStarted=true;}});
-          const tools=run.tool.pieceName==='@activepieces/piece-http'?['اتصال ويب']:[];
-          const updated=await profiles.recordEmployeeRun({companyId,employeeId:saved.id,flowId:run.flowId,runId:run.runId,result:run.result,tools,conversationId});
-          const proof={recordId:`proof_${run.runId}`,employeeId:saved.id,flowId:run.flowId,runId:run.runId,work_id:`work_${run.runId}`,conversation_id:conversationId,subject:`مهمة ${saved.name}`,message:'اكتملت المهمة ووصل رد الخدمة.',status:'succeeded',proof:`ردت الخدمة برمز ${run.result.status||200}`,at:run.finishedAt};
-          const reply='نفّذت المهمة ووصلت النتيجة بنجاح.';
-          await profiles.recordConversation({companyId,conversationId,employeeId:saved.id,requestId,userMessage:input.message,assistantMessage:reply});
-          return finish(200,{ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:'succeeded',outcome_kind:'external_run',work_id:proof.work_id,reply,employee:updated,recent_work:[proof]});
-        }
         await profiles.recordConversation({companyId,conversationId,employeeId:saved.id,requestId,userMessage:input.message,assistantMessage:answer.reply});
+        if(answer.flowToolAttempted)return finish(200,{ok:true,conversation_id:conversationId,request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',work_id:`request_${requestId}`,reply:answer.reply,experience:{employee_conversation:true,employee_id:saved.id,instruction_version:Number(saved.prompt_version||1),external_execution:true}});
         return finish(200,{...completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply:answer.reply,experience:{employee_conversation:true,employee_id:saved.id,instruction_version:Number(saved.prompt_version||1),external_execution:false}}),...(answer.employee?{employee:answer.employee}:{}),...(answer.approval?{approval:answer.approval,work_status:'awaiting_input'}:{})});
       }
       const profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId),conversations=await profiles.listConversations(companyId),conversation=conversations.find(item=>item.id===conversationId);
