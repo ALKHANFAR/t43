@@ -117,7 +117,7 @@ test('native test snapshot ignores only step test metadata and operation audit f
 test('employee readiness never marks unrelated actions, table writes or another Flow successful',()=>{
   const readiness={employee_id:'e',flow_id:'F'.repeat(21),published_version_id:'v1',test_run_id:'R'.repeat(21),test_environment:'TESTING'};
   for(const [name,flow] of [['ap_run_action',readiness.flow_id],['ap_update_table',readiness.flow_id],['ap_update_step','X'.repeat(21)]]){
-    const answer={readinessReceipt:readiness,effects:['ap_test_flow',name],toolReceipts:[{name:'ap_test_flow',flow_id:readiness.flow_id,effect_attempted:true},{name,flow_id:flow,effect_attempted:true}]};
+    const answer={readinessReceipt:readiness,effects:['ap_test_flow',name],toolReceipts:[{name:'ap_test_flow',flow_id:readiness.flow_id,effect_attempted:true,status:'returned'},{name,flow_id:flow,effect_attempted:true,status:'returned'}]};
     const result=completedToolActions(answer);assert.equal(result.outcome_kind,'unverified');assert.equal(result.work_status,'unknown');assert.deepEqual(result.readiness_receipt,readiness);
   }
 });
