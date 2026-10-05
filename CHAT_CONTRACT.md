@@ -11,6 +11,8 @@ This contract belongs to `ALKHANFAR/t43`. The customer frontend may change later
 
 ## Project MCP chat
 
+- Within one model/tool request, the adapter reuses a project access token until its advertised lifetime approaches expiry. Every call still reads the current company project and saved grant; changing or deleting either prevents reuse. Separate requests have separate token state. Failed calls discard that state without automatically replaying tool writes.
+
 - The main chat and selected employee chat use the same server-side Activepieces MCP adapter. The server resolves the company project; no project ID, MCP token, or provider credential is accepted from the browser.
 - Employee chat uses the `activepieces_flow_id` saved for that employee. For MCP tools with a `flowId` argument, the server fills a missing ID from that record and rejects a different ID. Project switching and tools that select another Flow by listing, run ID, or creating one are hidden from employee chat. Catalog discovery remains available while an employee is a draft. An active employee can call only its exact native MCP Flow tool when the owned published Flow uses the MCP Tool trigger with Wait for Response. A legacy Flow without that trigger remains available for discussion and editing, but cannot be run from employee chat. Siyadah makes no direct Activepieces Webhook request.
 - If the company project or MCP grant is not ready, the chat may answer from company context but must say it has not read an external app. It must not claim tool access or execution.
