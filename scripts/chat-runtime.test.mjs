@@ -327,7 +327,7 @@ test('tools page distinguishes a saved connection from one assigned to an employ
 });
 test('real employee shows natural instructions without exposing a compiled prompt',async()=>{
   const changed='تابعي الفرص الجديدة وأرسلي ملخصًا واضحًا.';
-  const p=await page({hydrate:{...empty,team:[{...employee,instructions:'تابعي الفرص الجديدة واكتبي ملخصًا واضحًا.',instructionSource:'company_profile',instructionVersion:1}]},employee_instructions:body=>({ok:true,instructions_verified:true,employee:{...employee,instructions:body.instructions,instructionSource:'owner',instructionVersion:2}})});try{
+  const p=await page({hydrate:{...empty,team:[{...employee,instructions:'تابعي الفرص الجديدة واكتبي ملخصًا واضحًا.',instructionSource:'company_profile',instructionVersion:1}]},employee_instructions:body=>({ok:true,instruction_scope:'conversation',instructions_verified:true,employee:{...employee,instructions:body.instructions,instructionSource:'owner',instructionVersion:2}})});try{
     p.d.querySelector('#emps .emp').click();await flush();
     p.d.querySelector('#instrTgl').click();await flush();
     assert.match(thread(p),/تعليماته|تعليمات/);
@@ -335,7 +335,7 @@ test('real employee shows natural instructions without exposing a compiled promp
     p.d.querySelector('#instr').value=changed;p.d.querySelector('#instrSave').click();await flush();
     assert.equal(p.requests.at(-1).body.op,'employee_instructions');
     assert.equal(p.requests.at(-1).body.instructions,changed);
-    assert.match(p.d.querySelector('#instrF').textContent,/تم الحفظ والتحقق · النسخة 2/);
+    assert.match(p.d.querySelector('#instrF').textContent,/حُفظت للمحادثة · النسخة 2/);
     assert.equal(p.d.querySelector('.prompt'),null);
     assert.doesNotMatch(thread(p),/Prompt|Activepieces|MCP|# الهوية|# الصلاحية/);
   }finally{p.close();}
@@ -926,4 +926,52 @@ test('limited native output notice accepts only true and escapes malicious recei
       assert.ok(thread(p).includes('نص المصدر الكامل كما عاد.'));assert.doesNotMatch(details.textContent,/KPI|\d+٪/);
     }finally{p.close();}
   }
+});
+
+test('saved instructions handoff stays short, employee scoped, escaped and requires explicit chat send in RTL and LTR',async()=>{
+  for(const locale of ['ar','en']){
+    const instructions='x'.repeat(11000)+'</textarea><img src=x onerror=alert(1)>';
+    const p=await page({locale,hydrate:{...empty,team:[{...employee,instructions}]},message:{ok:true,conversation_id:'instruction-chat',request_status:'succeeded',work_status:'not_started',outcome_kind:'conversation_reply',reply:'أراجع طريقة العمل.'}});try{
+      p.d.querySelector('#emps .emp').click();p.d.querySelector('#instrTgl').click();
+      assert.equal(p.d.querySelector('#instr').value,instructions);assert.equal(p.d.querySelector('#instrWrap img'),null);
+      const before=p.requests.filter(x=>x.body?.op==='message').length;
+      p.d.querySelector('#instrApply').click();const composer=p.d.querySelector('#input');
+      assert.equal(p.d.activeElement,composer);assert.ok(composer.value.length<5000);assert.ok(!composer.value.includes(instructions));
+      assert.match(composer.value,locale==='ar'?/التعليمات المحفوظة/:/saved instructions/);
+      assert.equal(p.requests.filter(x=>x.body?.op==='message').length,before);
+      p.d.querySelector('#send').click();await flush();const sent=p.requests.find(x=>x.body?.op==='message');assert.equal(sent.body.employee_id,employee.recordId);
+      assert.ok(sent.body.message.length<5000);assert.equal(p.d.documentElement.dir,locale==='ar'?'rtl':'ltr');
+      assert.doesNotMatch(thread(p),/أصبحت النسخة المعتمدة|is now current|تم التفعيل/);
+    }finally{p.close();}
+  }
+});
+test('unsaved edits block the workflow handoff and a DB readback never claims runtime adoption',async()=>{
+  const changed='التعليمات الجديدة';
+  const p=await page({hydrate:{...empty,team:[{...employee,instructions:'التعليمات السابقة'}]},employee_instructions:body=>({ok:true,instruction_scope:'conversation',instructions_verified:true,employee:{...employee,instructions:body.instructions,instructionVersion:2,instructionSource:'owner'}})});try{
+    p.d.querySelector('#emps .emp').click();p.d.querySelector('#instrTgl').click();p.d.querySelector('#instr').value=changed;p.d.querySelector('#instrApply').click();
+    assert.equal(p.d.querySelector('#input').value,'');assert.match(p.d.querySelector('#instrF').textContent,/احفظ تعديلك أولًا/);
+    p.d.querySelector('#instrSave').click();await flush();assert.match(p.d.querySelector('#instrF').textContent,/حُفظت للمحادثة.*لم يُتحقق منه/);
+    assert.doesNotMatch(p.d.querySelector('#instrF').textContent,/أصبحت النسخة المعتمدة|تم التفعيل/);
+    assert.equal(p.requests.filter(x=>x.body?.op==='message').length,0);p.d.querySelector('#instrApply').click();assert.ok(p.d.querySelector('#input').value);
+  }finally{p.close();}
+});
+test('instruction save rejects an incompatible scope and a missing workflow has no apply shortcut',async()=>{
+  const p=await page({hydrate:{...empty,team:[{...employee,flowId:null,status:'disabled',tools:[],instructions:'الأصل'}]},employee_instructions:body=>({ok:true,instruction_scope:'workflow',instructions_verified:true,employee:{...employee,instructions:body.instructions}})});try{
+    p.d.querySelector('#emps .emp').click();p.d.querySelector('#reviewStart').click();assert.equal(p.d.querySelector('#instrApply'),null);
+    p.d.querySelector('#instr').value='جديد';p.d.querySelector('#instrSave').click();await flush();assert.equal(p.w.EMPS[0].instr,'الأصل');
+    assert.match(p.d.querySelector('#instrF').textContent,/لم تتطابق قراءة التعليمات/);assert.doesNotMatch(p.d.querySelector('#instrF').textContent,/حُفظت للمحادثة/);
+  }finally{p.close();}
+});
+
+
+test('instruction application does not overwrite the manager’s unsent message',async()=>{
+  const p=await page({hydrate:{...empty,team:[{...employee,instructions:'تعليمات محفوظة'}]}});try{
+    p.d.querySelector('#emps .emp').click();p.d.querySelector('#instrTgl').click();
+    const composer=p.d.querySelector('#input');composer.value='سؤالي الذي لم أرسله';
+    p.d.querySelector('#instrApply').click();
+    assert.equal(composer.value,'سؤالي الذي لم أرسله');
+    assert.equal(p.d.activeElement,composer);
+    assert.match(p.d.querySelector('#instrF').textContent,/رسالة لم ترسلها/);
+    assert.equal(p.requests.filter(x=>x.body?.op==='message').length,0);
+  }finally{p.close();}
 });

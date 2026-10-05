@@ -328,3 +328,29 @@ test('large MCP results reach the model as complete JSON with every returned rec
   ]});
   assert.equal((await run()).reply,'خمسة سجلات كاملة.');
 });
+
+
+test('main-chat draft carries saved owner instructions into the model instead of losing them during build',async()=>{
+  const instruction='اكتب التقارير بالعربية واحتفظ بمراجع المصادر.';
+  const {run,log}=setup({script:[say('قرأت تعليمات المسودة.') ]});
+  await run({draftEmployee:{id:'employee-1',name:'أمين المحتوى',activepieces_flow_id:null,prompt:instruction,prompt_source:'owner',prompt_version:3}});
+  const system=log.model[0].messages[0].content;
+  assert.ok(system.includes(instruction));
+  assert.ok(system.includes('"instructionSource":"owner"'));
+  assert.ok(system.includes('"instructionVersion":3'));
+  assert.match(system,/ليست دليلًا على تعليمات التشغيل/);
+  assert.deepEqual(log.tools,[]);
+});
+
+
+test('large company context does not cut saved employee instructions or produce partial JSON',async()=>{
+  const instruction=('"قرار"\n').repeat(1700);
+  const {run,log}=setup({script:[say('قرأت السياق كاملاً.') ]});
+  await run({company:{name:'شركة',profile:{about:'معلومة '.repeat(5000)}},draftEmployee:{id:'employee-1',name:'أمين المحتوى',activepieces_flow_id:null,prompt:instruction,prompt_source:'owner',prompt_version:4}});
+  const content=log.model[0].messages[0].content;
+  const raw=content.split('سياق العمل الحالي بصيغة JSON:\n')[1].split('\n\n## Activepieces MCP Server')[0];
+  const context=JSON.parse(raw);
+  assert.equal(context.currentDraft.instructions,instruction);
+  assert.equal(context.company.profile.about,'معلومة '.repeat(5000));
+  assert.deepEqual(log.tools,[]);
+});
