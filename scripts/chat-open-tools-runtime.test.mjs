@@ -6,6 +6,7 @@ import {builtFlowResult,conversationMemory} from '../lib/chat-intelligence.mjs';
 import {employeeMcpToolReady,scopeMcpTool,visibleMcpTool} from '../lib/mcp-flow-scope.mjs';
 import {TenantProjectError} from '../lib/tenant-projects.mjs';
 import {CompanyProfileError} from '../lib/company-profile.mjs';
+import {completedWithoutExecution,failedChatExecution} from '../lib/chat-outcome.mjs';
 
 // Runs the real chat loop from server.mjs against a scripted model and a scripted Activepieces MCP.
 const source=readFileSync(new URL('../server.mjs',import.meta.url),'utf8');
@@ -155,47 +156,69 @@ test('selected employee chat stays on its own Flow and can still ask for a run',
   assert.match(toolMessages(log.model[1])[0],/employee_flow_scope/);
 });
 
-test('a long request answers queued once, keeps working, and settles the same request ID',async()=>{
+function chatHarness({message='ابنِ طريقة عمل كاملة',reply}){
   const chatStart=source.indexOf('async function publicChat('),chatEnd=source.indexOf('async function deepseek(req,res)',chatStart);
   const jsonStart=source.indexOf('function json(res,status,body,headers={})'),jsonEnd=source.indexOf('\n',jsonStart);
   assert.ok(chatStart>0&&chatEnd>chatStart&&jsonStart>0);
-  const timers=[],settled=[],recorded=[];let release;
+  const state={timers:[],settled:[],recorded:[],started:0,release:null,request:0};
   const profiles={
     claimChatRequest:async()=>({claimed:true,claimToken:'t'}),
-    settleChatRequest:async entry=>{settled.push(entry);return {status:entry.status,httpStatus:entry.httpStatus,response:entry.response};},
+    settleChatRequest:async entry=>{state.settled.push(entry);return {status:entry.status,httpStatus:entry.httpStatus,response:entry.response};},
     read:async()=>({company_name:'شركة'}),readSettings:async()=>({}),ownedKnowledge:async()=>({}),listEmployees:async()=>[],listConversations:async()=>[],
-    findConversationDraft:async()=>null,recordConversation:async entry=>{recorded.push(entry);},
+    findConversationDraft:async()=>null,recordConversation:async entry=>{state.recorded.push(entry);},
   };
   const ctx={
-    console:{error:()=>{},info:()=>{},warn:()=>{}},JSON,String,Object,Number,Array,Boolean,
-    setTimeout:(fn,ms)=>{timers.push({fn,ms});return timers.length;},clearTimeout:id=>{if(timers[id-1])timers[id-1].cleared=true;},
+    console:{error:()=>{},info:()=>{},warn:()=>{}},JSON,String,Object,Number,Array,Boolean,Set,
+    setTimeout:(fn,ms)=>{state.timers.push({fn,ms});return state.timers.length;},clearTimeout:id=>{if(state.timers[id-1])state.timers[id-1].cleared=true;},
     randomUUID:()=>'11111111-1111-4111-8111-111111111111',createHash:()=>({update(){return this;},digest:()=>'hash'}),
     TenantProjectError,CompanyProfileError,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
-    body:async()=>({op:'message',message:'ابنِ طريقة عمل كاملة',conversation_id:'c1',request_id:'r1'}),
+    body:async()=>({op:'message',message,conversation_id:'c1',request_id:`r${++state.request}`}),
     tenantSession:async()=>({session:{companyId:'company-1'},account:{company_name:'شركة'},headers:{}}),
     companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),
     employeeRequestMode:()=>'explore',explicitNewEmployee:()=>false,flowName:()=>'x',
-    completedWithoutExecution:(kind,response)=>({...response,request_status:'succeeded',outcome_kind:kind,work_status:'not_started'}),
-    failedChatExecution:()=>({ok:true,request_status:'failed'}),
-    deepseekReply:()=>new Promise(resolve=>{release=resolve;}),
+    completedWithoutExecution,failedChatExecution,workingCompanies:new Set(),
+    deepseekReply:()=>{state.started++;return reply?Promise.resolve(reply):new Promise(resolve=>{state.release=resolve;});},
   };
   const publicChat=runInNewContext(`${source.slice(jsonStart,jsonEnd)}\n${source.slice(chatStart,chatEnd)}; publicChat`,ctx);
-  const writes=[];
-  const res={headersSent:false,writeHead(status){this.headersSent=true;writes.push({status});},end(text){writes.at(-1).body=JSON.parse(text);}};
-  const running=publicChat({headers:{}},res);
-  while(!release)await new Promise(resolve=>setImmediate(resolve));
-  const wait=timers.find(timer=>timer.ms===20_000&&!timer.cleared);
+  const call=()=>{const writes=[];const res={headersSent:false,writeHead(status){this.headersSent=true;writes.push({status});},end(text){writes.at(-1).body=JSON.parse(text);}};return {writes,done:publicChat({headers:{}},res)};};
+  return {state,call};
+}
+
+test('a long request answers queued once, keeps working, and settles the same request ID',async()=>{
+  const {state,call}=chatHarness({});
+  const first=call();
+  while(!state.release)await new Promise(resolve=>setImmediate(resolve));
+  const wait=state.timers.find(timer=>timer.ms===20_000&&!timer.cleared);
   assert.ok(wait);
   wait.fn();
-  assert.equal(writes.length,1);
-  assert.deepEqual([writes[0].body.request_status,writes[0].body.work_id],['queued','request_r1']);
-  release({reply:'بُنيت ونُشرت.',flowId});
-  await running;
-  assert.equal(writes.length,1);
-  assert.equal(settled.length,1);
-  assert.equal(settled[0].status,'succeeded');
-  assert.equal(settled[0].response.reply,'بُنيت ونُشرت.');
-  assert.equal(settled[0].response.flow_id,flowId);
-  assert.equal(recorded[0].assistantMessage,'بُنيت ونُشرت.');
+  assert.equal(first.writes.length,1);
+  assert.deepEqual([first.writes[0].body.request_status,first.writes[0].body.work_id],['queued','request_r1']);
+  // A second message while the first is still calling tools is answered, not started.
+  const second=call();await second.done;
+  assert.equal(state.started,1);
+  assert.match(second.writes[0].body.reply,/ما زلت أنفّذ طلبك السابق/);
+  state.release({reply:'بُنيت ونُشرت.',flowId});
+  await first.done;
+  assert.equal(first.writes.length,1);
+  const settled=state.settled.find(entry=>entry.requestId==='r1');
+  assert.equal(settled.status,'succeeded');
+  assert.equal(settled.response.reply,'بُنيت ونُشرت.');
+  assert.equal(settled.response.flow_id,flowId);
   assert.ok(wait.cleared);
+  // The company is free again after the first request settles.
+  const third=call();while(state.started<2)await new Promise(resolve=>setImmediate(resolve));
+  state.release({reply:'تم.'});await third.done;
+  assert.equal(third.writes[0].body.reply,'تم.');
+});
+
+test('a request that published the employee settles as succeeded with the active employee',async()=>{
+  const employee={recordId:'employee-1',flowId,name:'منقّب المستثمرين',status:'active'};
+  const {state,call}=chatHarness({reply:{reply:'نُشر الموظف.',flowId,employee}});
+  const sent=call();await sent.done;
+  assert.equal(sent.writes[0].status,200);
+  assert.equal(sent.writes[0].body.request_status,'succeeded');
+  assert.equal(sent.writes[0].body.outcome_kind,'conversation_reply');
+  assert.equal(sent.writes[0].body.employee.status,'active');
+  assert.equal(sent.writes[0].body.draft,false);
+  assert.equal(state.settled[0].status,'succeeded');
 });
