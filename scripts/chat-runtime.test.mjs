@@ -758,7 +758,7 @@ test('knowledge pricing facts retain distinct evidence labels and hide technical
 
 test('real billing stays unknown despite actual employees and work evidence without invented quotas',async()=>{
  const p=await page({hydrate:{...empty,team:[employee,{...employee,recordId:'second'}],recent_work:[proof]}});try{
-  const plan=p.d.querySelector('#pane-plan');assert.match(plan.textContent,/بيانات الاشتراك غير متاحة/);assert.match(plan.textContent,/الاستخدام غير متحقق/);assert.match(plan.textContent,/2 موظف مسجل/);
+  const plan=p.d.querySelector('#pane-plan');assert.match(plan.textContent,/بيانات الاشتراك والاستخدام غير متاحة/);assert.match(plan.textContent,/سارة.*نشط في السجل/);assert.match(plan.textContent,/2 موظف مسجل/);
   for(const claim of ['تنتهي خلال','9 أيام','0 /','ر.س','يتجدد'])assert.ok(!plan.textContent.includes(claim));
   assert.equal(p.w.PLAN.actions.used,null);assert.equal(p.d.querySelector('#pban').hidden,true);assert.equal(plan.querySelector('[role="progressbar"]'),null);
   p.w.PLAN.state='over';p.w.renderPlan();assert.equal(p.d.querySelector('#pban').hidden,true);
@@ -769,7 +769,7 @@ test('unavailable actions cannot mutate and hiring opens central composer withou
  const p=await page({hydrate:{...empty,team:[employee]}});try{
   p.d.querySelector('#emps .emp').click();p.d.querySelector('[data-open="plan"]').click();
   const unavailable=[p.d.querySelector('#attachBtn'),p.d.querySelector('#deleteAccountBtn'),...p.d.querySelectorAll('#pane-plan button[disabled]')];
-  assert.equal(unavailable.length,4);for(const button of unavailable){assert.equal(button.disabled,true);button.click();}
+  assert.equal(unavailable.length,2);for(const button of unavailable){assert.equal(button.disabled,true);button.click();}
   assert.match(p.d.querySelector('#attachBtn').getAttribute('aria-label'),/غير متاح/);assert.equal(p.requests.length,2);
   p.d.querySelector('#hireFromPlan').click();assert.equal(p.d.activeElement.id,'input');assert.match(p.d.querySelector('#input').placeholder,/مهمة الموظف/);assert.equal(p.requests.length,2);assert.equal(p.d.querySelector('#thread').classList.contains('thread--emp'),false);
   assert.equal(p.d.querySelector('#exportBtn').disabled,false);
@@ -900,4 +900,18 @@ test('ActionRun metadata stays inside technical details without KPI proof or uns
     assert.equal(details.querySelector('img'),null);assert.doesNotMatch(thread(p),/✓|KPI|FlowRun/);
     assert.ok(thread(p).includes('هذا رد المصدر.'));
   }finally{p.close();}
+});
+
+
+test('team summary exposes recorded draft and pause states without fabricated billing controls',async()=>{
+  const p=await page({hydrate:{...empty,team:[{...employee,recordId:'draft',name:'مسودة <img src=x>',status:'disabled',tools:[]},{...employee,recordId:'paused',name:'متوقف',status:'disabled',tools:['gmail']}]}});try{
+    const panel=p.d.querySelector('#pane-plan');assert.match(panel.textContent,/مسودة محفوظة/);assert.match(panel.textContent,/متوقف في السجل/);
+    assert.match(panel.textContent,/مسودة <img src=x>/);assert.equal(panel.querySelector('img'),null);
+    assert.equal(panel.querySelectorAll('button[disabled]').length,0);assert.ok(panel.querySelector('#hireFromPlan'));
+    assert.equal(panel.querySelectorAll('.srow').length,2);assert.doesNotMatch(panel.textContent,/ر.س|الرصيد المسبق|قيد العمل/);
+  }finally{p.close();}
+  const failed=await page({hydrate:Error('offline')});try{
+    assert.match(failed.d.querySelector('#pane-plan').textContent,/تعذّر تحميل الفريق/);
+    assert.doesNotMatch(failed.d.querySelector('#pane-plan').textContent,/0 موظف/);
+  }finally{failed.close();}
 });

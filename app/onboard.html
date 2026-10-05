@@ -105,12 +105,6 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 .rolepick:hover{background:var(--wash)}
 .rolepick[aria-pressed="true"]{background:var(--accent-wash);box-shadow:inset 0 0 0 1px var(--accent)}
 .rolepick[aria-pressed="true"] .av{border-color:var(--accent);background:var(--accent);color:#fff}
-.rank{display:inline-block;margin-inline-start:8px;font-family:var(--f-body);font-size:.68rem;color:var(--accent);background:var(--accent-wash);padding:2px 7px;vertical-align:2px}
-.fit{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;margin-block-start:8px;color:var(--ash);font-size:.72rem}
-.fit i{display:block;height:3px;background:var(--hair);overflow:hidden}
-.fit i::after{content:"";display:block;height:100%;width:var(--fit);background:var(--accent);transform-origin:right;animation:grow .55s var(--ease)}
-@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
-html[dir="ltr"] .fit i::after{transform-origin:left}
 .choice{border:1px solid var(--accent-edge);background:var(--accent-wash);padding:14px 16px;margin-block-end:18px;animation:in .3s var(--ease)}
 .choice b{display:block;font-family:var(--f-display);font-size:.78rem;font-weight:400;color:var(--accent);margin-block-end:4px}
 .choice p{margin:0;color:var(--ink);font-size:.875rem;line-height:1.65}

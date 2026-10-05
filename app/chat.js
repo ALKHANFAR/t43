@@ -1169,12 +1169,11 @@ var I = {
   function srow(l,body){ return '<div class="srow"><div>'+l+'</div><div>'+body+'</div></div>'; }
   function renderPlan(){
     if(window.__SIY_REAL__){
-      var unavailable=function(label){return '<button type="button" class="lnk" disabled>'+label+' — غير متاح</button>';};
-      $('#pane-plan').innerHTML=srow(ui('الخطة','Plan'),'<div>'+ui('بيانات الاشتراك غير متاحة','Subscription details unavailable')+'</div><div class="acts">'+unavailable(ui('اختر خطتك','Choose a plan'))+'</div>')+
-        srow(ui('الاستخدام','Usage'),'<div>'+ui('الاستخدام غير متحقق','Usage unverified')+'</div><small>'+ui('لا تتوفر بيانات فوترة مؤكدة لهذا الحساب.','No verified billing data for this account.')+'</small>')+
-        srow(ui('الرصيد المسبق','Prepaid credit'),'<div>'+ui('الرصيد غير متحقق','Credit unverified')+'</div><div class="acts">'+unavailable(ui('أضف رصيدًا','Add credit'))+'</div>')+
-        srow(ui('الموظفون','Employees'),'<span class="num">'+EMPS.length+'</span> '+ui('موظف مسجل','employees recorded')+'<div class="acts"><button type="button" class="lnk" id="hireFromPlan">'+ui('وظّف موظفًا','Create employee')+'</button></div>');
-      $('#setPlanSum').textContent=ui('بيانات الاشتراك والاستخدام غير متاحة','Subscription and usage data unavailable');
+      var loaded=Boolean(window.__SIY_DASH__)&&!window.__SIY_LOAD_ERROR__;
+      var team=loaded?EMPS.map(function(e){return '<p>'+esc(e.n)+' · '+esc(e.r)+'<small>'+ui(e.draft?'مسودة محفوظة':e.on?'نشط في السجل':'متوقف في السجل',e.draft?'Saved draft':e.on?'Recorded as active':'Recorded as paused')+'</small></p>';}).join(''):'';
+      $('#pane-plan').innerHTML=srow(ui('فريقك','Your team'),(loaded?'<div><span class="num">'+EMPS.length+'</span> '+ui('موظف مسجل','employees recorded')+'</div>'+team:'<div>'+ui('تعذّر تحميل الفريق؛ أعد تحميل الصفحة.','Could not load your team. Reload the page.')+'</div>')+'<div class="acts"><button type="button" class="lnk" id="hireFromPlan">'+ui('وظّف موظفًا','Create employee')+'</button></div>')+
+        srow(ui('الفوترة','Billing'),'<small>'+ui('بيانات الاشتراك والاستخدام غير متاحة.','Subscription and usage data unavailable.')+'</small>');
+      $('#setPlanSum').textContent=loaded?EMPS.length+' '+ui('موظف مسجل','employees recorded'):ui('الفريق غير متاح','Team unavailable');
       $('#pban').hidden=true; $('#mePill').hidden=true;
       return;
     }
