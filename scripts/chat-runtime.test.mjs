@@ -78,8 +78,9 @@ test('routine draft work skips approval while an MCP action is approval gated',(
   assert.match(serverSource,/mcp\.consume\(\{tenantId:companyId,conversationId,id:approvalId\}\)/);
 });
 
-test('employee execution proof is scoped to the conversation that produced it',()=>{
-  assert.match(serverSource,/const proof=\{[^\n]+conversation_id:conversationId/);
+test('employee MCP response remains unverified without provider proof',()=>{
+  assert.match(serverSource,/if\(answer\.flowToolAttempted\)return finish\(200,\{[^\n]+request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified'/);
+  assert.doesNotMatch(serverSource,/const proof=\{[^\n]+conversation_id:conversationId/);
 });
 
 async function page({storage={},locale,hydrate=empty,message,work,approve,employee_state,employee_instructions,add_knowledge,update_company_settings,export:exportResponse,integrations={list:{ok:true,connections:[]}},integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد',{pieceName:'@activepieces/piece-gmail'}]]}={}){

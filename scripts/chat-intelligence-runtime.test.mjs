@@ -68,8 +68,10 @@ test('employee instructions have a tenant-scoped verified write path',()=>{
 test('employee conversation reads its saved instructions while external execution stays gated',()=>{
   assert.match(server,/deepseekReply\(\{company,settings,knowledge,team,history,message,/);
   assert.match(server,/selectedEmployee=employee\?/);
-  assert.match(server,/name:'siyadah_run_employee_flow'/);
-  assert.match(server,/if\(answer\.runRequested\)/);
+  assert.match(server,/employeeFlowMcpToolName\(published\.flow\)/);
+  assert.match(server,/name,arguments:args/);
+  assert.match(server,/answer\.flowToolAttempted/);
+  assert.doesNotMatch(server,/siyadah_run_employee_flow|\.runFlow\(/);
   assert.doesNotMatch(server,/wantsEmployeeExecution\(input\.message\)/);
   assert.match(server,/employee:saved/);
   assert.match(server,/instruction_version:Number\(saved\.prompt_version\|\|1\),external_execution:false/);

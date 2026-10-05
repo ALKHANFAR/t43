@@ -242,15 +242,16 @@
       "id": "external_run_proof",
       "name": "تشغيل أداة الموظف وإثبات نتيجتها",
       "aliases": ["نتيجة الاداة", "Activepieces run", "دليل التنفيذ", "runId"],
-      "state": "draft_pr",
-      "meaning": "PR #15 يفحص التشغيل ودليل النقل؛ نتيجة المزود التجارية تحتاج محول تحقق وإيصالًا خاصًا بها. رد HTTP وحده ليس نجاحًا.",
+      "state": "gap",
+      "meaning": "أُوقف استدعاء Webhook المباشر من سيادة. تشغيل الموظف يمر بأداة الفلو المنشورة في MCP فقط، ويظل أثر المزود غير مؤكد حتى تعيد الأداة إيصالًا يمكن التحقق منه. الفلوهات القديمة بلا مشغّل MCP Tool لا تُشغّل من شات الموظف.",
       "linear": "ABO-43",
       "pr": "https://github.com/ALKHANFAR/t43/pull/15",
       "locations": [
-        {"role": "route", "path": "server.mjs", "anchor": "runFlow({tenantId:companyId"},
-        {"role": "provider", "path": "lib/tenant-projects.mjs", "anchor": "async function runFlow({tenantId,flowId,requestId,message"},
+        {"role": "route", "path": "server.mjs", "anchor": "if(answer.flowToolAttempted)"},
+        {"role": "flow_tool", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function employeeFlowMcpToolName("},
+        {"role": "mcp_transport", "path": "lib/activepieces-mcp.mjs", "anchor": "async function rpc(token,method,params)"},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "For a provider result, require"},
-        {"role": "test", "path": "scripts/tenant-projects-runtime.test.mjs", "anchor": "runFlow({tenantId:"}
+        {"role": "test", "path": "scripts/mcp-flow-scope-runtime.test.mjs", "anchor": "employee Flow ID comes from its saved record"}
       ]
     },
     {
@@ -258,7 +259,7 @@
       "name": "قدرات أدوات مشروع الشركة في الشات",
       "aliases": ["ربط الشات بـMCP", "أدوات الشات", "شات الموظف والأدوات", "project scoped MCP chat"],
       "state": "live_needs_change",
-      "meaning": "وصلة MCP واحدة إلى مشروع الشركة مع اكتشاف ديناميكي للأدوات ودليل الاستخدام الذي يرسله خادم Activepieces نفسه. بقرار المالك (2026-10-05) تُنفَّذ كل أدوات المشروع من الشات مباشرة دون موافقة مستقلة، بما فيها النشر والتنفيذ الخارجي، وتعود نتيجة كل أداة، حتى الخطأ، إلى النموذج ليصحح ويكمل ثم يكتب الرد من النتائج. يبقى نطاق الشركة محددًا من الخادم، وتبديل المشروع ممنوع، ويُتحقق من ملكية الاتصال قبل ap_run_action، ويُقرأ الـFlow المبني من مشروع الشركة قبل ربطه بمسودة الموظف. حالة الموظف في سيادة تتبع حالة الـFlow بعد النشر. الطلب الطويل يرد queued ويكمل في الخادم. مسار op:approve باقٍ للموافقات القديمة فقط. لم يثبت بعد باختبار عميل حي؛ رد الأداة لا يثبت نتيجة المزود.",
+      "meaning": "وصلة MCP واحدة إلى مشروع الشركة مع اكتشاف ديناميكي للأدوات ودليل الاستخدام الذي يرسله خادم Activepieces نفسه. أدوات المشروع تُنفَّذ مباشرة من الشات، ونتيجتها تعود للنموذج. شات الموظف يعرض أداة فلوه المنشور عبر MCP وحدها بعد مطابقة الاسم الدقيق للفلو ونسخته المنشورة؛ الفلو القديم بلا مشغّل MCP لا يُشغّل. يبقى نطاق الشركة محددًا من الخادم. الطلب الطويل يرد queued ويكمل في الخادم. لم يثبت بعد تشغيل عميل حي أو نتيجة مزود.",
       "linear": "ABO-48",
       "locations": [
         {"role": "chat_route", "path": "server.mjs", "anchor": "async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null"},
@@ -268,6 +269,7 @@
         {"role": "table_continuation", "path": "server.mjs", "anchor": "if(pending.toolName==='ap_create_table')"},
         {"role": "mcp_adapter", "path": "lib/activepieces-mcp.mjs", "anchor": "export function createActivepiecesMcp("},
         {"role": "employee_flow_scope", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function scopeMcpTool("},
+        {"role": "employee_flow_mcp_name", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function employeeFlowMcpToolName("},
         {"role": "connection_guard", "path": "lib/tool-connections.mjs", "anchor": "async function assertOwnedExternal({tenantId,externalId,pieceName})"},
         {"role": "migration", "path": "migrations/0005-activepieces-mcp.sql", "anchor": "CREATE TABLE IF NOT EXISTS siyadah_mcp_grants"},
         {"role": "client_approval", "path": "app/chat.js", "anchor": "if(data.approval.kind==='tool_action')"},
@@ -282,23 +284,20 @@
       "name": "إرسال بريد تجريبي من شركة 43",
       "aliases": ["رسالة Gmail التجريبية", "معرف رسالة Google", "Gmail pilot send", "شركة 43"],
       "state": "gap",
-      "meaning": "الطلب v1 لشركة 43 نجح سابقًا بمعرف رسالة من Google وبقي دليله محفوظًا. طلب مراجعة Google الجديد v2 له أمر إنجليزي وهوية ledger مستقلة، ويبقى غير منفذ حتى تفعيل Flow مؤقتًا وإثبات run جديد ونتيجة المزود. زر إعادة ربط Google يبدأ OAuth من سيادة دون فصل الاتصال الذي تعتمد عليه تدفقات منشورة؛ الموافقة الجديدة تستبدل بيانات الاعتماد في نفس المشروع. زر التحقق يقرأ فقط ولا يعيد الإرسال. Flow التجربة معطل حاليًا، وموظفو الشركة ما زالوا مسودات.",
+      "meaning": "الطلب v1 لشركة 43 نجح سابقًا بمعرف رسالة من Google وبقي دليله محفوظًا. أُوقف الإرسال التجريبي الخاص عبر Webhook؛ طلب البريد الجديد يمر بالشات العام وأدوات MCP. بقي استرداد نتائج الطلبات القديمة قراءةً فقط. زر إعادة ربط Google وقراءة صلاحية الاتصال باقيان، ولا يثبت الاتصال المحفوظ إرسال رسالة جديدة.",
       "linear": "ABO-43",
       "locations": [
         {"role": "flow_gate", "path": "lib/gmail-send-pilot.mjs", "anchor": "export function validateGmailPilotFlow("},
-        {"role": "chat_command", "path": "server.mjs", "anchor": "if(typeof input.message==='string'&&input.message.trim()===GMAIL_PILOT_COMMAND"},
-        {"role": "chat_request_identity", "path": "app/chat.js", "anchor": "if(!employeeId&&text.trim()==='Send a test email to my inbox')"},
         {"role": "gmail_reconnect", "path": "app/chat.js", "anchor": "data-reconnect=\"1\""},
-        {"role": "execution", "path": "lib/gmail-pilot-runner.mjs", "anchor": "export function createGmailPilotRunner("},
+        {"role": "read_only_recovery", "path": "lib/gmail-pilot-runner.mjs", "anchor": "export function createGmailPilotRunner("},
         {"role": "reconciliation", "path": "server.mjs", "anchor": "const receipt=await runner.recover("},
         {"role": "ledger_reconciliation", "path": "lib/company-profile.mjs", "anchor": "async function reconcileVerifiedChatRequest("},
         {"role": "conversation_persistence", "path": "lib/gmail-pilot-runner.mjs", "anchor": "export async function recordGmailPilotConversation("},
         {"role": "dedupe", "path": "lib/gmail-pilot-runner.mjs", "anchor": "export function gmailPilotLedgerIdentity("},
-        {"role": "signed_payload", "path": "lib/gmail-send-pilot.mjs", "anchor": "export function signedGmailPilotWebhook("},
         {"role": "provider_receipt", "path": "lib/gmail-send-pilot.mjs", "anchor": "export function verifyGmailPilotRun("},
         {"role": "contract", "path": "GMAIL-PILOT-CONTRACT.md", "anchor": "# شركة الاختبار 43"},
         {"role": "test", "path": "scripts/gmail-send-pilot-runtime.test.mjs", "anchor": "pilot gate accepts only the exact company"},
-        {"role": "test", "path": "scripts/gmail-pilot-runner-runtime.test.mjs", "anchor": "one exact signed dispatch returns only Gmail provider message id"},
+        {"role": "test", "path": "scripts/gmail-pilot-runner-runtime.test.mjs", "anchor": "Gmail pilot runner has no outbound webhook dispatch"},
         {"role": "test", "path": "scripts/chat-request-ledger-runtime.test.mjs", "anchor": "Gmail pilot shares one ledger key across two chat conversations"}
       ]
     }
