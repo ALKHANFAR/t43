@@ -12,7 +12,7 @@ import {createCompanyProfileService,CompanyProfileError} from './lib/company-pro
 import {createAccountAuthService,AccountAuthError} from './lib/account-auth.mjs';
 import {createMailer,MailerError} from './lib/mailer.mjs';
 import {builtFlowResult,conversationMemory,createdTableReadback,flowName,hasActiveFlowConnections} from './lib/chat-intelligence.mjs';
-import {completedWithoutExecution,failedChatExecution,nativeActionReceipt,completedToolActions,chatExecutionBudget} from './lib/chat-outcome.mjs';
+import {completedWithoutExecution,failedChatExecution,nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget} from './lib/chat-outcome.mjs';
 import {assertSchemaReady} from './lib/schema-ready.mjs';
 import {toolIcon} from './lib/tool-icons.mjs';
 import {createPublicWaitlist,PublicWaitlistError} from './lib/public-waitlist.mjs';
@@ -377,10 +377,10 @@ async function buildOwnedDraftFlow({mcp,companyId,args,draftEmployee=null,onEffe
 }
 async function successfulFlowTest(mcp,companyId,flowId,test){
   const runId=test?.structuredContent?.runId;
-  if(test?.isError===true||test?.structuredContent?.status!=='SUCCEEDED'||!/^[A-Za-z0-9]{21}$/.test(String(runId||'')))return false;
+  if(test?.isError===true||test?.structuredContent?.status!=='SUCCEEDED'||!/^[A-Za-z0-9]{21}$/.test(String(runId||'')))return null;
   const detail=await mcp.call(companyId,'tools/call',{name:'ap_get_run',arguments:{flowRunId:runId}});
   const run=detail?.structuredContent;
-  return detail?.isError!==true&&run?.id===runId&&run.flowId===flowId&&run.environment==='TESTING'&&run.status==='SUCCEEDED'&&Array.isArray(run.steps)&&run.steps.length>0;
+  return detail?.isError!==true&&run?.id===runId&&run.flowId===flowId&&run.environment==='TESTING'&&run.status==='SUCCEEDED'&&Array.isArray(run.steps)&&run.steps.length>0?{...run,...(typeof test.structuredContent.usedMockTriggerData==='boolean'?{usedMockTriggerData:test.structuredContent.usedMockTriggerData}:{})}:null;
 }
 async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null,mcp=null,companyId=null,conversationId=null,deadlineMs=null,excludedTools=[],onEffectStart=null,createDraft=null}){
   mcp=mcp?.forRequest?.()||mcp;
@@ -445,7 +445,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
       return data?.choices?.[0]?.message;
     }finally{clearTimeout(timer);}
   };
-  let flowId=null,linked=null,createdDraft=null,statusChanged=false,flowToolAttempted=false,testedFlowId=null,testedVersion=null;
+  let flowId=null,linked=null,createdDraft=null,statusChanged=false,flowToolAttempted=false,testedFlowId=null,testedVersion=null,testedRun=null,readinessReceipt=null;
   const effects=[],toolReceipts=[];
   const account=()=>`نُفّذت خطوات على مشروع شركتك (${[...new Set(effects)].join('، ')||'ap_build_flow'}) ثم توقف الطلب قبل كتابة الرد. اكتب «أكمل» لأقرأ الحالة وأتابع من حيث توقفت.`;
   // A Flow the model published or paused is the employee's real state; Siyadah's record follows it.
@@ -453,10 +453,16 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
     const flow=employee?.activepieces_flow_id||flowId||draftEmployee?.activepieces_flow_id,id=employee?.id||linked?.recordId||(flow===draftEmployee?.activepieces_flow_id?draftEmployee?.id:null);
     if(statusChanged&&flow&&id)try{
       const state=(await (await tenantProjects()).ownedFlow(companyId,flow)).flow;
-      if(state.status==='ENABLED'&&state.publishedVersionId&&testedFlowId===flow)linked=await (await companyProfiles()).setEmployeeState({companyId,employeeId:id,status:'active'});
+      if(state.status==='ENABLED'&&state.publishedVersionId&&testedFlowId===flow&&testedRun){
+        const tested=JSON.parse(testedVersion),published=(await (await tenantProjects()).ownedFlow(companyId,flow,state.publishedVersionId)).flow;
+        if(state.publishedVersionId===tested.id&&flowTestSnapshot({trigger:published.version.trigger,connectionIds:published.version.connectionIds})===flowTestSnapshot({trigger:tested.trigger,connectionIds:tested.connectionIds})){
+          linked=await (await companyProfiles()).setEmployeeState({companyId,employeeId:id,status:'active'});
+          if(linked?.status==='active'&&linked.recordId===id&&linked.flowId===flow)readinessReceipt={employee_id:id,flow_id:flow,published_version_id:state.publishedVersionId,test_run_id:testedRun.id,test_environment:'TESTING',...(typeof testedRun.usedMockTriggerData==='boolean'?{used_mock_trigger_data:testedRun.usedMockTriggerData}:{})};
+        }
+      }
       else if(employee?.status==='active')linked=await (await companyProfiles()).setEmployeeState({companyId,employeeId:id,status:'disabled'});
     }catch(error){console.error('employee state readback failed',error?.code||error?.name||'unknown_error');}
-    return {reply:String(reply).slice(0,6000),effects,toolReceipts,flowToolAttempted,...(flowId?{flowId}:{}),...(linked||createdDraft?{employee:linked||createdDraft}:{})};
+    return {reply:String(reply).slice(0,6000),effects,toolReceipts,flowToolAttempted,...(readinessReceipt?{readinessReceipt}:{}),...(flowId?{flowId}:{}),...(linked||createdDraft?{employee:linked||createdDraft}:{})};
   };
   try{
     for(let turn=0;turn<40;turn++){
@@ -474,7 +480,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
         const name=call?.function?.name;
         // Every result, a failed one included, returns to the model: Activepieces writes its errors as
         // instructions for the next call, and the model corrects itself from them.
-        let result,effectAttempted=false;
+        let result,effectAttempted=false,effectFlowId=null;
         const toolStarted=Date.now();
         try{
           if(!tools.some(tool=>tool.function.name===name))throw new TenantProjectError('mcp_tool_invalid','هذه الأداة غير متاحة في هذه المحادثة.',502);
@@ -485,18 +491,19 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           const employeeFlow=employee?.activepieces_flow_id||flowId||draftEmployee?.activepieces_flow_id;
           if(args.flowId&&args.flowId===employeeFlow){
             if(name==='ap_lock_and_publish'||name==='ap_change_flow_status'&&args.status==='ENABLED'){
-              const current=(await (await tenantProjects()).ownedFlow(companyId,args.flowId)).flow;
-              if(testedFlowId!==args.flowId||testedVersion!==JSON.stringify(current.version))throw new TenantProjectError('employee_test_required','اختبر النسخة الحالية من طريقة عمل الموظف بنجاح قبل تفعيلها.',409);
+              const current=(await (await tenantProjects()).ownedFlow(companyId,args.flowId)).flow,tested=testedVersion?JSON.parse(testedVersion):null;
+              const currentVersion=current.publishedVersionId===tested?.id&&current.version?.state==='LOCKED'&&tested?.state==='DRAFT'?{...current.version,state:tested.state}:current.version;
+              if(testedFlowId!==args.flowId||testedVersion!==flowTestSnapshot(currentVersion))throw new TenantProjectError('employee_test_required','اختبر النسخة الحالية من طريقة عمل الموظف بنجاح قبل تفعيلها.',409);
             }
-            if(!readOnly(name)&&!['ap_test_flow','ap_lock_and_publish','ap_change_flow_status'].includes(name)){testedFlowId=null;testedVersion=null;}
+            if(!readOnly(name)&&!['ap_test_flow','ap_lock_and_publish','ap_change_flow_status'].includes(name)){testedFlowId=null;testedVersion=null;testedRun=null;}
           }
           if(name==='ap_run_action'&&args.connectionExternalId){
             const pieceName=String(args.pieceName||'');
             await (await toolConnections()).assertOwnedExternal({tenantId:companyId,externalId:args.connectionExternalId,pieceName:pieceName.startsWith('@activepieces/piece-')?pieceName:`@activepieces/piece-${pieceName}`});
           }
-          const versionBeforeTest=name==='ap_test_flow'&&args.flowId===employeeFlow?JSON.stringify((await (await tenantProjects()).ownedFlow(companyId,args.flowId)).flow.version):null;
+          const versionBeforeTest=name==='ap_test_flow'&&args.flowId===employeeFlow?flowTestSnapshot((await (await tenantProjects()).ownedFlow(companyId,args.flowId)).flow.version):null;
           checkDeadline();
-          if(!readOnly(name)){effectAttempted=true;onEffectStart?.();effects.push(name);}
+          if(!readOnly(name)){effectAttempted=true;effectFlowId=args.flowId||null;onEffectStart?.();effects.push(name);}
           if(name===flowToolName)flowToolAttempted=true;
           if(name==='ap_lock_and_publish'||name==='ap_change_flow_status')statusChanged=true;
           if(name==='ap_build_flow'&&!employee){
@@ -504,13 +511,14 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
             if(!draftEmployee&&!flowId&&createDraft){draftEmployee=await createDraft(args.flowName);createdDraft=draftEmployee;}
             const done=await buildOwnedDraftFlow({mcp,companyId,args,draftEmployee:draftEmployee&&!draftEmployee.activepieces_flow_id&&!flowId?draftEmployee:null,onEffectStart:()=>{}});
             result=done.result;
-            if(done.built){flowId=done.built.flowId;linked=done.updated||linked;}
+            if(done.built){flowId=done.built.flowId;effectFlowId=flowId;linked=done.updated||linked;}
           }else result=await mcp.call(companyId,'tools/call',{name,arguments:args});
           if(name==='ap_test_flow'&&args.flowId===employeeFlow){
-            testedFlowId=null;testedVersion=null;
-            if(await successfulFlowTest(mcp,companyId,args.flowId,result)){
-              const versionAfterTest=JSON.stringify((await (await tenantProjects()).ownedFlow(companyId,args.flowId)).flow.version);
-              if(versionBeforeTest===versionAfterTest){testedFlowId=args.flowId;testedVersion=versionAfterTest;}
+            testedFlowId=null;testedVersion=null;testedRun=null;
+            const verifiedRun=await successfulFlowTest(mcp,companyId,args.flowId,result);
+            if(verifiedRun){
+              const versionAfterTest=flowTestSnapshot((await (await tenantProjects()).ownedFlow(companyId,args.flowId)).flow.version);
+              if(versionBeforeTest===versionAfterTest){testedFlowId=args.flowId;testedVersion=versionAfterTest;testedRun=verifiedRun;}
             }
           }
         }catch(error){
@@ -519,7 +527,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           if(!known)console.error('chat tool call failed',name,error?.code||error?.name||'unknown_error');
           result={isError:true,content:[{type:'text',text:error?.name==='TimeoutError'?'انتهت مهلة الأداة ونتيجتها غير معروفة. اقرأ الحالة الحالية قبل أي محاولة جديدة.':known?`${error.code}: ${error.message}`:'تعذّر تنفيذ الأداة.'}]};
         }
-        if(toolReceipts.length<80)toolReceipts.push({...nativeActionReceipt(name,result),...(effectAttempted?{effect_attempted:true}:{})});
+        if(toolReceipts.length<80)toolReceipts.push({...nativeActionReceipt(name,result),...(effectAttempted?{effect_attempted:true,...(effectFlowId?{flow_id:effectFlowId}:{})}:{})});
         console.info('chat_tool_timing',JSON.stringify({conversation_id:conversationId,name,elapsed_ms:Date.now()-toolStarted,error:result?.isError===true}));
         messages.push({role:'tool',tool_call_id:call.id,content:JSON.stringify(result)});
       }
@@ -609,7 +617,7 @@ async function publicChat(req,res){
         const test=await mcp.call(companyId,'tools/call',{name:'ap_test_flow',arguments:{flowId:saved.activepieces_flow_id}});
         if(!await successfulFlowTest(mcp,companyId,saved.activepieces_flow_id,test))throw new CompanyProfileError('employee_test_required','لم تنجح تجربة طريقة عمل الموظف أو لم نتأكد من نتيجتها؛ بقي غير مفعّل.',409);
         const tested=(await projects.ownedFlow(companyId,saved.activepieces_flow_id)).flow;
-        if(JSON.stringify(tested.version)!==JSON.stringify(latest.version))throw new CompanyProfileError('employee_test_required','تغيرت طريقة العمل أثناء التجربة؛ أعد اختبار نسختها الحالية.',409);
+        if(flowTestSnapshot(tested.version)!==flowTestSnapshot(latest.version))throw new CompanyProfileError('employee_test_required','تغيرت طريقة العمل أثناء التجربة؛ أعد اختبار نسختها الحالية.',409);
       }
       if(publishDraft){
         try{await mcp.call(companyId,'tools/call',{name:'ap_lock_and_publish',arguments:{flowId:saved.activepieces_flow_id}});}
@@ -768,7 +776,7 @@ async function publicChat(req,res){
         const profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId),history=await profiles.conversationHistory({companyId,conversationId,requestId});
         const answer=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history,message:input.message,employee:saved,mcp:await activepiecesMcp(),companyId,conversationId,deadlineMs:chatExecutionBudget(acceptedAt),onEffectStart:()=>{activeRequest.effectStarted=true;activeRequest.executionAttempt=true;}});
         await profiles.recordConversation({companyId,conversationId,employeeId:saved.id,requestId,userMessage:input.message,assistantMessage:answer.reply});
-        if(answer.flowToolAttempted||answer.effects?.length)return finish(200,{ok:true,conversation_id:conversationId,...completedToolActions(answer),work_id:`request_${requestId}`,reply:answer.reply,tool_receipts:answer.toolReceipts,experience:{employee_conversation:true,employee_id:saved.id,instruction_version:Number(saved.prompt_version||1),external_execution:true}});
+        if(answer.flowToolAttempted||answer.effects?.length)return finish(200,{ok:true,conversation_id:conversationId,...completedToolActions(answer),work_id:`request_${requestId}`,reply:answer.reply,tool_receipts:answer.toolReceipts,...(answer.employee?{employee:answer.employee}:{}),experience:{employee_conversation:true,employee_id:saved.id,instruction_version:Number(saved.prompt_version||1),external_execution:true}});
         return finish(200,{...completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply:answer.reply,experience:{employee_conversation:true,employee_id:saved.id,instruction_version:Number(saved.prompt_version||1),external_execution:false}}),...(answer.toolReceipts.length?{tool_receipts:answer.toolReceipts}:{}),...(answer.employee?{employee:answer.employee}:{}),...(answer.approval?{approval:answer.approval,work_status:'awaiting_input'}:{})});
       }
       const profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId),history=await profiles.conversationHistory({companyId,conversationId,requestId});
@@ -778,7 +786,7 @@ async function publicChat(req,res){
       answer=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history,message:input.message,draftEmployee:draft,mcp:await activepiecesMcp(),companyId,conversationId,deadlineMs:chatExecutionBudget(acceptedAt),onEffectStart:()=>{activeRequest.effectStarted=true;activeRequest.executionAttempt=true;},createDraft:async name=>profiles.findEmployee(companyId,(await profiles.createManualEmployeeDraft({companyId,name:flowName(String(name||input.message)),requestId})).recordId)});
       const draftOnly=/(?:مسودة\s*فقط|بدون\s+(?:تشغيل|تفعيل)|لا\s+تفعّل|لا\s+تفعل\s+الموظف|لا\s+تشغّ?ل|draft\s+only|do\s+not\s+activate)/i.test(String(input.message||''));
       const activationIntent=!draftOnly&&answer.flowId&&answer.employee?.flowId===answer.flowId&&answer.employee.status==='disabled'?{auto_activate_after_connection:true,auto_activate_employee_id:answer.employee.recordId,auto_activate_flow_id:answer.flowId}:{};
-      const reply=answer.employee&&!answer.flowId?`حُفظ سجل ${answer.employee.name}، وحالة بناء طريقة عمله غير مؤكدة؛ تحقّق من مشروع الشركة قبل إعادة البناء. ${answer.reply}`:answer.reply;
+      const reply=answer.employee&&!answer.flowId&&!answer.readinessReceipt?`حُفظ سجل ${answer.employee.name}، وحالة بناء طريقة عمله غير مؤكدة؛ تحقّق من مشروع الشركة قبل إعادة البناء. ${answer.reply}`:answer.reply;
       await profiles.recordConversation({companyId,conversationId,employeeId:null,requestId,userMessage:input.message,assistantMessage:reply});
       if(answer.effects?.some(name=>name!=='ap_build_flow')||(answer.effects?.includes('ap_build_flow')&&!answer.flowId))return finish(200,{ok:true,conversation_id:conversationId,...completedToolActions(answer),work_id:`request_${requestId}`,reply,tool_receipts:answer.toolReceipts,...activationIntent,...(answer.flowId?{flow_id:answer.flowId}:{}),...(answer.employee?{employee:answer.employee}:{})});
       return finish(200,{...completedWithoutExecution(answer.employee?.status==='disabled'?'employee_draft':'conversation_reply',{ok:true,conversation_id:conversationId,reply,...activationIntent,...(answer.flowId?{flow_id:answer.flowId,draft:answer.employee?.status!=='active'}:{}),...(answer.employee?{employee:answer.employee}:{experience:{understood_company:true,knowledge_version:Number(knowledge?.knowledgeVersion||0),catalog_reviewed:true}})}),...(answer.toolReceipts?.length?{tool_receipts:answer.toolReceipts}:{}),...(answer.approval?{approval:answer.approval,work_status:'awaiting_input'}:{})});

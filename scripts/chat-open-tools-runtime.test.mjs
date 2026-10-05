@@ -5,7 +5,7 @@ import {runInNewContext} from 'node:vm';
 import {builtFlowResult,conversationMemory} from '../lib/chat-intelligence.mjs';
 import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool} from '../lib/mcp-flow-scope.mjs';
 import {TenantProjectError} from '../lib/tenant-projects.mjs';
-import {nativeActionReceipt,completedToolActions,chatExecutionBudget,failedChatExecution} from '../lib/chat-outcome.mjs';
+import {nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget,failedChatExecution} from '../lib/chat-outcome.mjs';
 import {CompanyProfileError} from '../lib/company-profile.mjs';
 
 // Runs the real chat loop from server.mjs against a scripted model and a scripted Activepieces MCP.
@@ -26,6 +26,7 @@ const catalog=[
   {name:'ap_build_flow',...hint(false)},
   {name:'ap_add_step',...hint(false),inputSchema:{type:'object',properties:{flowId:{type:'string'}}}},
   {name:'ap_lock_and_publish',...hint(false),inputSchema:{type:'object',properties:{flowId:{type:'string'}}}},
+  {name:'ap_change_flow_status',...hint(false),inputSchema:{type:'object',properties:{flowId:{type:'string'},status:{type:'string'}}}},
   {name:'ap_run_action',...hint(false)},
   {name:'ap_set_project_context',...hint(false)},
   {name:flowToolName,...hint(false),inputSchema:{type:'object',properties:{task:{type:'string'}}}},
@@ -33,24 +34,25 @@ const catalog=[
 const say=content=>({content});
 const use=(...calls)=>({content:'',tool_calls:calls.map(([name,args],index)=>({id:`call_${name}_${index}`,function:{name,arguments:typeof args==='string'?args:JSON.stringify(args||{})}}))});
 
-function setup({script,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false}={}){
+function setup({script,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false}={}){
   const log={model:[],tools:[],effects:0,states:[],owned:[]};
-  let step=0,status=flowStatus,publishedVersionId=published?'v1':null,draftVersionId='v1';
+  let step=0,status=flowStatus,publishedVersionId=published?'v1':null,draftVersionId='v1',versionState=published?'LOCKED':'DRAFT',sampleData,updated='before',updatedBy,taskInput='{{trigger.task}}';
   const mcp={call:async(_company,method,params)=>{
     if(method==='tools/list')return {tools:catalog};
     if(method==='initialize')return {instructions:'## Activepieces MCP Server\n1. Discover 2. Schema 3. Build 4. Validate 5. Publish'};
     log.tools.push([params.name,params.arguments]);
     if(Object.hasOwn(toolResults,params.name)){const value=toolResults[params.name];return typeof value==='function'?value(params.arguments):value;}
     if(params.name==='ap_build_flow')return {content:[{type:'text',text:`✅ Flow created (id: ${flowId})`}],structuredContent:{flowId,invalidSteps:[],skippedSteps:[],unknownProps:[]}};
-    if(params.name==='ap_test_flow'){if(editDuringTest)draftVersionId='v2';return {structuredContent:{runId,status:'SUCCEEDED',usedMockTriggerData:false}};}
+    if(params.name==='ap_test_flow'){if(editDuringTest)draftVersionId='v2';if(nativeTestMetadata){sampleData={lastTestDate:'2026-10-05T21:13:05.105Z',sampleDataFileId:'S'.repeat(21)};updated='after';updatedBy='test-user';}if(editInputDuringTest)taskInput='changed task';return {structuredContent:{runId,status:'SUCCEEDED',usedMockTriggerData:false}};}
     if(params.name==='ap_get_run')return {structuredContent:{id:runId,flowId,status:'SUCCEEDED',environment:'TESTING',steps:[{name:'trigger',status:'SUCCEEDED'}]}};
-    if(params.name==='ap_lock_and_publish'){status='ENABLED';publishedVersionId='v1';return {content:[{type:'text',text:'✅ published and enabled'}]};}
+    if(params.name==='ap_change_flow_status'){status=params.arguments.status;return {content:[{type:'text',text:'status changed'}]};}
+    if(params.name==='ap_lock_and_publish'){versionState='LOCKED';status='ENABLED';publishedVersionId=publishDifferentVersion?'v2':'v1';return {content:[{type:'text',text:'✅ published and enabled'}]};}
     return {content:[{type:'text',text:`ok ${params.name}`}]};
   }};
   const ctx={
     console:{error:()=>{},info:()=>{},warn:()=>{}},process:{env:{DEEPSEEK_API_KEY:'test-key'}},
     AbortController,setTimeout,clearTimeout,Date,JSON,String,Array,Object,Math,
-    TenantProjectError,CompanyProfileError,nativeActionReceipt,builtFlowResult,conversationMemory,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,
+    TenantProjectError,CompanyProfileError,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,
     fetch:async(url,options)=>{
       const request=JSON.parse(options.body);log.model.push(request);
       const message=script[Math.min(step++,script.length-1)];
@@ -60,9 +62,9 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false,edit
     companyProfiles:async()=>({
       findEmployee:async()=>({id:'employee-1',status:'draft',activepieces_flow_id:null}),
       linkEmployeeFlow:async({flowId:id})=>({recordId:'employee-1',flowId:id,name:'أمين المحتوى',status:'disabled'}),
-      setEmployeeState:async({employeeId,status:next})=>{log.states.push([employeeId,next]);return {recordId:employeeId,flowId,name:'أمين المحتوى',status:next};},
+      setEmployeeState:async({employeeId,status:next})=>{if(saveStateFailure)throw new Error('save failed');log.states.push([employeeId,next]);return {recordId:employeeId,flowId,name:'أمين المحتوى',status:next};},
     }),
-    tenantProjects:async()=>({ownedFlow:async(_company,id)=>{log.owned.push(id);return {flow:{...publishedFlow,id,status,publishedVersionId,version:{...publishedFlow.version,id:draftVersionId}}};}}),
+    tenantProjects:async()=>({ownedFlow:async(_company,id)=>{log.owned.push(id);return {flow:{...publishedFlow,id,status,publishedVersionId,version:{...publishedFlow.version,id:draftVersionId,state:versionState,updated,...(updatedBy?{updatedBy}:{}),trigger:{...publishedFlow.version.trigger,settings:{...publishedFlow.version.trigger.settings,input:{...publishedFlow.version.trigger.settings.input,task:taskInput},...(sampleData?{sampleData}:{})}}}}};}}),
     toolConnections:async()=>({assertOwnedExternal:async({externalId})=>{if(externalId==='foreign')throw new TenantProjectError('connection_not_owned','الاتصال لا يخص هذه الشركة.',403);}}),
   };
   const deepseekReply=runInNewContext(`${source.slice(start,end)}; deepseekReply`,ctx);
@@ -353,4 +355,57 @@ test('large company context does not cut saved employee instructions or produce 
   assert.equal(context.currentDraft.instructions,instruction);
   assert.equal(context.company.profile.about,'معلومة '.repeat(5000));
   assert.deepEqual(log.tools,[]);
+});
+
+
+test('native AP test metadata does not invalidate unchanged instructions and returns scoped readiness',async()=>{
+  const {run}=setup({nativeTestMetadata:true,script:[use(['ap_build_flow',{flowName:'نور'}]),use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),say('اختبرت ونشرت.') ]});
+  const answer=await run({draftEmployee:{id:'employee-1',name:'نور',activepieces_flow_id:null}});
+  assert.equal(answer.employee.status,'active');
+  assert.deepEqual(JSON.parse(JSON.stringify(answer.readinessReceipt)),{employee_id:'employee-1',flow_id:flowId,published_version_id:'v1',test_run_id:runId,test_environment:'TESTING',used_mock_trigger_data:false});
+  assert.equal(completedToolActions(answer).outcome_kind,'employee_ready');
+  assert.equal(completedToolActions(answer).work_status,'succeeded');
+  assert.equal(answer.toolReceipts.filter(r=>r.effect_attempted).every(r=>r.flow_id===flowId),true);
+});
+
+test('native metadata tolerance cannot mask a concurrent instruction change',async()=>{
+  const {run,log}=setup({nativeTestMetadata:true,editInputDuringTest:true,script:[use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),say('تحتاج تجربة جديدة.') ]});
+  const answer=await run({draftEmployee:{id:'employee-1',name:'نور',activepieces_flow_id:flowId}});
+  assert.deepEqual(log.tools.map(item=>item[0]),['ap_test_flow','ap_get_run']);
+  assert.equal(answer.readinessReceipt,undefined);
+  assert.equal(completedToolActions(answer).work_status,'unknown');
+});
+
+test('a different published version or failed local state readback never produces readiness',async()=>{
+  for(const option of [{publishDifferentVersion:true},{saveStateFailure:true}]){
+    const {run}=setup({...option,script:[use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),say('قرأت النتيجة.') ]});
+    const answer=await run({draftEmployee:{id:'employee-1',name:'نور',activepieces_flow_id:flowId}});
+    assert.equal(answer.readinessReceipt,undefined);
+    assert.equal(completedToolActions(answer).outcome_kind,'unverified');
+  }
+});
+
+test('an old active employee without a fresh tested and published receipt stays unverified',async()=>{
+  const {run}=setup({flowStatus:'ENABLED',published:true,script:[use(['ap_add_step',{flowId}]),say('عدلت المسودة.') ]});
+  const answer=await run({employee:{id:'employee-1',status:'active',activepieces_flow_id:flowId}});
+  assert.equal(answer.readinessReceipt,undefined);
+  assert.equal(completedToolActions(answer).outcome_kind,'unverified');
+});
+
+
+test('readiness retains the native mock-data flag and never infers it from a FlowRun',async()=>{
+  for(const flag of [true,undefined]){
+    const {run}=setup({script:[use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),say('اختبرت ونشرت.')],toolResults:{ap_test_flow:{structuredContent:{runId,status:'SUCCEEDED',...(flag===undefined?{}:{usedMockTriggerData:flag})}}}});
+    const answer=await run({draftEmployee:{id:'employee-1',name:'نور',activepieces_flow_id:flowId}});
+    assert.equal(answer.readinessReceipt.used_mock_trigger_data,flag);
+    assert.equal(Object.hasOwn(answer.readinessReceipt,'used_mock_trigger_data'),flag!==undefined);
+  }
+});
+
+
+test('native DRAFT to LOCKED publication does not reject subsequent enabling of the tested version',async()=>{
+  const {run,log}=setup({nativeTestMetadata:true,script:[use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),use(['ap_change_flow_status',{flowId,status:'ENABLED'}]),say('فعّلت النسخة المختبرة.') ]});
+  const answer=await run({draftEmployee:{id:'employee-1',name:'نور',activepieces_flow_id:flowId}});
+  assert.deepEqual(log.tools.map(item=>item[0]),['ap_test_flow','ap_get_run','ap_lock_and_publish','ap_change_flow_status']);
+  assert.equal(completedToolActions(answer).outcome_kind,'employee_ready');
 });
