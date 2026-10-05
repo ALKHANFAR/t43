@@ -67,7 +67,9 @@ Before merging, compare the exact head and base, verify the resolved Railway pre
 
 To apply saved instructions to ongoing work, use the existing message route with the selected `employee_id`. The UI prepares the request without sending it automatically and requires unsaved edits to be saved first. The model reads the owned Flow and AI schema, edits the per-step prompt without dropping task variables, then reads back, tests and publishes through the existing MCP path. A `run_agent` step prompt is a per-Flow overlay; do not change a shared Agent's base instructions. No suitable AI step, a failed test, or uncertain readback must not be displayed as runtime adoption.
 
-The saved-context panel is not an authoritative projection of published Activepieces instructions. Runtime instructions and their draft/published version require actual AP readback; this PR does not claim automatic synchronization or complete ABO-65/66 acceptance.
+The editable saved-context panel is conversation context. Opening instructions requests `employee_instructions` with `read_published:true`; the separate read-only `published_instructions` section reads the owned exact published Flow version. The two reads must agree on the published pointer; a publish race, wrong ownership or provider failure returns `read_status:unavailable` without prompts. No published version returns `not_published`. `verified` means version readback only, not activation, execution or synchronization.
+
+The projection preserves literal AI `askAi` and `run_agent` prompt inputs, including variable references, without returning full settings/auth. A saved Agent task input is marked separately and `agent_instructions_unverified:true` prevents claiming its saved Agent instructions were read. Unknown AI actions have no projected prompt. UI reads lazily on each opening, preserves editable conversation text and discards stale employee/panel responses. Read mode writes no instructions, Flow or Agent and never tests/publishes.
 
 
 ## Employee readiness receipt
