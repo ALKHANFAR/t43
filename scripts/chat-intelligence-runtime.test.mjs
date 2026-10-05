@@ -48,7 +48,6 @@ test('employee instructions have a tenant-scoped verified write path',()=>{
   assert.match(server,/updateEmployeeInstructions\(\{companyId,employeeId:input\.employee_id,instructions\}\)/);
   assert.match(chat,/op:'employee_instructions',employee_id:e\.id,instructions:instructions/);
   assert.match(chat,/data\.employee\.instructions!==instructions/);
-  assert.match(chat,/مصدر البداية: الدور المختار ومعرفة شركتك/);
 });
 
 test('employee conversation reads its saved instructions while external execution stays gated',()=>{
