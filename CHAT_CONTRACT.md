@@ -30,7 +30,7 @@ This contract belongs to `ALKHANFAR/t43`. The customer frontend may change later
 | Field | Meaning | May prove an external action? |
 | --- | --- | --- |
 | `request_status` | Whether Siyadah recorded and handled this request: `queued`, `succeeded`, `failed`, `not_observed` | No |
-| `outcome_kind` | What kind of response was produced: `conversation_reply`, `employee_draft`, `external_run`, `tool_result`, `unverified` | Only identifies the kind; proof is separate |
+| `outcome_kind` | What kind of response was produced: `conversation_reply`, `employee_draft`, `external_run`, `tool_result`, `employee_ready`, `unverified` | Only identifies the kind; proof is separate |
 | `work_status` | Legacy progress/status field; `not_started` for a reply or disabled employee draft | Never by itself |
 | `work_id` | Identifier for status tracking; a `request_…` value is not a provider run | No |
 | `recent_work[].runId` | Activepieces run reference | Proves a run reference, not a provider outcome |
@@ -48,6 +48,7 @@ This contract belongs to `ALKHANFAR/t43`. The customer frontend may change later
 | General Flow draft | `outcome_kind:conversation_reply`, `flow_id` after owned Flow readback, no employee | The Flow was saved disabled in this company's project; no task or provider action is proven. |
 | Uncertain outcome | `request_status:not_observed`, `outcome_kind:unverified`, `work_status:unknown` | The result is unverified; check the same request ID. |
 | Rejected before dispatch | `request_status:failed`, `outcome_kind:unverified`, `work_status:failed`, no `transport_receipt` | The employee's task did not start. |
+| Employee tested and activated | `request_status:succeeded`, `work_status:succeeded`, `outcome_kind:employee_ready`, verified `readiness_receipt` | Configuration test and activation verified; no production task or KPI is implied. Mixed effects keep the overall request unverified. |
 | Completed native action calls | `request_status:succeeded`, `outcome_kind:tool_result`, `work_status:succeeded` | The native calls completed. An ActionRun reference is not a saved FlowRun or a KPI. |
 | Tool response without business proof | `request_status:not_observed`, `work_status:unknown`, optional `transport_receipt` | The tool replied, but the result is still being verified; do not dispatch again automatically. |
 | External flow | `outcome_kind:external_run` plus scoped `runId` and execution record | Show only the level actually verified. Activepieces run success alone is not proof of the provider result or business impact. |
@@ -67,3 +68,12 @@ Before merging, compare the exact head and base, verify the resolved Railway pre
 To apply saved instructions to ongoing work, use the existing message route with the selected `employee_id`. The UI prepares the request without sending it automatically and requires unsaved edits to be saved first. The model reads the owned Flow and AI schema, edits the per-step prompt without dropping task variables, then reads back, tests and publishes through the existing MCP path. A `run_agent` step prompt is a per-Flow overlay; do not change a shared Agent's base instructions. No suitable AI step, a failed test, or uncertain readback must not be displayed as runtime adoption.
 
 The saved-context panel is not an authoritative projection of published Activepieces instructions. Runtime instructions and their draft/published version require actual AP readback; this PR does not claim automatic synchronization or complete ABO-65/66 acceptance.
+
+
+## Employee readiness receipt
+
+`readiness_receipt` contains `employee_id`, `flow_id`, `published_version_id`, `test_run_id` and `test_environment:TESTING`. Optional `used_mock_trigger_data` is a Boolean from the native test response, not the run readback. The server verifies a fresh successful test for this owned Flow, unchanged business configuration, the exact tested version published and ENABLED, and the employee saved active. Old active state, missing proof, version/configuration changes or a failed state save cannot create a receipt.
+
+Comparisons ignore only native test metadata: version `updated`/`updatedBy` and graph step `settings.sampleData`. Business inputs, prompt text, task variables and step references remain compared. Native lifecycle changes must not substitute a different version or configuration.
+
+Only setup effects on this same Flow can produce `employee_ready`. A request with other effects keeps `unverified/unknown` and carries readiness independently. The UI retains the model reply, validates matching employee and Flow IDs, exposes TESTING evidence behind details, and excludes readiness from production work and KPI displays. TESTING may use mock trigger data and may execute real actions; readiness does not establish a production provider outcome.

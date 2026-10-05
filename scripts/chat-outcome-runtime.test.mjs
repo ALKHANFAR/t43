@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {completedWithoutExecution,failedChatExecution,nativeActionReceipt,completedToolActions,chatExecutionBudget} from '../lib/chat-outcome.mjs';
+import {completedWithoutExecution,failedChatExecution,nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget} from '../lib/chat-outcome.mjs';
 
 const native=(output,note='')=>({content:[{type:'text',text:`✅ Gmail completed (run R12345678901234567890)${note}.\n\n${JSON.stringify(output)}`}]});
 test('native ActionRun completion is distinct from provider or FlowRun proof',()=>{
@@ -102,4 +102,29 @@ test('official AP footer does not hide native completion or imply full output',(
   assert.equal(nativeActionReceipt('ap_run_action',empty).outcome,'action_completed');
   const bad=native({response:{status:403}});bad.content[0].text+='\n\nNote: empty result. Broaden your filter.';
   assert.equal(nativeActionReceipt('ap_run_action',bad).outcome,'unverified');
+});
+
+
+test('native test snapshot ignores only step test metadata and operation audit fields',()=>{
+  const version={id:'v1',created:'same',updated:'before',trigger:{name:'trigger',settings:{sampleData:{lastTestDate:'before'},input:{sampleData:{business:'keep'},nested:{settings:{sampleData:'business'}}}},nextAction:{name:'loop',settings:{sampleData:{lastTestDate:'before'}},firstLoopAction:{name:'inner',settings:{input:{prompt:'keep'},sampleData:{sampleDataFileId:'before'}}},children:[{name:'branch',settings:{input:{prompt:'keep'},sampleData:{lastTestDate:'before'}}}]}}};
+  const native=structuredClone(version);native.updated='after';native.updatedBy='tester';native.trigger.settings.sampleData={lastTestDate:'after'};native.trigger.nextAction.firstLoopAction.settings.sampleData={sampleDataFileId:'after'};native.trigger.nextAction.children[0].settings.sampleData={lastTestDate:'after'};
+  assert.equal(flowTestSnapshot(native),flowTestSnapshot(version));
+  for(const mutate of [v=>{v.id='v2';},v=>{v.created='changed';},v=>{v.trigger.settings.input.sampleData.business='changed';},v=>{v.trigger.settings.input.nested.settings.sampleData='changed';},v=>{v.trigger.nextAction.firstLoopAction.settings.input.prompt='changed';},v=>{v.trigger.nextAction.children[0].settings.input.prompt='changed';}]){
+    const changed=structuredClone(native);mutate(changed);assert.notEqual(flowTestSnapshot(changed),flowTestSnapshot(version));
+  }
+});
+
+test('employee readiness never marks unrelated actions, table writes or another Flow successful',()=>{
+  const readiness={employee_id:'e',flow_id:'F'.repeat(21),published_version_id:'v1',test_run_id:'R'.repeat(21),test_environment:'TESTING'};
+  for(const [name,flow] of [['ap_run_action',readiness.flow_id],['ap_update_table',readiness.flow_id],['ap_update_step','X'.repeat(21)]]){
+    const answer={readinessReceipt:readiness,effects:['ap_test_flow',name],toolReceipts:[{name:'ap_test_flow',flow_id:readiness.flow_id,effect_attempted:true,status:'returned'},{name,flow_id:flow,effect_attempted:true,status:'returned'}]};
+    const result=completedToolActions(answer);assert.equal(result.outcome_kind,'unverified');assert.equal(result.work_status,'unknown');assert.deepEqual(result.readiness_receipt,readiness);
+  }
+});
+
+
+test('an active tested employee does not turn a failed setup request into overall success',()=>{
+  const readiness={employee_id:'e',flow_id:'F'.repeat(21),published_version_id:'v1',test_run_id:'R'.repeat(21),test_environment:'TESTING'};
+  const result=completedToolActions({readinessReceipt:readiness,effects:['ap_test_flow','ap_lock_and_publish','ap_change_flow_status'],toolReceipts:[{name:'ap_test_flow',flow_id:readiness.flow_id,effect_attempted:true,status:'returned'},{name:'ap_lock_and_publish',flow_id:readiness.flow_id,effect_attempted:true,status:'returned'},{name:'ap_change_flow_status',flow_id:readiness.flow_id,effect_attempted:true,status:'error'}]});
+  assert.equal(result.work_status,'unknown');assert.equal(result.outcome_kind,'unverified');assert.deepEqual(result.readiness_receipt,readiness);
 });

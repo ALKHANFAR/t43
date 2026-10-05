@@ -243,11 +243,11 @@ var I = {
     var labels=locale==='en'?{draft_readback:'Work plan saved',flow_valid:'Work plan valid',connection_ready:'Tool ready',execution_run:'Real run completed',provider_result:'Provider result received',commercial_result:'Business outcome verified'}:{draft_readback:"تم تجهيز طريقة العمل",flow_valid:"طريقة العمل سليمة",connection_ready:"الأداة جاهزة",execution_run:"اكتمل اختبار فعلي",provider_result:"وصلت نتيجة الخدمة",commercial_result:"ظهرت نتيجة أعمال مثبتة"};
     return labels[row&&row.key]||customerText(row&& (row.label||row.key));
   }
-  function siyRefsHtml(items){
+  function siyRefsHtml(items,note){
     var refs=(items||[]).filter(function(x){return x&&typeof x[1]==="string"&&/^[A-Za-z0-9_-]+$/.test(x[1]);});
     if(!window.__SIY_REAL__||!refs.length) return "";
-    var refNames=locale==='en'?{'الطلب':'Request','المهمة':'Task','التشغيل':'Run','النتيجة':'Result','طريقة العمل':'Work plan','الموظف':'Employee'}:{};
-    return '<details class="siyrefs"><summary>'+ui('الدليل التقني','Technical evidence')+'</summary><div class="siyrefs__list">'+refs.map(function(x){return '<span>'+esc(refNames[x[0]]||customerText(x[0]))+' <code>'+esc(x[1])+'</code></span>';}).join("")+'</div></details>';
+    var refNames=locale==='en'?{'الطلب':'Request','المهمة':'Task','التشغيل':'Run','النتيجة':'Result','طريقة العمل':'Work plan','الموظف':'Employee','النسخة المنشورة':'Published version','اختبار التهيئة':'Test run'}:{};
+    return '<details class="siyrefs"><summary>'+ui('الدليل التقني','Technical evidence')+'</summary>'+(note?'<p>'+esc(note)+'</p>':'')+'<div class="siyrefs__list">'+refs.map(function(x){return '<span>'+esc(refNames[x[0]]||customerText(x[0]))+' <code>'+esc(x[1])+'</code></span>';}).join("")+'</div></details>';
   }
   /* عنوان المحادثة: قصّ عند حدود الكلمة */
   function title(t){ if(t.length<=32) return t; var c=t.slice(0,32), i=c.lastIndexOf(" "); return (i>12?c.slice(0,i):c).replace(/[،,.؟?!:]+$/,"")+"…"; }
@@ -1349,7 +1349,7 @@ var I = {
       var knowledge=data.owned_knowledge;
       dash.owned_knowledge=knowledge&&knowledge.schemaVersion===1&&typeof knowledge.companyId==='string'&&knowledge.companyId&&Array.isArray(knowledge.facts)&&knowledge.facts.every(function(f){return f&&typeof f==='object'&&f.value!==undefined;})?knowledge:null;
     }
-    if(Array.isArray(data.recent_work)) dash.recent_work=data.recent_work;
+    if(data.outcome_kind!=='employee_ready'&&Array.isArray(data.recent_work)) dash.recent_work=data.recent_work;
     if(data.company_settings&&typeof data.company_settings==='object'){
       dash.company_settings=data.company_settings;
       var settings=data.company_settings,voice=$("#companyVoice"),language=$("#companyLanguage"),dialect=$("#companyDialect"),preferred=$("#preferredWords"),forbidden=$("#forbiddenWords");
@@ -1450,19 +1450,25 @@ var I = {
     var labels={queued:ui('بانتظار التنفيذ','Queued'),running:ui('قيد التنفيذ','In progress'),failed:ui('تعذّر الطلب','Request failed'),unknown:ui('النتيجة غير مؤكدة','Outcome unverified'),awaiting_input:ui('بانتظارك','Needs your input'),cancelled:ui('أُلغي الطلب','Request cancelled')};
     return labels[state]?'<span class="request-state" data-state="'+state+'" role="status">'+labels[state]+'</span>':'';
   }
+  function siyReadinessReceipt(data){
+    var r=data.readiness_receipt,e=data.employee;
+    return r&&e&&e.status==='active'&&typeof r.employee_id==='string'&&r.employee_id===e.recordId&&r.flow_id===e.flowId&&r.test_environment==='TESTING'&&[r.flow_id,r.published_version_id,r.test_run_id].every(function(id){return typeof id==='string'&&/^[0-9A-Za-z]{21}$/.test(id);})&&(!Object.prototype.hasOwnProperty.call(r,'used_mock_trigger_data')||typeof r.used_mock_trigger_data==='boolean')?r:null;
+  }
   function siyResultRow(data){
-    var state=data.work_status, kind=data.outcome_kind, text=data.reply;
+    var state=data.work_status, kind=data.outcome_kind, text=data.reply,ready=siyReadinessReceipt(data);
+    if(kind==='employee_ready'){var complete=ready&&data.request_status==='succeeded'&&state==='succeeded';if(!complete)state='unknown';if(!text)text=complete?ui('اختبرنا طريقة العمل وفعّلناها. لم تُثبت نتيجة مهمة إنتاجية بعد.','We tested and activated the workflow. A production task result is not verified yet.'):ui('لم نتأكد من اختبار طريقة العمل وتفعيلها.','Workflow testing and activation are unverified.');}
     if(!text&&kind==='conversation_reply'&&state==='not_started') text=ui('اكتملت معالجة السؤال دون تشغيل أداة، لكن تفاصيل الرد غير متاحة.','The question was processed without running a tool, but the reply details are unavailable.');
     if(!text&&kind==='tool_result'&&state==='succeeded') text=ui('اكتمل استدعاء الأداة، لكن تفاصيل النتيجة غير متاحة.','The tool action completed, but the result details are unavailable.');
     if(!text&&kind==='employee_draft'&&state==='not_started') text=ui('حُفظت مسودة الموظف. لم يبدأ تشغيل أدواته.','The employee draft was saved. Its tools have not run.');
     if(!text&&data.request_status==='not_observed'&&state==='unknown') text=ui('لم نتأكد من نتيجة الطلب. لم نعد تنفيذه.','The request outcome is unverified. We did not run it again.');
     if(!text) text=(locale==='en'?{queued:'Request received, awaiting execution.',running:'Work in progress.',succeeded:'The run is recorded; verify the tool result.',failed:'Work could not be completed. Review the result details.',awaiting_input:'Work needs more information from you.',cancelled:'Request cancelled.'}:{queued:"تم استلام الطلب، بانتظار التنفيذ.",running:"العمل قيد التنفيذ.",succeeded:"سُجّل التشغيل؛ تحقّق من نتيجة الأداة.",failed:"تعذّر إكمال العمل. راجع تفاصيل النتيجة.",awaiting_input:"العمل ينتظر معلومات إضافية منك.",cancelled:"أُلغي الطلب."})[state]||ui("وصل الرد دون تفاصيل إضافية.","Response received without further details.");
-    var noExecution=["conversation_reply","employee_draft","unverified"].includes(kind),records=(noExecution?[]:Array.isArray(data.recent_work)?data.recent_work:[]).filter(function(r){return (!r.conversation_id||r.conversation_id===data.conversation_id)&&(!r.work_id||r.work_id===data.work_id);});
+    var noExecution=["conversation_reply","employee_draft","employee_ready","unverified"].includes(kind),records=(noExecution?[]:Array.isArray(data.recent_work)?data.recent_work:[]).filter(function(r){return (!r.conversation_id||r.conversation_id===data.conversation_id)&&(!r.work_id||r.work_id===data.work_id);});
     var scoped=records.filter(function(r){return r.conversation_id;});
+    var readiness=ready?siyRefsHtml([['طريقة العمل',ready.flow_id],['النسخة المنشورة',ready.published_version_id],['اختبار التهيئة',ready.test_run_id]],ui('اختبار تهيئة (TESTING)، وليس تنفيذ مهمة إنتاجية.','Configuration test (TESTING), not a production task.')+(ready.used_mock_trigger_data===true?ui(' استخدم بيانات مشغّل تجريبية.',' Used mock trigger data.'):'')):'';
     var draft=data.draft&&data.flow_id?siyRefsHtml([['طريقة العمل',data.flow_id],['المهمة',data.work_id]]):'';
     var receipts=Array.isArray(data.tool_receipts)?data.tool_receipts.filter(function(r){return r&&typeof r.name==='string'&&['returned','error'].includes(r.status);}).slice(0,80):[];
     var tools=receipts.length?'<details class="plan nr" style="margin-top:10px"><summary>'+ui('استدعاءات الأدوات','Tool calls')+' · '+receipts.length+'</summary>'+receipts.map(function(r,i){var run=r.name==='ap_run_action'&&typeof r.run_id==='string'&&/^[0-9A-Za-z]{21}$/.test(r.run_id)?r.run_id:'';return '<div class="prow"><b>'+(i+1)+'</b><span>'+esc(r.name)+' · '+(r.status==='error'?ui('تعذّر الاستدعاء','Call failed'):run&&r.outcome==='action_completed'?ui('اكتمل استدعاء الإجراء','Action completed'):ui('أعادت ردًا','Returned a response'))+(run?'<small>'+ui('مرجع الإجراء: ','Action run: ')+'<code>'+esc(run)+'</code></small>':'')+(r.output_limited===true?'<small>'+ui('اختصرت الخدمة بعض الحقول؛ اطلب نطاقًا أضيق لعرضها كاملة.','The service shortened some fields; request a narrower scope to display them in full.')+'</small>':'')+'</span></div>';}).join('')+'<p>'+ui('رد الأداة وحده لا يثبت نتيجة الخدمة.','A tool response alone does not prove the provider outcome.')+'</p></details>':'';
-    return {me:false,at:now(),requestState:state,t:siyReplyHtml(text)+tools+siyBuilderProposalHtml(data)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,ui('نتائج هذا الطلب','Results for this request')):'')+siyLegacyProofHtml(records)+draft,workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;}),builderApproval:data.approval&&data.approval.required===true?{id:data.approval.approval_id,conversationId:data.conversation_id}:null};
+    return {me:false,at:now(),requestState:state,t:siyReplyHtml(text)+readiness+tools+siyBuilderProposalHtml(data)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,ui('نتائج هذا الطلب','Results for this request')):'')+siyLegacyProofHtml(records)+draft,workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;}),builderApproval:data.approval&&data.approval.required===true?{id:data.approval.approval_id,conversationId:data.conversation_id}:null};
   }
   async function siyDecideBuilder(row,decision){
     if(!row||!row.builderApproval||row.siyInFlight) return;

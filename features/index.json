@@ -93,9 +93,12 @@
       "name": "تفعيل الموظف أو إيقافه",
       "aliases": ["تشغيل الموظف", "ايقاف الموظف", "زر الموظف", "employee state"],
       "state": "live",
-      "meaning": "يرسل حالة الموظف من الواجهة إلى خادم سيادة الذي يغير حالة Flow داخل مشروع الشركة. هذا غير موافقة تجهيز الموظف في الشات.",
+      "meaning": "تفعيل Flow الموظف داخل مشروع الشركة بعد اختبار النسخة الحالية وقراءة النسخة المنشورة. إيصال الجاهزية يثبت الاختبار والتفعيل فقط؛ الطلب المختلط يبقى غير مؤكد ولا يتحول الاختبار إلى نتيجة إنتاجية أو KPI.",
       "linear": "ABO-17",
       "locations": [
+        {"role": "readiness_contract", "path": "CHAT_CONTRACT.md", "anchor": "## Employee readiness receipt"},
+        {"role": "test_snapshot", "path": "lib/chat-outcome.mjs", "anchor": "export function flowTestSnapshot(version)"},
+        {"role": "readiness_ui", "path": "app/chat.js", "anchor": "function siyReadinessReceipt(data)"},
         {"role": "screen", "path": "app/chat.js", "anchor": "async function siySetEmployeeState(e)"},
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='employee_state')"},
         {"role": "provider", "path": "lib/tenant-projects.mjs", "anchor": "async function changeFlowStatus({tenantId,flowId,status})"},
