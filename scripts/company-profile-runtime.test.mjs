@@ -192,7 +192,7 @@ test('employee conversations persist idempotently inside the owning company',asy
       for(const [role,content] of [['user',user],['assistant',assistant]])if(!messages.some(row=>row.company_id===company_id&&row.conversation_id===conversation_id&&row.request_id===request_id&&row.role===role))messages.push({company_id,conversation_id,request_id,role,content,created_at:'2026-09-30T01:00:00Z'});
       return {rows:[]};
     }
-    if(sql.startsWith('SELECT id,employee_id,title'))return {rows:conversations.filter(row=>row.company_id===values[0])};
+    if(sql.startsWith('SELECT c.id,CASE WHEN EXISTS'))return {rows:conversations.filter(row=>row.company_id===values[0])};
     if(sql.startsWith('SELECT conversation_id,role'))return {rows:messages.filter(row=>row.company_id===values[0])};
     throw new Error(`unexpected query: ${sql}`);
   };
@@ -210,4 +210,44 @@ test('employee conversations persist idempotently inside the owning company',asy
   assert.equal(restored.length,1);assert.equal(restored[0].id,pilotId.conversationId);
   assert.deepEqual(restored[0].messages.map(message=>message.content),[GMAIL_PILOT_COMMAND,response.reply]);
   await assert.rejects(()=>recordGmailPilotConversation({profiles:service,companyId:'company_other',response}),{code:'pilot_conversation_unverified'});
+});
+
+test('reloaded main chat finds its saved draft without becoming an employee chat',async()=>{
+  const calls=[];
+  const employees=[{id:'11111111-1111-4111-8111-111111111111',company_id:'company_alpha',creation_request_id:'create_1',activepieces_flow_id:null,name:'موظف تسويق',status:'draft'}];
+  const conversations=[
+    {company_id:'company_alpha',id:'main_chat',employee_id:employees[0].id,title:'جهز موظف تسويق',updated_at:'2026-10-05T00:00:00Z'},
+    {company_id:'company_alpha',id:'employee_chat',employee_id:employees[0].id,title:'تابع العملاء',updated_at:'2026-10-05T00:01:00Z'},
+    {company_id:'company_beta',id:'main_chat',employee_id:null,title:'محادثة أخرى',updated_at:'2026-10-05T00:02:00Z'},
+  ];
+  const messages=[
+    {company_id:'company_alpha',conversation_id:'main_chat',request_id:'create_1',role:'user',content:'جهز موظف تسويق',created_at:'2026-10-05T00:00:00Z'},
+    {company_id:'company_alpha',conversation_id:'main_chat',request_id:'create_1',role:'assistant',content:'حُفظت مسودة',created_at:'2026-10-05T00:00:01Z'},
+    {company_id:'company_alpha',conversation_id:'employee_chat',request_id:'talk_1',role:'user',content:'تابع العملاء',created_at:'2026-10-05T00:01:00Z'},
+  ];
+  const hasDraftMessage=(companyId,conversationId)=>employees.some(employee=>employee.company_id===companyId&&messages.some(message=>message.company_id===companyId&&message.conversation_id===conversationId&&message.request_id===employee.creation_request_id&&message.role==='user'));
+  const query=async(sql,values=[])=>{
+    calls.push({sql,values});
+    if(sql.startsWith('SELECT e.id FROM siyadah_digital_employees e')){
+      const [companyId,conversationId]=values;
+      const employee=employees.find(row=>row.company_id===companyId&&hasDraftMessage(companyId,conversationId));
+      return {rows:employee?[{id:employee.id}]:[]};
+    }
+    if(sql.startsWith('SELECT id,company_id,activepieces_flow_id'))return {rows:employees.filter(row=>row.company_id===values[0]&&row.id===values[1])};
+    if(sql.startsWith('SELECT c.id,CASE WHEN EXISTS'))return {rows:conversations.filter(row=>row.company_id===values[0]).map(row=>({...row,employee_id:hasDraftMessage(row.company_id,row.id)?null:row.employee_id}))};
+    if(sql.startsWith('SELECT conversation_id,role'))return {rows:messages.filter(row=>row.company_id===values[0])};
+    throw new Error(`unexpected query: ${sql}`);
+  };
+  const service=createCompanyProfileService({query});
+  const draft=await service.findConversationDraft('company_alpha','main_chat');
+  assert.equal(draft?.id,employees[0].id);
+  assert.equal(await service.findConversationDraft('company_alpha','employee_chat'),null);
+  assert.equal(await service.findConversationDraft('company_beta','main_chat'),null);
+  const restored=await service.listConversations('company_alpha');
+  assert.equal(restored.find(item=>item.id==='main_chat').employee_id,null);
+  assert.equal(restored.find(item=>item.id==='employee_chat').employee_id,employees[0].id);
+  assert.equal(restored.find(item=>item.id==='main_chat').messages.length,2);
+  assert.equal((await service.listConversations('company_beta'))[0].employee_id,null);
+  assert.ok(calls.filter(call=>call.sql.includes('siyadah_conversation_messages m')).every(call=>call.sql.includes('m.company_id=e.company_id')&&call.sql.includes('m.request_id=e.creation_request_id')));
+  assert.ok(calls.every(call=>call.values[0]==='company_alpha'||call.values[0]==='company_beta'));
 });

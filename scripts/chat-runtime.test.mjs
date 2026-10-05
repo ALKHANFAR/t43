@@ -349,6 +349,21 @@ test('MCP action approval shows exact inputs and never places credentials in the
     assert.equal(p.requests.some(row=>Object.hasOwn(row.body,'projectId')||Object.hasOwn(row.body,'token')),false);
   }finally{p.close();}
 });
+test('approved flow draft updates the same employee in chat without claiming a run',async()=>{
+  const saved={...employee,recordId:'employee-draft',flowId:null,status:'disabled'};
+  const proposal={ok:true,conversation_id:'draft-chat',request_status:'succeeded',work_status:'awaiting_input',outcome_kind:'employee_draft',reply:'حُفظت المسودة.',employee:saved,approval:{required:true,kind:'tool_action',approval_id:'build-approval',summary:'تجهيز طريقة العمل',details:'{}'}};
+  const linked={...saved,flowId:'F12345678901234567890'};
+  const approved={ok:true,conversation_id:'draft-chat',request_status:'succeeded',work_status:'not_started',outcome_kind:'employee_draft',reply:'بُنيت طريقة العمل كمسودة.',employee:linked};
+  const p=await page({hydrate:{...empty,team:[saved]},message:proposal,approve:approved});try{
+    send(p,'جهّز الموظف');await flush();
+    p.d.querySelector('[data-siy-approval="approve"]').click();await flush();
+    assert.equal(p.w.EMPS.length,1);
+    assert.equal(p.w.EMPS[0].id,saved.recordId);
+    assert.equal(p.w.EMPS[0].flowId,linked.flowId);
+    assert.match(thread(p),/بُنيت طريقة العمل كمسودة/);
+    assert.doesNotMatch(thread(p),/آخر تشغيل ناجح|نتيجة الخدمة/);
+  }finally{p.close();}
+});
 test('browser storage cannot supply company identity or suppress server hydration',async()=>{
   const p=await page({storage:{siyadah_company:'Untrusted',siyadah_token:'attacker-token'}});try{
     assert.equal(p.w.__SIY_REAL__,true);assert.equal(p.requests.length,2);assert.equal(p.requests[0].credentials,'include');

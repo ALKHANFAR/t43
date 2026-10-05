@@ -1436,6 +1436,7 @@ var I = {
     row.siyInFlight=true; row.t=siyReplyHtml(decision==='approve'?ui('جارٍ تنفيذ الإجراء داخل مساحة شركتك…','Running the action in your workspace…'):ui('جارٍ إلغاء الإجراء…','Cancelling the action…')); siyDraw();
     try{
       var data=await siyRequest({op:'approve',request_id:requestId,conversation_id:row.builderApproval.conversationId,approval_id:row.builderApproval.id,decision:decision});
+      siyMerge(data,false);
       Object.assign(row,siyResultRow(data)); row.builderApproval=null; row.siyInFlight=false; siyDraw();
     }catch(error){ row.siyInFlight=false; row.t=siyReplyHtml(ui('نتحقق من نتيجة القرار بنفس الطلب، دون إعادة تشغيل الأداة.','Checking this decision with the same request, without running the tool again.')); siyDraw(); siyPoll('request_'+requestId,curList(),row,0); }
   }
