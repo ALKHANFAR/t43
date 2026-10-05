@@ -177,9 +177,23 @@ test('invalid calls and company boundaries are answered to the model without dis
   const answer=await run();
   assert.equal(answer.reply,'لم يُنفّذ شيء خارج مشروع الشركة.');
   assert.deepEqual(log.tools,[]);
+  assert.deepEqual(JSON.parse(JSON.stringify(answer.toolReceipts)),[]);
   const replies=toolMessages(log.model[1]);
   assert.equal(replies.length,4);
   assert.match(replies[0],/mcp_tool_invalid/);assert.match(replies[2],/mcp_arguments_invalid/);assert.match(replies[3],/connection_not_owned/);
+});
+
+test('the chat keeps ordered MCP results without storing tool inputs or claiming provider success',async()=>{
+  let calls=0;
+  const {run}=setup({script:[
+    use(['ap_run_action',{pieceName:'gmail',actionName:'get_profile',connectionExternalId:'owned'}]),
+    use(['ap_run_action',{pieceName:'gmail',actionName:'get_profile',connectionExternalId:'owned'}]),
+    say('المحاولة الأولى أخطأت، والثانية أعادت ردًا.'),
+  ],toolResults:{ap_run_action:()=>++calls===1?{isError:true,content:[{type:'text',text:'invalid_request: private detail'}]}:{content:[{type:'text',text:'✅ Get Profile completed (run RRR). private result'}]}}});
+  const answer=await run();
+  assert.deepEqual(JSON.parse(JSON.stringify(answer.toolReceipts)),[{name:'ap_run_action',status:'error'},{name:'ap_run_action',status:'returned'}]);
+  assert.equal(calls,2);
+  assert.doesNotMatch(JSON.stringify(answer.toolReceipts),/private|connectionExternalId|owned|invalid_request/);
 });
 
 test('the step limit ends with a written account instead of a fixed sentence',async()=>{
@@ -279,6 +293,7 @@ test('a second message waits for the first result before reaching the model',asy
     tenantSession:async()=>({session:{companyId:'company-1'},account:{company_name:'شركة'},headers:{}}),
     companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),
     completedWithoutExecution:(kind,response)=>({...response,request_status:'succeeded',outcome_kind:kind,work_status:'not_started'}),
+    failedChatExecution:()=>({ok:true,request_status:'failed'}),
     deepseekReply:async args=>{modelCalls++;if(args.message==='r1')await new Promise(resolve=>{releaseFirst=resolve;});return {reply:`رد ${args.message}: ${args.history.length}`};},
   };
   const publicChat=runInNewContext(`${source.slice(jsonStart,jsonEnd)}\n${source.slice(chatStart,chatEnd)}; publicChat`,ctx);

@@ -250,7 +250,7 @@
         {"role": "route", "path": "server.mjs", "anchor": "if(answer.flowToolAttempted||answer.effects?.length)"},
         {"role": "flow_tool", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function employeeFlowMcpToolName("},
         {"role": "mcp_transport", "path": "lib/activepieces-mcp.mjs", "anchor": "async function rpc(token,method,params)"},
-        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "For a provider result, require"},
+        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "For a provider result from a Flow"},
         {"role": "test", "path": "scripts/mcp-flow-scope-runtime.test.mjs", "anchor": "employee Flow ID comes from its saved record"}
       ]
     },
@@ -263,6 +263,8 @@
       "linear": "ABO-48",
       "locations": [
         {"role": "chat_route", "path": "server.mjs", "anchor": "async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null"},
+        {"role": "tool_receipt", "path": "server.mjs", "anchor": "const effects=[],toolReceipts=[];"},
+        {"role": "tool_receipt_render", "path": "app/chat.js", "anchor": "var receipts=Array.isArray(data.tool_receipts)"},
         {"role": "draft_build", "path": "server.mjs", "anchor": "async function buildOwnedDraftFlow("},
         {"role": "approval_route", "path": "server.mjs", "anchor": "if(input.op==='approve')"},
         {"role": "table_readback", "path": "lib/chat-intelligence.mjs", "anchor": "export function createdTableReadback("},
