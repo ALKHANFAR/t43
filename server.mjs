@@ -11,7 +11,7 @@ import {createFirecrawlClient,FirecrawlError} from './lib/firecrawl.mjs';
 import {createCompanyProfileService,CompanyProfileError} from './lib/company-profile.mjs';
 import {createAccountAuthService,AccountAuthError} from './lib/account-auth.mjs';
 import {createMailer,MailerError} from './lib/mailer.mjs';
-import {builtFlowResult,conversationMemory,employeeRequestMode,explicitNewEmployee,flowName,hasActiveFlowConnections} from './lib/chat-intelligence.mjs';
+import {builtFlowResult,conversationMemory,createdTableReadback,employeeRequestMode,explicitNewEmployee,flowName,hasActiveFlowConnections} from './lib/chat-intelligence.mjs';
 import {completedWithoutExecution,failedChatExecution} from './lib/chat-outcome.mjs';
 import {assertSchemaReady} from './lib/schema-ready.mjs';
 import {toolIcon} from './lib/tool-icons.mjs';
@@ -352,7 +352,7 @@ function employee(flow){
   const name=String(flow?.version?.displayName||flow?.displayName||'موظف').trim();
   return {recordId:`employee_${flow.id}`,flowId:flow.id,name,role:'موظف',initial:name.slice(0,1),status:String(flow.status||'DISABLED').toUpperCase()==='ENABLED'?'active':'disabled',tools:[],rules:[],instructions:'',how:[]};
 }
-async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null,mcp=null,companyId=null,conversationId=null,deadlineMs=null}){
+async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null,mcp=null,companyId=null,conversationId=null,deadlineMs=null,excludedTools=[]}){
   const key=process.env.DEEPSEEK_API_KEY;
   if(!key)throw new TenantProjectError('assistant_not_configured','مساعد سيادة غير مهيأ الآن.',503);
   const deadline=deadlineMs?Date.now()+deadlineMs:null;
@@ -382,7 +382,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
     }
   }
   const readOnly=name=>/^ap_(?:search_|list_|get_|read_|research_|resolve_|flow_structure$|validate_flow$|validate_step_config$|setup_guide$)/.test(name);
-  const tools=available.filter(tool=>/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(tool.name)&&tool.name!=='siyadah_run_employee_flow'&&!(draftEmployee?.activepieces_flow_id&&tool.name==='ap_build_flow')&&visibleMcpTool(tool,employee)&&(!employee||employeeMcpToolReady(tool,employee))).map(tool=>({type:'function',function:{name:tool.name,description:String(tool.description||'').slice(0,1000),parameters:tool.inputSchema||{type:'object',properties:{}}}}));
+  const tools=available.filter(tool=>/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(tool.name)&&tool.name!=='siyadah_run_employee_flow'&&!excludedTools.includes(tool.name)&&!(draftEmployee?.activepieces_flow_id&&tool.name==='ap_build_flow')&&visibleMcpTool(tool,employee)&&(!employee||employeeMcpToolReady(tool,employee))).map(tool=>({type:'function',function:{name:tool.name,description:String(tool.description||'').slice(0,1000),parameters:tool.inputSchema||{type:'object',properties:{}}}}));
   if(employee?.status==='active'&&employee.activepieces_flow_id)tools.push({type:'function',function:{name:'siyadah_run_employee_flow',description:'شغّل Flow هذا الموظف الموجود عندما يطلب المدير تنفيذ مهمته الآن. لا تستخدمه للسؤال أو لتعديل خطة العمل أو خطوات Flow.',parameters:{type:'object',properties:{},additionalProperties:false}}});
   if(available.length)messages[0].content+='\nأدوات Activepieces متاحة لمشروع هذه الشركة فقط. استخدم الاكتشاف وفحص المدخلات والاتصال قبل أي إجراء. لا تفترض نجاحًا من الوصف أو اتصال محفوظ. أي أداة قد تغيّر حالة أو تستدعي تطبيقًا خارجيًا ستتوقف حتى موافقة واضحة؛ لا تعد المستخدم بأنها نُفذت قبل عودة نتيجتها.';
   if(draftEmployee)messages[0].content+='\nالمستخدم لديه مسودة موظف محفوظة باسم currentDraft. عند طلب تجهيزها ولا يوجد لها flowId، اكتشف الأدوات والاتصالات واستخدم ap_build_flow لبناء طريقة عملها الآن كمسودة؛ توقف عند الموافقة المطلوبة ولا تكتفِ بالوصف أو تدّع التنفيذ. إذا وُجد flowId، اقرأ طريقة العمل وعدّلها بالأدوات المناسبة بدل إنشاء Flow جديد. لا تنشئ موظفًا ثانيًا ولا تنشر أو تشغّل المسودة. إن غاب اتصال مطلوب، اشرح ما ينقص وأكمل ما تسمح به الأدوات كمسودة. احتفظ بالمحادثة العامة وقدراتها لبقية الطلبات.';
@@ -595,6 +595,24 @@ async function publicChat(req,res){
           if(flow.status!=='DISABLED')throw new TenantProjectError('flow_state_invalid','طريقة العمل لم تُحفظ كمسودة متوقفة.',409);
           const reply=flowDraft.incomplete?'حُفظت طريقة العمل كمسودة في مشروع شركتك، وبعض خطواتها تحتاج إكمالًا قبل التشغيل.':'بُنيت طريقة العمل وحُفظت كمسودة متوقفة في مشروع شركتك. لم تُشغّل مهمة بعد.';
           const response=completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply,flow_id:flowDraft.flowId,draft:true});
+          await profiles.recordConversation({companyId,conversationId,employeeId:null,requestId,userMessage:pending.summary,assistantMessage:reply});
+          const settled=await profiles.settleChatRequest({companyId,requestId,status:'succeeded',httpStatus:200,response,claimToken:claim.claimToken});activeRequest=null;
+          return json(res,200,settled.response,sessionHeaders);
+        }
+      }
+      if(pending.toolName==='ap_create_table'){
+        const listed=await mcp.call(companyId,'tools/call',{name:'ap_list_tables',arguments:{}});
+        const table=createdTableReadback(result,listed);
+        if(table){
+          const profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId);
+          const conversation=(await profiles.listConversations(companyId)).find(item=>item.id===conversationId),draft=await profiles.findConversationDraft(companyId,conversationId);
+          const completed=`تحققنا من إنشاء جدول «${table.name}» في مشروع الشركة (id: ${table.id}, externalId: ${table.externalId}).`;
+          let answer;
+          try{
+            answer=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history:[...(conversation?.messages||[]),{role:'assistant',content:completed}],message:'تابع هدف المستخدم في هذه المحادثة بعد تجهيز الجدول المؤكد. إذا احتاج الهدف طريقة عمل، اقترح بناء Flow كمسودة عبر الأدوات والموافقة المعتادة. لا تنشئ جدولًا آخر ولا تدّع تشغيل مهمة.',draftEmployee:draft?.status==='draft'?draft:null,mcp,companyId,conversationId,deadlineMs:25_000,excludedTools:['ap_create_table']});
+          }catch(error){console.error('table continuation failed',error?.code||error?.name||'unknown_error');}
+          const reply=`${completed} ${answer?.reply||'لم يكتمل تجهيز الخطوة التالية؛ يمكنك المتابعة من هذه المحادثة.'}`;
+          const response={ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:answer?.approval?'awaiting_input':'not_started',outcome_kind:'conversation_reply',reply,table:{id:table.id,externalId:table.externalId,name:table.name},...(answer?.approval?{approval:answer.approval}:{})};
           await profiles.recordConversation({companyId,conversationId,employeeId:null,requestId,userMessage:pending.summary,assistantMessage:reply});
           const settled=await profiles.settleChatRequest({companyId,requestId,status:'succeeded',httpStatus:200,response,claimToken:claim.claimToken});activeRequest=null;
           return json(res,200,settled.response,sessionHeaders);

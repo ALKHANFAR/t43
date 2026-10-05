@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {builtFlowResult,conversationMemory,employeeRequestMode,explicitNewEmployee,flowName,hasActiveFlowConnections} from '../lib/chat-intelligence.mjs';
+import {builtFlowResult,conversationMemory,createdTableReadback,employeeRequestMode,explicitNewEmployee,flowName,hasActiveFlowConnections} from '../lib/chat-intelligence.mjs';
 
 const server=await readFile(new URL('../server.mjs',import.meta.url),'utf8');
 const chat=await readFile(new URL('../app/chat.js',import.meta.url),'utf8');
@@ -140,4 +140,30 @@ test('generic MCP flow build is returned as a disabled draft only after owned re
   assert.match(branch,/completedWithoutExecution\('conversation_reply',\{ok:true,conversation_id:conversationId,reply,flow_id:flowDraft\.flowId,draft:true\}\)/);
   assert.ok(branch.indexOf('ownedFlow(companyId,flowDraft.flowId)')<branch.indexOf("completedWithoutExecution('conversation_reply'"));
   assert.equal(builtFlowResult({content:[{type:'text',text:'Flow built successfully'}]}),null);
+});
+
+test('table creation is confirmed only by one exact structured inventory match',()=>{
+  const table={id:'T12345678901234567890',externalId:'E12345678901234567890',name:'Leads'};
+  const created={structuredContent:table},listed={structuredContent:{count:1,tables:[table]}};
+  assert.deepEqual(createdTableReadback(created,listed),table);
+  assert.equal(createdTableReadback({content:[{type:'text',text:'Table created'}]},listed),null);
+  assert.equal(createdTableReadback({...created,isError:true},listed),null);
+  assert.equal(createdTableReadback(created,{...listed,isError:true}),null);
+  assert.equal(createdTableReadback(created,{structuredContent:{count:1,tables:[{...table,name:'Other'}]}}),null);
+  assert.equal(createdTableReadback(created,{structuredContent:{count:2,tables:[table]}}),null);
+  assert.equal(createdTableReadback(created,{structuredContent:{count:2,tables:[table,table]}}),null);
+  assert.equal(createdTableReadback(created,{content:[{type:'text',text:'The table is present'}]}),null);
+});
+
+test('confirmed table resumes planning without creating another table and keeps flow build approval',()=>{
+  const start=server.indexOf("if(pending.toolName==='ap_create_table')"),end=server.indexOf('const raw=Array.isArray(result.content)',start),continuation=server.slice(start,end);
+  assert.ok(start>=0&&end>start);
+  assert.match(continuation,/name:'ap_list_tables'/);
+  assert.match(continuation,/createdTableReadback\(result,listed\)/);
+  assert.match(continuation,/deepseekReply\(/);
+  assert.match(continuation,/excludedTools:\['ap_create_table'\]/);
+  assert.match(continuation,/answer\?\.approval\?\{approval:answer\.approval\}/);
+  assert.match(server,/!excludedTools\.includes\(tool\.name\)/);
+  assert.ok(continuation.indexOf('createdTableReadback(result,listed)')<continuation.indexOf('deepseekReply('));
+  assert.match(server.slice(end,end+700),/outcome_kind:'unverified'/);
 });

@@ -349,6 +349,24 @@ test('MCP action approval shows exact inputs and never places credentials in the
     assert.equal(p.requests.some(row=>Object.hasOwn(row.body,'projectId')||Object.hasOwn(row.body,'token')),false);
   }finally{p.close();}
 });
+test('table approval keeps the next flow approval visible and sends each approval once',async()=>{
+  const proposal={ok:true,conversation_id:'table-flow-chat',request_status:'succeeded',work_status:'awaiting_input',outcome_kind:'conversation_reply',reply:'سأجهز جدول العملاء.',approval:{required:true,kind:'tool_action',approval_id:'table-approval',summary:'إنشاء الجدول',details:'{}'}};
+  let decisions=0;
+  const p=await page({message:proposal,approve:()=>++decisions===1?{
+    ok:true,conversation_id:'table-flow-chat',request_status:'succeeded',work_status:'awaiting_input',outcome_kind:'conversation_reply',reply:'تحققنا من إنشاء الجدول. جهزت خطة التدفق للمراجعة.',table:{id:'T12345678901234567890',externalId:'E12345678901234567890',name:'Leads'},approval:{required:true,kind:'tool_action',approval_id:'flow-approval',summary:'بناء طريقة العمل',details:'{}'},
+  }:{ok:true,conversation_id:'table-flow-chat',request_status:'succeeded',work_status:'not_started',outcome_kind:'conversation_reply',reply:'حُفظت طريقة العمل كمسودة.',flow_id:'F12345678901234567890',draft:true}});
+  try{
+    send(p,'ابنِ فلو لجمع العملاء');await flush();
+    p.d.querySelector('[data-siy-approval="approve"]').click();await flush();
+    assert.match(thread(p),/تحققنا من إنشاء الجدول/);
+    assert.ok(p.d.querySelector('[data-siy-approval="approve"]'));
+    p.d.querySelector('[data-siy-approval="approve"]').click();await flush();
+    assert.deepEqual(p.requests.filter(row=>row.body.op==='approve').map(row=>row.body.approval_id),['table-approval','flow-approval']);
+    assert.equal(decisions,2);
+    assert.match(thread(p),/حُفظت طريقة العمل كمسودة/);
+    assert.equal(p.d.querySelector('[data-siy-approval="approve"]'),null);
+  }finally{p.close();}
+});
 test('approved flow draft updates the same employee in chat without claiming a run',async()=>{
   const saved={...employee,recordId:'employee-draft',flowId:null,status:'disabled'};
   const proposal={ok:true,conversation_id:'draft-chat',request_status:'succeeded',work_status:'awaiting_input',outcome_kind:'employee_draft',reply:'حُفظت المسودة.',employee:saved,approval:{required:true,kind:'tool_action',approval_id:'build-approval',summary:'تجهيز طريقة العمل',details:'{}'}};
