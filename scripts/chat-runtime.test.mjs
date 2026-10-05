@@ -1009,3 +1009,45 @@ test('readiness preserves the model reply and does not complete an uncertain mix
     assert.doesNotMatch(thread(p),/اختبرنا طريقة العمل وفعّلناها|✓|فرصة أ/);assert.equal(p.d.querySelector('.m__c img'),null);
   }finally{p.close();}
 });
+
+const publishedEmployee={...employee,flowId:'f'.repeat(21),instructions:'تعليمات المحادثة {{kept}}'};
+const publishedProjection={flow_id:publishedEmployee.flowId,published_version_id:'v'.repeat(21),flow_status:'ENABLED',read_status:'verified',steps:[{step_name:'step_1',display_name:'التحليل',prompt:'<img src=x onerror=alert(1)> {{step_2.output}}\nMCP original'},{step_name:'step_2',display_name:'Agent task',prompt:'نفّذ المهمة',agent_instructions_unverified:true}]};
+for(const locale of ['ar','en'])test('published instructions are lazy, literal, separate from conversation and honest about saved agent '+locale,async()=>{
+  const p=await page({locale,hash:'#e='+publishedEmployee.recordId,hydrate:{...empty,team:[publishedEmployee]},employee_instructions:body=>({ok:true,published_instructions:publishedProjection})});try{
+    assert.equal(p.requests.filter(r=>r.body?.read_published).length,0);
+    p.d.querySelector('#instrTgl').click();p.d.querySelector('#instr').value='unsaved {{draft}}';await flush();await flush();
+    const panel=p.d.querySelector('#publishedInstr');assert.equal(panel.querySelector('img'),null);assert.match(panel.textContent,/<img src=x onerror=alert\(1\)> \{\{step_2.output\}\}/);assert.match(panel.textContent,/MCP original/);assert.equal(panel.querySelectorAll('details.adv').length,2);
+    assert.match(panel.textContent,locale==='en'?/task input; the saved agent’s own instructions are unverified/:/مدخل مهمة للوكيل؛ تعليمات الوكيل المحفوظ نفسه لم تُتحقق/);
+    assert.equal(p.d.querySelector('#instr').value,'unsaved {{draft}}');assert.equal(p.requests.at(-1).body.employee_id,publishedEmployee.recordId);assert.equal(p.requests.at(-1).body.read_published,true);
+  }finally{p.close();}
+});
+
+test('published projection states never infer runnable instructions or a provider result',async()=>{
+  for(const projection of [{...publishedProjection,flow_status:'DISABLED',steps:[]},{flow_id:publishedEmployee.flowId,read_status:'not_published'},{flow_id:publishedEmployee.flowId,read_status:'unavailable'},{...publishedProjection,flow_id:'wrong'},{...publishedProjection,published_version_id:'<script>'}]){
+    const p=await page({hash:'#e='+publishedEmployee.recordId,hydrate:{...empty,team:[publishedEmployee]},employee_instructions:{ok:true,published_instructions:projection}});try{
+      p.d.querySelector('#instrTgl').click();await flush();await flush();const panel=p.d.querySelector('#publishedInstr');
+      if(projection.flow_status==='DISABLED'){assert.match(panel.textContent,/طريقة العمل متوقفة/);assert.match(panel.textContent,/لا توجد تعليمات خطوات/);}
+      else if(projection.read_status==='not_published')assert.match(panel.textContent,/لا توجد نسخة منشورة/);
+      else assert.match(panel.textContent,/تعذّرت قراءة/);
+      assert.equal(panel.querySelector('script'),null);assert.equal(p.requests.filter(r=>r.body?.op==='message').length,0);
+    }finally{p.close();}
+  }
+});
+
+test('late published response cannot overwrite another employee panel or unsaved edits',async()=>{
+  let resolveRead;const other={...publishedEmployee,recordId:'other',name:'آخر',flowId:'o'.repeat(21),instructions:'other instructions'};
+  const p=await page({hash:'#e='+publishedEmployee.recordId,hydrate:{...empty,team:[publishedEmployee,other]},employee_instructions:body=>body.employee_id===publishedEmployee.recordId?new Promise(resolve=>{resolveRead=resolve;}):{ok:true,published_instructions:{...publishedProjection,flow_id:other.flowId,steps:[]}}});try{
+    p.d.querySelector('#instrTgl').click();await flush();
+    p.d.querySelectorAll('#emps .emp')[1].click();p.d.querySelector('#instrTgl').click();p.d.querySelector('#instr').value='other unsaved';await flush();await flush();
+    resolveRead({ok:true,published_instructions:publishedProjection});await flush();await flush();
+    assert.equal(p.d.querySelector('#instr').value,'other unsaved');assert.doesNotMatch(p.d.querySelector('#publishedInstr').textContent,/MCP original/);assert.match(p.d.querySelector('#publishedInstr').textContent,/لا توجد تعليمات خطوات/);
+  }finally{p.close();}
+});
+
+test('reopening instructions refreshes publication and ignores an older response',async()=>{
+  let firstResolve,count=0;const p=await page({hash:'#e='+publishedEmployee.recordId,hydrate:{...empty,team:[publishedEmployee]},employee_instructions:()=>++count===1?new Promise(resolve=>{firstResolve=resolve;}):{ok:true,published_instructions:{...publishedProjection,steps:[{prompt:'latest published'}]}}});try{
+    p.d.querySelector('#instrTgl').click();await flush();p.d.querySelector('#instr').value='still unsaved';p.d.querySelector('#instrTgl').click();p.d.querySelector('#instrTgl').click();await flush();await flush();
+    firstResolve({ok:true,published_instructions:publishedProjection});await flush();await flush();
+    assert.match(p.d.querySelector('#publishedInstr').textContent,/latest published/);assert.doesNotMatch(p.d.querySelector('#publishedInstr').textContent,/MCP original/);assert.equal(p.d.querySelector('#instr').value,'still unsaved');assert.equal(count,2);
+  }finally{p.close();}
+});
