@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {builtFlowResult,conversationMemory,createdTableReadback,employeeRequestMode,explicitNewEmployee,flowName,hasActiveFlowConnections} from '../lib/chat-intelligence.mjs';
+import {builtFlowResult,conversationMemory,createdTableReadback,flowName,hasActiveFlowConnections} from '../lib/chat-intelligence.mjs';
 
 const server=await readFile(new URL('../server.mjs',import.meta.url),'utf8');
 const chat=await readFile(new URL('../app/chat.js',import.meta.url),'utf8');
@@ -26,25 +26,11 @@ test('central chat uses company knowledge, settings and team instead of the rigi
   assert.match(chat,/<strong>\$1<\/strong>/);
 });
 
-test('employee exploration does not create a flow until the user gives an explicit creation command',()=>{
-  assert.equal(employeeRequestMode('أبغى موظف يتابع العملاء وما يضيع أحد'),'explore');
-  assert.equal(employeeRequestMode('وش أفضل موظف رقمي للمبيعات؟'),'explore');
-  assert.equal(employeeRequestMode('جهّز الموظف «منسق العملاء»'),'create');
-  assert.equal(employeeRequestMode('أنشئ موظف رقمي للمبيعات'),'create');
+test('the model chooses when to build while a quoted employee name remains usable',()=>{
   assert.equal(flowName('جهّز الموظف «منسق العملاء»'),'منسق العملاء');
-  assert.match(server,/employeeRequestMode\(input\.message\)==='create'/);
-  assert.doesNotMatch(server,/if\(wantsEmployee\(input\.message\)\)/);
-});
-
-test('a fresh employee request is distinct from preparing a saved employee or a generic flow',()=>{
-  assert.equal(explicitNewEmployee('أنشئ موظف موارد بشرية'),true);
-  assert.equal(explicitNewEmployee('انشئ لي موظف رقمي جديد'),true);
-  assert.equal(explicitNewEmployee('جهّز الموظف «نُور»'),false);
-  assert.equal(explicitNewEmployee('جهز الفلو'),false);
-  assert.equal(employeeRequestMode('جهز الفلو'),'create');
-  assert.equal(employeeRequestMode('ابنِ فلو متابعة العملاء'),'create');
-  assert.match(server,/const newEmployee=creating&&\/موظف/);
-  assert.match(server,/explicitNewEmployee\(input\.message\)/);
+  assert.doesNotMatch(server,/employeeRequestMode\(input\.message\)/);
+  assert.doesNotMatch(server,/const newEmployee=creating/);
+  assert.match(server,/مستشار أعمال متمرس/);
 });
 
 test('working memory keeps older user constraints outside the recent message window',()=>{
@@ -121,7 +107,7 @@ test('activation accepts only complete project connection readback for every req
 });
 
 test('employee activation reads provider state after publish and requires structured validation',()=>{
-  const start=server.indexOf("if(input.op==='employee_state')"),end=server.indexOf("if(input.op==='employee_instructions')",start),activation=server.slice(start,end);
+  const start=server.indexOf('async function changeEmployeeState('),end=server.indexOf("if(input.op==='employee_state')",start),activation=server.slice(start,end);
   assert.ok(start>=0&&end>start);
   assert.match(activation,/validation\.structuredContent\?\.valid!==true/);
   assert.match(activation,/name:'ap_lock_and_publish'/);
@@ -130,6 +116,8 @@ test('employee activation reads provider state after publish and requires struct
   assert.ok(activation.lastIndexOf('ownedFlow(companyId,saved.activepieces_flow_id)')>activation.indexOf("name:'ap_lock_and_publish'"));
   assert.match(activation,/assertOwnedExternal\(\{tenantId:companyId,externalId,pieceName:/);
   assert.ok(activation.indexOf('assertOwnedExternal(')<activation.indexOf("name:'ap_validate_flow'"));
+  assert.match(server.slice(end),/if\(input\.op==='employee_state'\)[\s\S]*changeEmployeeState\(saved,status\)/);
+  assert.match(server.slice(end),/if\(input\.op==='resume_employee_activation'\)[\s\S]*changeEmployeeState\(saved,'active'\)/);
 });
 
 test('generic MCP flow build is returned as a disabled draft only after owned readback',()=>{

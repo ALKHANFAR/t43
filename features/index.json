@@ -22,12 +22,12 @@
       "name": "حفظ موظف كمسودة من الشات",
       "aliases": ["انشاء موظف", "تجهيز موظف", "مسودة الموظف", "employee draft from chat"],
       "state": "live_needs_change",
-      "meaning": "يحفظ الشات الموظف في سيادة أولًا، ثم يمرر المسودة إلى المساعد لاقتراح بناء Flow عبر MCP بعد الموافقة. ربط Flow بالمستخدم يتطلب قراءة مشروع الشركة والنتيجة؛ المسودة وحدها لا تعني التشغيل.",
+      "meaning": "يفهم النموذج هدف الشركة وسياقها ويختار بناء Flow عبر MCP عند الحاجة. عند أول بناء فقط يحفظ سيادة سجل الموظف ويربطه بعد قراءة ملكية Flow في مشروع الشركة؛ لا ينشئ مسودة من كلمات الطلب وحدها. المسودة والبناء لا يثبتان تجربة أو دوامًا.",
       "linear": "ABO-55",
       "pr": "https://github.com/ALKHANFAR/t43/pull/17",
       "locations": [
-        {"role": "route", "path": "server.mjs", "anchor": "const creating=employeeRequestMode(input.message)==='create'"},
-        {"role": "intent", "path": "lib/chat-intelligence.mjs", "anchor": "export function employeeRequestMode(message)"},
+        {"role": "route", "path": "server.mjs", "anchor": "const draft=existing?.status==='draft'?existing:null"},
+        {"role": "build", "path": "server.mjs", "anchor": "if(name==='ap_build_flow'&&!employee)"},
         {"role": "storage", "path": "lib/company-profile.mjs", "anchor": "async function createManualEmployeeDraft({companyId,name,requestId})"},
         {"role": "migration", "path": "migrations/0002-local-employee-drafts.sql", "anchor": "ADD COLUMN IF NOT EXISTS creation_request_id"},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "| Employee saved |"},
@@ -186,7 +186,7 @@
         {"role": "message", "path": "app/chat.js", "anchor": "if(!text&&data.request_status==='not_observed'&&state==='unknown')"},
         {"role": "retry", "path": "app/chat.js", "anchor": "row.siyRetry=function(){submit(true);}"},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "| Uncertain outcome |"},
-        {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "terminal unknown request shows verification warning and never a success mark"}
+        {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "terminal unknown request shows the actual tool account without claiming success"}
       ]
     },
     {
@@ -247,7 +247,7 @@
       "linear": "ABO-43",
       "pr": "https://github.com/ALKHANFAR/t43/pull/15",
       "locations": [
-        {"role": "route", "path": "server.mjs", "anchor": "if(answer.flowToolAttempted)"},
+        {"role": "route", "path": "server.mjs", "anchor": "if(answer.flowToolAttempted||answer.effects?.length)"},
         {"role": "flow_tool", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function employeeFlowMcpToolName("},
         {"role": "mcp_transport", "path": "lib/activepieces-mcp.mjs", "anchor": "async function rpc(token,method,params)"},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "For a provider result, require"},
@@ -276,7 +276,10 @@
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "## Project MCP chat"},
         {"role": "test", "path": "scripts/activepieces-mcp-runtime.test.mjs", "anchor": "MCP OAuth grant is bound to the server-owned company project"},
         {"role": "employee_flow_test", "path": "scripts/mcp-flow-scope-runtime.test.mjs", "anchor": "employee Flow ID comes from its saved record"},
-        {"role": "open_tools_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "the model builds, validates and publishes in one request and writes the reply itself"}
+        {"role": "open_tools_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "the model builds, tests and publishes in one request and writes the reply itself"},
+        {"role": "activation_resume", "path": "server.mjs", "anchor": "if(input.op==='resume_employee_activation')"},
+        {"role": "activation_intent", "path": "lib/company-profile.mjs", "anchor": "async function pendingEmployeeActivation(companyId,employeeId=null)"},
+        {"role": "activation_resume_test", "path": "scripts/employee-activation-resume-runtime.test.mjs", "anchor": "manual activation and connection resume share one tested activation path"}
       ]
     },
     {

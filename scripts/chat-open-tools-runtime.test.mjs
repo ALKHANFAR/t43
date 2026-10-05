@@ -12,6 +12,7 @@ const source=readFileSync(new URL('../server.mjs',import.meta.url),'utf8');
 const start=source.indexOf('async function buildOwnedDraftFlow('),end=source.indexOf('async function publicChat(',start);
 assert.ok(start>0&&end>start);
 const flowId='F'.repeat(21);
+const runId='R'.repeat(21);
 const publishedFlow={id:flowId,status:'ENABLED',publishedVersionId:'v1',version:{id:'v1',displayName:'نور',trigger:{settings:{pieceName:'@activepieces/piece-mcp',triggerName:'mcp_tool',input:{toolName:'nour',returnsResponse:true}}}}};
 const flowToolName=employeeFlowMcpToolName(publishedFlow);
 const hint=readOnlyHint=>({annotations:{readOnlyHint}});
@@ -19,6 +20,8 @@ const catalog=[
   {name:'ap_list_connections',...hint(true),inputSchema:{type:'object',properties:{}}},
   {name:'ap_research_pieces',...hint(true)},
   {name:'ap_validate_flow',...hint(true),inputSchema:{type:'object',properties:{flowId:{type:'string'}}}},
+  {name:'ap_test_flow',...hint(false),inputSchema:{type:'object',properties:{flowId:{type:'string'}}}},
+  {name:'ap_get_run',...hint(true),inputSchema:{type:'object',properties:{flowRunId:{type:'string'}}}},
   {name:'ap_build_flow',...hint(false)},
   {name:'ap_add_step',...hint(false),inputSchema:{type:'object',properties:{flowId:{type:'string'}}}},
   {name:'ap_lock_and_publish',...hint(false),inputSchema:{type:'object',properties:{flowId:{type:'string'}}}},
@@ -29,15 +32,17 @@ const catalog=[
 const say=content=>({content});
 const use=(...calls)=>({content:'',tool_calls:calls.map(([name,args],index)=>({id:`call_${name}_${index}`,function:{name,arguments:typeof args==='string'?args:JSON.stringify(args||{})}}))});
 
-function setup({script,toolResults={},flowStatus='DISABLED',published=false}={}){
+function setup({script,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false}={}){
   const log={model:[],tools:[],effects:0,states:[],owned:[]};
-  let step=0,status=flowStatus,publishedVersionId=published?'v1':null;
+  let step=0,status=flowStatus,publishedVersionId=published?'v1':null,draftVersionId='v1';
   const mcp={call:async(_company,method,params)=>{
     if(method==='tools/list')return {tools:catalog};
     if(method==='initialize')return {instructions:'## Activepieces MCP Server\n1. Discover 2. Schema 3. Build 4. Validate 5. Publish'};
     log.tools.push([params.name,params.arguments]);
     if(Object.hasOwn(toolResults,params.name)){const value=toolResults[params.name];return typeof value==='function'?value(params.arguments):value;}
     if(params.name==='ap_build_flow')return {content:[{type:'text',text:`✅ Flow created (id: ${flowId})`}],structuredContent:{flowId,invalidSteps:[],skippedSteps:[],unknownProps:[]}};
+    if(params.name==='ap_test_flow'){if(editDuringTest)draftVersionId='v2';return {structuredContent:{runId,status:'SUCCEEDED',usedMockTriggerData:false}};}
+    if(params.name==='ap_get_run')return {structuredContent:{id:runId,flowId,status:'SUCCEEDED',environment:'TESTING',steps:[{name:'trigger',status:'SUCCEEDED'}]}};
     if(params.name==='ap_lock_and_publish'){status='ENABLED';publishedVersionId='v1';return {content:[{type:'text',text:'✅ published and enabled'}]};}
     return {content:[{type:'text',text:`ok ${params.name}`}]};
   }};
@@ -56,7 +61,7 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false}={})
       linkEmployeeFlow:async({flowId:id})=>({recordId:'employee-1',flowId:id,name:'أمين المحتوى',status:'disabled'}),
       setEmployeeState:async({employeeId,status:next})=>{log.states.push([employeeId,next]);return {recordId:employeeId,flowId,name:'أمين المحتوى',status:next};},
     }),
-    tenantProjects:async()=>({ownedFlow:async(_company,id)=>{log.owned.push(id);return {flow:{...publishedFlow,id,status,publishedVersionId}};}}),
+    tenantProjects:async()=>({ownedFlow:async(_company,id)=>{log.owned.push(id);return {flow:{...publishedFlow,id,status,publishedVersionId,version:{...publishedFlow.version,id:draftVersionId}}};}}),
     toolConnections:async()=>({assertOwnedExternal:async({externalId})=>{if(externalId==='foreign')throw new TenantProjectError('connection_not_owned','الاتصال لا يخص هذه الشركة.',403);}}),
   };
   const deepseekReply=runInNewContext(`${source.slice(start,end)}; deepseekReply`,ctx);
@@ -65,18 +70,18 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false}={})
 }
 const toolMessages=request=>request.messages.filter(item=>item.role==='tool').map(item=>item.content);
 
-test('the model builds, validates and publishes in one request and writes the reply itself',async()=>{
+test('the model builds, tests and publishes in one request and writes the reply itself',async()=>{
   const {run,log}=setup({script:[
     use(['ap_list_connections',{}]),
     use(['ap_build_flow',{flowName:'أمين المحتوى',trigger:{pieceName:'schedule',triggerName:'every_week'},steps:[{type:'PIECE',displayName:'توليد'},{type:'PIECE',displayName:'Slack'},{type:'PIECE',displayName:'Gmail'}]}]),
-    use(['ap_validate_flow',{flowId}],['ap_lock_and_publish',{flowId}]),
+    use(['ap_validate_flow',{flowId}],['ap_test_flow',{flowId}],['ap_lock_and_publish',{flowId}]),
     say('بُنيت ثلاث خطوات ونُشرت.'),
   ]});
   const answer=await run({draftEmployee:{id:'employee-1',name:'أمين المحتوى',activepieces_flow_id:null}});
   assert.equal(answer.reply,'بُنيت ثلاث خطوات ونُشرت.');
   assert.equal(answer.flowId,flowId);
   assert.equal(answer.approval,undefined);
-  assert.deepEqual(log.tools.map(item=>item[0]),['ap_list_connections','ap_build_flow','ap_validate_flow','ap_lock_and_publish']);
+  assert.deepEqual(log.tools.map(item=>item[0]),['ap_list_connections','ap_build_flow','ap_validate_flow','ap_test_flow','ap_get_run','ap_lock_and_publish']);
   assert.equal(log.tools[1][1].steps.length,3);
   assert.deepEqual(log.states,[['employee-1','active']]);
   assert.equal(answer.employee.status,'active');
@@ -86,8 +91,35 @@ test('the model builds, validates and publishes in one request and writes the re
   assert.match(first.messages[0].content,/## Activepieces MCP Server/);
   assert.ok(first.tools.some(tool=>tool.function.name==='ap_lock_and_publish'));
   assert.ok(!first.tools.some(tool=>tool.function.name==='ap_set_project_context'));
-  assert.equal(toolMessages(last).length,4);
+  assert.equal(toolMessages(last).length,5);
   assert.match(toolMessages(last)[1],/Flow created/);
+});
+
+test('an employee cannot be published from chat without a successful test run readback',async()=>{
+  const {run,log}=setup({script:[use(['ap_lock_and_publish',{flowId}]),say('التجربة مطلوبة أولًا.')]});
+  const answer=await run({draftEmployee:{id:'employee-1',name:'أمين المحتوى',activepieces_flow_id:flowId}});
+  assert.deepEqual(log.tools,[]);
+  assert.deepEqual(log.states,[]);
+  assert.match(toolMessages(log.model.at(-1))[0],/employee_test_required/);
+  assert.equal(answer.employee,undefined);
+});
+
+test('a failed test or a later edit invalidates employee activation',async()=>{
+  const failed=setup({script:[use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),say('لم أنشره.')],toolResults:{ap_test_flow:{structuredContent:{runId,status:'FAILED'}}}});
+  await failed.run({draftEmployee:{id:'employee-1',name:'أمين المحتوى',activepieces_flow_id:flowId}});
+  assert.deepEqual(failed.log.tools.map(item=>item[0]),['ap_test_flow']);
+  assert.match(toolMessages(failed.log.model.at(-1))[1],/employee_test_required/);
+  const edited=setup({script:[use(['ap_test_flow',{flowId}]),use(['ap_add_step',{flowId}]),use(['ap_lock_and_publish',{flowId}]),say('تحتاج تجربة جديدة.')],toolResults:{ap_add_step:{content:[{type:'text',text:'step added'}]}}});
+  await edited.run({draftEmployee:{id:'employee-1',name:'أمين المحتوى',activepieces_flow_id:flowId}});
+  assert.deepEqual(edited.log.tools.map(item=>item[0]),['ap_test_flow','ap_get_run','ap_add_step']);
+  assert.match(toolMessages(edited.log.model.at(-1))[2],/employee_test_required/);
+});
+
+test('a concurrent Flow version change during the test cannot authorize publishing',async()=>{
+  const changed=setup({script:[use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),say('تغيّرت النسخة أثناء التجربة.')],editDuringTest:true});
+  await changed.run({draftEmployee:{id:'employee-1',name:'أمين المحتوى',activepieces_flow_id:flowId}});
+  assert.deepEqual(changed.log.tools.map(item=>item[0]),['ap_test_flow','ap_get_run']);
+  assert.match(toolMessages(changed.log.model.at(-1))[1],/employee_test_required/);
 });
 
 test('a tool error returns to the model, which corrects itself and continues',async()=>{
@@ -108,6 +140,14 @@ test('a failed build is handed back as Activepieces wrote it and no employee is 
   assert.match(toolMessages(log.model[1])[0],/every_weak/);
 });
 
+test('a failed first build reports the local employee record for later recovery',async()=>{
+  const failed={isError:true,content:[{type:'text',text:'trigger connection missing'}]};
+  const {run}=setup({script:[use(['ap_build_flow',{flowName:'مستشار المبيعات'}]),say('ينقص اتصال المشغّل.')],toolResults:{ap_build_flow:failed}});
+  const answer=await run({createDraft:async name=>({id:'employee-1',name,status:'disabled',activepieces_flow_id:null})});
+  assert.equal(answer.employee.name,'مستشار المبيعات');
+  assert.equal(answer.flowId,undefined);
+});
+
 test('a Flow built with no saved draft creates the employee under the name the model designed',async()=>{
   const names=[];
   const {run}=setup({script:[use(['ap_build_flow',{flowName:'أمين المحتوى الاجتماعي',trigger:{},steps:[]}]),say('بُنيت.')]});
@@ -115,6 +155,18 @@ test('a Flow built with no saved draft creates the employee under the name the m
   assert.deepEqual(names,['أمين المحتوى الاجتماعي']);
   assert.equal(answer.employee.recordId,'employee-1');
   assert.equal(answer.flowId,flowId);
+});
+
+test('a second build in one chat request cannot create an orphan Flow',async()=>{
+  const {run,log}=setup({script:[
+    use(['ap_build_flow',{flowName:'أمين المحتوى',trigger:{},steps:[]}]),
+    use(['ap_build_flow',{flowName:'نسخة أخرى',trigger:{},steps:[]}]),
+    say('أكملت تعديل التدفق الأول.'),
+  ]});
+  const answer=await run({createDraft:async name=>({id:'employee-1',name,activepieces_flow_id:null})});
+  assert.equal(answer.flowId,flowId);
+  assert.deepEqual(log.tools.map(item=>item[0]),['ap_build_flow']);
+  assert.match(toolMessages(log.model.at(-1))[1],/employee_flow_conflict/);
 });
 
 test('invalid calls and company boundaries are answered to the model without dispatch',async()=>{
@@ -168,6 +220,7 @@ test('a long request answers queued once, keeps working, and settles the same re
   const timers=[],settled=[],recorded=[];let release;
   const profiles={
     claimChatRequest:async()=>({claimed:true,claimToken:'t'}),
+    earlierPendingChatRequest:async()=>null,
     settleChatRequest:async entry=>{settled.push(entry);return {status:entry.status,httpStatus:entry.httpStatus,response:entry.response};},
     read:async()=>({company_name:'شركة'}),readSettings:async()=>({}),ownedKnowledge:async()=>({}),listEmployees:async()=>[],listConversations:async()=>[],
     findConversationDraft:async()=>null,recordConversation:async entry=>{recorded.push(entry);},
@@ -204,4 +257,38 @@ test('a long request answers queued once, keeps working, and settles the same re
   assert.equal(settled[0].response.flow_id,flowId);
   assert.equal(recorded[0].assistantMessage,'بُنيت ونُشرت.');
   assert.ok(wait.cleared);
+});
+
+test('a second message waits for the first result before reaching the model',async()=>{
+  const chatStart=source.indexOf('async function publicChat('),chatEnd=source.indexOf('async function deepseek(req,res)',chatStart);
+  const jsonStart=source.indexOf('function json(res,status,body,headers={})'),jsonEnd=source.indexOf('\n',jsonStart);
+  let firstDone=false,releaseFirst,modelCalls=0;const messages=[];
+  const profiles={
+    claimChatRequest:async()=>({claimed:true,claimToken:'t'}),
+    earlierPendingChatRequest:async({requestId})=>requestId==='r2'&&!firstDone?'r1':null,
+    settleChatRequest:async entry=>{if(entry.requestId==='r1')firstDone=true;return {httpStatus:entry.httpStatus,response:entry.response};},
+    read:async()=>({company_name:'شركة'}),readSettings:async()=>({}),ownedKnowledge:async()=>({}),listEmployees:async()=>[],
+    listConversations:async()=>[{id:'c1',messages:[...messages]}],findConversationDraft:async()=>null,
+    recordConversation:async entry=>{messages.push({role:'user',content:entry.userMessage},{role:'assistant',content:entry.assistantMessage});},
+  };
+  const ctx={console:{error:()=>{}},JSON,String,Object,Number,Array,Boolean,Date,
+    setTimeout:(fn,ms)=>ms===1000?setTimeout(fn,1):1,clearTimeout:()=>{},
+    randomUUID:()=> 'u1',createHash:()=>({update(){return this;},digest:()=> 'hash'}),
+    TenantProjectError,CompanyProfileError,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
+    body:async req=>({op:'message',message:req.id,conversation_id:'c1',request_id:req.id}),
+    tenantSession:async()=>({session:{companyId:'company-1'},account:{company_name:'شركة'},headers:{}}),
+    companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),
+    completedWithoutExecution:(kind,response)=>({...response,request_status:'succeeded',outcome_kind:kind,work_status:'not_started'}),
+    deepseekReply:async args=>{modelCalls++;if(args.message==='r1')await new Promise(resolve=>{releaseFirst=resolve;});return {reply:`رد ${args.message}: ${args.history.length}`};},
+  };
+  const publicChat=runInNewContext(`${source.slice(jsonStart,jsonEnd)}\n${source.slice(chatStart,chatEnd)}; publicChat`,ctx);
+  const response=()=>({headersSent:false,writeHead(){this.headersSent=true;},end(){}});
+  const first=publicChat({id:'r1',headers:{}},response());
+  while(!releaseFirst)await new Promise(resolve=>setImmediate(resolve));
+  const second=publicChat({id:'r2',headers:{}},response());
+  await new Promise(resolve=>setTimeout(resolve,10));
+  assert.equal(modelCalls,1);
+  releaseFirst();await Promise.all([first,second]);
+  assert.equal(modelCalls,2);
+  assert.equal(messages.at(-1).content,'رد r2: 2');
 });

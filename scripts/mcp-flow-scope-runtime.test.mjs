@@ -49,7 +49,7 @@ test('MCP cannot switch away from the server-owned company project',()=>{
   assert.throws(()=>scopeMcpTool(tool,{projectId:'BBBBBBBBBBBBBBBBBBBBB'},null),{code:'mcp_project_switch_forbidden'});
 });
 
-test('draft employee can discover tools and edit its Flow, but cannot test or run it',()=>{
+test('draft employee can discover, edit and test its Flow, but cannot run unrelated flows',()=>{
   const draft={...employee,status:'draft'};
   const discovery={name:'ap_search_actions',inputSchema:{properties:{query:{type:'string'}}}};
   const execution={name:'ap_test_flow',inputSchema:{properties:{flowId:{type:'string'}}}};
@@ -57,7 +57,7 @@ test('draft employee can discover tools and edit its Flow, but cannot test or ru
   assert.equal(visibleMcpTool(flowTool,{...draft,activepieces_flow_id:null}),false);
   assert.equal(employeeMcpToolReady(discovery,draft),true);
   assert.equal(employeeMcpToolReady(flowTool,draft),true);
-  assert.equal(employeeMcpToolReady(execution,draft),false);
+  assert.equal(employeeMcpToolReady(execution,draft),true);
   assert.deepEqual(scopeMcpTool(flowTool,{stepName:'step_1'},draft),{stepName:'step_1',flowId:employee.activepieces_flow_id});
   assert.equal(visibleMcpTool({name:'ap_list_tables',inputSchema:{properties:{}}},draft),false);
 });

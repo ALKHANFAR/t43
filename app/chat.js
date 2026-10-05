@@ -803,7 +803,7 @@ var I = {
   $("#input").addEventListener("keydown",function(e){ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(this.value);} });
   $("#input").addEventListener("input",function(){ this.style.height="auto"; this.style.height=Math.min(this.scrollHeight,160)+"px"; });
 
-  function go(w,c){ who=w; chatId=c||null; kpiOpen=null; renderSide(); renderBar(); renderThread(); }
+  function go(w,c){ who=w; chatId=c||null; kpiOpen=null; renderSide(); renderBar(); renderThread(); if(window.__SIY_REAL__&&emp(w))siyResumePendingActivation(w); }
   function newChat(){ live={}; go("siyadah"); $("#input").focus(); }
   $("#emps").addEventListener("click",function(e){ var b=e.target.closest(".emp"); if(!b) return; go(b.dataset.emp); $("#input").focus(); });
   $(".side__scroll").addEventListener("click",function(e){ var b=e.target.closest(".hist"); if(!b||!b.dataset.chat) return;
@@ -1007,7 +1007,7 @@ var I = {
     try{var data=await integration({op:"methods",piece:tool.s});if(!rc||rc.tool!==tool)return;if(data.noAuth){rcBox('<p class="mf__m">'+ui('هذه الأداة لا تحتاج حسابًا أو مفتاحًا. تصبح جاهزة عند استخدامها داخل مهمة.','This tool needs no account or key. It becomes available when used in a task.')+'</p>');return;}rc.methods=data.methods||[];if(!rc.methods.length)throw new Error(ui("لا توجد طريقة ربط لهذه الأداة.","No connection method is available for this tool."));rcRender();}catch(error){if(rc&&rc.tool===tool)rcBox('<p class="mf__e" role="alert">'+esc(error.message||ui("تعذّر تجهيز الربط.","Could not prepare the connection."))+'</p>');}
   }
   function rcValues(method){var values={};for(var i=0;i<(method.fields||[]).length;i++){var field=method.fields[i],el=$("#mf"+i),value=field.type==="checkbox"?el.checked:field.type==="dropdown"?(el.value===""?"":field.options[+el.value].value):field.type==="number"?(el.value===""?"":Number(el.value)):el.value.trim();if(field.required&&(value===""||value==null)){rcMsg(ui("أكمل «","Complete “")+(field.label||field.name)+ui("» أولًا.","” first."));el.focus();return null;}if(value!=="")values[field.name]=value;}return values;}
-  async function rcPost(payload){var tool=rc.tool,button=$("#mOk");button.disabled=true;rcMsg("");try{var data=await integration(payload);tool.connection=data.connection;tool.on=data.connection.status==='ACTIVE';tool.by=usersOf(tool.s);tool.sug="";rc=null;closeModal();toolsCount();renderThread();}catch(error){button=$("#mOk");if(button)button.disabled=false;rcMsg(error.message||ui("تعذّر الربط. راجع البيانات وحاول مرة ثانية.","Could not connect. Check the details and try again."));}}
+  async function rcPost(payload){var tool=rc.tool,button=$("#mOk");button.disabled=true;rcMsg("");try{var data=await integration(payload);tool.connection=data.connection;tool.on=data.connection.status==='ACTIVE';tool.by=usersOf(tool.s);tool.sug="";rc=null;closeModal();toolsCount();renderThread();if(tool.on)siyResumePendingActivation();}catch(error){button=$("#mOk");if(button)button.disabled=false;rcMsg(error.message||ui("تعذّر الربط. راجع البيانات وحاول مرة ثانية.","Could not connect. Check the details and try again."));}}
   function oauthResult(data){if(data&&typeof data==="object"&&data.data)data=data.data;if(data&&typeof data==="object"&&data.code)return {code:String(data.code),state:String(data.state||"")};if(data&&typeof data==="object")data=data.url;var code=typeof data==="string"&&/[?&#]code=([^&#]+)/.exec(data),state=typeof data==="string"&&/[?&#]state=([^&#]+)/.exec(data);return {code:code?decodeURIComponent(code[1].replace(/\+/g," ")):"",state:state?decodeURIComponent(state[1].replace(/\+/g," ")):""};}
   async function rcOAuth(values){
     var tool=rc.tool,button=$("#mOk"),popup=window.open("about:blank","siyadah_oauth","width=520,height=680");
@@ -1024,12 +1024,12 @@ var I = {
           var posted=oauthResult(event.data);
           if(!posted.code)return;
           oauthOff();try{popup.close();}catch(ignore){}
-          try{var finished=await integration({op:"oauth_finish",attempt:started.attempt,code:decodeURIComponent(posted.code)});await realTools();if(!window.__SIY_TOOLS_ERROR__&&tool.connection?.id===finished.connection?.id&&tool.connection.status==='ACTIVE'){rc=null;closeModal();renderThread();return;}}catch(error){rcMsg(error.message||ui("لم يكتمل الربط. حاول مرة ثانية.","The connection could not be completed. Try again."));}
+          try{var finished=await integration({op:"oauth_finish",attempt:started.attempt,code:decodeURIComponent(posted.code)});await realTools();if(!window.__SIY_TOOLS_ERROR__&&tool.connection?.id===finished.connection?.id&&tool.connection.status==='ACTIVE'){rc=null;closeModal();renderThread();siyResumePendingActivation();return;}}catch(error){rcMsg(error.message||ui("لم يكتمل الربط. حاول مرة ثانية.","The connection could not be completed. Try again."));}
           button=$("#mOk");if(button)button.disabled=false;return;
         }
         if(event.data?.type!=="siyadah-oauth-result")return;
         oauthOff();try{popup.close();}catch(ignore){}
-        if(event.data.connectionId){await realTools();if(!window.__SIY_TOOLS_ERROR__&&tool.connection?.id===event.data.connectionId&&tool.connection.status==='ACTIVE'){rc=null;closeModal();renderThread();return;}}
+        if(event.data.connectionId){await realTools();if(!window.__SIY_TOOLS_ERROR__&&tool.connection?.id===event.data.connectionId&&tool.connection.status==='ACTIVE'){rc=null;closeModal();renderThread();siyResumePendingActivation();return;}}
         button=$("#mOk");if(button)button.disabled=false;rcMsg(ui("لم يثبت حفظ الاتصال في مشروع شركتك. أعد المحاولة أو تواصل معنا.","The connection was not saved in your company's project. Try again or contact us."));
       }
       window.addEventListener("message",on);
@@ -1222,9 +1222,9 @@ var I = {
   }
   function siyStopPolling(){ siyGeneration++; Object.keys(siyPolls).forEach(function(k){ clearTimeout(siyPolls[k]); }); siyPolls={}; }
   function siyAccessError(text){var e=new Error(text);e.noRetry=true;return e;}
-  async function siyPost(url,body){
+  async function siyPost(url,body,timeoutMs){
     if(!/^(https:\/\/|\/)/.test(url)) throw siyAccessError(ui("اتصال سيادة لم يُجهّز بعد.","Siyadah connection is not configured yet."));
-    var abort=new AbortController(), timer=setTimeout(function(){abort.abort();},60000);
+    var abort=new AbortController(), timer=setTimeout(function(){abort.abort();},timeoutMs||60000);
     try{
       var response=await fetch(url,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:abort.signal});
       if(response.status===401){location.replace("../auth.html");throw siyAccessError(ui("انتهت جلستك. سجّل الدخول من جديد.","Your session ended. Sign in again."));}
@@ -1244,7 +1244,7 @@ var I = {
     }catch(e){ if(e.name==="AbortError") throw new Error(ui("تأخر الرد. أعد المحاولة بنفس الطلب للتحقق من حالته.","The response timed out. Check the same request to verify its status.")); throw e; }
     finally{clearTimeout(timer);}
   }
-  function siyRequest(body){return siyPost(SIY_GATEWAY,body);}
+  function siyRequest(body,timeoutMs){return siyPost(SIY_GATEWAY,body,timeoutMs);}
   async function siySaveKnowledge(){
     var form=$("#kbEdit"),button=$("#kbSave"),status=$("#kbStatus"),value=$("#kbValue").value.trim();if(!value){status.textContent=ui("اكتب المعلومة أولًا.","Enter the information first.");return;}
     button.disabled=true;status.textContent=ui("جارٍ الحفظ…","Saving…");
@@ -1267,7 +1267,7 @@ var I = {
     var id=e.id, flowId=e.flowId, status=e.on?'disabled':'active', generation=siyGeneration;
     siyEmployeeStatePending[id]=true; siyDraw();
     try{
-      var data=await siyRequest({op:'employee_state',employee_id:id,status:status});
+      var data=await siyRequest({op:'employee_state',employee_id:id,status:status},210000);
       if(generation!==siyGeneration) return;
       if(data.state_verified!==true||!data.employee||data.employee.recordId!==id||data.employee.flowId!==flowId||data.employee.status!==status) throw new Error("لم يصل تأكيد مطابق لحالة الموظف.");
       siyMerge({employee:data.employee},false);
@@ -1372,6 +1372,17 @@ var I = {
     if(!employeeId&&curList()===list){chatId=id;live.siyadah=null;}
   }
   function siyDraw(){ renderSide(); renderBar(); renderThread(); renderPlan(); }
+  var siyActivationResumeBusy=false;
+  async function siyResumePendingActivation(employeeId){
+    if(!window.__SIY_REAL__||siyActivationResumeBusy)return;
+    siyActivationResumeBusy=true;
+    try{
+      var result=await siyRequest({op:"resume_employee_activation",...(employeeId?{employee_id:employeeId}:{})},210000);
+      if(result.activation_status==='active'&&result.employee){siyMerge({employee:result.employee},false);siyDraw();}
+      if(result.activation_status==='pending'&&result.employee_id&&result.message){var waiting=emp(result.employee_id);if(waiting){waiting.since=result.message;siyDraw();}}
+    }catch(error){}
+    finally{siyActivationResumeBusy=false;}
+  }
   function siyDraftReadinessHtml(readiness){
     if(!readiness||readiness.schema!=="SiyadahDraftReadinessV1"||!Array.isArray(readiness.checks)) return "";
     var passed=readiness.checks.filter(function(row){return row&&row.passed===true;});
@@ -1443,6 +1454,7 @@ var I = {
         var data=await siyRequest({op:"work",work_id:workId});
         if(generation!==siyGeneration) return;
         siyMerge(data,false); var updated=siyResultRow(data); Object.assign(row,updated); siyDraw();
+        if(data.auto_activate_after_connection===true)siyResumePendingActivation();
         if(["queued","running"].includes(data.work_status)) siyPoll(workId,list,row,attempt+1); else delete siyPolls[workId];
       }catch(e){
         if(generation!==siyGeneration) return;
@@ -1461,9 +1473,14 @@ var I = {
       if(row.siyInFlight) return; row.siyInFlight=true; row.typing=true; row.siyRetry=null; siyDraw();
       try{
         var data=await siyRequest(refresh?{op:'work',request_id:request.request_id,conversation_id:request.conversation_id}:request); if(generation!==siyGeneration) return;
-        if(data.request_status==='not_observed') throw new Error(ui('لم نتأكد من نتيجة الطلب. لم نعد تنفيذه. تحقق من حالته دون إرسال طلب جديد.','The request outcome is unverified. We did not run it again. Check its status without sending a new request.'));
+        if(data.request_status==='not_observed'&&!data.reply) throw new Error(ui('لم نتأكد من نتيجة الطلب. لم نعد تنفيذه. تحقق من حالته دون إرسال طلب جديد.','The request outcome is unverified. We did not run it again. Check its status without sending a new request.'));
         siyRememberConversation(data,list,employeeId,text); siyMerge(data,false);
         Object.assign(row,siyResultRow(data)); row.typing=false; row.siyInFlight=false; siyDraw();
+        if(data.auto_activate_after_connection===true)siyResumePendingActivation();
+        if(data.request_status==='not_observed'){
+          row.t+='<button type="button" class="lnk" data-siy-retry="1">'+ui('تحقق من حالة الطلب','Check request status')+'</button>';
+          row.siyRetry=function(){submit(true);}; siyDraw();
+        }
         if(data.work_id&&["queued","running"].includes(data.work_status)) siyPoll(data.work_id,list,row,0);
       }catch(e){
         if(generation!==siyGeneration) return;
@@ -1587,6 +1604,7 @@ var I = {
         siyMerge(data,true); window.__SIY_LOAD_ERROR__="";
       }
       done();
+      if(data&&data.ok===true&&Array.isArray(data.team))siyResumePendingActivation();
     }
     siyRequest({op:"hydrate"}).then(finish).catch(function(){finish(null);});
   }
