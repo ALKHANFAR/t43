@@ -91,3 +91,15 @@ test('queued time reduces execution budget before another request can expire it'
   assert.equal(chatExecutionBudget(0,900_000),1);
   assert.ok(600_000+chatExecutionBudget(0,600_000)<900_000);
 });
+
+test('official AP footer does not hide native completion or imply full output',()=>{
+  const result=native({messages:[{subject:'Full subject',body:'short…[truncated 9000 chars]'}]});
+  result.content[0].text+='\n\n(Long values above end with "…[truncated]" — shortened, not missing. Every field and record is still listed. The full output was 140KB. Ask for fewer items or a narrower filter to see a shortened value in full.)';
+  const receipt=nativeActionReceipt('ap_run_action',result);
+  assert.equal(receipt.outcome,'action_completed');assert.equal(receipt.output_limited,true);
+  assert.match(result.content[0].text,/truncated 9000 chars/);
+  const empty=native([]);empty.content[0].text+='\n\nNote: empty result. Broaden your filter.';
+  assert.equal(nativeActionReceipt('ap_run_action',empty).outcome,'action_completed');
+  const bad=native({response:{status:403}});bad.content[0].text+='\n\nNote: empty result. Broaden your filter.';
+  assert.equal(nativeActionReceipt('ap_run_action',bad).outcome,'unverified');
+});

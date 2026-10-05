@@ -5,7 +5,7 @@ import {runInNewContext} from 'node:vm';
 import {builtFlowResult,conversationMemory} from '../lib/chat-intelligence.mjs';
 import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool} from '../lib/mcp-flow-scope.mjs';
 import {TenantProjectError} from '../lib/tenant-projects.mjs';
-import {nativeActionReceipt,completedToolActions,chatExecutionBudget} from '../lib/chat-outcome.mjs';
+import {nativeActionReceipt,completedToolActions,chatExecutionBudget,failedChatExecution} from '../lib/chat-outcome.mjs';
 import {CompanyProfileError} from '../lib/company-profile.mjs';
 
 // Runs the real chat loop from server.mjs against a scripted model and a scripted Activepieces MCP.
@@ -251,7 +251,7 @@ test('a long request answers queued once, keeps working, and settles the same re
     companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),
     employeeRequestMode:()=>'explore',explicitNewEmployee:()=>false,flowName:()=>'x',
     completedWithoutExecution:(kind,response)=>({...response,request_status:'succeeded',outcome_kind:kind,work_status:'not_started'}),
-    failedChatExecution:()=>({ok:true,request_status:'failed'}),
+    failedChatExecution,
     deepseekReply:()=>new Promise(resolve=>{release=resolve;}),
   };
   const publicChat=runInNewContext(`${source.slice(jsonStart,jsonEnd)}\n${source.slice(chatStart,chatEnd)}; publicChat`,ctx);
@@ -273,6 +273,14 @@ test('a long request answers queued once, keeps working, and settles the same re
   assert.equal(settled[0].response.flow_id,flowId);
   assert.equal(recorded.at(-1).assistantMessage,'بُنيت ونُشرت.');
   assert.ok(wait.cleared);
+  // A failed accepted message survives reload too; it is not left as an unanswered user row.
+  ctx.deepseekReply=async()=>{throw new Error('model unavailable');};
+  const failedWrites=[];
+  const failedRes={headersSent:false,writeHead(status){this.headersSent=true;failedWrites.push({status});},end(text){failedWrites.at(-1).body=JSON.parse(text);}};
+  await publicChat({headers:{}},failedRes);
+  assert.equal(failedWrites[0].body.request_status,'failed');
+  assert.equal(recorded.at(-1).assistantMessage,failedWrites[0].body.reply);
+  assert.match(recorded.at(-1).assistantMessage,/تعذّر إكمال الطلب/);
 });
 
 test('a second message waits for the first result before reaching the model',async()=>{
