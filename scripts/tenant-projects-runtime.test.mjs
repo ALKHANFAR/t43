@@ -94,26 +94,13 @@ test('never accepts an unprovisioned or malformed tenant project for flow operat
   await assert.rejects(()=>h.service.ensure({tenantId:'../other',displayName:'سيئ'}),error=>error instanceof TenantProjectError&&error.code==='invalid_tenant');
 });
 
-test('creates flows only with the stored tenant project and rejects a foreign provider result',async()=>{
-  const h=harness({createdProject:{id:projectId,externalId:'siyadah:tenant_5005'}});
-  await h.service.ensure({tenantId:'tenant_5005',displayName:'شركة هاء'});
-  h.calls.length=0;
-  const flowHarness=createTenantProjectService({
-    query:async(text,values=[])=>{
-      if(text.startsWith('SELECT'))return {rows:[h.rows.get(values[0])]};
-      return {rows:[]};
-    },
-    activepiecesUrl:'https://activepieces.example',apiKey:'secret',
-    fetchImpl:async(url,options)=>({ok:true,status:201,json:async()=>({id:'ZyXwVu9876543210TsRqP',projectId,version:{displayName:'فلو عميل'},status:'DISABLED'})})
-  });
-  const flow=await flowHarness.createFlow({tenantId:'tenant_5005',displayName:'فلو عميل'});
-  assert.equal(flow.projectId,projectId);
-
-  const foreign=createTenantProjectService({
-    query:async()=>({rows:[h.rows.get('tenant_5005')]}),activepiecesUrl:'https://activepieces.example',apiKey:'secret',
-    fetchImpl:async()=>({ok:true,status:201,json:async()=>({id:'ZyXwVu9876543210TsRqP',projectId:'WrongProject1234567890'})})
-  });
-  await assert.rejects(()=>foreign.createFlow({tenantId:'tenant_5005',displayName:'مرفوض'}),error=>error instanceof TenantProjectError&&error.code==='flow_project_mismatch');
+test('the REST project adapter exposes only Flow reads and no Flow mutations',async()=>{
+  const h=harness();
+  assert.equal(Object.hasOwn(h.service,'createFlow'),false);
+  assert.equal(Object.hasOwn(h.service,'changeFlowStatus'),false);
+  assert.equal(typeof h.service.listFlows,'function');
+  assert.equal(typeof h.service.ownedFlow,'function');
+  assert.equal(h.calls.length,0);
 });
 
 test('lists only flows returned for the company stored project',async()=>{
@@ -169,10 +156,6 @@ test('two companies keep distinct projects and cannot receive each other flows',
       const body=JSON.parse(options.body),tenantId=body.metadata.tenantId;
       return {ok:true,status:201,json:async()=>({id:projects[tenantId],externalId:`siyadah:${tenantId}`})};
     }
-    if(url.endsWith('/api/v1/flows')&&method==='POST'){
-      const body=JSON.parse(options.body);
-      return {ok:true,status:201,json:async()=>({id:body.projectId.startsWith('A')?'F12345678901234567890':'G12345678901234567890',projectId:body.projectId,status:'DISABLED'})};
-    }
     if(url.includes('/api/v1/flows?')){
       const projectId=new URL(url).searchParams.get('projectId');
       return {ok:true,status:200,json:async()=>({data:[{id:projectId.startsWith('A')?'F12345678901234567890':'G12345678901234567890',projectId,status:'DISABLED'}]})};
@@ -185,15 +168,7 @@ test('two companies keep distinct projects and cannot receive each other flows',
     service.ensure({tenantId:'company_beta',displayName:'شركة باء'}),
   ]);
   assert.notEqual(alpha.activepieces_project_id,beta.activepieces_project_id);
-  const [alphaFlow,betaFlow]=await Promise.all([
-    service.createFlow({tenantId:'company_alpha',displayName:'موظف ألف'}),
-    service.createFlow({tenantId:'company_beta',displayName:'موظف باء'}),
-  ]);
-  assert.equal(alphaFlow.projectId,projects.company_alpha);
-  assert.equal(betaFlow.projectId,projects.company_beta);
   assert.deepEqual((await service.listFlows('company_alpha')).map(flow=>flow.projectId),[projects.company_alpha]);
   assert.deepEqual((await service.listFlows('company_beta')).map(flow=>flow.projectId),[projects.company_beta]);
-  const flowBodies=providerCalls.filter(call=>call.url.endsWith('/api/v1/flows')&&call.options.method==='POST').map(call=>JSON.parse(call.options.body));
-  assert.deepEqual(new Set(flowBodies.map(body=>body.projectId)),new Set(Object.values(projects)));
-  assert.equal(flowBodies.every(body=>body.metadata.tenantId==='company_alpha'||body.metadata.tenantId==='company_beta'),true);
+  assert.equal(providerCalls.some(call=>call.url.includes('/api/v1/flows')&&(call.options.method||'GET')!=='GET'),false);
 });

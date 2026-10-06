@@ -1165,3 +1165,13 @@ test('connection UI preserves exact method, multi-select defaults and excludes i
     assert.equal(request.methodId,'CUSTOM_AUTH:1');assert.deepEqual(request.values,{algorithms:['a','b']});
   }finally{p.close();}
 });
+
+test('blocked REST field discovery displays its unavailable state without inventing a connection form',async()=>{
+  const message='حقول الربط تحتاج اكتشافًا أصليًا عبر أدوات الشركة؛ مسار REST متوقف.';
+  const p=await page({integrations:{list:{ok:true,connections:[]},methods:new Error(message)},hash:''});
+  try{
+    p.d.querySelector('#toolsLink').click();await flush();p.d.querySelector('#allTgl').click();await flush();p.d.querySelector('[data-c="gmail"]').click();await flush();
+    assert.match(p.d.querySelector('#mF').textContent,/مسار REST متوقف/);assert.equal(p.d.querySelector('#mF form'),null);
+    assert.equal(p.requests.some(request=>['connect','oauth_start'].includes(request.body?.op)),false);
+  }finally{p.close();}
+});

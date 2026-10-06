@@ -99,3 +99,15 @@ Ledger and optional employee result updates share one atomic PostgreSQL statemen
 ## Retired fixed-company Gmail pilot
 
 The old company-43 recovery exception no longer runs in the production chat route. A read-only check on 6 October found no account, employee, chat request, tenant mapping, MCP grant or Flow for that historical pilot. Its verifier helpers remain under `scripts/support` for historical tests only. The existing general work ledger and project-scoped native MCP result paths serve every current company. This retirement deletes no data and adds no execution path.
+
+## Native MCP construction and discovery boundary
+
+Siyadah must not call direct REST endpoints to create/mutate Flows or discover pieces, actions, triggers, operation fields or auth fields. These capabilities belong to the company-scoped native MCP. Read-only Flow information/detail remains allowed for ownership and receipt validation; existing native authentication/project provisioning scope is unchanged. Existing connection management and pending OAuth completion remain distinct from tool/field discovery.
+
+The authenticated legacy internal Flow creation route returns 410 `native_mcp_creation_required` without provider initialization. Employee status mutations use `ap_change_flow_status` over MCP and read back the owned Flow status before recording employee state. Unconfirmed native status returns an error without REST mutation fallback. Connection method preparation returns 409 `native_mcp_discovery_required` before HTTP until an original auth-schema contract is available; the dialog shows a plain availability error.
+
+These boundaries are draft PR #60 behavior, not a production claim. See `docs/mcp-tool-discovery-boundary.md`.
+
+## Native capabilities in main and employee chat
+
+Both chat paths use the original company MCP tool catalog and schemas. Employee scope limits Flow/run identity, not an arbitrary whitelist of project action, table, record, AI or guidance capabilities. Native Flow creation for a Flow-less employee links its existing record and refreshes tool visibility for the next model turn. Existing linked Flows are edited. Flow-list text and structured data are limited to that employee, and run inspection/retry verifies the exact saved Flow before dispatch. Production employee Flow invocation still requires activation, exact native receipt and existing recovery boundaries. Local tests prove dispatch wiring, not live provider acceptance of every tool.

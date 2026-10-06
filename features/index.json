@@ -3,6 +3,38 @@
   "repository": "ALKHANFAR/t43",
   "features": [
     {
+      "id": "native_mcp_chat_capabilities",
+      "name": "كل قدرات MCP في الشات وشات الموظف",
+      "aliases": ["إمكانيات MCP", "أدوات الموظف الأصلية", "استخدام MCP فعليًا"],
+      "state": "draft_pr",
+      "meaning": "الشات الرئيسي يستخدم أدوات المشروع الأصلية من tools/list؛ شات الموظف يتيح أدوات الإجراءات والجداول ونماذج AI والإرشادات بدل قائمة سماح محدودة. الفلو والتشغيل مربوطان بالموظف، وقائمة الفلوهات مصفاة له. بناء فلو جديد يربط نفس السجل ثم يتيح التعديل في نفس المحادثة. اختبار محلي مثبت؛ لم يُنشر هذا التغيير ولم تُختبر كل القدرات حية.",
+      "linear": "ABO-69",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/60",
+      "locations": [
+        {"role": "scope", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function visibleMcpTool"},
+        {"role": "live_catalog", "path": "server.mjs", "anchor": "const modelTools=()=>available.filter"},
+        {"role": "run_scope", "path": "server.mjs", "anchor": "employee_run_scope"},
+        {"role": "test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "paused employee actually uses native action tables and AI discovery"},
+        {"role": "build_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "employee without a Flow builds and edits its own linked Flow"}
+      ]
+    },
+    {
+      "id": "native_mcp_build_discovery_boundary",
+      "name": "إيقاف إنشاء الفلو واكتشاف الأدوات والحقول عبر REST",
+      "aliases": ["بناء الفلو", "منع REST", "اكتشاف الحقول", "MCP فقط للبناء"],
+      "state": "draft_pr",
+      "meaning": "حذف إنشاء الفلو وتغيير حالته من محول REST؛ المسار الداخلي القديم يعيد 410. البناء والاكتشاف في MCP الشركة، وتغيير الحالة عبر MCP مع قراءة تأكيد. قراءة تفاصيل الفلو وتهيئة المشاريع وإدارة الاتصالات الحالية تبقى. تجهيز اتصالات جديدة يتوقف حتى توفر عقد حقول مصادقة أصلي؛ لا بديل REST. تغيير محلي غير منشور.",
+      "linear": "ABO-69",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/60",
+      "locations": [
+        {"role": "closed_route", "path": "server.mjs", "anchor": "native_mcp_creation_required"},
+        {"role": "native_status", "path": "server.mjs", "anchor": "mcp=mcp||await activepiecesMcp();"},
+        {"role": "closed_metadata", "path": "lib/tool-connections.mjs", "anchor": "native_mcp_discovery_required"},
+        {"role": "contract", "path": "docs/mcp-tool-discovery-boundary.md", "anchor": "# Tool discovery boundary"},
+        {"role": "test", "path": "scripts/native-mcp-boundary-runtime.test.mjs", "anchor": "closed internal create route never initializes a provider"}
+      ]
+    },
+    {
       "id": "native_user_qa_auth_probe",
       "name": "اختبار المصادقة الأصلية لرمز مشروع QA",
       "aliases": [
@@ -83,7 +115,7 @@
       "pr": "https://github.com/ALKHANFAR/t43/pull/17",
       "locations": [
         {"role": "route", "path": "server.mjs", "anchor": "const draft=existing?.status==='draft'?existing:null"},
-        {"role": "build", "path": "server.mjs", "anchor": "if(name==='ap_build_flow'&&!employee)"},
+        {"role": "build", "path": "server.mjs", "anchor": "if(['ap_build_flow','ap_create_flow'].includes(name))"},
         {"role": "storage", "path": "lib/company-profile.mjs", "anchor": "async function createManualEmployeeDraft({companyId,name,requestId})"},
         {"role": "migration", "path": "migrations/0002-local-employee-drafts.sql", "anchor": "ADD COLUMN IF NOT EXISTS creation_request_id"},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "| Employee saved |"},
@@ -141,7 +173,7 @@
         {"role": "resume_ui", "path": "app/chat.js", "anchor": "async function siyResumePendingActivation(employeeId)"},
         {"role": "editor_continuity_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "late activation redraw preserves the instruction panel, edit, focus and selection"},
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='employee_state')"},
-        {"role": "provider", "path": "lib/tenant-projects.mjs", "anchor": "async function changeFlowStatus({tenantId,flowId,status})"},
+        {"role": "provider", "path": "server.mjs", "anchor": "mcp=mcp||await activepiecesMcp();"},
         {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "op:'employee_state'"}
       ]
     },
@@ -168,9 +200,9 @@
       "name": "ربط أداة الشركة عند الحاجة",
       "aliases": ["ربط الأدوات", "اتصال أداة", "تسجيل دخول الأداة", "OAuth الأداة", "كتالوج الأدوات", "company tool connection", "tool catalog"],
       "state": "gap",
-      "meaning": "كتالوج الأدوات يعرض 762 أداة بأيقونات من نطاق سيادة. الفرع الحالي يعيد مسار OAuth الافتراضي في Activepieces للأدوات التي يعلنها الوسيط، ويطلب النطاقات التي تعلنها القطعة، مع محاولة واحدة مرتبطة بجلسة الشركة واتصال PROJECT حصري. تُقرأ صفحات اتصالات مشروع الشركة كلها قبل عرضها؛ لم تثبت بعد موافقة مزود حية أو تشغيل موظف دائم بهذا المسار. Gmail يختار Activepieces مرحليًا للربط الجديد، ومسار OAuth سيادة المحفوظ يطلب gmail.send فقط وينتظر موافقة Google. لا تحول تلقائيًا لاتصالات العملاء. التفويض الدائم لكل موظف وأداة يحتاج إنفاذًا في بوابة العمل، ولا تنشئ نافذة الربط وحدها هذا التفويض. عند استخدام تدفق لاتصال، يرفض طلب الفصل برسالة واضحة؛ إزالة الاعتماد من التدفق قبل الفصل ما زالت تحتاج مسارًا وظيفيًا.",
+      "meaning": "ربط أدوات جديدة متوقف في PR #60 لأن تجهيز حقول المصادقة كان يعتمد على REST metadata المحظور. إدارة الاتصالات القائمة وإنهاء محاولات OAuth السابقة باقية؛ يلزم عقد أصلي لحقول المصادقة عبر MCP قبل إعادة تجهيز اتصال جديد. التغيير غير منشور.",
       "linear": "ABO-61",
-      "pr": "https://github.com/ALKHANFAR/t43/pull/39",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/60",
       "locations": [
         {"role": "catalog", "path": "pieces.js", "anchor": "window.PIECES="},
         {"role": "catalog_mapping", "path": "app/chat.js", "anchor": "x.s===c.slug"},
@@ -189,7 +221,7 @@
         {"role": "owned_google_finish", "path": "lib/tool-connections.mjs", "anchor": "async function oauthFinish({tenantId,sessionBinding,state,code})"},
         {"role": "cloud_oauth_start", "path": "lib/tool-connections.mjs", "anchor": "if(cloudFor(pieceName(piece)))"},
         {"role": "cloud_oauth_finish", "path": "lib/tool-connections.mjs", "anchor": "async function cloudOauthFinish({tenantId,sessionBinding,attempt,code})"},
-        {"role": "cloud_oauth_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "the same connection path supports another OAuth app"},
+        {"role": "cloud_oauth_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "connection methods, fields and new connection preparation never fall back to REST metadata"},
         {"role": "cloud_popup_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "cloud OAuth accepts only the opened popup"},
         {"role": "disconnect_guard", "path": "lib/tool-connections.mjs", "anchor": "if(connection.flowIds.length)fail('connection_in_use'"},
         {"role": "disconnect_unknown_guard", "path": "lib/tool-connections.mjs", "anchor": "if(!Array.isArray(rawFlowIds)||rawFlowIds.some"},
@@ -200,7 +232,7 @@
         {"role": "callback", "path": "server.mjs", "anchor": "async function googleOAuthCallback(req,res,url)"},
         {"role": "migration", "path": "migrations/0003-google-oauth-attempts.sql", "anchor": "CREATE TABLE IF NOT EXISTS siyadah_google_oauth_attempts"},
         {"role": "handoff", "path": "GOOGLE-OAUTH-PILOT.md", "anchor": "# Gmail connection under Siyadah"},
-        {"role": "test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "owned Google Gmail OAuth is session-bound, single-use and project-exclusive"},
+        {"role": "test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "connection methods, fields and new connection preparation never fall back to REST metadata"},
         {"role": "disconnect_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "in-use connection stays attached and is not reported as disconnected"},
         {"role": "disconnect_unknown_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "unknown or malformed flow references fail closed before disconnect"},
         {"role": "ledger_test", "path": "scripts/google-oauth-attempts-runtime.test.mjs", "anchor": "OAuth attempt ledger stores hashes and consumes exactly once"}
@@ -280,16 +312,15 @@
       "name": "جرد أدوات Pilot واتصالات مشروع الشركة",
       "aliases": ["جرد الأدوات", "اكتشاف الأدوات", "tool inventory", "pilot tool discovery", "ABO-40"],
       "state": "draft_pr",
-      "meaning": "جرد قراءة فقط لثلاث قطع Pilot واتصالات مشروع الشركة. هذا فحص داخلي لا يُعرض عبر API العميل لأنه يحوي تفاصيل محرك التنفيذ. لا يثبت جاهزية التنفيذ أو نتيجة مزود.",
+      "meaning": "جرد REST القديم مغلق؛ اكتشاف الأدوات والحقول يتم عبر MCP مشروع الشركة بلا بديل REST. استدعاء المكتبة القديمة يفشل قبل HTTP. الحظر في PR #60 ولم يُنشر بعد.",
       "linear": "ABO-40",
-      "pr": "https://github.com/ALKHANFAR/t43/pull/22",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/60",
       "locations": [
         {"role": "service", "path": "lib/pilot-tool-discovery.mjs", "anchor": "export function createPilotToolDiscovery"},
-        {"role": "pinned_detail", "path": "lib/pilot-tool-discovery.mjs", "anchor": "const detail=version?await get"},
-        {"role": "pilot_set", "path": "lib/pilot-tool-discovery.mjs", "anchor": "export const PILOT_PIECES"},
-        {"role": "contract", "path": "PILOT_TOOL_DISCOVERY.md", "anchor": "an inventory"},
-        {"role": "test", "path": "scripts/pilot-tool-discovery-runtime.test.mjs", "anchor": "pilot inventory reads three exact pieces"},
-        {"role": "test_mismatch", "path": "scripts/pilot-tool-discovery-runtime.test.mjs", "anchor": "detail name or version mismatch is rejected"}
+        {"role": "closed_inventory", "path": "lib/pilot-tool-discovery.mjs", "anchor": "native_mcp_discovery_required"},
+        {"role": "contract", "path": "PILOT_TOOL_DISCOVERY.md", "anchor": "The legacy REST inventory is closed"},
+        {"role": "test", "path": "scripts/pilot-tool-discovery-runtime.test.mjs", "anchor": "legacy inventory cannot fall back to REST discovery"},
+        {"role": "test_mismatch", "path": "scripts/pilot-tool-discovery-runtime.test.mjs", "anchor": "legacy discovery preserves the company-project gate"}
       ]
     },
     {

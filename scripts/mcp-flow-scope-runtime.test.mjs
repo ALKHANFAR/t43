@@ -49,12 +49,19 @@ test('employee Flow ID comes from its saved record, never from the model',()=>{
   assert.deepEqual(scopeMcpTool(flowTool,{flowId:'BBBBBBBBBBBBBBBBBBBBB'},null),{flowId:'BBBBBBBBBBBBBBBBBBBBB'});
 });
 
-test('employee cannot select another Flow through broad MCP tools',()=>{
-  for(const name of ['ap_list_flows','ap_get_run','ap_retry_run','ap_build_flow','ap_create_flow','ap_duplicate_flow','ap_delete_flow','ap_change_flow_status']){
+test('employee flow operations bind the saved Flow while creation cannot silently replace it',()=>{
+  for(const name of ['ap_duplicate_flow','ap_delete_flow','ap_change_flow_status']){
+    const tool={name,inputSchema:{properties:{flowId:{type:'string'}}}};
+    assert.equal(visibleMcpTool(tool,employee),true);
+    assert.deepEqual(scopeMcpTool(tool,{},employee),{flowId:employee.activepieces_flow_id});
+    assert.throws(()=>scopeMcpTool(tool,{flowId:'B'.repeat(21)},employee),{code:'employee_flow_scope'});
+  }
+  for(const name of ['ap_create_flow','ap_build_flow']){
     const tool={name,inputSchema:{properties:{}}};
     assert.equal(visibleMcpTool(tool,employee),false);
     assert.throws(()=>scopeMcpTool(tool,{},employee),{code:'employee_flow_scope'});
-    assert.equal(visibleMcpTool(tool,null),true);
+    assert.equal(visibleMcpTool(tool,{status:'draft'}),true);
+    assert.deepEqual(scopeMcpTool(tool,{flowName:'QA'},{status:'draft'}),{flowName:'QA'});
   }
   assert.deepEqual(scopeMcpTool({name:'ap_list_runs',inputSchema:{properties:{flowId:{type:'string'}}}},{limit:5},employee),{limit:5,flowId:employee.activepieces_flow_id});
 });
@@ -75,5 +82,26 @@ test('draft employee can discover, edit and test its Flow, but cannot run unrela
   assert.equal(employeeMcpToolReady(flowTool,draft),true);
   assert.equal(employeeMcpToolReady(execution,draft),true);
   assert.deepEqual(scopeMcpTool(flowTool,{stepName:'step_1'},draft),{stepName:'step_1',flowId:employee.activepieces_flow_id});
-  assert.equal(visibleMcpTool({name:'ap_list_tables',inputSchema:{properties:{}}},draft),false);
+  assert.equal(visibleMcpTool({name:'ap_list_tables',inputSchema:{properties:{}}},draft),true);
+});
+
+
+test('project tools stay available in main and employee chat including drafts and paused employees',()=>{
+  const names=['ap_list_ai_models','ap_list_tables','ap_find_records','ap_create_table','ap_delete_table','ap_manage_fields','ap_insert_records','ap_update_record','ap_delete_records','ap_run_action','ap_test_step','ap_list_flows','ap_get_run','ap_retry_run','future_native_capability'];
+  for(const name of names){
+    const tool={name,inputSchema:{properties:{}}};
+    for(const selected of [null,{...employee,status:'active'},{...employee,status:'draft'},{...employee,status:'disabled'}]){
+      assert.equal(visibleMcpTool(tool,selected),true,name);
+      assert.equal(employeeMcpToolReady(tool,selected),true,name);
+      assert.deepEqual(scopeMcpTool(tool,{safe:'value'},selected),{safe:'value'},name);
+    }
+  }
+});
+
+test('flow schema alone scopes a newly advertised native tool without a tool-name allowlist',()=>{
+  const tool={name:'future_flow_edit',inputSchema:{properties:{flowId:{type:'string'}}}};
+  assert.equal(visibleMcpTool(tool,employee),true);
+  assert.deepEqual(scopeMcpTool(tool,{},employee),{flowId:employee.activepieces_flow_id});
+  assert.throws(()=>scopeMcpTool(tool,{flowId:'B'.repeat(21)},employee),{code:'employee_flow_scope'});
+  assert.equal(visibleMcpTool(tool,{status:'draft'}),false);
 });

@@ -109,14 +109,7 @@ async function health(res){
 }
 async function createTenantFlow(req,res){
   if(!authorized(req))return json(res,401,{ok:false,error:'unauthorized'});
-  try{
-    const input=await body(req),service=await tenantProjects();
-    const flow=await service.createFlow({tenantId:input.tenantId,displayName:input.flowName,metadata:{source:'siyadah-gateway'}});
-    return json(res,201,{ok:true,tenantId:input.tenantId,projectId:flow.projectId,flowId:flow.id,status:flow.status,displayName:flow.version?.displayName||input.flowName});
-  }catch(error){
-    if(error instanceof TenantProjectError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
-    console.error('tenant flow creation failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error'});
-  }
+  return json(res,410,{ok:false,error:'native_mcp_creation_required',message:'إنشاء طريقة العمل متاح عبر شات الشركة فقط.'});
 }
 async function provisionTenant(req,res){
   if(!authorized(req))return json(res,401,{ok:false,error:'unauthorized'});
@@ -351,7 +344,7 @@ async function authRoute(req,res,operation){
     console.error('account auth failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error',message:'تعذّر إكمال الدخول.'});
   }
 }
-async function buildOwnedDraftFlow({mcp,companyId,args,draftEmployee=null,onEffectStart}){
+async function buildOwnedDraftFlow({mcp,companyId,args,draftEmployee=null,onEffectStart,toolName='ap_build_flow'}){
   const client=draftEmployee?await (await database()).connect():null;
   let locked=false;
   try{
@@ -362,7 +355,7 @@ async function buildOwnedDraftFlow({mcp,companyId,args,draftEmployee=null,onEffe
       if(current?.status!=='draft'||current.activepieces_flow_id)throw new CompanyProfileError('employee_flow_conflict','طريقة عمل هذا الموظف مجهزة بالفعل.',409);
     }
     onEffectStart();
-    const result=await mcp.call(companyId,'tools/call',{name:'ap_build_flow',arguments:args});
+    const result=await mcp.call(companyId,'tools/call',{name:toolName,arguments:args});
     if(result?.isError===true)return {result,built:null,updated:null};
     const built=builtFlowResult(result);
     if(!built)throw new TenantProjectError('flow_build_unverified','تعذّر تأكيد إنشاء طريقة العمل؛ تحقّق من حالة الطلب قبل إعادته.',502);
@@ -427,11 +420,12 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   }
   // Activepieces labels every tool with readOnlyHint; the name pattern only covers a server that omits it.
   const readOnly=name=>{const hint=available.find(tool=>tool.name===name)?.annotations?.readOnlyHint;return typeof hint==='boolean'?hint:/^ap_(?:search_|list_|get_|read_|research_|resolve_|find_|flow_structure$|validate_flow$|validate_step_config$|setup_guide$)/.test(name);};
-  const tools=available.filter(tool=>/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(tool.name)&&!excludedTools.includes(tool.name)&&!(draftEmployee?.activepieces_flow_id&&tool.name==='ap_build_flow')&&visibleMcpTool(tool,employee,flowToolName)&&(!employee||employeeMcpToolReady(tool,employee))).map(tool=>({type:'function',function:{name:tool.name,description:String(tool.description||'').slice(0,4000),parameters:tool.inputSchema||{type:'object',properties:{}}}}));
+  const modelTools=()=>available.filter(tool=>/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(tool.name)&&!excludedTools.includes(tool.name)&&!(draftEmployee?.activepieces_flow_id&&['ap_build_flow','ap_create_flow'].includes(tool.name))&&visibleMcpTool(tool,employee,flowToolName)&&(!employee||employeeMcpToolReady(tool,employee))).map(tool=>({type:'function',function:{name:tool.name,description:String(tool.description||'').slice(0,4000),parameters:tool.inputSchema||{type:'object',properties:{}}}}));
+  let tools=modelTools();
   if(available.length)messages[0].content+='\nأدوات Activepieces تخص مشروع هذه الشركة. اختر منها بحرية ما يخدم هدف المستخدم، وصغ التعليمات والمدخلات داخل Flow/Agent عبر MCP، واستند إلى نتائج الأدوات في وصف ما حدث. إذا أراد المستخدم عملًا مستمرًا، اختبره ثم فعّله عند نجاح التجربة واكتمال اتصالاته؛ وإن نقص اتصال فاذكره وانتظر اكتماله. لا تدّع تشغيلًا أو نتيجة مزود لم تتحقق منها.';
   if(draftEmployee)messages[0].content+='\nللمستخدم مسودة موظف محفوظة في currentDraft. إن لم يكن لها flowId فابنِ طريقة عملها بـ ap_build_flow وستُربط بها؛ وإن وُجد flowId فاقرأها وعدّلها بأدوات التعديل ولا تنشئ لها Flow ثانيًا. إن كان سيستقبل مهام من شاته فاجعل مشغّل الفلو MCP Tool مع Wait for Response وأضف Reply to MCP Client؛ اكتشف حقول القطعتين من Activepieces قبل البناء.';
   if(employee||draftEmployee)messages[0].content+='\nتعليمات الموظف في السياق محفوظة للمحادثة؛ ليست دليلًا على تعليمات التشغيل. عند طلب تطبيقها على العمل، اقرأ طريقة العمل من Activepieces وحدّد خطوة AI وحقولها، ثم عدّل تعليمات الخطوة داخل Flow الموظف مع حفظ متغيرات المهمة ومراجع الخطوات. اقرأ التعديل ثانية وبيّن هل هو مسودة أم منشور. لا تعدّل Agent مشتركًا؛ تعليمات خطوة Run Agent تخص هذا Flow. إن لم توجد خطوة مناسبة فاشرح ما يلزم دون ادعاء تطبيقها.';
-  if(employee)messages[0].content+='\nهذه محادثة الموظف المحدد. عند قراءة طريقة عمله أو تعديلها، استخدم flowId الموجود في selectedEmployee فقط. إن غاب، صف حالة المسودة ولا تدّع وجود Flow جاهز.';
+  if(employee)messages[0].content+='\nهذه محادثة الموظف المحدد. استخدم جميع أدوات المشروع الأصلية التي تخدم طلب المستخدم، بما فيها إجراءات التطبيقات والجداول والنماذج والإرشادات. عند قراءة طريقة عمل الموظف أو تعديلها استخدم flowId الموجود في selectedEmployee فقط؛ إن غاب فجهّزها بأداة البناء الأصلية وستُربط بنفس الموظف. لا تنفّذ طريقة عمل موظف آخر ولا تبدّل المشروع.';
   if(employee?.status==='active'&&!flowToolName)messages[0].content+='\nطريقة عمل هذا الموظف ليست منشورة كأداة MCP تعيد نتيجةً بعد التنفيذ. لا تدّع تشغيلها؛ أخبر المستخدم أنها تحتاج مشغّل MCP Tool وخطوة Reply to MCP Client.';
   const ask=async withTools=>{
     checkDeadline();
@@ -491,11 +485,16 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           if(!tools.some(tool=>tool.function.name===name))throw new TenantProjectError('mcp_tool_invalid','هذه الأداة غير متاحة في هذه المحادثة.',502);
           let args;try{args=JSON.parse(call.function.arguments||'{}');}catch{args=null;}
           if(!args||typeof args!=='object'||Array.isArray(args))throw new TenantProjectError('mcp_arguments_invalid','مدخلات الأداة يجب أن تكون كائن JSON واحدًا.',502);
-          if(name==='ap_build_flow'&&flowId)throw new TenantProjectError('employee_flow_conflict','بُني Flow في هذا الطلب. اقرأه وعدّل خطواته بدل إنشاء نسخة ثانية.',409);
+          if(['ap_build_flow','ap_create_flow'].includes(name)&&flowId)throw new TenantProjectError('employee_flow_conflict','بُني Flow في هذا الطلب. اقرأه وعدّل خطواته بدل إنشاء نسخة ثانية.',409);
           if(name===flowToolName&&flowToolAttempted)throw new TenantProjectError('employee_run_already_dispatched','أُرسل تشغيل الموظف لهذا الطلب. تحقّق من نتيجته دون إعادة تشغيله.',409);
           if(name===flowToolName&&effects.length||flowToolAttempted&&!readOnly(name))throw new TenantProjectError('employee_run_mixed_effects','تشغيل الموظف يحتاج طلبًا مستقلًا عن تعديل طريقة عمله. يمكنك قراءة نتيجة التشغيل الحالي.',409);
           args=scopeMcpTool(available.find(tool=>tool.name===name),args,employee,flowToolName);
           const employeeFlow=employee?.activepieces_flow_id||flowId||draftEmployee?.activepieces_flow_id;
+          if(employee&&['ap_get_run','ap_retry_run'].includes(name)){
+            if(!/^[A-Za-z0-9]{21}$/.test(String(args.flowRunId||'')))throw new TenantProjectError('employee_run_scope','معرّف تشغيل الموظف غير صالح.',403);
+            const observed=await mcp.call(companyId,'tools/call',{name:'ap_get_run',arguments:{flowRunId:args.flowRunId}});
+            if(observed?.isError===true||observed?.structuredContent?.id!==args.flowRunId||observed?.structuredContent?.flowId!==employeeFlow)throw new TenantProjectError('employee_run_scope','التشغيل لا يخص طريقة عمل هذا الموظف.',403);
+          }
           if(args.flowId&&args.flowId===employeeFlow){
             if(name==='ap_lock_and_publish'||name==='ap_change_flow_status'&&args.status==='ENABLED'){
               const current=(await (await tenantProjects()).ownedFlow(companyId,args.flowId)).flow,tested=testedVersion?JSON.parse(testedVersion):null;
@@ -513,13 +512,33 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           if(!readOnly(name)){effectAttempted=true;effectFlowId=args.flowId||null;onEffectStart?.();effects.push(name);}
           if(name===flowToolName){flowToolAttempted=true;effectFlowId=employee.activepieces_flow_id;}
           if(name==='ap_lock_and_publish'||name==='ap_change_flow_status')statusChanged=true;
-          if(name==='ap_build_flow'&&!employee){
+          if(['ap_build_flow','ap_create_flow'].includes(name)){
             // A Flow built in main chat belongs to an employee: the saved draft, or one named after the Flow the model designed.
+            if(employee?.activepieces_flow_id)throw new TenantProjectError('employee_flow_conflict','طريقة عمل الموظف موجودة؛ عدّلها بدل استبدالها.',409);
+            if(employee&&!draftEmployee)draftEmployee=employee;
             if(!draftEmployee&&!flowId&&createDraft){draftEmployee=await createDraft(args.flowName);createdDraft=draftEmployee;}
-            const done=await buildOwnedDraftFlow({mcp,companyId,args,draftEmployee:draftEmployee&&!draftEmployee.activepieces_flow_id&&!flowId?draftEmployee:null,onEffectStart:()=>{}});
+            const done=await buildOwnedDraftFlow({mcp,companyId,args,draftEmployee:draftEmployee&&!draftEmployee.activepieces_flow_id&&!flowId?draftEmployee:null,onEffectStart:()=>{},toolName:name});
             result=done.result;
-            if(done.built){flowId=done.built.flowId;effectFlowId=flowId;linked=done.updated||linked;}
+            if(done.built){flowId=done.built.flowId;effectFlowId=flowId;linked=done.updated||linked;if(employee){employee={...employee,activepieces_flow_id:flowId,status:'draft'};tools=modelTools();}}
           }else result=await mcp.call(companyId,'tools/call',{name,arguments:args});
+          if(employee&&name==='ap_delete_flow'&&result?.isError!==true){
+            // Stop local production invocation when native deletion is accepted;
+            // retain the historical Flow link without claiming completed deletion.
+            linked=await (await companyProfiles()).setEmployeeState({companyId,employeeId:employee.id,status:'disabled'});
+            await (await companyProfiles()).clearEmployeeActivationIntent({companyId,employeeId:employee.id,flowId:employee.activepieces_flow_id});
+            employee={...employee,status:'disabled'};readinessReceipt=null;testedFlowId=null;testedVersion=null;testedRun=null;
+            tools=modelTools();
+          }
+          if(employee&&name==='ap_duplicate_flow'&&result?.isError!==true){
+            result={...result,siyadahContext:{employee_id:employee.id,employee_flow_id:employee.activepieces_flow_id,duplicate_scope:'independent_company_flow',employee_link_changed:false}};
+          }
+          if(employee&&name==='ap_list_flows'&&result?.isError!==true){
+            const rows=result?.structuredContent?.flows;
+            if(!Array.isArray(rows))throw new TenantProjectError('employee_flow_scope','تعذّر تحديد طريقة عمل الموظف من القائمة.',502);
+            const flows=rows.filter(item=>item?.id===employee.activepieces_flow_id);
+            const scoped={flows,count:flows.length};
+            result={structuredContent:scoped,content:[{type:'text',text:JSON.stringify(scoped)}]};
+          }
           if(name===flowToolName&&result?.isError!==true){
             let verification='missing_execution',observedStatus=null;
             // The native webhook callback identifies this invocation; never infer it from recent runs.
@@ -653,7 +672,15 @@ async function publicChat(req,res){
         catch(error){console.error('employee publish result uncertain',error?.code||error?.name||'unknown_error');}
         const {flow}=await (await tenantProjects()).ownedFlow(companyId,saved.activepieces_flow_id);
         if(flow.status!=='ENABLED'||!flow.publishedVersionId)throw new CompanyProfileError('employee_not_ready','لم نتأكد من نشر طريقة العمل وتفعيلها؛ تحقّق من حالتها قبل المحاولة مجددًا.',409);
-      }else await (await tenantProjects()).changeFlowStatus({tenantId:companyId,flowId:saved.activepieces_flow_id,status:status==='active'?'ENABLED':'DISABLED'});
+      }else{
+        const projects=await tenantProjects(),desired=status==='active'?'ENABLED':'DISABLED';
+        await projects.ownedFlow(companyId,saved.activepieces_flow_id);
+        mcp=mcp||await activepiecesMcp();
+        try{await mcp.call(companyId,'tools/call',{name:'ap_change_flow_status',arguments:{flowId:saved.activepieces_flow_id,status:desired}});}
+        catch(error){console.error('employee status result uncertain',error?.code||error?.name||'unknown_error');}
+        const {flow}=await projects.ownedFlow(companyId,saved.activepieces_flow_id);
+        if(flow.status!==desired)throw new CompanyProfileError('employee_not_ready','لم نتأكد من تغيير حالة طريقة العمل؛ تحقّق من حالتها قبل المحاولة مجددًا.',409);
+      }
       const updated=await profiles.setEmployeeState({companyId,employeeId:saved.id,status});
       if(status==='active')await profiles.clearEmployeeActivationIntent({companyId,employeeId:saved.id,flowId:saved.activepieces_flow_id});
       return updated;
@@ -723,34 +750,49 @@ async function publicChat(req,res){
         employee=await profiles.findEmployee(companyId,pending.employeeId);
         if(!employee)throw new CompanyProfileError('employee_not_found','الموظف غير موجود في شركتك.',404);
       }
-      const buildingDraft=pending.toolName==='ap_build_flow'&&employee?.status==='draft';
-      if(pending.toolName==='ap_build_flow'&&employee&&!buildingDraft)throw new CompanyProfileError('employee_flow_conflict','طريقة عمل هذا الموظف مجهزة بالفعل.',409);
+      const buildingDraft=['ap_build_flow','ap_create_flow'].includes(pending.toolName)&&employee?.status==='draft';
+      if(['ap_build_flow','ap_create_flow'].includes(pending.toolName)&&employee&&!buildingDraft)throw new CompanyProfileError('employee_flow_conflict','طريقة عمل هذا الموظف مجهزة بالفعل.',409);
       if(buildingDraft&&employee.activepieces_flow_id)throw new CompanyProfileError('employee_flow_conflict','طريقة عمل هذا الموظف مجهزة بالفعل.',409);
       const available=await mcp.call(companyId,'tools/list',{});
       const tool=available.tools?.find(tool=>tool.name===pending.toolName);
       const scopedEmployee=buildingDraft?null:employee;
       if(!tool||!visibleMcpTool(tool,scopedEmployee)||scopedEmployee&&!employeeMcpToolReady(tool,scopedEmployee))throw new TenantProjectError('mcp_tool_unavailable','لم تعد الأداة متاحة لهذا المشروع.',409);
       pending.args=scopeMcpTool(tool,pending.args,scopedEmployee);
+      if(employee&&['ap_get_run','ap_retry_run'].includes(pending.toolName)){
+        if(!/^[A-Za-z0-9]{21}$/.test(String(pending.args.flowRunId||'')))throw new TenantProjectError('employee_run_scope','معرّف تشغيل الموظف غير صالح.',403);
+        const observed=await mcp.call(companyId,'tools/call',{name:'ap_get_run',arguments:{flowRunId:pending.args.flowRunId}});
+        if(observed?.isError===true||observed?.structuredContent?.id!==pending.args.flowRunId||observed?.structuredContent?.flowId!==employee.activepieces_flow_id)throw new TenantProjectError('employee_run_scope','التشغيل لا يخص طريقة عمل هذا الموظف.',403);
+      }
       if(pending.toolName==='ap_run_action'&&pending.args.connectionExternalId){
         const pieceName=String(pending.args.pieceName||'');
         const fullPiece=pieceName.startsWith('@activepieces/piece-')?pieceName:`@activepieces/piece-${pieceName}`;
         await (await toolConnections()).assertOwnedExternal({tenantId:companyId,externalId:pending.args.connectionExternalId,pieceName:fullPiece});
       }
       let result,built,updated;
-      if(pending.toolName==='ap_build_flow'){
-        ({result,built,updated}=await buildOwnedDraftFlow({mcp,companyId,args:pending.args,draftEmployee:buildingDraft?employee:null,onEffectStart:()=>{activeRequest.effectStarted=true;}}));
+      if(['ap_build_flow','ap_create_flow'].includes(pending.toolName)){
+        ({result,built,updated}=await buildOwnedDraftFlow({mcp,companyId,args:pending.args,draftEmployee:buildingDraft?employee:null,onEffectStart:()=>{activeRequest.effectStarted=true;},toolName:pending.toolName}));
       }else{
         activeRequest.effectStarted=true;
         result=await mcp.call(companyId,'tools/call',{name:pending.toolName,arguments:pending.args});
       }
-      if(built){
+      if(employee&&pending.toolName==='ap_delete_flow'&&result?.isError!==true){
+        updated=await profiles.setEmployeeState({companyId,employeeId:employee.id,status:'disabled'});
+        await profiles.clearEmployeeActivationIntent({companyId,employeeId:employee.id,flowId:employee.activepieces_flow_id});
+      }
+      if(employee&&pending.toolName==='ap_list_flows'&&result?.isError!==true){
+        const rows=result?.structuredContent?.flows;
+        if(!Array.isArray(rows))throw new TenantProjectError('employee_flow_scope','تعذّر تحديد طريقة عمل الموظف من القائمة.',502);
+        const flows=rows.filter(item=>item?.id===employee.activepieces_flow_id),scoped={flows,count:flows.length};
+        result={structuredContent:scoped,content:[{type:'text',text:JSON.stringify(scoped)}]};
+      }
+      if(built&&updated){
         const reply=built.incomplete?`حُفظت طريقة عمل ${updated.name} في مشروع شركتك، لكن بعض الخطوات تحتاج إكمالًا قبل التشغيل. لم يُفعّل الموظف.`:`بُنيت طريقة عمل ${updated.name} وحُفظت كمسودة في مشروع شركتك. لم يُفعّل الموظف ولم تُشغّل مهمة بعد.`;
         const response=completedWithoutExecution('employee_draft',{ok:true,conversation_id:conversationId,reply,employee:updated,flow_id:built.flowId});
         await profiles.recordConversation({companyId,conversationId,employeeId:null,requestId,userMessage:pending.summary,assistantMessage:reply});
         const settled=await profiles.settleChatRequest({companyId,requestId,status:'succeeded',httpStatus:200,response,claimToken:claim.claimToken});activeRequest=null;
         return json(res,200,settled.response,sessionHeaders);
       }
-      if(pending.toolName==='ap_build_flow'&&!employee){
+      if(['ap_build_flow','ap_create_flow'].includes(pending.toolName)&&!employee){
         const flowDraft=builtFlowResult(result);
         if(flowDraft){
           const {flow}=await (await tenantProjects()).ownedFlow(companyId,flowDraft.flowId);
@@ -782,7 +824,7 @@ async function publicChat(req,res){
       }
       const raw=Array.isArray(result.content)?result.content.filter(item=>item?.type==='text').map(item=>item.text).join('\n'):JSON.stringify(result);
       const reply=result.isError===true?'أعادت الأداة خطأً. راجع الإعداد أو الاتصال قبل المحاولة من جديد.':`وصل رد الأداة، ولم نتحقق بعد من أثره لدى المزود:\n${String(raw||'').slice(0,3000)}`;
-      const response={ok:true,conversation_id:conversationId,request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',work_id:`request_${requestId}`,reply};
+      const response={ok:true,conversation_id:conversationId,request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',work_id:`request_${requestId}`,reply,...(updated?{employee:updated}:{})};
       await profiles.recordConversation({companyId,conversationId,employeeId:pending.employeeId,requestId,userMessage:pending.summary,assistantMessage:reply});
       const settled=await profiles.settleChatRequest({companyId,requestId,status:'unknown',httpStatus:200,response,claimToken:claim.claimToken});activeRequest=null;
       return json(res,200,settled.response,sessionHeaders);
