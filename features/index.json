@@ -293,6 +293,9 @@
       "pr": "https://github.com/ALKHANFAR/t43/pull/15",
       "locations": [
         {"role": "route", "path": "server.mjs", "anchor": "if(answer.flowToolAttempted||answer.effects?.length)"},
+        {"role": "native_run_readback", "path": "server.mjs", "anchor": "const execution=result?.structuredContent?.execution,projects=await tenantProjects();"},
+        {"role": "native_run_contract", "path": "CHAT_CONTRACT.md", "anchor": "## Native employee production run receipt"},
+        {"role": "native_run_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "native employee execution receipt reads its exact production run and saves proof before the next model call"},
         {"role": "flow_tool", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function employeeFlowMcpToolName("},
         {"role": "mcp_transport", "path": "lib/activepieces-mcp.mjs", "anchor": "async function rpc(token,method,params)"},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "For a provider result from a Flow"},

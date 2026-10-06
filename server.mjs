@@ -406,12 +406,12 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   for(const item of (history||[]).slice(-16))if(['user','assistant'].includes(item.role)&&typeof item.content==='string')messages.push({role:item.role,content:item.content.slice(0,4000)});
   messages.push({role:'user',content:String(message||'').slice(0,5000)});
   let available=[];
-  let flowToolName=null;
+  let flowToolName=null,publishedEmployeeVersion=null;
   if(employee?.status==='active'&&employee.activepieces_flow_id){
     const projects=await tenantProjects(),{flow}=await projects.ownedFlow(companyId,employee.activepieces_flow_id);
     if(flow.status==='ENABLED'&&flow.publishedVersionId){
       const published=await projects.ownedFlow(companyId,employee.activepieces_flow_id,flow.publishedVersionId);
-      flowToolName=employeeFlowMcpToolName(published.flow);
+      flowToolName=employeeFlowMcpToolName(published.flow);publishedEmployeeVersion=published.flow.publishedVersionId;
     }
   }
   if(mcp&&companyId){
@@ -485,7 +485,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
         const name=call?.function?.name;
         // Every result, a failed one included, returns to the model: Activepieces writes its errors as
         // instructions for the next call, and the model corrects itself from them.
-        let result,effectAttempted=false,effectFlowId=null;
+        let result,executionReceipt=null,effectAttempted=false,effectFlowId=null;
         const toolStarted=Date.now();
         try{
           if(!tools.some(tool=>tool.function.name===name))throw new TenantProjectError('mcp_tool_invalid','هذه الأداة غير متاحة في هذه المحادثة.',502);
@@ -509,7 +509,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           const versionBeforeTest=name==='ap_test_flow'&&args.flowId===employeeFlow?flowTestSnapshot((await (await tenantProjects()).ownedFlow(companyId,args.flowId)).flow.version):null;
           checkDeadline();
           if(!readOnly(name)){effectAttempted=true;effectFlowId=args.flowId||null;onEffectStart?.();effects.push(name);}
-          if(name===flowToolName)flowToolAttempted=true;
+          if(name===flowToolName){flowToolAttempted=true;effectFlowId=employee.activepieces_flow_id;}
           if(name==='ap_lock_and_publish'||name==='ap_change_flow_status')statusChanged=true;
           if(name==='ap_build_flow'&&!employee){
             // A Flow built in main chat belongs to an employee: the saved draft, or one named after the Flow the model designed.
@@ -518,6 +518,23 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
             result=done.result;
             if(done.built){flowId=done.built.flowId;effectFlowId=flowId;linked=done.updated||linked;}
           }else result=await mcp.call(companyId,'tools/call',{name,arguments:args});
+          if(name===flowToolName&&result?.isError!==true){
+            // The native webhook callback identifies this invocation; never infer it from recent runs.
+            try{
+              const execution=result?.structuredContent?.execution,projects=await tenantProjects();
+              const projectId=await projects.requireProject(companyId);
+              if(execution&&/^[A-Za-z0-9]{21}$/.test(String(execution.runId||''))&&execution.flowId===employee.activepieces_flow_id&&execution.projectId===projectId&&execution.flowVersionId===publishedEmployeeVersion&&execution.environment==='PRODUCTION'){
+                const {flow}=await projects.ownedFlow(companyId,execution.flowId,execution.flowVersionId);
+                if(flow.status==='ENABLED'&&flow.publishedVersionId===execution.flowVersionId){
+                  const detail=await mcp.call(companyId,'tools/call',{name:'ap_get_run',arguments:{flowRunId:execution.runId}}),run=detail?.structuredContent;
+                  if(detail?.isError!==true&&run?.id===execution.runId&&run.flowId===execution.flowId&&run.environment==='PRODUCTION'&&run.status==='SUCCEEDED'&&Array.isArray(run.steps)&&run.steps.length>0){
+                    const saved=await (await companyProfiles()).recordEmployeeRun({companyId,employeeId:employee.id,flowId:execution.flowId,runId:execution.runId,result:run.steps.at(-1).output,tools:employee.tools_json||[],conversationId});
+                    if(saved?.recordId===employee.id&&saved.flowId===execution.flowId&&saved.lastRunId===execution.runId){linked=saved;executionReceipt={run_id:execution.runId,outcome:'flow_completed'};}
+                  }
+                }
+              }
+            }catch(error){console.error('employee run readback failed',error?.code||error?.name||'unknown_error');}
+          }
           if(name==='ap_test_flow'&&args.flowId===employeeFlow){
             testedFlowId=null;testedVersion=null;testedRun=null;
             const verifiedRun=await successfulFlowTest(mcp,companyId,args.flowId,result);
@@ -532,7 +549,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           if(!known)console.error('chat tool call failed',name,error?.code||error?.name||'unknown_error');
           result={isError:true,content:[{type:'text',text:error?.name==='TimeoutError'?'انتهت مهلة الأداة ونتيجتها غير معروفة. اقرأ الحالة الحالية قبل أي محاولة جديدة.':known?`${error.code}: ${error.message}`:'تعذّر تنفيذ الأداة.'}]};
         }
-        if(toolReceipts.length<80)toolReceipts.push({...nativeActionReceipt(name,result),...(effectAttempted?{effect_attempted:true,...(effectFlowId?{flow_id:effectFlowId}:{})}:{})});
+        if(toolReceipts.length<80)toolReceipts.push({...nativeActionReceipt(name,result),...(executionReceipt||{}),...(effectAttempted?{effect_attempted:true,...(effectFlowId?{flow_id:effectFlowId}:{})}:{})});
         console.info('chat_tool_timing',JSON.stringify({conversation_id:conversationId,name,elapsed_ms:Date.now()-toolStarted,error:result?.isError===true}));
         if(result?.isError!==true&&['ap_lock_and_publish','ap_change_flow_status'].includes(name))await syncEmployeeState();
         // Keep the native MCP result intact and expose only the employee state saved by Siyadah.
