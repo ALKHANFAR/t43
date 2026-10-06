@@ -18,7 +18,7 @@ Figma عند اعتماد تصميم الصفحة → واجهة سيادة → 
 | الحساب ونطاق الشركة | `lib/account-auth.mjs`، `lib/tenant-session.mjs` | B: الهوية والجلسة والعزل |
 | بيانات الشركة والموظف | `lib/company-profile.mjs` وPostgreSQL | B: التخزين والمخطط والصلاحيات |
 | قاعدة البيانات | `migrations/`، `scripts/migrate-schema.mjs`، `railway.json` | B: ترحيل قابل للتحقق قبل نشر الخدمة |
-| التنفيذ | `lib/tenant-projects.mjs`، `lib/tool-connections.mjs`، `lib/gmail-pilot-runner.mjs` | C: مشروع الشركة والاتصالات والتدفقات وقراءة التشغيل؛ تغييرات SQL يراجعها B |
+| التنفيذ | `lib/tenant-projects.mjs`، `lib/tool-connections.mjs`، `lib/activepieces-mcp.mjs` | C: مشروع الشركة والاتصالات والتدفقات وقراءة التشغيل؛ تغييرات SQL يراجعها B |
 | قائمة الوصول المبكر | `lib/public-waitlist.mjs`، `migrations/0004-public-waitlist.sql` | B: طلب محفوظ 90 يومًا؛ نموذج LWS العام لم يتحول بعد |
 | دليل Google | `docs/google-review/`، [ABO-62](https://linear.app/abo-eyad/issue/ABO-62/tjhyz-sfhh-syadh-alaamh-wsyash-gmail-lqbwl-google) | B وC مع مراجعة المحتوى العام قبل التقديم |
 

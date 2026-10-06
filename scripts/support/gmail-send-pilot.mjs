@@ -1,5 +1,5 @@
-// A read-only gate for one explicitly configured Gmail send flow. No webhook is
-// dispatched from this module; callers must pass this gate before dispatch.
+// Historical test-only pilot validators and signed fixture helper.
+// Never imported by production; no provider dispatch.
 import {createHmac} from 'node:crypto';
 const AP_ID=/^[A-Za-z0-9]{21}$/;
 const MESSAGE_ID=/^[A-Za-z0-9_-]{1,256}$/;

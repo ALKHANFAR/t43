@@ -16,10 +16,8 @@ import {completedWithoutExecution,failedChatExecution,nativeActionReceipt,comple
 import {assertSchemaReady} from './lib/schema-ready.mjs';
 import {toolIcon} from './lib/tool-icons.mjs';
 import {createPublicWaitlist,PublicWaitlistError} from './lib/public-waitlist.mjs';
-import {createGmailPilotRunner,gmailPilotLedgerIdentity,gmailPilotSuccessResponse,recordGmailPilotConversation} from './lib/gmail-pilot-runner.mjs';
 import {createActivepiecesMcp} from './lib/activepieces-mcp.mjs';
 import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool} from './lib/mcp-flow-scope.mjs';
-import {GMAIL_PILOT_COMPANY_ID,GMAIL_PILOT_REQUEST_ID,GmailPilotError} from './lib/gmail-send-pilot.mjs';
 
 const root=process.cwd();
 const port=Number(process.env.PORT||3000);
@@ -585,22 +583,7 @@ async function publicChat(req,res){
       const profiles=await companyProfiles(),record=await profiles.expireChatRequest({companyId,requestId});
       if(!record)return json(res,200,{ok:true,request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified'},sessionHeaders);
       if(input.conversation_id&&record.conversationId!==input.conversation_id)throw new CompanyProfileError('request_scope_mismatch','معرّف الطلب مرتبط بمحادثة أخرى.',409);
-      const pilotIdentity=gmailPilotLedgerIdentity();
-      if(companyId===GMAIL_PILOT_COMPANY_ID&&requestId===GMAIL_PILOT_REQUEST_ID&&record.status==='unknown'&&record.conversationId===pilotIdentity.conversationId&&record.requestHash===pilotIdentity.requestHash){
-        try{
-          const projects=await tenantProjects();
-          const runner=createGmailPilotRunner({requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY,flowId:process.env.SIYADAH_GMAIL_PILOT_FLOW_ID,connectionId:process.env.SIYADAH_GMAIL_PILOT_CONNECTION_ID});
-          const receipt=await runner.recover({companyId,notBefore:record.createdAt});
-          if(receipt){
-            const response=gmailPilotSuccessResponse({conversationId:record.conversationId,receipt});
-            const reconciled=await profiles.reconcileVerifiedChatRequest({companyId,requestId,conversationId:record.conversationId,requestHash:record.requestHash,response});
-            if(reconciled.status==='succeeded')await recordGmailPilotConversation({profiles,companyId,response:reconciled.response});
-            return json(res,reconciled.httpStatus,reconciled.response,sessionHeaders);
-          }
-        }catch(error){console.error('gmail pilot readback failed',error?.code||error?.name||'unknown_error');}
-      }
       if(record.status!=='pending'){
-        if(companyId===GMAIL_PILOT_COMPANY_ID&&requestId===GMAIL_PILOT_REQUEST_ID&&record.status==='succeeded')await recordGmailPilotConversation({profiles,companyId,response:record.response});
         return json(res,record.httpStatus||200,record.response,sessionHeaders);
       }
       return json(res,200,{ok:true,conversation_id:record.conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders);
@@ -845,7 +828,7 @@ async function publicChat(req,res){
       try{const settled=await profiles.settleChatRequest({companyId,requestId,status,httpStatus,response});return json(res,settled.httpStatus,settled.response,sessionHeaders);}
       catch(completionError){console.error('chat request completion failed',completionError?.code||completionError?.name||'unknown_error');}
     }
-    if(error instanceof TenantProjectError||error instanceof CompanyProfileError||error instanceof GmailPilotError)return json(res,error.status,{ok:false,error:error.code,message:error.message},sessionHeaders);
+    if(error instanceof TenantProjectError||error instanceof CompanyProfileError)return json(res,error.status,{ok:false,error:error.code,message:error.message},sessionHeaders);
     console.error('public tenant chat failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error'},sessionHeaders);
   }
 }

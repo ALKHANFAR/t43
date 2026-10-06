@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {buildEmployeePrompt,createCompanyProfileService,normalizeAgentProfile,normalizeCompanyProfile,normalizeCompanySettings,recommendEmployees,selectCompanyUrls} from '../lib/company-profile.mjs';
-import {GMAIL_PILOT_COMMAND,gmailPilotLedgerIdentity,gmailPilotSuccessResponse,recordGmailPilotConversation} from '../lib/gmail-pilot-runner.mjs';
+import {GMAIL_PILOT_COMMAND,gmailPilotLedgerIdentity,gmailPilotSuccessResponse,recordGmailPilotConversation} from './support/gmail-pilot-runner.mjs';
 
 test('selects bounded high-value pages from the same company site',()=>{
   const urls=selectCompanyUrls('https://example.com/',[
