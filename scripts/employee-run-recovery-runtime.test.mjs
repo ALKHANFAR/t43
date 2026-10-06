@@ -32,7 +32,11 @@ test('durable native receipts survive restart, expiry and concurrent reconciliat
       await profiles.expireChatRequest(f);
       f.unavailable(false);const result=await f.fresh().reconcile(f);
       assert.equal(result.run_id,f.runId);assert.equal(result.work_status,'succeeded');
+      assert.equal(Object.hasOwn(result,'result'),false);
+      assert.match(result.reply,/42/);
       const employee=await profiles.findEmployee(f.companyId,f.employeeId);assert.equal(employee.last_run_id,f.runId);
+      const persisted=(await query('SELECT last_result_json FROM siyadah_digital_employees WHERE company_id=$1 AND id=$2',[f.companyId,f.employeeId])).rows[0].last_result_json;
+      assert.deepEqual(persisted,{status:null});
       const before=employee.run_snapshot_updated_at;
       await f.fresh().reconcile(f);assert.equal((await profiles.findEmployee(f.companyId,f.employeeId)).run_snapshot_updated_at,before);
       assert.deepEqual(f.calls,['ap_get_run','ap_get_run']);
@@ -42,6 +46,23 @@ test('durable native receipts survive restart, expiry and concurrent reconciliat
       assert.ok(results.every(result=>result.run_id===f.runId));
       const row=await profiles.readChatRequest(f);assert.equal(row.status,'succeeded');
       assert.equal((await profiles.findEmployee(f.companyId,f.employeeId)).last_run_id,f.runId);
+    });
+    await t.test('recovery keeps bounded reply and status metadata while AP owns the full output',async()=>{
+      const f=await fixture();f.overrides({steps:[{output:{status:200,body:'x'.repeat(20000)}}]});
+      const result=await f.fresh().reconcile(f);
+      assert.equal(Object.hasOwn(result,'result'),false);assert.ok(result.reply.length<5100);
+      const row=(await query('SELECT last_result_json FROM siyadah_digital_employees WHERE company_id=$1 AND id=$2',[f.companyId,f.employeeId])).rows[0];
+      assert.deepEqual(row.last_result_json,{status:200});
+      const stored=await profiles.readChatRequest(f);assert.equal(Object.hasOwn(stored.response,'result'),false);
+      assert.ok(JSON.stringify(stored.response).length<5500);
+    });
+    await t.test('reconciliation discards stale full results from earlier unknown or cached responses',async()=>{
+      const f=await fixture();
+      await query("UPDATE siyadah_chat_requests SET status='unknown',response_json=$3::jsonb WHERE company_id=$1 AND request_id=$2",[f.companyId,f.requestId,JSON.stringify({ok:true,result:'x'.repeat(20000)})]);
+      assert.equal(Object.hasOwn(await f.fresh().reconcile(f),'result'),false);
+      assert.equal(Object.hasOwn((await profiles.readChatRequest(f)).response,'result'),false);
+      await query("UPDATE siyadah_chat_requests SET response_json=response_json||$3::jsonb WHERE company_id=$1 AND request_id=$2",[f.companyId,f.requestId,JSON.stringify({result:'x'.repeat(20000)})]);
+      assert.equal(Object.hasOwn(await f.fresh().reconcile(f),'result'),false);
     });
     await t.test('disabled employee and a newer employee run are preserved',async()=>{
       for(const disabled of [true,false]){
