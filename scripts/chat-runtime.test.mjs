@@ -1243,7 +1243,7 @@ test('mixed action receipts explain completed action without upgrading unknown r
 });
 
 test('invalid or absent completed-action identity cannot change unknown request wording',async()=>{
- for(const run of ['', '<img src=x>']){
+ for(const run of ['', '<img src=x>', 1e20, null]){
   const p=await page({message:{ok:true,conversation_id:'mixed',request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',reply:'رد المصدر',tool_receipts:[{name:'ap_run_action',status:'error',effect_attempted:true},{name:'ap_run_action',status:'returned',run_id:run,outcome:'action_completed',effect_attempted:true}]}});try{send(p,'اقرأ');await flush();assert.equal(p.d.querySelector('.request-state').textContent,'النتيجة غير مؤكدة');}finally{p.close();}
  }
 });
