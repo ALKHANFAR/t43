@@ -11,6 +11,16 @@ This contract belongs to `ALKHANFAR/t43`. The customer frontend may change later
 
 ## Project MCP chat
 
+### Customer MCP consent (draft PR, not deployed)
+
+`GET /siyadah-api/v1/mcp/status` uses the authenticated company session and performs only local grant/project reads. It returns `state: project_required | authorization_required | authorization_stored` and `liveVerified: false`. Stored authorization is not proof of a working native MCP call.
+
+`POST /siyadah-api/v1/mcp/connect` accepts only `{}` and requires the configured same Origin. The server verifies the company account, reuses its existing project ensure, and returns the native OAuth authorization URL. Company/project IDs and scope supplied by the browser are rejected. Native consent still requires the customer's action.
+
+Customer OAuth state is encrypted and bound to the initiating company session. Callback completion rejects a missing, changed or foreign session before token exchange or grant storage. Existing internal unbound OAuth starts retain compatibility. No Flow mutation or tool/auth-field discovery REST endpoint is introduced.
+
+The start response includes `authorizationRevision`, a digest of the native registration's public OAuth client ID. Status includes `grantRevision` for the stored client registration. The UI confirms this consent attempt only when these match; refresh-token rotation cannot complete an unrelated consent attempt. These markers are not access tokens and do not prove native tool readiness. The modal opens consent only on a user click and polls while open with a bounded deadline; closing it cancels observation without replaying chat requests or tool actions.
+
 - Within one model/tool request, the adapter reuses a project access token until its advertised lifetime approaches expiry. Every call still reads the current company project and saved grant; changing or deleting either prevents reuse. Separate requests have separate token state. Failed calls discard that state without automatically replaying tool writes.
 
 - The main chat and selected employee chat use the same server-side Activepieces MCP adapter. The server resolves the company project; no project ID, MCP token, or provider credential is accepted from the browser.

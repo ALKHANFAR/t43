@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {createActivepiecesMcp} from '../lib/activepieces-mcp.mjs';
 
 const projectA='AAAAAAAAAAAAAAAAAAAAA',projectB='BBBBBBBBBBBBBBBBBBBBB';
@@ -7,10 +8,11 @@ const token=project=>'header.'+Buffer.from(JSON.stringify({projectId:project,exp
 const json=value=>new Response(JSON.stringify(value),{status:200,headers:{'content-type':'application/json'}});
 
 function harness(tokenProject=projectA,sse=false){
-  let grant=null,approval=null,mcpCalls=0,refreshCalls=0,rejectMcp=false,rejectRefresh=false,lifetime=900,currentProject=projectA,rotate=false;
+  let grant=null,approval=null,mcpCalls=0,refreshCalls=0,tokenCalls=0,grantWrites=0,registrations=0,rejectMcp=false,rejectRefresh=false,lifetime=900,currentProject=projectA,rotate=false;
   const query=async(sql,values=[])=>{
-    if(sql.includes('INSERT INTO siyadah_mcp_grants')){grant={project_id:values[1],client_id:values[2],refresh_token_cipher:values[3]};return {rows:[]};}
+    if(sql.includes('INSERT INTO siyadah_mcp_grants')){grantWrites++;grant={project_id:values[1],client_id:values[2],refresh_token_cipher:values[3],updated_at:new Date(Date.UTC(2026,9,6,0,0,grantWrites))};return {rows:[]};}
     if(sql.includes('SELECT project_id,client_id,refresh_token_cipher'))return {rows:grant&&values[0]==='company-a'?[grant]:[]};
+    if(sql.includes('SELECT project_id,client_id FROM'))return {rows:grant&&values[0]==='company-a'?[grant]:[]};
     if(sql.includes('UPDATE siyadah_mcp_grants')){grant.refresh_token_cipher=values[0];return {rows:[]};}
     if(sql.includes('INSERT INTO siyadah_mcp_approvals')){approval={id:values[0],tenant_id:values[1],conversation_id:values[2],employee_id:values[3],tool_name:values[4],args_cipher:values[5],summary:values[6]};return {rows:[]};}
     if(sql.includes('DELETE FROM siyadah_mcp_approvals')){
@@ -20,8 +22,9 @@ function harness(tokenProject=projectA,sse=false){
     return {rows:[]};
   };
   const fetchImpl=async(url,options)=>{
-    if(url.endsWith('/register'))return json({client_id:'siyadah-client'});
+    if(url.endsWith('/register')){registrations++;return json({client_id:`siyadah-client-${registrations}`});}
     if(url.endsWith('/token')){
+      tokenCalls++;
       if(options.body.get('grant_type')==='refresh_token'){refreshCalls++;if(rejectRefresh)return new Response(JSON.stringify(typeof rejectRefresh==='string'?{error:rejectRefresh,error_description:'private provider details'}:{}),{status:400});}
       return json({access_token:token(tokenProject),refresh_token:rotate?'refresh-secret-'+refreshCalls:'refresh-secret',expires_in:lifetime});
     }
@@ -34,7 +37,7 @@ function harness(tokenProject=projectA,sse=false){
     throw new Error('unexpected provider URL');
   };
   const service=createActivepiecesMcp({query,requireProject:async()=>currentProject,activepiecesUrl:'https://ap.example.test',origin:'https://siyadah.example.test',secret:'s'.repeat(40),fetchImpl});
-  return {service,get grant(){return grant;},get mcpCalls(){return mcpCalls;},get refreshCalls(){return refreshCalls;},dropGrant(){grant=null;},changeGrant(){grant.client_id+='-new';},foreignToken(){tokenProject=projectB;},rejectMcp(value){rejectMcp=value;},rejectRefresh(value){rejectRefresh=value;},setLifetime(value){lifetime=value;},changeProject(){currentProject=projectB;},rotate(){rotate=true;},corruptGrant(){grant.refresh_token_cipher+='x';}};
+  return {service,get grant(){return grant;},get mcpCalls(){return mcpCalls;},get refreshCalls(){return refreshCalls;},get tokenCalls(){return tokenCalls;},dropGrant(){grant=null;},changeGrant(){grant.client_id+='-new';},foreignToken(){tokenProject=projectB;},rejectMcp(value){rejectMcp=value;},rejectRefresh(value){rejectRefresh=value;},setLifetime(value){lifetime=value;},changeProject(){currentProject=projectB;},rotate(){rotate=true;},corruptGrant(){grant.refresh_token_cipher+='x';}};
 }
 
 test('MCP OAuth grant is bound to the server-owned company project and stored encrypted',async()=>{
@@ -173,4 +176,43 @@ test('malformed expiry cannot retain a token for the request',async()=>{
   const h=harness();await connect(h);h.setLifetime('invalid');const request=h.service.forRequest();
   await request.call('company-a','tools/list',{});await request.call('company-a','tools/list',{});
   assert.equal(h.refreshCalls,2);
+});
+
+test('customer-bound OAuth requires the initiating company session before any token exchange or grant write',async()=>{
+  const h=harness(),url=await h.service.begin('company-a',{sessionBinding:'session-binding-a'}),state=new URL(url).searchParams.get('state');
+  const callback=`/siyadah-api/v1/mcp/callback?state=${encodeURIComponent(state)}&code=once`;
+  assert.ok(!url.includes('session-binding-a'),'session binding must remain encrypted');
+  for(const context of [undefined,{tenantId:'company-a'},{tenantId:'company-b',sessionBinding:'session-binding-a'},{tenantId:'company-a',sessionBinding:'other-session'}]){
+    await assert.rejects(()=>h.service.complete(callback,context),{code:'mcp_session_mismatch',status:403});
+    assert.equal(h.tokenCalls,0);assert.equal(h.mcpCalls,0);assert.equal(h.grant,null);
+  }
+  await h.service.complete(callback,{tenantId:'company-a',sessionBinding:'session-binding-a'});
+  assert.equal(h.tokenCalls,1);assert.equal(h.grant.project_id,projectA);
+});
+
+test('legacy internal OAuth remains completable without a customer session context',async()=>{
+  const h=harness();await connect(h);assert.equal(h.grant.project_id,projectA);
+});
+
+test('grant status is local presence only, exposes no secrets and never probes the provider',async()=>{
+  const h=harness();assert.deepEqual(await h.service.status('company-a'),{grantPresent:false});
+  assert.equal(h.tokenCalls,0);assert.equal(h.mcpCalls,0);
+  await connect(h);const tokenCalls=h.tokenCalls,mcpCalls=h.mcpCalls;
+  h.rejectRefresh(true);h.rejectMcp(true);
+  assert.deepEqual(await h.service.status('company-a'),{grantPresent:true,grantRevision:createHash('sha256').update('siyadah-client-1').digest('hex')});
+  assert.deepEqual(await h.service.status('company-b'),{grantPresent:false});
+  h.changeProject();assert.deepEqual(await h.service.status('company-a'),{grantPresent:false});
+  assert.equal(h.tokenCalls,tokenCalls);assert.equal(h.mcpCalls,mcpCalls);
+});
+
+test('grant status revision identifies public OAuth registration and ignores timestamps or token rotation',async()=>{
+  const h=harness();await connect(h);const first=await h.service.status('company-a');
+  h.grant.updated_at=new Date();assert.deepEqual(await h.service.status('company-a'),first);
+  h.rotate();await h.service.call('company-a','tools/list',{});assert.deepEqual(await h.service.status('company-a'),first);
+  await connect(h);const second=await h.service.status('company-a');
+  assert.notEqual(first.grantRevision,second.grantRevision);
+  assert.equal(second.grantRevision,createHash('sha256').update('siyadah-client-2').digest('hex'));
+  h.grant.client_id=' ';assert.deepEqual(await h.service.status('company-a'),{grantPresent:true,grantRevision:null});
+  delete h.grant.client_id;assert.deepEqual(await h.service.status('company-a'),{grantPresent:true,grantRevision:null});
+  assert.deepEqual(await h.service.status('company-b'),{grantPresent:false});
 });

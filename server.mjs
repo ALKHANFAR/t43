@@ -134,10 +134,40 @@ async function beginMcpGrant(req,res){
 }
 async function finishMcpGrant(req,res){
   let ok=false;
-  try{await (await activepiecesMcp()).complete(req.url);ok=true;}
+  try{
+    let context={};
+    try{const resolved=await tenantSession(req);context={tenantId:resolved.session.companyId,sessionBinding:oauthSessionBinding(req)};}
+    catch(error){if(error?.status!==401)throw error;}
+    await (await activepiecesMcp()).complete(req.url,context);ok=true;
+  }
   catch(error){console.warn('MCP grant callback failed',error?.code||error?.name||'unknown_error');}
   res.writeHead(ok?200:400,{'content-type':'text/html; charset=utf-8','cache-control':'no-store','content-security-policy':"default-src 'none'; base-uri 'none'; frame-ancestors 'none'",'referrer-policy':'no-referrer','x-content-type-options':'nosniff'});
   res.end(`<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><title>قدرات سيادة</title><p>${ok?'اكتمل ربط قدرات المشروع. يمكنك إغلاق النافذة.':'لم يكتمل ربط قدرات المشروع.'}</p></html>`);
+}
+
+async function customerMcpAccess(req,res,op){
+  try{
+    const resolved=await tenantSession(req),tenantId=resolved.session.companyId;
+    if(op==='start'){
+      if(!publicOrigin()||req.headers.origin!==publicOrigin())throw new TenantProjectError('origin_not_allowed','ابدأ الربط من سيادة.',403);
+      const input=await body(req);
+      if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).length)throw new TenantProjectError('client_scope_forbidden','نطاق الشركة يحدده الخادم فقط.',400);
+      const pool=await database();
+      await provisionVerifiedTenant({tenantId,query:(sql,values)=>pool.query(sql,values),ensureProject:async value=>(await tenantProjects()).ensure(value)});
+      const authorizationUrl=await (await activepiecesMcp()).begin(tenantId,{sessionBinding:oauthSessionBinding(req)});
+      const clientId=new URL(authorizationUrl).searchParams.get('client_id');
+      if(!clientId)throw new TenantProjectError('mcp_registration_invalid','تعذّر تهيئة الموافقة.',502);
+      const authorizationRevision=createHash('sha256').update(clientId).digest('hex');
+      return json(res,200,{ok:true,state:'authorization_required',authorizationUrl,authorizationRevision});
+    }
+    const result=await (await activepiecesMcp()).status(tenantId);
+    return json(res,200,{ok:true,state:result.grantPresent?'authorization_stored':'authorization_required',grantRevision:result.grantPresent?result.grantRevision:null,liveVerified:false});
+  }catch(error){
+    if(op==='status'&&error?.code==='project_not_ready')return json(res,200,{ok:true,state:'project_required',liveVerified:false});
+    if(error instanceof TenantProjectError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
+    console.warn('customer MCP access failed',error?.code||error?.name||'unknown_error');
+    return json(res,502,{ok:false,error:'mcp_unavailable'});
+  }
 }
 
 async function scrapeWeb(req,res){
@@ -954,6 +984,8 @@ createServer((req,res)=>{
   if(req.method==='GET'&&req.url==='/siyadah-api/v1/auth/session')return authRoute(req,res,'session');
   if(req.method==='POST'&&req.url==='/internal/v1/tenants/provision')return provisionTenant(req,res);
   if(req.method==='POST'&&req.url==='/internal/v1/mcp/connect')return beginMcpGrant(req,res);
+  if(req.method==='POST'&&req.url==='/siyadah-api/v1/mcp/connect')return customerMcpAccess(req,res,'start');
+  if(req.method==='GET'&&req.url==='/siyadah-api/v1/mcp/status')return customerMcpAccess(req,res,'status');
   if(req.method==='GET'&&pathname==='/siyadah-api/v1/mcp/callback')return finishMcpGrant(req,res);
   if(req.method==='POST'&&req.url==='/internal/v1/tenant-flows/create')return createTenantFlow(req,res);
   if(req.method==='POST'&&req.url==='/internal/v1/web/scrape')return scrapeWeb(req,res);

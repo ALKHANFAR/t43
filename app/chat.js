@@ -1016,9 +1016,55 @@ var I = {
     html+='<p class="mf__e" id="mE" role="alert" hidden></p><div class="mbox__a"><button type="submit" class="lnk lnk--fill" id="mOk"'+(off?' disabled':'')+'>'+(method.type==="OAUTH2"?ui('سجّل الدخول عبر ','Sign in with ')+esc(rc.tool.n):ui('احفظ الاتصال','Save connection'))+'</button></div>';rcBox('<form novalidate>'+html+'</form>');
     var focus=focusTabs?$("[data-method=\""+rc.index+"\"]",$("#mF")):$("[id^=mf]",$("#mF"));if(focus)focus.focus();
   }
+  async function workspaceAuthorizationStatus(){
+    var abort=new AbortController(),timeout=setTimeout(function(){abort.abort();},12000),response;
+    try{response=await fetch("/siyadah-api/v1/mcp/status",{method:"GET",credentials:"include",signal:abort.signal});}finally{clearTimeout(timeout);}
+    if(!response.ok)throw new Error(ui("تعذّر التحقق من تفويض مساحة الشركة.","Could not check workspace authorization."));
+    var data=await response.json();
+    if(!data||data.ok!==true||!["authorization_required","authorization_stored","project_required"].includes(data.state))throw new Error(ui("لم تصل حالة تفويض مؤكدة.","Workspace authorization status is unverified."));
+    return data;
+  }
+  function workspaceAuthorizationControl(required){
+    return '<p class="mf__m">'+(required?ui('تحتاج مساحة الشركة موافقة لاستخدام أدواتها. ربط حساب الأداة خطوة منفصلة.','Your workspace needs authorization to use its tools. Connecting an app account is a separate step.'):ui('تفويض مساحة الشركة محفوظ؛ جاهزية الأدوات تحتاج تحققًا عند الاستخدام.','Workspace authorization is saved; tool readiness needs verification when used.'))+'</p><button type="button" class="lnk" data-workspace-connect>'+ui(required?'اسمح باستخدام أدوات الشركة':'أعد تفويض مساحة الشركة',required?'Authorize workspace tools':'Authorize workspace again')+'</button>';
+  }
+  async function authorizeWorkspace(){
+    if(!rc)return;var tool=rc.tool,button=$("[data-workspace-connect]",$("#mF"));
+    var popup=window.open("about:blank","siyadah_workspace_oauth","width=520,height=680");
+    if(!popup){rcBox('<p class="mf__e" role="alert">'+ui('اسمح بالنوافذ المنبثقة، ثم أعد المحاولة.','Allow pop-ups and try again.')+'</p>'+workspaceAuthorizationControl(true));return;}
+    if(button)button.disabled=true;var stopped=false,pollTimer,expiryTimer;
+    var stop=function(){stopped=true;clearTimeout(pollTimer);clearTimeout(expiryTimer);try{popup.close();}catch(ignore){}if(oauthOff===stop)oauthOff=null;};
+    if(oauthOff)oauthOff();oauthOff=stop;
+    function failed(message){stop();if(rc&&rc.tool===tool)rcBox('<p class="mf__e" role="alert">'+esc(message)+'</p>'+workspaceAuthorizationControl(true));}
+    expiryTimer=setTimeout(function(){failed(ui('انتهت مهلة الموافقة. أعد المحاولة عند الاستعداد.','Authorization timed out. Try again when ready.'));},10*60*1000);
+    try{
+      var started=await siyPost("/siyadah-api/v1/mcp/connect",{});
+      if(stopped||!rc||rc.tool!==tool)return;
+      if(started.state!=="authorization_required"||! /^[a-f0-9]{64}$/.test(started.authorizationRevision||""))throw new Error(ui("لم تبدأ محاولة موافقة جديدة.","A new authorization attempt was not started."));
+      var destination=new URL(started.authorizationUrl);if(destination.protocol!=="https:")throw new Error(ui('صفحة الموافقة غير صالحة.','The authorization page is invalid.'));
+      popup.location.replace(destination.toString());
+      rcBox('<p class="mf__m" role="status">'+ui('أكمل الموافقة في النافذة المنبثقة. لم نتأكد من جاهزية الأدوات بعد.','Complete authorization in the pop-up. Tool readiness is not verified yet.')+'</p>');
+      async function poll(){
+        if(stopped)return;
+        if(popup.closed){failed(ui('أُغلقت نافذة الموافقة؛ لم يتم تأكيد حفظ التفويض.','The pop-up closed; saved authorization was not confirmed.'));return;}
+        try{
+          var status=await workspaceAuthorizationStatus();
+          if(stopped||!rc||rc.tool!==tool)return;
+          if(status.state==="authorization_stored"&&status.grantRevision===started.authorizationRevision){stop();await realConnect(tool);return;}
+          pollTimer=setTimeout(poll,2000);
+        }catch(error){failed(error.message);}
+      }
+      pollTimer=setTimeout(poll,2000);
+    }catch(error){failed(error.message||ui('لم تكتمل الموافقة. أعد المحاولة.','Authorization did not complete. Try again.'));}
+  }
   async function realConnect(tool){
     rc={tool:tool,methods:[],index:0};rcBox('<p class="mf__m">'+ui('أجهّز طرق الربط الآمنة…','Preparing secure connection methods…')+'</p>');
-    try{var data=await integration({op:"methods",piece:tool.s});if(!rc||rc.tool!==tool)return;if(data.noAuth){rcBox('<p class="mf__m">'+ui('هذه الأداة لا تحتاج حسابًا أو مفتاحًا. تصبح جاهزة عند استخدامها داخل مهمة.','This tool needs no account or key. It becomes available when used in a task.')+'</p>');return;}rc.methods=data.methods||[];if(!rc.methods.length)throw new Error(ui("لا توجد طريقة ربط لهذه الأداة.","No connection method is available for this tool."));rcRender();}catch(error){if(rc&&rc.tool===tool)rcBox('<p class="mf__e" role="alert">'+esc(error.message||ui("تعذّر تجهيز الربط.","Could not prepare the connection."))+'</p>');}
+    var authorizationStored=false;
+    try{
+      var status=await workspaceAuthorizationStatus();if(!rc||rc.tool!==tool)return;
+      authorizationStored=status.state==="authorization_stored";
+      if(!authorizationStored){rcBox(workspaceAuthorizationControl(true));return;}
+      var data=await integration({op:"methods",piece:tool.s});if(!rc||rc.tool!==tool)return;if(data.noAuth){rcBox('<p class="mf__m">'+ui('هذه الأداة لا تحتاج حسابًا أو مفتاحًا. تصبح جاهزة عند استخدامها داخل مهمة.','This tool needs no account or key. It becomes available when used in a task.')+'</p>'+workspaceAuthorizationControl(false));return;}rc.methods=data.methods||[];if(!rc.methods.length)throw new Error(ui("لا توجد طريقة ربط لهذه الأداة.","No connection method is available for this tool."));rcRender();$("#mF form").insertAdjacentHTML("beforeend",workspaceAuthorizationControl(false));
+    }catch(error){if(rc&&rc.tool===tool)rcBox('<p class="mf__e" role="alert">'+esc(error.message||ui("تعذّر تجهيز الربط.","Could not prepare the connection."))+'</p>'+(authorizationStored?workspaceAuthorizationControl(false):''));}
   }
   function rcValues(method){var values={};for(var i=0;i<(method.fields||[]).length;i++){var field=method.fields[i];if(field.type==="markdown")continue;var el=$("#mf"+i),value=field.type==="multiselect"?Array.from(el.selectedOptions).filter(function(option){return option.value!=="";}).map(function(option){return field.options[+option.value].value;}):field.type==="checkbox"?el.checked:field.type==="dropdown"?(el.value===""?"":field.options[+el.value].value):field.type==="number"?(el.value===""?"":Number(el.value)):el.value.trim();if(field.required&&(value===""||value==null||Array.isArray(value)&&!value.length)){rcMsg(ui("أكمل «","Complete “")+(field.label||field.name)+ui("» أولًا.","” first."));el.focus();return null;}if(value!=="")values[field.name]=value;}return values;}
   async function rcPost(payload){var tool=rc.tool,button=$("#mOk");button.disabled=true;rcMsg("");try{var data=await integration(payload);tool.connection=data.connection;tool.on=data.connection.status==='ACTIVE';tool.by=usersOf(tool.s);tool.sug="";rc=null;closeModal();toolsCount();renderThread();if(tool.on)siyResumePendingActivation();}catch(error){button=$("#mOk");if(button)button.disabled=false;rcMsg(error.message||ui("تعذّر الربط. راجع البيانات وحاول مرة ثانية.","Could not connect. Check the details and try again."));}}
@@ -1053,6 +1099,7 @@ var I = {
     }catch(error){try{popup.close();}catch(ignore){}button=$("#mOk");if(button)button.disabled=false;rcMsg(error.message||ui("تعذّر بدء تسجيل الدخول.","Could not start sign-in."));}
   }
   $("#mF").addEventListener("click",async function(event){
+    if(event.target.closest("[data-workspace-connect]")){event.preventDefault();authorizeWorkspace();return;}
     var method=event.target.closest("[data-method]");if(method&&rc){rc.index=+method.dataset.method;rcRender(true);return;}
     var reconnect=event.target.closest("[data-reconnect]");if(reconnect&&picked?.s==='gmail'&&picked.connection){realConnect(picked);return;}
     var test=event.target.closest("[data-revalidate]"),disconnect=event.target.closest("[data-disconnect]");if(!picked||!picked.connection||(!test&&!disconnect))return;event.target.disabled=true;rcMsg("");try{if(test){var data=await integration({op:"revalidate",connection_id:picked.connection.id});picked.connection=data.connection;picked.on=data.connection.status==='ACTIVE';$("#mD").textContent=(data.connection.status==='ERROR'?ui("الاتصال فيه خطأ","Connection needs attention"):ui("تم التحقق من بيانات الربط؛ نتيجة الاستخدام تحتاج مهمة فعلية","Connection details verified. A real task is needed to verify the outcome"))+ui(" · يستخدمها: "," · Used by: ")+usersOf(picked.s);event.target.disabled=false;}else{await integration({op:"disconnect",connection_id:picked.connection.id});picked.connection=null;picked.on=false;closeModal();toolsCount();renderThread();}}catch(error){event.target.disabled=false;rcMsg(error.message||ui("لم يتم تأكيد العملية.","The action could not be confirmed."));}
