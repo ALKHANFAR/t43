@@ -36,7 +36,7 @@ const use=(...calls)=>({content:'',tool_calls:calls.map(([name,args],index)=>({i
 
 function setup({script,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false}={}){
   const log={model:[],tools:[],effects:0,states:[],owned:[]};
-  let step=0,status=flowStatus,publishedVersionId=published?'v1':null,draftVersionId='v1',versionState=published?'LOCKED':'DRAFT',sampleData,updated='before',updatedBy,taskInput='{{trigger.task}}';
+  let stateAttempts=0,step=0,status=flowStatus,publishedVersionId=published?'v1':null,draftVersionId='v1',versionState=published?'LOCKED':'DRAFT',sampleData,updated='before',updatedBy,taskInput='{{trigger.task}}';
   const mcp={call:async(_company,method,params)=>{
     if(method==='tools/list')return {tools:catalog};
     if(method==='initialize')return {instructions:'## Activepieces MCP Server\n1. Discover 2. Schema 3. Build 4. Validate 5. Publish'};
@@ -62,7 +62,7 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false,edit
     companyProfiles:async()=>({
       findEmployee:async()=>({id:'employee-1',status:'draft',activepieces_flow_id:null}),
       linkEmployeeFlow:async({flowId:id})=>({recordId:'employee-1',flowId:id,name:'أمين المحتوى',status:'disabled'}),
-      setEmployeeState:async({employeeId,status:next})=>{if(saveStateFailure)throw new Error('save failed');log.states.push([employeeId,next]);return {recordId:employeeId,flowId,name:'أمين المحتوى',status:next};},
+      setEmployeeState:async({employeeId,status:next})=>{if(saveStateFailure===true||saveStateFailure==='once'&&stateAttempts++===0)throw new Error('save failed');log.states.push([employeeId,next]);return {recordId:employeeId,flowId,name:'أمين المحتوى',status:next};},
     }),
     tenantProjects:async()=>({ownedFlow:async(_company,id)=>{log.owned.push(id);return {flow:{...publishedFlow,id,status,publishedVersionId,version:{...publishedFlow.version,id:draftVersionId,state:versionState,updated,...(updatedBy?{updatedBy}:{}),trigger:{...publishedFlow.version.trigger,settings:{...publishedFlow.version.trigger.settings,input:{...publishedFlow.version.trigger.settings.input,task:taskInput},...(sampleData?{sampleData}:{})}}}}};}}),
     toolConnections:async()=>({assertOwnedExternal:async({externalId})=>{if(externalId==='foreign')throw new TenantProjectError('connection_not_owned','الاتصال لا يخص هذه الشركة.',403);}}),
@@ -408,4 +408,75 @@ test('native DRAFT to LOCKED publication does not reject subsequent enabling of 
   const answer=await run({draftEmployee:{id:'employee-1',name:'نور',activepieces_flow_id:flowId}});
   assert.deepEqual(log.tools.map(item=>item[0]),['ap_test_flow','ap_get_run','ap_lock_and_publish','ap_change_flow_status']);
   assert.equal(completedToolActions(answer).outcome_kind,'employee_ready');
+});
+
+
+test('the next model call sees the saved employee link alongside the unchanged native build result',async()=>{
+  const {run}=setup({script:[use(['ap_build_flow',{flowName:'نور'}]),request=>{
+    const result=JSON.parse(toolMessages(request).at(-1));
+    assert.equal(result.structuredContent.flowId,flowId);
+    assert.match(result.content[0].text,/Flow created/);
+    assert.equal(result.siyadahContext.employee.recordId,'employee-1');
+    assert.equal(result.siyadahContext.employee.flowId,flowId);
+    assert.equal(result.siyadahContext.employee.status,'disabled');
+    assert.equal(result.siyadahContext.readinessReceipt,undefined);
+    return say('الموظف مربوط بالمسودة.');
+  }]});
+  const answer=await run({draftEmployee:{id:'employee-1',activepieces_flow_id:null}});
+  assert.equal(answer.employee.status,'disabled');
+});
+
+test('publication reconciles the employee and readiness before the model writes its final reply',async()=>{
+  const {run,log}=setup({script:[use(['ap_build_flow',{flowName:'نور'}]),use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),request=>{
+    const result=JSON.parse(toolMessages(request).at(-1));
+    assert.match(result.content[0].text,/published and enabled/);
+    assert.equal(result.siyadahContext.employee.status,'active');
+    assert.equal(result.siyadahContext.readinessReceipt.test_run_id,runId);
+    assert.equal(result.siyadahContext.readinessReceipt.published_version_id,'v1');
+    return say('الموظف مربوط ومفعّل.');
+  }]});
+  const answer=await run({draftEmployee:{id:'employee-1',activepieces_flow_id:null}});
+  assert.equal(answer.employee.status,'active');
+  assert.equal(log.states.length,1);
+});
+
+test('failed employee reconciliation exposes uncertainty without an active state or readiness to the model',async()=>{
+  const {run}=setup({saveStateFailure:true,script:[use(['ap_build_flow',{flowName:'نور'}]),use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),request=>{
+    const result=JSON.parse(toolMessages(request).at(-1));
+    assert.equal(result.siyadahContext.employee,undefined);
+    assert.equal(result.siyadahContext.employeeStateVerified,false);
+    assert.equal(result.siyadahContext.readinessReceipt,undefined);
+    return say('نُشر التدفق وبقي تأكيد تفعيل الموظف.');
+  }]});
+  const answer=await run({draftEmployee:{id:'employee-1',activepieces_flow_id:null}});
+  assert.equal(answer.employee.status,'disabled');
+  assert.equal(answer.readinessReceipt,undefined);
+});
+
+
+test('publishing then disabling a newly linked employee sends its latest disabled state to the model',async()=>{
+  const {run,log}=setup({script:[use(['ap_build_flow',{flowName:'نور'}]),use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),use(['ap_change_flow_status',{flowId,status:'DISABLED'}]),request=>{
+    const result=JSON.parse(toolMessages(request).at(-1));
+    assert.equal(result.siyadahContext.employee.status,'disabled');
+    assert.equal(result.siyadahContext.readinessReceipt,undefined);
+    return say('الموظف متوقف.');
+  }]});
+  const answer=await run({draftEmployee:{id:'employee-1',activepieces_flow_id:null}});
+  assert.equal(answer.employee.status,'disabled');
+  assert.equal(answer.readinessReceipt,undefined);
+  assert.deepEqual(log.states,[['employee-1','active'],['employee-1','disabled']]);
+});
+
+
+test('a transient employee state readback failure remains retryable at finalization',async()=>{
+  const {run,log}=setup({saveStateFailure:'once',script:[use(['ap_build_flow',{flowName:'نور'}]),use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),request=>{
+    const result=JSON.parse(toolMessages(request).at(-1));
+    assert.equal(result.siyadahContext.employeeStateVerified,false);
+    assert.equal(result.siyadahContext.employee,undefined);
+    return say('نُشر التدفق؛ تأكيد حالة الموظف يحتاج قراءة.');
+  }]});
+  const answer=await run({draftEmployee:{id:'employee-1',activepieces_flow_id:null}});
+  assert.equal(answer.employee.status,'active');
+  assert.equal(answer.readinessReceipt.test_run_id,runId);
+  assert.equal(log.states.length,1);
 });
