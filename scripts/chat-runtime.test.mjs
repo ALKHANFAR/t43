@@ -1126,3 +1126,12 @@ test('logout resets activation ownership and a late prior response cannot replac
     newResolve({ok:true,activation_status:'pending',employee_id:publishedEmployee.recordId,message:'new check missing connection'});await flush();await flush();assert.match(p.d.querySelector('.pin__s').textContent,/new check missing connection/);assert.equal(p.d.querySelector('#onSw').disabled,false);
   }finally{p.close();}
 });
+
+test('a newly linked workflow adds the instruction apply shortcut without losing the open draft edit',async()=>{
+  const draft={...publishedEmployee,flowId:null,status:'disabled',tools:[],instructions:'draft saved'};let resolveMessage;
+  const p=await page({hash:'#e='+draft.recordId,hydrate:{...empty,team:[draft]},message:()=>new Promise(resolve=>{resolveMessage=resolve;}),employee_instructions:{ok:true,published_instructions:{flow_id:null,read_status:'not_published'}}});try{
+    p.d.querySelector('#reviewStart').click();await flush();assert.equal(p.d.querySelector('#instrApply'),null);const editor=p.d.querySelector('#instr'),save=p.d.querySelector('#instrSave');editor.value='unsaved newly linked draft';editor.focus();editor.setSelectionRange(2,6);send(p,'جهز طريقة العمل');await flush();editor.focus();editor.setSelectionRange(2,6);
+    resolveMessage({ok:true,request_status:'succeeded',work_status:'not_started',outcome_kind:'employee_draft',reply:'حفظت طريقة العمل.',employee:{...draft,flowId:publishedEmployee.flowId}});await flush();await flush();
+    assert.ok(p.d.querySelector('#instrApply'));assert.equal(p.d.querySelector('#instr'),editor);assert.equal(p.d.querySelector('#instrSave'),save);assert.equal(editor.value,'unsaved newly linked draft');assert.equal(p.d.querySelector('#instrWrap').hidden,false);assert.equal(p.d.activeElement,editor);assert.deepEqual([editor.selectionStart,editor.selectionEnd],[2,6]);p.d.querySelector('#instrApply').click();assert.match(p.d.querySelector('#instrF').textContent,/احفظ تعديلك أولًا/);
+  }finally{p.close();}
+});
