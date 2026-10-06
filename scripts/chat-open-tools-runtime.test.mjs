@@ -102,7 +102,7 @@ test('the model builds, tests and publishes in one request and writes the reply 
   assert.deepEqual(first.thinking,{type:'enabled'});
   assert.match(first.messages[0].content,/## Activepieces MCP Server/);
   assert.ok(first.tools.some(tool=>tool.function.name==='ap_lock_and_publish'));
-  assert.ok(!first.tools.some(tool=>tool.function.name==='ap_set_project_context'));
+  assert.ok(first.tools.some(tool=>tool.function.name==='ap_set_project_context'));
   assert.equal(toolMessages(last).length,5);
   assert.match(toolMessages(last)[1],/Flow created/);
 });
@@ -193,7 +193,7 @@ test('invalid calls and company boundaries are answered to the model without dis
   assert.ok(answer.toolReceipts.every(item=>item.status==='error'&&!item.effect_attempted));
   const replies=toolMessages(log.model[1]);
   assert.equal(replies.length,4);
-  assert.match(replies[0],/mcp_tool_invalid/);assert.match(replies[2],/mcp_arguments_invalid/);assert.match(replies[3],/connection_not_owned/);
+  assert.match(replies[0],/mcp_project_switch_forbidden/);assert.match(replies[2],/mcp_arguments_invalid/);assert.match(replies[3],/connection_not_owned/);
 });
 
 test('the chat keeps ordered MCP results without storing tool inputs or claiming provider success',async()=>{
@@ -566,7 +566,7 @@ test('employee without a Flow builds and edits its own linked Flow in one chat',
   assert.equal(result.employee.recordId,'employee-1');assert.equal(result.employee.flowId,flowId);
   assert.deepEqual(log.tools.map(x=>x[0]),['ap_build_flow','ap_add_step']);
   assert.equal(log.tools[1][1].flowId,flowId);
-  assert.equal(log.model.at(-1).tools.some(x=>x.function.name==='ap_build_flow'),false);
+  assert.equal(log.model.at(-1).tools.some(x=>x.function.name==='ap_build_flow'),true);
 });
 test('native employee Flow listing removes other Flow data from text and structured output',async()=>{
   const foreign='G'.repeat(21);
@@ -603,5 +603,30 @@ test('accepted native deletion pauses the employee without claiming final Flow d
   const {run,log}=setup({published:true,flowStatus:'ENABLED',script:[use(['ap_delete_flow',{}]),say('طلب الحذف قُبل وأوقفت الموظف.')],toolResults:{ap_delete_flow:{structuredContent:{success:true}}}});
   const result=await run({employee:{id:'employee-1',status:'active',activepieces_flow_id:flowId}});
   assert.deepEqual(log.states,[['employee-1','disabled']]);assert.equal(result.employee.status,'disabled');assert.equal(result.employee.flowId,flowId);
-  assert.equal(result.readinessReceipt,undefined);assert.equal(log.model.at(-1).tools.some(x=>x.function.name===flowToolName),false);
+  assert.equal(result.readinessReceipt,undefined);assert.equal(log.model.at(-1).tools.some(x=>x.function.name===flowToolName),true);
+});
+
+
+test('main and every employee state receive the complete native catalog without a fixed count',async()=>{
+  for(const employee of [null,{id:'employee-1',status:'draft',activepieces_flow_id:null},{id:'employee-1',status:'disabled',activepieces_flow_id:flowId},{id:'employee-1',status:'active',activepieces_flow_id:flowId}]){
+    const {run,log}=setup({script:[say('الكتالوج متاح')],published:true,flowStatus:'ENABLED'});
+    await run({employee});
+    assert.deepEqual(log.model[0].tools.map(x=>x.function.name),catalog.map(x=>x.name));
+  }
+});
+
+test('saved draft sees creation tools but cannot create a replacement Flow',async()=>{
+  const {run,log}=setup({script:[use(['ap_create_flow',{flowName:'replacement'}]),say('نستخدم المسودة الموجودة')]});
+  await run({draftEmployee:{id:'employee-1',status:'draft',activepieces_flow_id:flowId}});
+  assert.ok(log.model[0].tools.some(x=>x.function.name==='ap_create_flow'));
+  assert.deepEqual(log.tools,[]);
+  assert.match(toolMessages(log.model[1])[0],/employee_flow_conflict/);
+});
+
+test('completed effect stays visible but cannot be dispatched again in a continuation',async()=>{
+  const {run,log}=setup({script:[use(['ap_list_tables',{}]),say('أكمل من النتيجة')]});
+  await run({excludedTools:['ap_list_tables']});
+  assert.ok(log.model[0].tools.some(x=>x.function.name==='ap_list_tables'));
+  assert.deepEqual(log.tools,[]);
+  assert.match(toolMessages(log.model[1])[0],/mcp_effect_already_completed/);
 });

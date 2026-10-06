@@ -121,3 +121,8 @@ These boundaries are draft PR #60 behavior, not a production claim. See `docs/mc
 ## Native capabilities in main and employee chat
 
 Both chat paths use the original company MCP tool catalog and schemas. Employee scope limits Flow/run identity, not an arbitrary whitelist of project action, table, record, AI or guidance capabilities. Native Flow creation for a Flow-less employee links its existing record and refreshes tool visibility for the next model turn. Existing linked Flows are edited. Flow-list text and structured data are limited to that employee, and run inspection/retry verifies the exact saved Flow before dispatch. Production employee Flow invocation still requires activation, exact native receipt and existing recovery boundaries. Local tests prove dispatch wiring, not live provider acceptance of every tool.
+
+
+### Full native catalog exposure (draft PR #60)
+
+Main and employee chat pass every protocol-valid tool advertised by the company MCP `tools/list` to the model, preserving native schemas and order without a fixed tool count. Employee state, linked Flow and continuation exclusions do not hide catalog entries. Company/project boundaries, employee Flow ownership, activation and duplicate-effect checks apply before dispatch. Project switching remains rejected; an existing draft cannot be replaced by another created Flow. This changes catalog exposure only, with no REST construction or discovery fallback and no claim that every tool has passed a live provider test.

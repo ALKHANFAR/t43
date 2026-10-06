@@ -152,7 +152,7 @@ test('confirmed table resumes planning without creating another table and keeps 
   assert.match(continuation,/deepseekReply\(/);
   assert.match(continuation,/excludedTools:\['ap_create_table'\]/);
   assert.match(continuation,/answer\?\.approval\?\{approval:answer\.approval\}/);
-  assert.match(server,/!excludedTools\.includes\(tool\.name\)/);
+  assert.match(server,/excludedTools\.includes\(name\)/);
   assert.ok(continuation.indexOf('createdTableReadback(result,listed)')<continuation.indexOf('deepseekReply('));
   assert.match(server.slice(end,end+700),/outcome_kind:'unverified'/);
 });

@@ -450,7 +450,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   }
   // Activepieces labels every tool with readOnlyHint; the name pattern only covers a server that omits it.
   const readOnly=name=>{const hint=available.find(tool=>tool.name===name)?.annotations?.readOnlyHint;return typeof hint==='boolean'?hint:/^ap_(?:search_|list_|get_|read_|research_|resolve_|find_|flow_structure$|validate_flow$|validate_step_config$|setup_guide$)/.test(name);};
-  const modelTools=()=>available.filter(tool=>/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(tool.name)&&!excludedTools.includes(tool.name)&&!(draftEmployee?.activepieces_flow_id&&['ap_build_flow','ap_create_flow'].includes(tool.name))&&visibleMcpTool(tool,employee,flowToolName)&&(!employee||employeeMcpToolReady(tool,employee))).map(tool=>({type:'function',function:{name:tool.name,description:String(tool.description||'').slice(0,4000),parameters:tool.inputSchema||{type:'object',properties:{}}}}));
+  const modelTools=()=>available.filter(tool=>/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(tool.name)).map(tool=>({type:'function',function:{name:tool.name,description:String(tool.description||'').slice(0,4000),parameters:tool.inputSchema||{type:'object',properties:{}}}}));
   let tools=modelTools();
   if(available.length)messages[0].content+='\nأدوات Activepieces تخص مشروع هذه الشركة. اختر منها بحرية ما يخدم هدف المستخدم، وصغ التعليمات والمدخلات داخل Flow/Agent عبر MCP، واستند إلى نتائج الأدوات في وصف ما حدث. إذا أراد المستخدم عملًا مستمرًا، اختبره ثم فعّله عند نجاح التجربة واكتمال اتصالاته؛ وإن نقص اتصال فاذكره وانتظر اكتماله. لا تدّع تشغيلًا أو نتيجة مزود لم تتحقق منها.';
   if(draftEmployee)messages[0].content+='\nللمستخدم مسودة موظف محفوظة في currentDraft. إن لم يكن لها flowId فابنِ طريقة عملها بـ ap_build_flow وستُربط بها؛ وإن وُجد flowId فاقرأها وعدّلها بأدوات التعديل ولا تنشئ لها Flow ثانيًا. إن كان سيستقبل مهام من شاته فاجعل مشغّل الفلو MCP Tool مع Wait for Response وأضف Reply to MCP Client؛ اكتشف حقول القطعتين من Activepieces قبل البناء.';
@@ -513,6 +513,8 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
         const toolStarted=Date.now();
         try{
           if(!tools.some(tool=>tool.function.name===name))throw new TenantProjectError('mcp_tool_invalid','هذه الأداة غير متاحة في هذه المحادثة.',502);
+          if(excludedTools.includes(name))throw new TenantProjectError('mcp_effect_already_completed','اكتمل هذا الإجراء في الطلب الحالي؛ تابع من نتيجته دون تكراره.',409);
+          if(draftEmployee?.activepieces_flow_id&&['ap_build_flow','ap_create_flow'].includes(name))throw new TenantProjectError('employee_flow_conflict','طريقة عمل المسودة محفوظة؛ اقرأها وعدّلها دون إنشاء نسخة ثانية.',409);
           let args;try{args=JSON.parse(call.function.arguments||'{}');}catch{args=null;}
           if(!args||typeof args!=='object'||Array.isArray(args))throw new TenantProjectError('mcp_arguments_invalid','مدخلات الأداة يجب أن تكون كائن JSON واحدًا.',502);
           if(['ap_build_flow','ap_create_flow'].includes(name)&&flowId)throw new TenantProjectError('employee_flow_conflict','بُني Flow في هذا الطلب. اقرأه وعدّل خطواته بدل إنشاء نسخة ثانية.',409);
