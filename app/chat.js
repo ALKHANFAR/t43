@@ -810,7 +810,7 @@ var I = {
   $("#input").addEventListener("keydown",function(e){ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(this.value);} });
   $("#input").addEventListener("input",function(){ this.style.height="auto"; this.style.height=Math.min(this.scrollHeight,160)+"px"; });
 
-  function go(w,c){ who=w; chatId=c||null; kpiOpen=null; renderSide(); renderBar(); renderThread(); if(window.__SIY_REAL__&&emp(w))siyResumePendingActivation(w); }
+  function go(w,c){ who=w; chatId=c||null; kpiOpen=null; renderSide(); renderBar(); renderThread();refreshLiveLabels(); if(window.__SIY_REAL__&&emp(w))siyResumePendingActivation(w); }
   function newChat(){ live={}; go("siyadah"); $("#input").focus(); }
   $("#emps").addEventListener("click",function(e){ var b=e.target.closest(".emp"); if(!b) return; go(b.dataset.emp); $("#input").focus(); });
   $(".side__scroll").addEventListener("click",function(e){ var b=e.target.closest(".hist"); if(!b||!b.dataset.chat) return;
@@ -1410,13 +1410,13 @@ var I = {
     if(!CHATS[id]) CHATS[id]={with:employeeId||"siyadah",emp:employeeId||null,t:title(text),when:"today",msgs:list};
     if(!employeeId&&curList()===list){chatId=id;live.siyadah=null;}
   }
-  function siyDraw(){ renderSide(); renderBar(); renderThread(); renderPlan(); }
+  function siyDraw(){ renderSide(); renderBar(); renderThread(); renderPlan();refreshLiveLabels(); }
   var siyActivationResumeBusy=false, siyActivationResumeNotice=null;
   async function siyResumePendingActivation(employeeId){
     if(!window.__SIY_REAL__||siyActivationResumeBusy)return;
     var generation=siyGeneration;
     siyActivationResumeBusy=true;siyActivationResumeNotice={employeeId:employeeId||null,busy:true,message:ui('نتحقق من جاهزية الموظف للتجربة والتفعيل…','Checking employee readiness for testing and activation…')};
-    siyBuilderState(siyActivationResumeNotice.message,false);if(employeeId&&who===employeeId)siyDraw();
+    siyBuilderState(siyActivationResumeNotice.message,false);refreshLiveLabels();if(employeeId&&who===employeeId)siyDraw();
     try{
       var result=await siyRequest({op:"resume_employee_activation",...(employeeId?{employee_id:employeeId}:{})},210000);
       if(generation!==siyGeneration)return;
@@ -1425,7 +1425,7 @@ var I = {
       else if(result.activation_status==='none'){siyActivationResumeNotice=null;siyBuilderState(ui('مساحة شركتك','Your workspace'),true);if(employeeId&&who===employeeId)siyDraw();}
       else throw new Error(ui('لم نتأكد من نتيجة التفعيل.','Activation outcome is unverified.'));
     }catch(error){if(generation===siyGeneration){siyActivationResumeNotice={employeeId:employeeId||null,busy:false,message:error.message||ui('تعذّر التحقق من التفعيل. أعد فتح الموظف للمحاولة.','Could not check activation. Reopen the employee to retry.')};siyBuilderState(siyActivationResumeNotice.message,false);if(employeeId&&who===employeeId)siyDraw();}}
-    finally{if(generation===siyGeneration)siyActivationResumeBusy=false;}
+    finally{if(generation===siyGeneration){siyActivationResumeBusy=false;refreshLiveLabels();}}
   }
   function siyDraftReadinessHtml(readiness){
     if(!readiness||readiness.schema!=="SiyadahDraftReadinessV1"||!Array.isArray(readiness.checks)) return "";
@@ -1619,7 +1619,7 @@ var I = {
     var profile=$("#meBtn .me__n");if(profile&&profile.firstChild&&profile.firstChild.nodeType===3)profile.firstChild.textContent=ui('حسابك','Your account');
     var dataDescription=$("#dataDescription");if(dataDescription)dataDescription.textContent=ui('ملف شركتك ومعرفتها ونتائجها','Your company profile, knowledge and results');
     var deletion=$("#deleteAccountBtn");if(deletion)deletion.textContent=ui('حذف الحساب — غير متاح','Delete account — unavailable');
-    var consent=$(".comp__f");if(consent)consent.textContent=ui('تظهر حالة كل طلب ونتيجته بعد التحقق.','Request status and results appear after verification.');
+    var consent=$(".comp__f"),notice=siyActivationResumeNotice;if(consent)consent.textContent=notice&&(!notice.employeeId||notice.employeeId===who)?notice.message:ui('تظهر حالة كل طلب ونتيجته بعد التحقق.','Request status and results appear after verification.');
     var attachment=$("#attachBtn");if(attachment&&attachment.disabled){attachment.title=ui('إرفاق الملفات غير متاح حاليًا','File attachments are currently unavailable');attachment.setAttribute('aria-label',attachment.title);}
     [$("#companyNameField"),$("#companyDescriptionField")].forEach(function(input){if(input&&input.readOnly)input.title=ui('من سجل الشركة؛ التعديل غير متاح هنا','From your company record; editing is unavailable here');});
     var notification=$("#notificationSwitch");if(notification){notification.setAttribute('aria-label',ui('الإشعارات غير متاحة حاليًا','Notifications are currently unavailable'));var row=notification.closest('.srow'),caption=row&&row.querySelector('small');if(caption)caption.textContent=ui('لم تُفعّل قنوات الإشعارات','Notification channels are not enabled');var label=notification.nextSibling;if(label&&label.nodeType===3)label.textContent=ui('الإشعارات غير متاحة حاليًا','Notifications are currently unavailable');}

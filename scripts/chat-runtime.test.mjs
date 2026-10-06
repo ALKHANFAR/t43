@@ -1135,3 +1135,18 @@ test('a newly linked workflow adds the instruction apply shortcut without losing
     assert.ok(p.d.querySelector('#instrApply'));assert.equal(p.d.querySelector('#instr'),editor);assert.equal(p.d.querySelector('#instrSave'),save);assert.equal(editor.value,'unsaved newly linked draft');assert.equal(p.d.querySelector('#instrWrap').hidden,false);assert.equal(p.d.activeElement,editor);assert.deepEqual([editor.selectionStart,editor.selectionEnd],[2,6]);p.d.querySelector('#instrApply').click();assert.match(p.d.querySelector('#instrF').textContent,/احفظ تعديلك أولًا/);
   }finally{p.close();}
 });
+
+for(const locale of ['ar','en'])test('global activation notice is visible with the account popup closed and restores the composer footer '+locale,async()=>{
+  let resolveResume;const p=await page({locale,hydrate:{...empty,team:[publishedEmployee]},resume_employee_activation:()=>new Promise(resolve=>{resolveResume=resolve;})});try{
+    assert.equal(p.d.querySelector('#pop').classList.contains('on'),false);assert.match(p.d.querySelector('.comp__f').textContent,locale==='ar'?/نتحقق من جاهزية/:/Checking employee readiness/);
+    resolveResume({ok:true,activation_status:'pending',message:'<img src=x> اختر الموظف للتجربة'});await flush();await flush();assert.match(p.d.querySelector('.comp__f').textContent,/اختر الموظف للتجربة/);assert.equal(p.d.querySelector('.comp__f img'),null);assert.equal(p.d.querySelector('.comp__f').closest('#pop,[hidden]'),null);
+    p.d.querySelector('#emps .emp').click();await flush();resolveResume({ok:true,activation_status:'none'});await flush();await flush();assert.match(p.d.querySelector('.comp__f').textContent,locale==='ar'?/تظهر حالة كل طلب/:/Request status and results/);
+  }finally{p.close();}
+});
+
+test('global activation error appears in the visible footer while a scoped notice does not leak to another chat',async()=>{
+  let calls=0;const p=await page({hydrate:{...empty,team:[publishedEmployee]},resume_employee_activation:()=>++calls===1?new Error('global activation failed'):{ok:true,activation_status:'pending',employee_id:publishedEmployee.recordId,message:'employee connection missing'}});try{
+    assert.equal(p.d.querySelector('#pop').classList.contains('on'),false);assert.match(p.d.querySelector('.comp__f').textContent,/global activation failed/);
+    p.d.querySelector('#emps .emp').click();await flush();await flush();assert.match(p.d.querySelector('.comp__f').textContent,/employee connection missing/);p.d.querySelector('#newChat').click();assert.match(p.d.querySelector('.comp__f').textContent,/تظهر حالة كل طلب/);
+  }finally{p.close();}
+});
