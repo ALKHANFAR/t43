@@ -222,10 +222,10 @@ test('a request that runs out of time still ends with an account of what ran',as
 
 test('selected employee chat calls only its published native MCP Flow tool',async()=>{
   const employee={id:'employee-9',name:'نور',status:'active',activepieces_flow_id:flowId};
-  const {run,log}=setup({flowStatus:'ENABLED',published:true,script:[use(['ap_add_step',{flowId:'G'.repeat(21)}],['ap_add_step',{}]),use([flowToolName,{task:'نفذ'}]),say('وصل رد الأداة.')]});
+  const {run,log}=setup({flowStatus:'ENABLED',published:true,script:[use(['ap_add_step',{flowId:'G'.repeat(21)}]),use([flowToolName,{task:'نفذ'}]),say('وصل رد الأداة.')]});
   const answer=await run({employee});
   assert.equal(answer.flowToolAttempted,true);
-  assert.deepEqual(log.tools,[['ap_add_step',{flowId}],[flowToolName,{task:'نفذ'}]]);
+  assert.deepEqual(log.tools,[[flowToolName,{task:'نفذ'}]]);
   assert.match(toolMessages(log.model[1])[0],/employee_flow_scope/);
   assert.match(toolMessages(log.model.at(-1)).at(-1),new RegExp(`ok ${flowToolName}`));
   assert.ok(log.model[0].tools.some(tool=>tool.function.name===flowToolName));
@@ -486,6 +486,30 @@ test('a transient employee state readback failure remains retryable at finalizat
 const executionResult=(overrides={})=>({content:[{type:'text',text:'native reply'}],structuredContent:{execution:{runId,flowId,projectId:'P'.repeat(21),flowVersionId:'v1',environment:'PRODUCTION',...overrides}}});
 const productionRun=(overrides={})=>({structuredContent:{id:runId,flowId,environment:'PRODUCTION',status:'SUCCEEDED',steps:[{name:'trigger',output:{}},{name:'reply',output:{status:200,body:{result:'QA'}}}],...overrides}});
 const runningEmployee={id:'employee-9',status:'active',activepieces_flow_id:flowId,tools_json:['mcp']};
+
+test('earlier Flow edits including failed writes block native dispatch in the same batch or next turn',async()=>{
+  for(const sameBatch of [true,false])for(const failedWrite of [true,false]){
+    let nativeReconciliations=0;
+    const edit=['ap_add_step',{flowId}],native=[flowToolName,{}];
+    const {run,log}=setup({published:true,flowStatus:'ENABLED',toolResults:failedWrite?{ap_add_step:()=>{throw new Error('ambiguous write failure');}}:{},script:sameBatch?[use(edit,native),say('اطلب تشغيل الموظف بصورة مستقلة.')]:[use(edit),use(native),say('اطلب تشغيل الموظف بصورة مستقلة.')]});
+    const answer=await run({employee:runningEmployee,onNativeExecution:async()=>{nativeReconciliations++;}});
+    assert.deepEqual(log.tools.map(x=>x[0]),['ap_add_step']);
+    assert.equal(nativeReconciliations,0);assert.equal(answer.flowToolAttempted,false);
+    assert.equal(completedToolActions(answer).work_status,'unknown');
+  }
+});
+
+test('native dispatch blocks later effects in the same batch or next turn while readonly remains allowed',async()=>{
+  for(const sameBatch of [true,false])for(const name of ['ap_add_step','ap_test_flow','ap_lock_and_publish']){
+    const native=[flowToolName,{}],effect=[name,{flowId}];
+    const script=[use(['ap_validate_flow',{flowId}]),...(sameBatch?[use(native,effect)]:[use(native),use(effect)]),use(['ap_validate_flow',{flowId}]),say('اكتملت المهمة؛ التعديل يحتاج طلبًا آخر.')];
+    const {run,log}=setup({published:true,flowStatus:'ENABLED',toolResults:{[flowToolName]:executionResult(),ap_get_run:productionRun()},script});
+    const answer=await run({employee:runningEmployee});
+    assert.deepEqual(log.tools.map(x=>x[0]),['ap_validate_flow',flowToolName,'ap_get_run','ap_validate_flow']);
+    assert.deepEqual(Array.from(answer.effects),[flowToolName]);assert.equal(log.runs.length,1);
+    assert.equal(completedToolActions(answer).work_status,'succeeded');
+  }
+});
 
 test('native employee execution receipt reads its exact production run and saves proof before the next model call',async()=>{
   const {run,log}=setup({published:true,flowStatus:'ENABLED',toolResults:{[flowToolName]:executionResult(),ap_get_run:productionRun()},script:[use([flowToolName,{}]),request=>{

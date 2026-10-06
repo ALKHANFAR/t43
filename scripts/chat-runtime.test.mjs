@@ -1150,3 +1150,18 @@ test('global activation error appears in the visible footer while a scoped notic
     p.d.querySelector('#emps .emp').click();await flush();await flush();assert.match(p.d.querySelector('.comp__f').textContent,/employee connection missing/);p.d.querySelector('#newChat').click();assert.match(p.d.querySelector('.comp__f').textContent,/تظهر حالة كل طلب/);
   }finally{p.close();}
 });
+
+test('connection UI preserves exact method, multi-select defaults and excludes instruction markdown',async()=>{
+  const fields=[{name:'algorithms',label:'Algorithms',type:'multiselect',required:true,defaultValue:['b'],options:[{label:'A',value:'a'},{label:'B',value:'b'}]},{name:'info',label:'Instructions',type:'markdown',description:'<b>Safe instructions</b>'}];
+  const connection={id:'C'.repeat(21),slug:'gmail',status:'ACTIVE',scope:'PROJECT'};
+  const p=await page({integrations:{list:{ok:true,connections:[]},methods:{ok:true,methods:[{id:'CUSTOM_AUTH:0',type:'CUSTOM_AUTH',available:true,fields:[]},{id:'CUSTOM_AUTH:1',type:'CUSTOM_AUTH',available:true,fields}]},connect:{ok:true,connection}},hash:''});
+  try{
+    p.d.querySelector('#toolsLink').click();await flush();p.d.querySelector('#allTgl').click();await flush();p.d.querySelector('[data-c="gmail"]').click();await flush();
+    p.d.querySelector('[data-method="1"]').click();
+    const select=p.d.querySelector('#mf0');assert.equal(select.multiple,true);assert.deepEqual(Array.from(select.selectedOptions).map(option=>option.value),['1']);assert.equal(p.d.querySelector('#mf1'),null);assert.equal(p.d.querySelector('#mF b'),null);
+    select.options[1].selected=true;
+    p.d.querySelector('#mF form').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));await flush();
+    const request=p.requests.find(request=>request.body?.op==='connect').body;
+    assert.equal(request.methodId,'CUSTOM_AUTH:1');assert.deepEqual(request.values,{algorithms:['a','b']});
+  }finally{p.close();}
+});

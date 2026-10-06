@@ -260,3 +260,37 @@ test('unknown or malformed flow references fail closed before disconnect',async(
     assert.equal(calls.some(call=>call.options.method==='DELETE'),false);
   }
 });
+
+test('client-credentials-only OAuth is unavailable and rejected before an attempt',async()=>{
+  const configured=harness({customerOrigin:ORIGIN,gmailOAuthProvider:'activepieces',gmail:{...gmail,auth:{...gmail.auth[0],grantType:'client_credentials'}}});
+  const result=await configured.service.methods({tenantId:'company-a',piece:'gmail',requestOrigin:ORIGIN});
+  assert.equal(result.methods[0].grantType,'client_credentials');assert.equal(result.methods[0].available,false);
+  await assert.rejects(()=>configured.service.oauthStart({tenantId:'company-a',sessionBinding:'session-a',requestOrigin:ORIGIN,piece:'gmail'}),error=>error.code==='unsupported_oauth_grant');
+});
+
+test('dual-grant OAuth keeps the supported authorization-code route explicit',async()=>{
+  const configured=harness({customerOrigin:ORIGIN,gmailOAuthProvider:'activepieces',gmail:{...gmail,auth:{...gmail.auth[0],grantType:'both_client_credentials_and_authorization_code'}}});
+  const result=await configured.service.methods({tenantId:'company-a',piece:'gmail',requestOrigin:ORIGIN});
+  assert.equal(result.methods[0].grantType,'both_client_credentials_and_authorization_code');assert.equal(result.methods[0].available,true);
+  const started=await configured.service.oauthStart({tenantId:'company-a',sessionBinding:'session-a',requestOrigin:ORIGIN,piece:'gmail'});
+  assert.equal(new URL(started.authorizationUrl).searchParams.get('response_type'),'code');
+});
+
+test('exact auth method and structured multi-select come from metadata; markdown is never submitted',async()=>{
+  const configured=harness({gmail:{...gmail,auth:[{type:'CUSTOM_AUTH',props:{first:{required:true,type:'SHORT_TEXT'}}},{type:'CUSTOM_AUTH',props:{algorithms:{required:true,type:'STATIC_MULTI_SELECT_DROPDOWN',options:{options:[{label:'A',value:'a'},{label:'B',value:'b'}]}},info:{required:true,type:'MARKDOWN',description:'Instructions'}}}]}});
+  const result=await configured.service.methods({tenantId:'company-a',piece:'gmail'});
+  assert.equal(result.methods[1].fields[0].type,'multiselect');assert.equal(result.methods[1].fields[1].type,'markdown');
+  await assert.rejects(()=>configured.service.connect({tenantId:'company-a',piece:'gmail',type:'CUSTOM_AUTH',values:{algorithms:['a']}}),error=>error.code==='auth_method_required');
+  await assert.rejects(()=>configured.service.connect({tenantId:'company-a',piece:'gmail',type:'CUSTOM_AUTH',methodId:'CUSTOM_AUTH:1',values:{algorithms:['unknown']}}),error=>error.code==='invalid_connection_field');
+  await configured.service.connect({tenantId:'company-a',piece:'gmail',type:'CUSTOM_AUTH',methodId:'CUSTOM_AUTH:1',values:{algorithms:['a','b'],info:'injected'}});
+  const request=configured.calls.find(call=>call.url.endsWith('/api/v1/app-connections')).body;
+  assert.deepEqual(request.value.props,{algorithms:['a','b']});
+});
+
+test('changed auth metadata is rejected before connection write instead of silently changing methods',async()=>{
+  const meta={...gmail,auth:[{type:'CUSTOM_AUTH',props:{first:{type:'SHORT_TEXT'}}},{type:'CUSTOM_AUTH',props:{second:{type:'SHORT_TEXT'}}}]},configured=harness({gmail:meta});
+  const chosen=(await configured.service.methods({tenantId:'company-a',piece:'gmail'})).methods[1];
+  meta.auth.reverse();
+  await assert.rejects(()=>configured.service.connect({tenantId:'company-a',piece:'gmail',type:chosen.type,methodId:chosen.id,methodFingerprint:chosen.fingerprint,values:{second:'value'}}),error=>error.code==='stale_auth_method');
+  assert.equal(configured.calls.some(call=>call.url.endsWith('/api/v1/app-connections')),false);
+});
