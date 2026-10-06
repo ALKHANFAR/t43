@@ -517,21 +517,27 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
             if(done.built){flowId=done.built.flowId;effectFlowId=flowId;linked=done.updated||linked;}
           }else result=await mcp.call(companyId,'tools/call',{name,arguments:args});
           if(name===flowToolName&&result?.isError!==true){
+            let verification='missing_execution',observedStatus=null;
             // The native webhook callback identifies this invocation; never infer it from recent runs.
             try{
               const execution=result?.structuredContent?.execution,projects=await tenantProjects();
               const projectId=await projects.requireProject(companyId);
+              if(execution)verification='identity_mismatch';
               if(execution&&/^[A-Za-z0-9]{21}$/.test(String(execution.runId||''))&&execution.flowId===employee.activepieces_flow_id&&execution.projectId===projectId&&execution.flowVersionId===publishedEmployeeVersion&&execution.environment==='PRODUCTION'){
+                verification='published_mismatch';
                 const {flow}=await projects.ownedFlow(companyId,execution.flowId,execution.flowVersionId);
                 if(flow.status==='ENABLED'&&flow.publishedVersionId===execution.flowVersionId){
                   const detail=await mcp.call(companyId,'tools/call',{name:'ap_get_run',arguments:{flowRunId:execution.runId}}),run=detail?.structuredContent;
+                  observedStatus=typeof run?.status==='string'?run.status.slice(0,40):null;verification='run_unverified';
                   if(detail?.isError!==true&&run?.id===execution.runId&&run.flowId===execution.flowId&&run.environment==='PRODUCTION'&&run.status==='SUCCEEDED'&&Array.isArray(run.steps)&&run.steps.length>0){
+                    verification='save_mismatch';
                     const saved=await (await companyProfiles()).recordEmployeeRun({companyId,employeeId:employee.id,flowId:execution.flowId,runId:execution.runId,result:run.steps.at(-1).output,tools:employee.tools_json||[],conversationId});
-                    if(saved?.recordId===employee.id&&saved.flowId===execution.flowId&&saved.lastRunId===execution.runId){linked=saved;executionReceipt={run_id:execution.runId,outcome:'flow_completed'};}
+                    if(saved?.recordId===employee.id&&saved.flowId===execution.flowId&&saved.lastRunId===execution.runId){linked=saved;executionReceipt={run_id:execution.runId,outcome:'flow_completed'};verification='verified';}
                   }
                 }
               }
-            }catch(error){console.error('employee run readback failed',error?.code||error?.name||'unknown_error');}
+            }catch(error){verification='exception';console.error('employee run readback failed',error?.code||error?.name||'unknown_error');}
+            console.info('employee_run_verification',JSON.stringify({conversation_id:conversationId,reason:verification,run_status:observedStatus,execution_present:!!result?.structuredContent?.execution}));
           }
           if(name==='ap_test_flow'&&args.flowId===employeeFlow){
             testedFlowId=null;testedVersion=null;testedRun=null;
