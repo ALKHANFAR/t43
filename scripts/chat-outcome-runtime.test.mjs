@@ -128,3 +128,11 @@ test('an active tested employee does not turn a failed setup request into overal
   const result=completedToolActions({readinessReceipt:readiness,effects:['ap_test_flow','ap_lock_and_publish','ap_change_flow_status'],toolReceipts:[{name:'ap_test_flow',flow_id:readiness.flow_id,effect_attempted:true,status:'returned'},{name:'ap_lock_and_publish',flow_id:readiness.flow_id,effect_attempted:true,status:'returned'},{name:'ap_change_flow_status',flow_id:readiness.flow_id,effect_attempted:true,status:'error'}]});
   assert.equal(result.work_status,'unknown');assert.equal(result.outcome_kind,'unverified');assert.deepEqual(result.readiness_receipt,readiness);
 });
+
+
+test('verified native Flow runs complete only the exact recorded effects without provider or KPI claims',()=>{
+  const receipt={name:'qa_mcp',status:'returned',effect_attempted:true,run_id:'R'.repeat(21),outcome:'flow_completed'};
+  const answer={flowToolAttempted:true,effects:['qa_mcp'],toolReceipts:[receipt]};
+  assert.deepEqual(completedToolActions(answer),{request_status:'succeeded',work_status:'succeeded',outcome_kind:'tool_result'});
+  for(const modified of [{effects:['qa_mcp','ap_add_step']},{effects:['other_mcp']},{toolReceipts:[{...receipt,status:'error'}]},{flowToolAttempted:false}])assert.equal(completedToolActions({...answer,...modified}).work_status,'unknown');
+});

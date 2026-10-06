@@ -34,8 +34,8 @@ const catalog=[
 const say=content=>({content});
 const use=(...calls)=>({content:'',tool_calls:calls.map(([name,args],index)=>({id:`call_${name}_${index}`,function:{name,arguments:typeof args==='string'?args:JSON.stringify(args||{})}}))});
 
-function setup({script,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false}={}){
-  const log={model:[],tools:[],effects:0,states:[],owned:[]};
+function setup({script,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false}={}){
+  const log={model:[],tools:[],effects:0,states:[],owned:[],runs:[]};
   let stateAttempts=0,step=0,status=flowStatus,publishedVersionId=published?'v1':null,draftVersionId='v1',versionState=published?'LOCKED':'DRAFT',sampleData,updated='before',updatedBy,taskInput='{{trigger.task}}';
   const mcp={call:async(_company,method,params)=>{
     if(method==='tools/list')return {tools:catalog};
@@ -62,9 +62,10 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false,edit
     companyProfiles:async()=>({
       findEmployee:async()=>({id:'employee-1',status:'draft',activepieces_flow_id:null}),
       linkEmployeeFlow:async({flowId:id})=>({recordId:'employee-1',flowId:id,name:'أمين المحتوى',status:'disabled'}),
+      recordEmployeeRun:async input=>{if(saveRunFailure)throw new Error('save failed');log.runs.push(input);return {recordId:input.employeeId,flowId:input.flowId,lastRunId:input.runId,status:'active'};},
       setEmployeeState:async({employeeId,status:next})=>{if(saveStateFailure===true||saveStateFailure==='once'&&stateAttempts++===0)throw new Error('save failed');log.states.push([employeeId,next]);return {recordId:employeeId,flowId,name:'أمين المحتوى',status:next};},
     }),
-    tenantProjects:async()=>({ownedFlow:async(_company,id)=>{log.owned.push(id);return {flow:{...publishedFlow,id,status,publishedVersionId,version:{...publishedFlow.version,id:draftVersionId,state:versionState,updated,...(updatedBy?{updatedBy}:{}),trigger:{...publishedFlow.version.trigger,settings:{...publishedFlow.version.trigger.settings,input:{...publishedFlow.version.trigger.settings.input,task:taskInput},...(sampleData?{sampleData}:{})}}}}};}}),
+    tenantProjects:async()=>({requireProject:async()=> 'P'.repeat(21),ownedFlow:async(_company,id)=>{log.owned.push(id);return {flow:{...publishedFlow,id,status,publishedVersionId,version:{...publishedFlow.version,id:draftVersionId,state:versionState,updated,...(updatedBy?{updatedBy}:{}),trigger:{...publishedFlow.version.trigger,settings:{...publishedFlow.version.trigger.settings,input:{...publishedFlow.version.trigger.settings.input,task:taskInput},...(sampleData?{sampleData}:{})}}}}};}}),
     toolConnections:async()=>({assertOwnedExternal:async({externalId})=>{if(externalId==='foreign')throw new TenantProjectError('connection_not_owned','الاتصال لا يخص هذه الشركة.',403);}}),
   };
   const deepseekReply=runInNewContext(`${source.slice(start,end)}; deepseekReply`,ctx);
@@ -479,4 +480,43 @@ test('a transient employee state readback failure remains retryable at finalizat
   assert.equal(answer.employee.status,'active');
   assert.equal(answer.readinessReceipt.test_run_id,runId);
   assert.equal(log.states.length,1);
+});
+
+
+const executionResult=(overrides={})=>({content:[{type:'text',text:'native reply'}],structuredContent:{execution:{runId,flowId,projectId:'P'.repeat(21),flowVersionId:'v1',environment:'PRODUCTION',...overrides}}});
+const productionRun=(overrides={})=>({structuredContent:{id:runId,flowId,environment:'PRODUCTION',status:'SUCCEEDED',steps:[{name:'trigger',output:{}},{name:'reply',output:{status:200,body:{result:'QA'}}}],...overrides}});
+const runningEmployee={id:'employee-9',status:'active',activepieces_flow_id:flowId,tools_json:['mcp']};
+
+test('native employee execution receipt reads its exact production run and saves proof before the next model call',async()=>{
+  const {run,log}=setup({published:true,flowStatus:'ENABLED',toolResults:{[flowToolName]:executionResult(),ap_get_run:productionRun()},script:[use([flowToolName,{}]),request=>{
+    const result=JSON.parse(toolMessages(request).at(-1));
+    assert.equal(result.content[0].text,'native reply');
+    assert.equal(result.siyadahContext.employee.lastRunId,runId);
+    return say('وصل رد الموظف.');
+  }]});
+  const answer=await run({employee:runningEmployee});
+  assert.equal(answer.toolReceipts[0].run_id,runId);
+  assert.equal(answer.toolReceipts[0].outcome,'flow_completed');
+  assert.equal(completedToolActions(answer).work_status,'succeeded');
+  assert.equal(log.runs.length,1);
+  assert.equal(log.runs[0].employeeId,'employee-9');
+  assert.equal(log.runs[0].conversationId,'c1');
+  assert.deepEqual(log.tools.map(x=>x[0]),[flowToolName,'ap_get_run']);
+});
+
+test('missing, mismatched, nonterminal or unsaved native execution stays unknown without repeating dispatch',async()=>{
+  const cases=[
+    {result:{content:[{type:'text',text:'native reply'}]}},
+    ...[{projectId:'X'.repeat(21)},{flowId:'X'.repeat(21)},{flowVersionId:'v2'},{environment:'TESTING'}].map(x=>({result:executionResult(x)})),
+    ...[{id:'X'.repeat(21)},{flowId:'X'.repeat(21)},{environment:'TESTING'},{status:'RUNNING'},{status:'FAILED'},{steps:[]}].map(x=>({detail:productionRun(x)})),
+    {detail:{isError:true}},{saveRunFailure:true},
+  ];
+  for(const item of cases){
+    const {run,log}=setup({published:true,flowStatus:'ENABLED',saveRunFailure:item.saveRunFailure,toolResults:{[flowToolName]:item.result||executionResult(),ap_get_run:item.detail||productionRun()},script:[use([flowToolName,{}]),say('النتيجة قيد التحقق.')]});
+    const answer=await run({employee:runningEmployee});
+    assert.equal(completedToolActions(answer).work_status,'unknown');
+    assert.equal(answer.toolReceipts[0].run_id,undefined);
+    assert.equal(answer.employee,undefined);
+    assert.equal(log.tools.filter(x=>x[0]===flowToolName).length,1);
+  }
 });
