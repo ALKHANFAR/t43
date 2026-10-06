@@ -128,7 +128,7 @@ async function page({storage={},locale,hydrate=empty,message,work,approve,employ
     return {ok:true,status:200,json:async()=>response};
   };
   w.alert=text=>alerts.push(text);w.__SIY_NAVIGATE__=url=>navigations.push(url);w.eval(source);await flush();await flush();
-  return {dom,w,d:w.document,requests,activationRequests,alerts,polls,navigations,timeout:()=>hydrateTimer(),close:()=>w.close()};
+  return {dom,w,d:w.document,requests,activationRequests,alerts,polls,navigations,timeout:()=>hydrateTimer(),close:()=>setImmediate(()=>w.close())};
 }
 function send(p,text){p.d.querySelector('#input').value=text;p.d.querySelector('#send').click();}
 function thread(p){return p.d.querySelector('#thread').textContent;}
@@ -564,7 +564,7 @@ test('rehydration restores saved messages and employee selection sends record ID
 test('stable employee mapping rejects missing IDs and exact active status, no false stop/connect',async()=>{
   const xss='"><img src=x onerror=alert(1)>';const p=await page({hydrate:{...empty,team:[{...employee,name:xss,role:xss,status:'inactive',tools:[]},{name:'missing ID'}]},employee_state:{httpStatus:403}});try{
     assert.equal(p.w.EMPS.length,1);assert.equal(p.w.EMPS[0].on,false);assert.equal(p.d.querySelectorAll('#emps img').length,0);
-    p.d.querySelector('#emps .emp').click();const toggle=p.d.querySelector('#onSw');toggle.click();assert.equal(toggle.getAttribute('aria-checked'),'false');await flush();
+    p.d.querySelector('#emps .emp').click();await flush();const toggle=p.d.querySelector('#onSw');toggle.click();assert.equal(toggle.getAttribute('aria-checked'),'false');await flush();
     assert.equal(p.d.querySelector('#renameBtn').disabled,true);
     assert.match(source,/op:"connect"/);assert.match(source,/op:"revalidate"/);assert.match(source,/op:"disconnect"/);
     assert.equal(p.requests.length,3);
@@ -573,7 +573,7 @@ test('stable employee mapping rejects missing IDs and exact active status, no fa
 test('an employee tool appears ready only with a project connection readback',async()=>{
   const connection={id:'C'.repeat(21),slug:'http',displayName:'طلب ويب',status:'ACTIVE',scope:'PROJECT'};
   const p=await page({hydrate:{...empty,team:[{...employee,tools:['اتصال ويب']}]},integrations:{list:{ok:true,connections:[connection]}},pieces:[['http','طلب ويب','تنفيذ','developer','https://example.test/http.png','إرسال طلب إلى خدمة خارجية',{pieceName:'@activepieces/piece-http'}]]});try{
-    p.d.querySelector('#emps .emp').click();assert.ok(p.d.querySelector('.chip:not(.chip--off) .chip__n'));assert.match(p.d.querySelector('.chip:not(.chip--off)').textContent,/اتصال ويب/);assert.equal(p.d.querySelector('.chip:not(.chip--off) [data-c]'),null);
+    p.d.querySelector('#emps .emp').click();await flush();assert.ok(p.d.querySelector('.chip:not(.chip--off) .chip__n'));assert.match(p.d.querySelector('.chip:not(.chip--off)').textContent,/اتصال ويب/);assert.equal(p.d.querySelector('.chip:not(.chip--off) [data-c]'),null);
   }finally{p.close();}
 });
 test('hydrate resumes pending work by work ID without resending the original message',async()=>{
@@ -590,7 +590,7 @@ test('expired authorization stops polling instead of looping or resubmitting',as
 
 test('employee header reflects matched verified run and persisted record',async()=>{
  const p=await page({hydrate:{...empty,team:[employee],recent_work:[proof]}});try{
-  p.d.querySelector('#emps .emp').click();assert.match(p.d.querySelector('.pin__s').textContent,/آخر تشغيل ناجح ونتيجته محفوظة/);
+  p.d.querySelector('#emps .emp').click();await flush();assert.match(p.d.querySelector('.pin__s').textContent,/آخر تشغيل ناجح ونتيجته محفوظة/);
   const refs=[...p.d.querySelectorAll('.siyrefs code')].map(x=>x.textContent);
   for(const id of [employee.recordId,employee.flowId,proof.work_id,proof.runId,proof.recordId])assert.ok(refs.includes(id));
  }finally{p.close();}
@@ -598,7 +598,7 @@ test('employee header reflects matched verified run and persisted record',async(
 test('employee header does not infer success from another employee, flow, or incomplete proof',async()=>{
  for(const candidate of [{...proof,employeeId:'other'},{...proof,flowId:'other'},{...proof,status:'failed'},{...proof,runId:''},{...proof,recordId:''}]){
   const p=await page({hydrate:{...empty,team:[employee],recent_work:[candidate]}});try{
-   p.d.querySelector('#emps .emp').click();assert.match(p.d.querySelector('.pin__s').textContent,/لم يُتحقق منه/);
+   p.d.querySelector('#emps .emp').click();await flush();assert.match(p.d.querySelector('.pin__s').textContent,/لم يُتحقق منه/);
   }finally{p.close();}
  }
 });
@@ -606,7 +606,7 @@ test('employee header does not infer success from another employee, flow, or inc
 test('reload restores employee conversation and its independently persisted proof',async()=>{
  const saved={...empty,team:[employee],conversations:[{id:'central-1',title:'استشارة',messages:[{role:'assistant',content:'رأي تجاري'}]},{id:'central-2',title:'إنشاء الموظف',messages:[{role:'assistant',content:'أنشأت الموظف'}]},{id:'employee-chat',title:'سجل الطلب',employee_id:employee.recordId,messages:[{role:'user',content:'سجل الطلب',at:'2026-09-09T07:57:12.000Z'},{role:'assistant',content:'تم حفظ الطلب',at:'2026-09-09T07:57:14.000Z'}]}],recent_work:[proof]};
  const p=await page({hydrate:saved});try{
-  p.d.querySelector('#emps .emp').click();assert.match(p.d.querySelector('#whoN').textContent,/سارة/);assert.match(thread(p),/تم حفظ الطلب/);assert.match(thread(p),/قراءة السجل مؤكدة/);
+  p.d.querySelector('#emps .emp').click();await flush();assert.match(p.d.querySelector('#whoN').textContent,/سارة/);assert.match(thread(p),/تم حفظ الطلب/);assert.match(thread(p),/قراءة السجل مؤكدة/);
   p.d.querySelector('#newChat').click();p.d.querySelector('[data-chat="employee-chat"]').click();assert.match(p.d.querySelector('#whoN').textContent,/سارة/);assert.match(thread(p),/قراءة السجل مؤكدة/);
   assert.equal(thread(p).split('قراءة السجل مؤكدة').length-1,1);
   assert.ok(!thread(p).includes('2026-09-09T'));assert.match(p.d.querySelector('.m--me .m__t').textContent,/^\d{2}:\d{2}$/);
@@ -615,7 +615,7 @@ test('reload restores employee conversation and its independently persisted proo
 
 test('employee toggle waits for matching verified server readback before changing displayed state',async()=>{
  let resolve;const response=new Promise(r=>resolve=r);const p=await page({hydrate:{...empty,team:[employee]},employee_state:()=>response});try{
-  p.d.querySelector('#emps .emp').click();p.d.querySelector('#onSw').click();
+  p.d.querySelector('#emps .emp').click();await flush();p.d.querySelector('#onSw').click();
   assert.equal(p.d.querySelector('#onSw').getAttribute('aria-checked'),'true');assert.equal(p.d.querySelector('#onSw').disabled,true);assert.match(p.d.querySelector('#onLbl').textContent,/جارٍ التحقق/);
   p.d.querySelector('#onSw').click();assert.equal(p.requests.filter(r=>r.body.op==='employee_state').length,1);
   assert.deepEqual(p.requests.at(-1).body,{op:'employee_state',employee_id:employee.recordId,status:'disabled'});
@@ -627,14 +627,14 @@ test('employee toggle waits for matching verified server readback before changin
 test('failed or foreign employee toggle response preserves last confirmed state',async()=>{
  for(const response of [{httpStatus:403},{ok:true,state_verified:true,employee:{...employee,recordId:'other-owner-record',status:'disabled'}},{ok:true,state_verified:true,employee:{...employee,flowId:'other-flow',status:'disabled'}},{ok:true,employee:{...employee,status:'disabled'}}]){
   const p=await page({hydrate:{...empty,team:[employee]},employee_state:response});try{
-   p.d.querySelector('#emps .emp').click();p.d.querySelector('#onSw').click();await flush();
+   p.d.querySelector('#emps .emp').click();await flush();p.d.querySelector('#onSw').click();await flush();
    assert.equal(p.w.EMPS.length,1);assert.equal(p.w.EMPS[0].id,employee.recordId);assert.equal(p.w.EMPS[0].on,true);assert.equal(p.d.querySelector('#onSw').disabled,false);assert.match(p.alerts.at(-1),/آخر حالة مؤكدة/);
   }finally{p.close();}
  }
 });
 test('disabled employee can be re-enabled only after verified readback',async()=>{
  const p=await page({hydrate:{...empty,team:[{...employee,status:'disabled'}]},employee_state:{ok:true,state_verified:true,employee:{...employee,status:'active',flow_status_verified:true}}});try{
-  p.d.querySelector('#emps .emp').click();p.d.querySelector('#onSw').click();await flush();assert.equal(p.requests.at(-1).body.status,'active');assert.equal(p.w.EMPS[0].on,true);
+  p.d.querySelector('#emps .emp').click();await flush();p.d.querySelector('#onSw').click();await flush();assert.equal(p.requests.at(-1).body.status,'active');assert.equal(p.w.EMPS[0].on,true);
  }finally{p.close();}
 });
 
@@ -1057,5 +1057,96 @@ test('published steps display server name when no display label exists',async()=
   const p=await page({hash:'#e='+publishedEmployee.recordId,hydrate:{...empty,team:[publishedEmployee]},employee_instructions:{ok:true,published_instructions:{...publishedProjection,steps:[{name:'analysis_1',prompt:'first'},{name:'<img src=x>',prompt:'second'}]}}});try{
     p.d.querySelector('#instrTgl').click();await flush();await flush();
     assert.deepEqual(Array.from(p.d.querySelectorAll('#publishedInstr details.adv > summary'),el=>el.textContent),['analysis_1','<img src=x>']);assert.equal(p.d.querySelector('#publishedInstr img'),null);
+  }finally{p.close();}
+});
+
+for(const locale of ['ar','en'])test('late activation redraw preserves the instruction panel, edit, focus and selection '+locale,async()=>{
+  let resolveResume;const p=await page({locale,hydrate:{...empty,team:[publishedEmployee]},resume_employee_activation:body=>body.employee_id?new Promise(resolve=>{resolveResume=resolve;}):{ok:true,activation_status:'none'},employee_instructions:{ok:true,published_instructions:publishedProjection}});try{
+    p.d.querySelector('#emps .emp').click();await flush();assert.equal(p.d.querySelector('#onSw').disabled,true);assert.equal(p.d.querySelector('#onSw').getAttribute('aria-busy'),'true');
+    p.d.querySelector('#instrTgl').click();await flush();await flush();const editor=p.d.querySelector('#instr'),panel=p.d.querySelector('#instrWrap');editor.value='unsaved {{keep}}';editor.focus();editor.setSelectionRange(2,8,'backward');
+    resolveResume({ok:true,activation_status:'pending',employee_id:publishedEmployee.recordId,message:'<img src=x> connection missing'});await flush();await flush();
+    assert.equal(p.d.querySelector('#instrWrap'),panel);assert.equal(panel.hidden,false);assert.equal(editor.value,'unsaved {{keep}}');assert.equal(p.d.activeElement,editor);assert.deepEqual([editor.selectionStart,editor.selectionEnd,editor.selectionDirection],[2,8,'backward']);assert.equal(p.d.querySelector('#instrTgl').getAttribute('aria-expanded'),'true');assert.match(p.d.querySelector('.pin__s').textContent,/connection missing/);assert.equal(p.d.querySelector('.pin__s img'),null);assert.equal(p.d.querySelector('#onSw').disabled,false);
+  }finally{p.close();}
+});
+
+test('activation errors and multiple pending choice are visible without pretending success',async()=>{
+  for(const response of [new Error('activation read failed'),{ok:true,activation_status:'pending',message:'افتح الموظف المقصود'}]){
+    const p=await page({hydrate:{...empty,team:[publishedEmployee]},resume_employee_activation:body=>body.employee_id?response:{ok:true,activation_status:'none'}});try{
+      p.d.querySelector('#emps .emp').click();await flush();await flush();
+      assert.match(p.d.querySelector('#builderConnectState').textContent,response instanceof Error?/activation read failed/:/افتح الموظف المقصود/);assert.equal(p.d.querySelector('#onSw').getAttribute('aria-checked'),'true');assert.equal(p.d.querySelector('#onSw').disabled,false);assert.equal(p.d.querySelector('#onSw').hasAttribute('aria-busy'),false);
+    }finally{p.close();}
+  }
+});
+
+test('late activation response preserves the newly selected employee and never imports the old panel',async()=>{
+  let resolveResume;const other={...publishedEmployee,recordId:'other',flowId:'o'.repeat(21),name:'آخر',instructions:'other saved'};
+  const p=await page({hydrate:{...empty,team:[publishedEmployee,other]},resume_employee_activation:body=>body.employee_id?new Promise(resolve=>{resolveResume=resolve;}):{ok:true,activation_status:'none'},employee_instructions:body=>({ok:true,published_instructions:{...publishedProjection,flow_id:body.employee_id==='other'?other.flowId:publishedEmployee.flowId}})});try{
+    p.d.querySelectorAll('#emps .emp')[0].click();await flush();p.d.querySelector('#instrTgl').click();p.d.querySelector('#instr').value='old unsaved';
+    p.d.querySelectorAll('#emps .emp')[1].click();p.d.querySelector('#instrTgl').click();const editor=p.d.querySelector('#instr');editor.value='other unsaved';editor.focus();editor.setSelectionRange(1,5);
+    resolveResume({ok:true,activation_status:'active',employee:publishedEmployee});await flush();await flush();
+    assert.match(p.d.querySelector('#whoN').textContent,/آخر/);assert.equal(p.d.querySelector('#instr'),editor);assert.equal(editor.value,'other unsaved');assert.equal(p.d.activeElement,editor);assert.equal(p.d.querySelector('#onSw').getAttribute('aria-checked'),'true');
+  }finally{p.close();}
+});
+
+test('automatic activation rejects a mismatched flow instead of changing the switch',async()=>{
+  const paused={...publishedEmployee,status:'disabled'};const p=await page({hydrate:{...empty,team:[paused]},resume_employee_activation:body=>body.employee_id?{ok:true,activation_status:'active',employee:{...paused,status:'active',flowId:'x'.repeat(21)}}:{ok:true,activation_status:'none'}});try{
+    p.d.querySelector('#emps .emp').click();await flush();await flush();assert.equal(p.d.querySelector('#onSw').getAttribute('aria-checked'),'false');assert.match(p.d.querySelector('#builderConnectState').textContent,/لم نتأكد من نتيجة التفعيل/);
+  }finally{p.close();}
+});
+
+test('activation refreshes only published readback while a pending instruction save updates the current employee',async()=>{
+  let resolveResume,resolveSave,reads=0;const p=await page({hydrate:{...empty,team:[publishedEmployee]},resume_employee_activation:body=>body.employee_id?new Promise(resolve=>{resolveResume=resolve;}):{ok:true,activation_status:'none'},employee_instructions:body=>body.read_published?{ok:true,published_instructions:{...publishedProjection,published_version_id:(++reads===1?'v':'n').repeat(21)}}:new Promise(resolve=>{resolveSave=resolve;})});try{
+    p.d.querySelector('#emps .emp').click();await flush();p.d.querySelector('#instrTgl').click();await flush();await flush();const editor=p.d.querySelector('#instr');editor.value='new saved instructions';p.d.querySelector('#instrSave').click();await flush();
+    resolveResume({ok:true,activation_status:'active',employee:publishedEmployee});await flush();await flush();assert.equal(p.d.querySelector('#instr'),editor);assert.equal(editor.value,'new saved instructions');assert.equal(reads,2);assert.match(p.d.querySelector('#publishedInstr').textContent,new RegExp('n'.repeat(21)));
+    resolveSave({ok:true,instruction_scope:'conversation',instructions_verified:true,employee:{...publishedEmployee,instructions:'new saved instructions',instructionSource:'owner',instructionVersion:2}});await flush();await flush();
+    assert.equal(p.w.EMPS[0].instr,'new saved instructions');assert.equal(p.d.querySelector('#instrSave').disabled,false);p.d.querySelector('#instrApply').click();assert.match(p.d.querySelector('#input').value,/التعليمات المحفوظة/);assert.equal(p.requests.filter(r=>r.body?.op==='message').length,0);
+  }finally{p.close();}
+});
+
+test('an older activation response cannot downgrade newer saved conversation instructions',async()=>{
+  let resolveResume;const p=await page({hydrate:{...empty,team:[publishedEmployee]},resume_employee_activation:body=>body.employee_id?new Promise(resolve=>{resolveResume=resolve;}):{ok:true,activation_status:'none'},employee_instructions:body=>body.read_published?{ok:true,published_instructions:publishedProjection}:{ok:true,instruction_scope:'conversation',instructions_verified:true,employee:{...publishedEmployee,instructions:body.instructions,instructionVersion:2,instructionSource:'owner'}}});try{
+    p.d.querySelector('#emps .emp').click();await flush();p.d.querySelector('#instrTgl').click();const editor=p.d.querySelector('#instr');editor.value='newer saved';p.d.querySelector('#instrSave').click();await flush();await flush();
+    resolveResume({ok:true,activation_status:'active',employee:{...publishedEmployee,instructionVersion:1}});await flush();await flush();assert.equal(p.w.EMPS[0].instr,'newer saved');assert.equal(p.w.EMPS[0].instrVersion,2);assert.equal(editor.value,'newer saved');p.d.querySelector('#instrApply').click();assert.match(p.d.querySelector('#input').value,/التعليمات المحفوظة/);
+  }finally{p.close();}
+});
+
+test('automatic activation rejects unknown employees and foreign pending notices',async()=>{
+  for(const response of [{ok:true,activation_status:'active',employee:{recordId:'foreign',name:'Foreign',status:'active'}},{ok:true,activation_status:'pending',employee_id:'foreign',message:'foreign tenant note'}]){
+    const p=await page({hydrate:{...empty,team:[publishedEmployee]},resume_employee_activation:body=>body.employee_id?response:{ok:true,activation_status:'none'}});try{
+      p.d.querySelector('#emps .emp').click();await flush();await flush();assert.equal(p.w.EMPS.length,1);assert.match(p.d.querySelector('#builderConnectState').textContent,/لم نتأكد من نتيجة التفعيل/);assert.doesNotMatch(thread(p),/foreign tenant note|Foreign/);
+    }finally{p.close();}
+  }
+});
+
+test('logout resets activation ownership and a late prior response cannot replace the new check',async()=>{
+  let oldResolve,newResolve,count=0;const p=await page({hydrate:{...empty,team:[publishedEmployee]},resume_employee_activation:body=>body.employee_id?new Promise(resolve=>{if(++count===1)oldResolve=resolve;else newResolve=resolve;}):{ok:true,activation_status:'none'}});try{
+    p.dom.virtualConsole.removeAllListeners('jsdomError');const originalFetch=p.w.fetch;p.w.fetch=(url,options)=>String(url).endsWith('/auth/logout')?Promise.resolve({ok:true}):originalFetch(url,options);
+    p.d.querySelector('#emps .emp').click();await flush();p.d.querySelector('#instrTgl').click();const oldPanel=p.d.querySelector('#instrWrap');p.d.querySelector('#instr').value='old session draft';p.d.querySelector('#logoutBtn').click();await flush();p.d.querySelector('#emps .emp').click();await flush();assert.equal(count,2);assert.notEqual(p.d.querySelector('#instrWrap'),oldPanel);assert.notEqual(p.d.querySelector('#instr').value,'old session draft');
+    oldResolve({ok:true,activation_status:'active',employee:publishedEmployee});await flush();await flush();assert.equal(p.d.querySelector('#onSw').getAttribute('aria-busy'),'true');
+    newResolve({ok:true,activation_status:'pending',employee_id:publishedEmployee.recordId,message:'new check missing connection'});await flush();await flush();assert.match(p.d.querySelector('.pin__s').textContent,/new check missing connection/);assert.equal(p.d.querySelector('#onSw').disabled,false);
+  }finally{p.close();}
+});
+
+test('a newly linked workflow adds the instruction apply shortcut without losing the open draft edit',async()=>{
+  const draft={...publishedEmployee,flowId:null,status:'disabled',tools:[],instructions:'draft saved'};let resolveMessage;
+  const p=await page({hash:'#e='+draft.recordId,hydrate:{...empty,team:[draft]},message:()=>new Promise(resolve=>{resolveMessage=resolve;}),employee_instructions:{ok:true,published_instructions:{flow_id:null,read_status:'not_published'}}});try{
+    p.d.querySelector('#reviewStart').click();await flush();assert.equal(p.d.querySelector('#instrApply'),null);const editor=p.d.querySelector('#instr'),save=p.d.querySelector('#instrSave');editor.value='unsaved newly linked draft';editor.focus();editor.setSelectionRange(2,6);send(p,'جهز طريقة العمل');await flush();editor.focus();editor.setSelectionRange(2,6);
+    resolveMessage({ok:true,request_status:'succeeded',work_status:'not_started',outcome_kind:'employee_draft',reply:'حفظت طريقة العمل.',employee:{...draft,flowId:publishedEmployee.flowId}});await flush();await flush();
+    assert.ok(p.d.querySelector('#instrApply'));assert.equal(p.d.querySelector('#instr'),editor);assert.equal(p.d.querySelector('#instrSave'),save);assert.equal(editor.value,'unsaved newly linked draft');assert.equal(p.d.querySelector('#instrWrap').hidden,false);assert.equal(p.d.activeElement,editor);assert.deepEqual([editor.selectionStart,editor.selectionEnd],[2,6]);p.d.querySelector('#instrApply').click();assert.match(p.d.querySelector('#instrF').textContent,/احفظ تعديلك أولًا/);
+  }finally{p.close();}
+});
+
+for(const locale of ['ar','en'])test('global activation notice is visible with the account popup closed and restores the composer footer '+locale,async()=>{
+  let resolveResume;const p=await page({locale,hydrate:{...empty,team:[publishedEmployee]},resume_employee_activation:()=>new Promise(resolve=>{resolveResume=resolve;})});try{
+    assert.equal(p.d.querySelector('#pop').classList.contains('on'),false);assert.match(p.d.querySelector('.comp__f').textContent,locale==='ar'?/نتحقق من جاهزية/:/Checking employee readiness/);
+    resolveResume({ok:true,activation_status:'pending',message:'<img src=x> اختر الموظف للتجربة'});await flush();await flush();assert.match(p.d.querySelector('.comp__f').textContent,/اختر الموظف للتجربة/);assert.equal(p.d.querySelector('.comp__f img'),null);assert.equal(p.d.querySelector('.comp__f').closest('#pop,[hidden]'),null);
+    p.d.querySelector('#emps .emp').click();await flush();resolveResume({ok:true,activation_status:'none'});await flush();await flush();assert.match(p.d.querySelector('.comp__f').textContent,locale==='ar'?/تظهر حالة كل طلب/:/Request status and results/);
+  }finally{p.close();}
+});
+
+test('global activation error appears in the visible footer while a scoped notice does not leak to another chat',async()=>{
+  let calls=0;const p=await page({hydrate:{...empty,team:[publishedEmployee]},resume_employee_activation:()=>++calls===1?new Error('global activation failed'):{ok:true,activation_status:'pending',employee_id:publishedEmployee.recordId,message:'employee connection missing'}});try{
+    assert.equal(p.d.querySelector('#pop').classList.contains('on'),false);assert.match(p.d.querySelector('.comp__f').textContent,/global activation failed/);
+    p.d.querySelector('#emps .emp').click();await flush();await flush();assert.match(p.d.querySelector('.comp__f').textContent,/employee connection missing/);p.d.querySelector('#newChat').click();assert.match(p.d.querySelector('.comp__f').textContent,/تظهر حالة كل طلب/);
   }finally{p.close();}
 });

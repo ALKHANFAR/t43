@@ -361,6 +361,7 @@ var I = {
   function renderThread(){
     var t=$("#thread"), scroll=t.scrollTop, nearEnd=t.scrollHeight-t.clientHeight-scroll<80; t.classList.toggle("thread--emp",isEmp());
     if(who==="tools"){ t.innerHTML=toolsHtml(); bindTools(); return; }
+    var savedPanel=window.__SIY_REAL__&&t.siyEmployee===who&&t.siyEmployeeGeneration===siyGeneration?$("#instrWrap"):null, savedFocus=savedPanel&&savedPanel.contains(document.activeElement)?document.activeElement:null, savedSelection=savedFocus&&savedFocus.id==='instr'?[savedFocus.selectionStart,savedFocus.selectionEnd,savedFocus.selectionDirection]:null;
     var list, w;
     if(isEmp()){ var e=emp(who); list=empThread(who); w=who;
       t.innerHTML='<div class="col'+(window.__SIY_REAL__&&e.draft&&!list.length?' col--draft':'')+'">'+pinHtml(e)+'<div id="instrWrap" hidden>'+instrHtml(e)+'</div>'+list.map(function(m,i){return msgHtml(m,who,i)}).join("")+(window.__SIY_REAL__&&e.draft&&!list.length?'<div class="emp-start"><span class="drop" aria-hidden="true"></span><button type="button" id="reviewStart" aria-expanded="false" aria-controls="instrWrap">'+ui('راجع التعليمات','Review instructions')+'</button></div>':'')+siyEmployeeProofHtml(e,list)+'</div>';
@@ -372,6 +373,8 @@ var I = {
       }
       t.innerHTML='<div class="col">'+list.map(function(m,i){return msgHtml(m, w, i)}).join("")+'</div>';
     }
+    if(savedPanel&&isEmp()){var freshPanel=$("#instrWrap"),freshApply=freshPanel.querySelector('#instrApply'),savedApply=savedPanel.querySelector('#instrApply');if(freshApply&&!savedApply)savedPanel.querySelector('#instrF').appendChild(freshApply);else if(!freshApply&&savedApply)savedApply.remove();freshPanel.replaceWith(savedPanel);var toggle=$("#instrTgl")||$("#reviewStart");if(toggle)toggle.setAttribute('aria-expanded',String(!savedPanel.hidden));if(savedFocus){savedFocus.focus({preventScroll:true});if(savedSelection)savedFocus.setSelectionRange(savedSelection[0],savedSelection[1],savedSelection[2]);}}
+    t.siyEmployee=isEmp()?who:null;t.siyEmployeeGeneration=siyGeneration;
     var follow=t.siyList!==list||nearEnd||(list.length>t.siyCount&&list[list.length-1].me);
     t.siyList=list; t.siyCount=list.length; t.scrollTop=follow?t.scrollHeight:scroll;
     list.forEach(function(m,i){ if(m.reveal){ m.reveal=false; reveal($('.m[data-mi="'+i+'"]')); } });
@@ -416,9 +419,9 @@ var I = {
       '<div class="kline"><span>اليوم: '+e.kpi.map(function(k){ return k.l.replace(/اليوم/,"").trim()+' <b class="num">'+k.v+'</b>'; }).join(' · ')+'</span>'+
       '<button type="button" class="link" id="kpiTgl" aria-expanded="'+(kpiOpen===e.id)+'" aria-controls="kpiWrap">التفاصيل</button></div>'+
       '<div class="kpis" id="kpiWrap"'+(kpiOpen===e.id?'':' hidden')+'>'+e.kpi.map(function(k){ return '<div class="kpi"><span class="kpi__v num">'+k.v+'</span><span class="kpi__l">'+k.l+'<span class="kpi__t'+(k.ok?' kpi__t--ok':'')+'" title="عن الأسبوع الماضي">'+k.t+'</span></span></div>'; }).join("")+'</div>';
-    return '<div class="pin"><div class="pin__r1"><span class="av">'+esc(e.ini)+'</span><div class="pin__t"><p class="pin__n">'+esc(e.n)+' <span>· '+esc(e.r)+'</span> <button type="button" class="pinbtn tip" id="renameBtn" data-tip="'+(window.__SIY_REAL__?ui('قريبًا','Coming soon'):ui('إعادة تسمية','Rename'))+'" aria-label="'+ui('إعادة تسمية ','Rename ')+esc(e.n)+'"'+(window.__SIY_REAL__?' disabled':'')+'><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1L18 7l-3-3L5 15l-1 5z"/><path d="M13 6l3 3"/></svg></button></p><div class="pin__s">'+esc(locale==='en'&&window.__SIY_REAL__?(e.draft?'Saved draft · Tools not connected':e.on?'Recorded as active · Execution unverified':'Recorded as paused'):e.since)+'</div>'+(e.draft?'':siyRefsHtml([['الموظف',e.id],['طريقة العمل',e.flowId]]))+'</div>'+
+    return '<div class="pin"><div class="pin__r1"><span class="av">'+esc(e.ini)+'</span><div class="pin__t"><p class="pin__n">'+esc(e.n)+' <span>· '+esc(e.r)+'</span> <button type="button" class="pinbtn tip" id="renameBtn" data-tip="'+(window.__SIY_REAL__?ui('قريبًا','Coming soon'):ui('إعادة تسمية','Rename'))+'" aria-label="'+ui('إعادة تسمية ','Rename ')+esc(e.n)+'"'+(window.__SIY_REAL__?' disabled':'')+'><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1L18 7l-3-3L5 15l-1 5z"/><path d="M13 6l3 3"/></svg></button></p><div class="pin__s">'+esc(window.__SIY_REAL__&&siyActivationResumeNotice&&siyActivationResumeNotice.employeeId===e.id?siyActivationResumeNotice.message:locale==='en'&&window.__SIY_REAL__?(e.draft?'Saved draft · Tools not connected':e.on?'Recorded as active · Execution unverified':'Recorded as paused'):e.since)+'</div>'+(e.draft?'':siyRefsHtml([['الموظف',e.id],['طريقة العمل',e.flowId]]))+'</div>'+
       '<div class="pin__c">'+(e.wait?'<span class="pill">ينتظر قرارك '+e.wait+'</span>':'')+
-      '<span class="swl" style="font-size:.8rem;color:var(--ash)"><span id="onLbl">'+(window.__SIY_REAL__?(siyEmployeeStatePending[e.id]?ui('جارٍ التحقق من تغيير الحالة…','Verifying status…'):(e.draft?ui('بانتظار الربط','Needs connection'):e.on?ui('نشط في السجل','Recorded as active'):ui('متوقف في السجل','Recorded as paused'))):(e.on?(f?ui('شغّالة','Active'):ui('شغّال','Active')):(f?ui('متوقفة','Paused'):ui('متوقف','Paused'))))+'</span><button type="button" class="sw" id="onSw" role="switch"'+(siyEmployeeStatePending[e.id]?' disabled aria-busy="true"':e.draft?' disabled title="'+ui('اربط الأدوات واختبرها قبل التشغيل','Connect and test tools before activation')+'"':'')+' aria-checked="'+e.on+'" aria-label="'+(e.draft?ui('التشغيل متاح بعد ربط الأدوات واختبارها','Activation available after connecting and testing tools'):ui('تشغيل ','Activate ')+esc(e.n))+'"></button></span></div></div>'+
+      '<span class="swl" style="font-size:.8rem;color:var(--ash)"><span id="onLbl">'+(window.__SIY_REAL__?((siyEmployeeStatePending[e.id]||(siyActivationResumeNotice?.busy&&siyActivationResumeNotice.employeeId===e.id))?ui('جارٍ التحقق من تغيير الحالة…','Verifying status…'):(e.draft?ui('بانتظار الربط','Needs connection'):e.on?ui('نشط في السجل','Recorded as active'):ui('متوقف في السجل','Recorded as paused'))):(e.on?(f?ui('شغّالة','Active'):ui('شغّال','Active')):(f?ui('متوقفة','Paused'):ui('متوقف','Paused'))))+'</span><button type="button" class="sw" id="onSw" role="switch"'+((siyEmployeeStatePending[e.id]||(siyActivationResumeNotice?.busy&&siyActivationResumeNotice.employeeId===e.id))?' disabled aria-busy="true"':e.draft?' disabled title="'+ui('اربط الأدوات واختبرها قبل التشغيل','Connect and test tools before activation')+'"':'')+' aria-checked="'+e.on+'" aria-label="'+(e.draft?ui('التشغيل متاح بعد ربط الأدوات واختبارها','Activation available after connecting and testing tools'):ui('تشغيل ','Activate ')+esc(e.n))+'"></button></span></div></div>'+
       metrics+
       (e.draft?'<div class="pin__r3"><button type="button" class="link" id="draftTools">'+ui('الأدوات والربط','Tools & connections')+'</button></div>':'<div class="pin__r3"><span class="pin__k">'+ui(f?'أدواتها':'أدواته','Tools')+'</span>'+e.tools.map(chipHtml).join("")+
       '<span class="mchip tip" data-tip="'+ui('ساعات العمل','Working hours')+(e.hours&&e.hours!=="—"?": "+esc(e.hours):"")+'"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l3 2"/></svg>'+(e.hours&&e.hours!=="—"?'<span>'+esc(e.hours)+'</span>':'')+'</span>'+
@@ -807,7 +810,7 @@ var I = {
   $("#input").addEventListener("keydown",function(e){ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(this.value);} });
   $("#input").addEventListener("input",function(){ this.style.height="auto"; this.style.height=Math.min(this.scrollHeight,160)+"px"; });
 
-  function go(w,c){ who=w; chatId=c||null; kpiOpen=null; renderSide(); renderBar(); renderThread(); if(window.__SIY_REAL__&&emp(w))siyResumePendingActivation(w); }
+  function go(w,c){ who=w; chatId=c||null; kpiOpen=null; renderSide(); renderBar(); renderThread();refreshLiveLabels(); if(window.__SIY_REAL__&&emp(w))siyResumePendingActivation(w); }
   function newChat(){ live={}; go("siyadah"); $("#input").focus(); }
   $("#emps").addEventListener("click",function(e){ var b=e.target.closest(".emp"); if(!b) return; go(b.dataset.emp); $("#input").focus(); });
   $(".side__scroll").addEventListener("click",function(e){ var b=e.target.closest(".hist"); if(!b||!b.dataset.chat) return;
@@ -1229,7 +1232,7 @@ var I = {
   function siyRefreshBuilderConnection(){
     siyBuilderState("مساحة شركتك",true);
   }
-  function siyStopPolling(){ siyGeneration++; Object.keys(siyPolls).forEach(function(k){ clearTimeout(siyPolls[k]); }); siyPolls={}; }
+  function siyStopPolling(){ siyGeneration++;siyActivationResumeBusy=false;siyActivationResumeNotice=null; Object.keys(siyPolls).forEach(function(k){ clearTimeout(siyPolls[k]); }); siyPolls={}; }
   function siyAccessError(text){var e=new Error(text);e.noRetry=true;return e;}
   async function siyPost(url,body,timeoutMs){
     if(!/^(https:\/\/|\/)/.test(url)) throw siyAccessError(ui("اتصال سيادة لم يُجهّز بعد.","Siyadah connection is not configured yet."));
@@ -1290,8 +1293,8 @@ var I = {
     var target=$("#publishedInstr");if(!e||!target)return;var readId=target.siyReadId=(target.siyReadId||0)+1;
     target.textContent=ui('نقرأ تعليمات طريقة العمل المنشورة…','Reading published workflow instructions…');
     try{
-      var data=await siyRequest({op:'employee_instructions',employee_id:e.id,read_published:true}),p=data.published_instructions;
-      if(!target.isConnected||who!==e.id||$("#publishedInstr")!==target||target.siyReadId!==readId)return;
+      var generation=siyGeneration,data=await siyRequest({op:'employee_instructions',employee_id:e.id,read_published:true}),p=data.published_instructions;
+      if(generation!==siyGeneration||!target.isConnected||who!==e.id||$("#publishedInstr")!==target||target.siyReadId!==readId)return;
       if(!p||p.flow_id!==e.flowId||!['verified','not_published','unavailable'].includes(p.read_status))throw new Error();
       if(p.read_status!=='verified'){target.textContent=p.read_status==='not_published'?ui('لا توجد نسخة منشورة لطريقة العمل.','The workflow has no published version.'):ui('تعذّرت قراءة تعليمات طريقة العمل المنشورة.','Published workflow instructions could not be read.');return;}
       if(!/^[A-Za-z0-9]{21}$/.test(p.flow_id)||!/^[A-Za-z0-9]{21}$/.test(p.published_version_id)||!['ENABLED','DISABLED'].includes(p.flow_status)||!Array.isArray(p.steps)||p.steps.some(function(step){return !step||typeof step.prompt!=='string';}))throw new Error();
@@ -1300,13 +1303,15 @@ var I = {
     }catch(error){if(target.isConnected&&who===e.id&&$("#publishedInstr")===target&&target.siyReadId===readId)target.textContent=ui('تعذّرت قراءة تعليمات طريقة العمل المنشورة. أعد فتح التعليمات للمحاولة.','Published workflow instructions could not be read. Reopen instructions to retry.');}
   }
   async function siySaveEmployeeInstructions(e,instructions){
-    var button=$("#instrSave"),note=$("#instrF").firstChild,previous=e.instr;
+    var button=$("#instrSave"),note=$("#instrF").firstChild,previous=e.instr,generation=siyGeneration,flowId=e.flowId;
     if(button.disabled)return;
     button.disabled=true;button.textContent=ui("جارٍ الحفظ…","Saving…");note.textContent=ui("أحفظها داخل مساحة شركتك وأتحقق من القراءة…","Saving in your workspace and verifying the result…");
     try{
       var data=await siyRequest({op:'employee_instructions',employee_id:e.id,instructions:instructions});
+      if(generation!==siyGeneration)return;
       if(data.instruction_scope!=='conversation'||!data.instructions_verified||!data.employee||data.employee.recordId!==e.id||data.employee.instructions!==instructions)throw new Error(ui('لم تتطابق قراءة التعليمات بعد الحفظ.','Saved instructions could not be verified.'));
-      e.instr=data.employee.instructions;e.instrSource=data.employee.instructionSource;e.instrVersion=data.employee.instructionVersion;e.ver+=1;note.textContent=ui("حُفظت للمحادثة · النسخة ","Saved for conversation · version ")+e.instrVersion+ui(". تطبيقها على طريقة العمل لم يُتحقق منه.",". Application to the workflow is not verified.");button.textContent=ui("تم الحفظ","Saved");
+      var current=emp(e.id);if(!current||current.flowId!==flowId)throw new Error(ui('تغيّر الموظف أثناء الحفظ؛ أعد التحقق من تعليماته.','The employee changed while saving; check the instructions again.'));
+      current.instr=e.instr=data.employee.instructions;current.instrSource=e.instrSource=data.employee.instructionSource;current.instrVersion=e.instrVersion=data.employee.instructionVersion;e.ver+=1;note.textContent=ui("حُفظت للمحادثة · النسخة ","Saved for conversation · version ")+e.instrVersion+ui(". تطبيقها على طريقة العمل لم يُتحقق منه.",". Application to the workflow is not verified.");button.textContent=ui("تم الحفظ","Saved");
     }catch(error){e.instr=previous;note.textContent=error.message||ui("تعذّر حفظ التعليمات.","Could not save instructions.");button.textContent=ui("أعد المحاولة","Try again");}
     finally{button.disabled=false;}
   }
@@ -1355,7 +1360,7 @@ var I = {
       var mapped=data.team.map(mapEmployee).filter(Boolean); EMPS.length=0; mapped.forEach(function(e){EMPS.push(e);});
       if(!window.__SIY_REAL__) TOOLS.forEach(function(t){ var users=EMPS.filter(function(e){return e.tools.indexOf(t.s)>-1;}); t.on=users.length>0; t.by=users.map(function(e){return e.n;}); });
     }
-    if(data.employee){ var employee=mapEmployee(data.employee,EMPS.length); if(employee){ var ix=EMPS.findIndex(function(e){return e.id===employee.id;}); if(ix<0) EMPS.push(employee); else EMPS[ix]=employee; } }
+    if(data.employee){ var employee=mapEmployee(data.employee,EMPS.length); if(employee){ var ix=EMPS.findIndex(function(e){return e.id===employee.id;}); if(ix<0) EMPS.push(employee); else {if(EMPS[ix].instrVersion>employee.instrVersion){employee.instr=EMPS[ix].instr;employee.instrSource=EMPS[ix].instrSource;employee.instrVersion=EMPS[ix].instrVersion;}EMPS[ix]=employee;} } }
     if(Array.isArray(data.memory)){ MEM.length=0; data.memory.forEach(function(m){MEM.push({k:m.topic,v:m.fact,src:m.source||m.added_at||""});}); }
     var dash=window.__SIY_DASH__||{};
     if(data.owned_knowledge!==undefined){
@@ -1405,17 +1410,22 @@ var I = {
     if(!CHATS[id]) CHATS[id]={with:employeeId||"siyadah",emp:employeeId||null,t:title(text),when:"today",msgs:list};
     if(!employeeId&&curList()===list){chatId=id;live.siyadah=null;}
   }
-  function siyDraw(){ renderSide(); renderBar(); renderThread(); renderPlan(); }
-  var siyActivationResumeBusy=false;
+  function siyDraw(){ renderSide(); renderBar(); renderThread(); renderPlan();refreshLiveLabels(); }
+  var siyActivationResumeBusy=false, siyActivationResumeNotice=null;
   async function siyResumePendingActivation(employeeId){
     if(!window.__SIY_REAL__||siyActivationResumeBusy)return;
-    siyActivationResumeBusy=true;
+    var generation=siyGeneration;
+    siyActivationResumeBusy=true;siyActivationResumeNotice={employeeId:employeeId||null,busy:true,message:ui('نتحقق من جاهزية الموظف للتجربة والتفعيل…','Checking employee readiness for testing and activation…')};
+    siyBuilderState(siyActivationResumeNotice.message,false);refreshLiveLabels();if(employeeId&&who===employeeId)siyDraw();
     try{
       var result=await siyRequest({op:"resume_employee_activation",...(employeeId?{employee_id:employeeId}:{})},210000);
-      if(result.activation_status==='active'&&result.employee){siyMerge({employee:result.employee},false);siyDraw();}
-      if(result.activation_status==='pending'&&result.employee_id&&result.message){var waiting=emp(result.employee_id);if(waiting){waiting.since=result.message;siyDraw();}}
-    }catch(error){}
-    finally{siyActivationResumeBusy=false;}
+      if(generation!==siyGeneration)return;
+      if(result.activation_status==='active'&&result.employee&&result.employee.status==='active'&&!!emp(result.employee.recordId)&&!!result.employee.flowId&&emp(result.employee.recordId).flowId===result.employee.flowId&&(!employeeId||result.employee.recordId===employeeId)){siyMerge({employee:result.employee},false);siyActivationResumeNotice=null;siyBuilderState(ui('مساحة شركتك','Your workspace'),true);siyDraw();if(who===result.employee.recordId&&!$('#instrWrap')?.hidden)siyReadPublishedInstructions(emp(who));}
+      else if(result.activation_status==='pending'&&typeof result.message==='string'&&result.message&&(!employeeId||!result.employee_id||result.employee_id===employeeId)){siyActivationResumeNotice={employeeId:result.employee_id||employeeId||null,busy:false,message:result.message};siyBuilderState(result.message,false);siyDraw();}
+      else if(result.activation_status==='none'){siyActivationResumeNotice=null;siyBuilderState(ui('مساحة شركتك','Your workspace'),true);if(employeeId&&who===employeeId)siyDraw();}
+      else throw new Error(ui('لم نتأكد من نتيجة التفعيل.','Activation outcome is unverified.'));
+    }catch(error){if(generation===siyGeneration){siyActivationResumeNotice={employeeId:employeeId||null,busy:false,message:error.message||ui('تعذّر التحقق من التفعيل. أعد فتح الموظف للمحاولة.','Could not check activation. Reopen the employee to retry.')};siyBuilderState(siyActivationResumeNotice.message,false);if(employeeId&&who===employeeId)siyDraw();}}
+    finally{if(generation===siyGeneration){siyActivationResumeBusy=false;refreshLiveLabels();}}
   }
   function siyDraftReadinessHtml(readiness){
     if(!readiness||readiness.schema!=="SiyadahDraftReadinessV1"||!Array.isArray(readiness.checks)) return "";
@@ -1609,7 +1619,7 @@ var I = {
     var profile=$("#meBtn .me__n");if(profile&&profile.firstChild&&profile.firstChild.nodeType===3)profile.firstChild.textContent=ui('حسابك','Your account');
     var dataDescription=$("#dataDescription");if(dataDescription)dataDescription.textContent=ui('ملف شركتك ومعرفتها ونتائجها','Your company profile, knowledge and results');
     var deletion=$("#deleteAccountBtn");if(deletion)deletion.textContent=ui('حذف الحساب — غير متاح','Delete account — unavailable');
-    var consent=$(".comp__f");if(consent)consent.textContent=ui('تظهر حالة كل طلب ونتيجته بعد التحقق.','Request status and results appear after verification.');
+    var consent=$(".comp__f"),notice=siyActivationResumeNotice;if(consent)consent.textContent=notice&&(!notice.employeeId||notice.employeeId===who)?notice.message:ui('تظهر حالة كل طلب ونتيجته بعد التحقق.','Request status and results appear after verification.');
     var attachment=$("#attachBtn");if(attachment&&attachment.disabled){attachment.title=ui('إرفاق الملفات غير متاح حاليًا','File attachments are currently unavailable');attachment.setAttribute('aria-label',attachment.title);}
     [$("#companyNameField"),$("#companyDescriptionField")].forEach(function(input){if(input&&input.readOnly)input.title=ui('من سجل الشركة؛ التعديل غير متاح هنا','From your company record; editing is unavailable here');});
     var notification=$("#notificationSwitch");if(notification){notification.setAttribute('aria-label',ui('الإشعارات غير متاحة حاليًا','Notifications are currently unavailable'));var row=notification.closest('.srow'),caption=row&&row.querySelector('small');if(caption)caption.textContent=ui('لم تُفعّل قنوات الإشعارات','Notification channels are not enabled');var label=notification.nextSibling;if(label&&label.nodeType===3)label.textContent=ui('الإشعارات غير متاحة حاليًا','Notifications are currently unavailable');}
