@@ -7,7 +7,7 @@
       "name": "تعليمات الموظف وتطبيقها على طريقة العمل",
       "aliases": ["تعليمات الموظف", "تعديل التعليمات", "طبق التعليمات", "employee instructions"],
       "state": "live_needs_change",
-      "meaning": "حفظ التعليمات يثبت سياق المحادثة فقط. الشات الرئيسي يقرأ تعليمات المسودة، والشات المحدد يستخدم أدوات Flow المملوك لمراجعة تطبيقها. عند فتح التعليمات تُقرأ مدخلات prompt لخطوات AI من النسخة المنشورة المملوكة في Activepieces وتُعرض منفصلة؛ هذه القراءة لا تثبت نتيجة تشغيل أو مزامنة التعليمات، ولا تدّعي قراءة تعليمات Saved Agent الكاملة.",
+      "meaning": "حفظ التعليمات يثبت سياق المحادثة فقط. الشات الرئيسي يقرأ تعليمات المسودة، والشات المحدد يستخدم أدوات Flow المملوك لمراجعة تطبيقها. عند فتح التعليمات تُقرأ مدخلات prompt لخطوات AI من النسخة المنشورة المملوكة في Activepieces وتُعرض منفصلة؛ هذه القراءة لا تثبت نتيجة تشغيل أو مزامنة التعليمات، ولا تدّعي قراءة تعليمات Saved Agent الكاملة. إعادة رسم حالة المحادثة تحفظ لوحة التعليمات ونص التعديل غير المحفوظ والتركيز داخل الموظف نفسه.",
       "linear": "ABO-66",
       "locations": [
         {"role": "context", "path": "server.mjs", "anchor": "instructionSource:draftEmployee.prompt_source"},
@@ -96,13 +96,15 @@
       "name": "تفعيل الموظف أو إيقافه",
       "aliases": ["تشغيل الموظف", "ايقاف الموظف", "زر الموظف", "employee state"],
       "state": "live",
-      "meaning": "تفعيل Flow الموظف داخل مشروع الشركة بعد اختبار النسخة الحالية وقراءة النسخة المنشورة. إيصال الجاهزية يثبت الاختبار والتفعيل فقط؛ الطلب المختلط يبقى غير مؤكد ولا يتحول الاختبار إلى نتيجة إنتاجية أو KPI.",
+      "meaning": "تفعيل Flow الموظف داخل مشروع الشركة بعد اختبار النسخة الحالية وقراءة النسخة المنشورة. إيصال الجاهزية يثبت الاختبار والتفعيل فقط؛ الطلب المختلط يبقى غير مؤكد ولا يتحول الاختبار إلى نتيجة إنتاجية أو KPI. التفعيل التلقائي يعرض الانتظار ورسالة النقص أو الخطأ على الأسطح الموجودة، ولا يغير مفتاح الحالة إلا بعد قراءة موظف مطابق.",
       "linear": "ABO-17",
       "locations": [
         {"role": "readiness_contract", "path": "CHAT_CONTRACT.md", "anchor": "## Employee readiness receipt"},
         {"role": "test_snapshot", "path": "lib/chat-outcome.mjs", "anchor": "export function flowTestSnapshot(version)"},
         {"role": "readiness_ui", "path": "app/chat.js", "anchor": "function siyReadinessReceipt(data)"},
         {"role": "screen", "path": "app/chat.js", "anchor": "async function siySetEmployeeState(e)"},
+        {"role": "resume_ui", "path": "app/chat.js", "anchor": "async function siyResumePendingActivation(employeeId)"},
+        {"role": "editor_continuity_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "late activation redraw preserves the instruction panel, edit, focus and selection"},
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='employee_state')"},
         {"role": "provider", "path": "lib/tenant-projects.mjs", "anchor": "async function changeFlowStatus({tenantId,flowId,status})"},
         {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "op:'employee_state'"}
