@@ -326,7 +326,7 @@ var I = {
     var body = m.wait ? waitHtml(m) : ((m.t||"").indexOf("<p>")===0? m.t : '<p>'+m.t+'</p>') + (m.plan? planHtml(m):'') + (m.diff? diffHtml(m):'');
     return '<div class="m m--ai'+(m.reveal?' m--rev':'')+'" data-mi="'+i+'"><span class="m__av">'+avHtml(w)+'</span><div class="m__b"><div class="m__c" dir="auto">'+body+'</div>'+
       '<span class="m__t">'+esc(name(w))+' · '+m.at+'</span>'+
-      siyRequestStateHtml(m.requestState)+
+      siyRequestStateHtml(m.requestState,m.partialActionResult)+
       '<div class="act"><button type="button" data-copy="1">'+I.copy+ui('نسخ','Copy')+'</button>'+(!window.__SIY_REAL__||m.why?'<button type="button" data-why="1" aria-expanded="false">'+I.why+ui('ليش؟','Why?')+'</button>':'')+'</div>'+
       (!window.__SIY_REAL__||m.why?'<p class="whyl" hidden>'+esc(whyOf(m,w))+'</p>':'')+'</div></div>';
   }
@@ -1517,8 +1517,9 @@ var I = {
       '<div class="approve nr"><button type="button" class="bt" data-siy-approval="approve">'+I.check+ui('ابدأ التجهيز','Start preparation')+'</button>'+
       '<button type="button" class="bt bt--line" data-siy-approval="reject">'+ui('إلغاء','Cancel')+'</button></div>';
   }
-  function siyRequestStateHtml(state){
+  function siyRequestStateHtml(state,partialActionResult){
     var labels={queued:ui('بانتظار التنفيذ','Queued'),running:ui('قيد التنفيذ','In progress'),failed:ui('تعذّر الطلب','Request failed'),unknown:ui('النتيجة غير مؤكدة','Outcome unverified'),awaiting_input:ui('بانتظارك','Needs your input'),cancelled:ui('أُلغي الطلب','Request cancelled')};
+    if(state==='unknown'&&partialActionResult===true)labels.unknown=ui('اكتمل إجراء؛ نتيجة الطلب كاملة غير مؤكدة','An action completed; the full request outcome is unverified');
     return labels[state]?'<span class="request-state" data-state="'+state+'" role="status">'+labels[state]+'</span>':'';
   }
   function siyReadinessReceipt(data){
@@ -1538,8 +1539,9 @@ var I = {
     var readiness=ready?siyRefsHtml([['طريقة العمل',ready.flow_id],['النسخة المنشورة',ready.published_version_id],['اختبار التهيئة',ready.test_run_id]],ui('اختبار تهيئة (TESTING)، وليس تنفيذ مهمة إنتاجية.','Configuration test (TESTING), not a production task.')+(ready.used_mock_trigger_data===true?ui(' استخدم بيانات مشغّل تجريبية.',' Used mock trigger data.'):'')):'';
     var draft=data.draft&&data.flow_id?siyRefsHtml([['طريقة العمل',data.flow_id],['المهمة',data.work_id]]):'';
     var receipts=Array.isArray(data.tool_receipts)?data.tool_receipts.filter(function(r){return r&&typeof r.name==='string'&&['returned','error'].includes(r.status);}).slice(0,80):[];
+    var partialActionResult=state==='unknown'&&receipts.some(function(r){return r.name==='ap_run_action'&&r.status==='returned'&&r.outcome==='action_completed'&&typeof r.run_id==='string'&&/^[0-9A-Za-z]{21}$/.test(r.run_id);})&&receipts.some(function(r){return r.status==='error'||r.effect_attempted===true&&r.outcome!=='action_completed';});
     var tools=receipts.length?'<details class="plan nr" style="margin-top:10px"><summary>'+ui('استدعاءات الأدوات','Tool calls')+' · '+receipts.length+'</summary>'+receipts.map(function(r,i){var run=r.name==='ap_run_action'&&typeof r.run_id==='string'&&/^[0-9A-Za-z]{21}$/.test(r.run_id)?r.run_id:'';return '<div class="prow"><b>'+(i+1)+'</b><span>'+esc(r.name)+' · '+(r.status==='error'?ui('تعذّر الاستدعاء','Call failed'):run&&r.outcome==='action_completed'?ui('اكتمل استدعاء الإجراء','Action completed'):ui('أعادت ردًا','Returned a response'))+(run?'<small>'+ui('مرجع الإجراء: ','Action run: ')+'<code>'+esc(run)+'</code></small>':'')+(r.output_limited===true?'<small>'+ui('اختصرت الخدمة بعض الحقول؛ اطلب نطاقًا أضيق لعرضها كاملة.','The service shortened some fields; request a narrower scope to display them in full.')+'</small>':'')+'</span></div>';}).join('')+'<p>'+ui('رد الأداة وحده لا يثبت نتيجة الخدمة.','A tool response alone does not prove the provider outcome.')+'</p></details>':'';
-    return {me:false,at:now(),requestState:state,t:siyReplyHtml(text)+readiness+tools+siyBuilderProposalHtml(data)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,ui('نتائج هذا الطلب','Results for this request')):'')+siyLegacyProofHtml(records)+draft,workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;}),builderApproval:data.approval&&data.approval.required===true?{id:data.approval.approval_id,conversationId:data.conversation_id}:null};
+    return {me:false,at:now(),requestState:state,partialActionResult:partialActionResult,t:siyReplyHtml(text)+readiness+tools+siyBuilderProposalHtml(data)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,ui('نتائج هذا الطلب','Results for this request')):'')+siyLegacyProofHtml(records)+draft,workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;}),builderApproval:data.approval&&data.approval.required===true?{id:data.approval.approval_id,conversationId:data.conversation_id}:null};
   }
   async function siyDecideBuilder(row,decision){
     if(!row||!row.builderApproval||row.siyInFlight) return;

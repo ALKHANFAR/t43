@@ -1232,3 +1232,18 @@ test('workspace reconnect accepts only its fresh OAuth client grant and ignores 
     assert.equal(p.requests.filter(r=>r.url.endsWith('/mcp/connect')).length,1);
   }finally{p.close();}
 });
+
+
+test('mixed action receipts explain completed action without upgrading unknown request in either language',async()=>{
+ for(const locale of ['ar','en']){
+  const p=await page({locale,message:{ok:true,conversation_id:'mixed',request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',reply:'رد المصدر',tool_receipts:[{name:'ap_run_action',status:'returned',run_id:'R'.repeat(21),outcome:'unverified',effect_attempted:true},{name:'ap_run_action',status:'returned',run_id:'S'.repeat(21),outcome:'action_completed',effect_attempted:true}]}});try{
+   send(p,'اقرأ');await flush();const state=p.d.querySelector('.request-state');assert.equal(state.dataset.state,'unknown');assert.match(state.textContent,locale==='en'?/An action completed; the full request outcome is unverified/:/اكتمل إجراء؛ نتيجة الطلب كاملة غير مؤكدة/);assert.equal(p.d.querySelectorAll('.request-state[data-state="succeeded"]').length,0);
+  }finally{p.close();}
+ }
+});
+
+test('invalid or absent completed-action identity cannot change unknown request wording',async()=>{
+ for(const run of ['', '<img src=x>', 1e20, null]){
+  const p=await page({message:{ok:true,conversation_id:'mixed',request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',reply:'رد المصدر',tool_receipts:[{name:'ap_run_action',status:'error',effect_attempted:true},{name:'ap_run_action',status:'returned',run_id:run,outcome:'action_completed',effect_attempted:true}]}});try{send(p,'اقرأ');await flush();assert.equal(p.d.querySelector('.request-state').textContent,'النتيجة غير مؤكدة');}finally{p.close();}
+ }
+});
