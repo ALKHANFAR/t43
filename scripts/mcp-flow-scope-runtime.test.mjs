@@ -27,6 +27,22 @@ test('employee sees only its own native Flow tool',()=>{
   assert.equal(visibleMcpTool(own,{...selected,status:'draft'},null),false);
 });
 
+test('native string Wait for Response exposes only the owned published employee tool',()=>{
+  const flow=publishedFlow('My17YmUnruHPBoZ8V2PSy');
+  const input=flow.version.trigger.settings.input;
+  input.toolName='siyadah_qa';input.returnsResponse='true';
+  const ownName=employeeFlowMcpToolName(flow);
+  assert.equal(ownName,'siyadah_qa_my17_t4s3mw_mcp');
+  const selected={status:'active',activepieces_flow_id:flow.id};
+  const own={name:ownName,inputSchema:{properties:{}}},other={...own,name:'another_flow_mcp'};
+  assert.equal(visibleMcpTool(own,selected,ownName),true);
+  assert.deepEqual(scopeMcpTool(own,{},selected,ownName),{});
+  assert.equal(visibleMcpTool(other,selected,ownName),false);
+  assert.throws(()=>scopeMcpTool(other,{},selected,ownName),{code:'employee_flow_scope'});
+  for(const value of ['false',false,'',undefined,'TRUE',1]){input.returnsResponse=value;assert.equal(employeeFlowMcpToolName(flow),null);}
+  input.returnsResponse='true';flow.status='DISABLED';assert.equal(employeeFlowMcpToolName(flow),null);
+});
+
 test('employee Flow ID comes from its saved record, never from the model',()=>{
   assert.deepEqual(scopeMcpTool(flowTool,{stepName:'step_1'},employee),{stepName:'step_1',flowId:employee.activepieces_flow_id});
   assert.throws(()=>scopeMcpTool(flowTool,{flowId:'BBBBBBBBBBBBBBBBBBBBB',stepName:'step_1'},employee),{code:'employee_flow_scope'});

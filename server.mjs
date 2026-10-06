@@ -449,9 +449,10 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   const effects=[],toolReceipts=[];
   const account=()=>`نُفّذت خطوات على مشروع شركتك (${[...new Set(effects)].join('، ')||'ap_build_flow'}) ثم توقف الطلب قبل كتابة الرد. اكتب «أكمل» لأقرأ الحالة وأتابع من حيث توقفت.`;
   // A Flow the model published or paused is the employee's real state; Siyadah's record follows it.
-  const finish=async reply=>{
+  const syncEmployeeState=async()=>{
     const flow=employee?.activepieces_flow_id||flowId||draftEmployee?.activepieces_flow_id,id=employee?.id||linked?.recordId||(flow===draftEmployee?.activepieces_flow_id?draftEmployee?.id:null);
     if(statusChanged&&flow&&id)try{
+      readinessReceipt=null;
       const state=(await (await tenantProjects()).ownedFlow(companyId,flow)).flow;
       if(state.status==='ENABLED'&&state.publishedVersionId&&testedFlowId===flow&&testedRun){
         const tested=JSON.parse(testedVersion),published=(await (await tenantProjects()).ownedFlow(companyId,flow,state.publishedVersionId)).flow;
@@ -460,8 +461,12 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           if(linked?.status==='active'&&linked.recordId===id&&linked.flowId===flow)readinessReceipt={employee_id:id,flow_id:flow,published_version_id:state.publishedVersionId,test_run_id:testedRun.id,test_environment:'TESTING',...(typeof testedRun.usedMockTriggerData==='boolean'?{used_mock_trigger_data:testedRun.usedMockTriggerData}:{})};
         }
       }
-      else if(employee?.status==='active')linked=await (await companyProfiles()).setEmployeeState({companyId,employeeId:id,status:'disabled'});
+      else if((linked||employee)?.status==='active')linked=await (await companyProfiles()).setEmployeeState({companyId,employeeId:id,status:'disabled'});
+      statusChanged=false;
     }catch(error){console.error('employee state readback failed',error?.code||error?.name||'unknown_error');}
+  };
+  const finish=async reply=>{
+    await syncEmployeeState();
     return {reply:String(reply).slice(0,6000),effects,toolReceipts,flowToolAttempted,...(readinessReceipt?{readinessReceipt}:{}),...(flowId?{flowId}:{}),...(linked||createdDraft?{employee:linked||createdDraft}:{})};
   };
   try{
@@ -529,7 +534,11 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
         }
         if(toolReceipts.length<80)toolReceipts.push({...nativeActionReceipt(name,result),...(effectAttempted?{effect_attempted:true,...(effectFlowId?{flow_id:effectFlowId}:{})}:{})});
         console.info('chat_tool_timing',JSON.stringify({conversation_id:conversationId,name,elapsed_ms:Date.now()-toolStarted,error:result?.isError===true}));
-        messages.push({role:'tool',tool_call_id:call.id,content:JSON.stringify(result)});
+        if(result?.isError!==true&&['ap_lock_and_publish','ap_change_flow_status'].includes(name))await syncEmployeeState();
+        // Keep the native MCP result intact and expose only the employee state saved by Siyadah.
+        const localState=linked||createdDraft;
+        const modelResult=localState?{...result,siyadahContext:statusChanged?{employeeStateVerified:false}:{employee:localState,...(readinessReceipt?{readinessReceipt}:{})}}:result;
+        messages.push({role:'tool',tool_call_id:call.id,content:JSON.stringify(modelResult)});
       }
     }
     messages.push({role:'user',content:'انتهى وقت أو خطوات هذا الطلب. اكتب الآن ردك النهائي دون أدوات: ما نُفّذ فعلًا وتحققت منه، وما بقي، وما المطلوب من المستخدم.'});
