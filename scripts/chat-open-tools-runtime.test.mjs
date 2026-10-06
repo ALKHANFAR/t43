@@ -24,6 +24,13 @@ const catalog=[
   {name:'ap_test_flow',...hint(false),inputSchema:{type:'object',properties:{flowId:{type:'string'}}}},
   {name:'ap_get_run',...hint(true),inputSchema:{type:'object',properties:{flowRunId:{type:'string'}}}},
   {name:'ap_build_flow',...hint(false)},
+  {name:'ap_create_flow',...hint(false)},
+  {name:'ap_list_flows',...hint(true)},
+  {name:'ap_delete_flow',...hint(false),inputSchema:{type:'object',properties:{flowId:{type:'string'}}}},
+  {name:'ap_duplicate_flow',...hint(false),inputSchema:{type:'object',properties:{flowId:{type:'string'},name:{type:'string'}}}},
+  {name:'ap_list_tables',...hint(true)},
+  {name:'ap_list_ai_models',...hint(true)},
+  {name:'ap_retry_run',...hint(false),inputSchema:{type:'object',properties:{flowRunId:{type:'string'},strategy:{type:'string'}}}},
   {name:'ap_add_step',...hint(false),inputSchema:{type:'object',properties:{flowId:{type:'string'}}}},
   {name:'ap_lock_and_publish',...hint(false),inputSchema:{type:'object',properties:{flowId:{type:'string'}}}},
   {name:'ap_change_flow_status',...hint(false),inputSchema:{type:'object',properties:{flowId:{type:'string'},status:{type:'string'}}}},
@@ -60,6 +67,7 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false,edit
     },
     database:async()=>({connect:async()=>({query:async()=>({rows:[{locked:true}]}),release:()=>{}})}),
     companyProfiles:async()=>({
+      clearEmployeeActivationIntent:async()=>{},
       findEmployee:async()=>({id:'employee-1',status:'draft',activepieces_flow_id:null}),
       linkEmployeeFlow:async({flowId:id})=>({recordId:'employee-1',flowId:id,name:'أمين المحتوى',status:'disabled'}),
       recordEmployeeRun:async input=>{if(saveRunFailure)throw new Error('save failed');log.runs.push(input);return {recordId:input.employeeId,flowId:input.flowId,lastRunId:input.runId,status:'active'};},
@@ -94,7 +102,7 @@ test('the model builds, tests and publishes in one request and writes the reply 
   assert.deepEqual(first.thinking,{type:'enabled'});
   assert.match(first.messages[0].content,/## Activepieces MCP Server/);
   assert.ok(first.tools.some(tool=>tool.function.name==='ap_lock_and_publish'));
-  assert.ok(!first.tools.some(tool=>tool.function.name==='ap_set_project_context'));
+  assert.ok(first.tools.some(tool=>tool.function.name==='ap_set_project_context'));
   assert.equal(toolMessages(last).length,5);
   assert.match(toolMessages(last)[1],/Flow created/);
 });
@@ -185,7 +193,7 @@ test('invalid calls and company boundaries are answered to the model without dis
   assert.ok(answer.toolReceipts.every(item=>item.status==='error'&&!item.effect_attempted));
   const replies=toolMessages(log.model[1]);
   assert.equal(replies.length,4);
-  assert.match(replies[0],/mcp_tool_invalid/);assert.match(replies[2],/mcp_arguments_invalid/);assert.match(replies[3],/connection_not_owned/);
+  assert.match(replies[0],/mcp_project_switch_forbidden/);assert.match(replies[2],/mcp_arguments_invalid/);assert.match(replies[3],/connection_not_owned/);
 });
 
 test('the chat keeps ordered MCP results without storing tool inputs or claiming provider success',async()=>{
@@ -222,10 +230,10 @@ test('a request that runs out of time still ends with an account of what ran',as
 
 test('selected employee chat calls only its published native MCP Flow tool',async()=>{
   const employee={id:'employee-9',name:'نور',status:'active',activepieces_flow_id:flowId};
-  const {run,log}=setup({flowStatus:'ENABLED',published:true,script:[use(['ap_add_step',{flowId:'G'.repeat(21)}],['ap_add_step',{}]),use([flowToolName,{task:'نفذ'}]),say('وصل رد الأداة.')]});
+  const {run,log}=setup({flowStatus:'ENABLED',published:true,script:[use(['ap_add_step',{flowId:'G'.repeat(21)}]),use([flowToolName,{task:'نفذ'}]),say('وصل رد الأداة.')]});
   const answer=await run({employee});
   assert.equal(answer.flowToolAttempted,true);
-  assert.deepEqual(log.tools,[['ap_add_step',{flowId}],[flowToolName,{task:'نفذ'}]]);
+  assert.deepEqual(log.tools,[[flowToolName,{task:'نفذ'}]]);
   assert.match(toolMessages(log.model[1])[0],/employee_flow_scope/);
   assert.match(toolMessages(log.model.at(-1)).at(-1),new RegExp(`ok ${flowToolName}`));
   assert.ok(log.model[0].tools.some(tool=>tool.function.name===flowToolName));
@@ -487,6 +495,30 @@ const executionResult=(overrides={})=>({content:[{type:'text',text:'native reply
 const productionRun=(overrides={})=>({structuredContent:{id:runId,flowId,environment:'PRODUCTION',status:'SUCCEEDED',steps:[{name:'trigger',output:{}},{name:'reply',output:{status:200,body:{result:'QA'}}}],...overrides}});
 const runningEmployee={id:'employee-9',status:'active',activepieces_flow_id:flowId,tools_json:['mcp']};
 
+test('earlier Flow edits including failed writes block native dispatch in the same batch or next turn',async()=>{
+  for(const sameBatch of [true,false])for(const failedWrite of [true,false]){
+    let nativeReconciliations=0;
+    const edit=['ap_add_step',{flowId}],native=[flowToolName,{}];
+    const {run,log}=setup({published:true,flowStatus:'ENABLED',toolResults:failedWrite?{ap_add_step:()=>{throw new Error('ambiguous write failure');}}:{},script:sameBatch?[use(edit,native),say('اطلب تشغيل الموظف بصورة مستقلة.')]:[use(edit),use(native),say('اطلب تشغيل الموظف بصورة مستقلة.')]});
+    const answer=await run({employee:runningEmployee,onNativeExecution:async()=>{nativeReconciliations++;}});
+    assert.deepEqual(log.tools.map(x=>x[0]),['ap_add_step']);
+    assert.equal(nativeReconciliations,0);assert.equal(answer.flowToolAttempted,false);
+    assert.equal(completedToolActions(answer).work_status,'unknown');
+  }
+});
+
+test('native dispatch blocks later effects in the same batch or next turn while readonly remains allowed',async()=>{
+  for(const sameBatch of [true,false])for(const name of ['ap_add_step','ap_test_flow','ap_lock_and_publish']){
+    const native=[flowToolName,{}],effect=[name,{flowId}];
+    const script=[use(['ap_validate_flow',{flowId}]),...(sameBatch?[use(native,effect)]:[use(native),use(effect)]),use(['ap_validate_flow',{flowId}]),say('اكتملت المهمة؛ التعديل يحتاج طلبًا آخر.')];
+    const {run,log}=setup({published:true,flowStatus:'ENABLED',toolResults:{[flowToolName]:executionResult(),ap_get_run:productionRun()},script});
+    const answer=await run({employee:runningEmployee});
+    assert.deepEqual(log.tools.map(x=>x[0]),['ap_validate_flow',flowToolName,'ap_get_run','ap_validate_flow']);
+    assert.deepEqual(Array.from(answer.effects),[flowToolName]);assert.equal(log.runs.length,1);
+    assert.equal(completedToolActions(answer).work_status,'succeeded');
+  }
+});
+
 test('native employee execution receipt reads its exact production run and saves proof before the next model call',async()=>{
   const {run,log}=setup({published:true,flowStatus:'ENABLED',toolResults:{[flowToolName]:executionResult(),ap_get_run:productionRun()},script:[use([flowToolName,{}]),request=>{
     const result=JSON.parse(toolMessages(request).at(-1));
@@ -519,4 +551,82 @@ test('missing, mismatched, nonterminal or unsaved native execution stays unknown
     assert.equal(answer.employee,undefined);
     assert.equal(log.tools.filter(x=>x[0]===flowToolName).length,1);
   }
+});
+
+
+test('paused employee actually uses native action tables and AI discovery in its chat',async()=>{
+  const {run,log}=setup({script:[use(['ap_list_tables',{}],['ap_list_ai_models',{}],['ap_run_action',{pieceName:'gmail',actionName:'read_email'}]),say('قرأت النتائج الأصلية.')]});
+  await run({employee:{id:'employee-1',status:'draft',activepieces_flow_id:flowId}});
+  assert.deepEqual(log.tools.map(x=>x[0]),['ap_list_tables','ap_list_ai_models','ap_run_action']);
+  assert.ok(log.model[0].tools.some(x=>x.function.name==='ap_retry_run'));
+});
+test('employee without a Flow builds and edits its own linked Flow in one chat',async()=>{
+  const {run,log}=setup({script:[use(['ap_build_flow',{flowName:'نور',trigger:{},steps:[]}]),use(['ap_add_step',{displayName:'خطوة'}]),say('بنيت المسودة وعدلتها.')]});
+  const result=await run({employee:{id:'employee-1',status:'draft',activepieces_flow_id:null}});
+  assert.equal(result.employee.recordId,'employee-1');assert.equal(result.employee.flowId,flowId);
+  assert.deepEqual(log.tools.map(x=>x[0]),['ap_build_flow','ap_add_step']);
+  assert.equal(log.tools[1][1].flowId,flowId);
+  assert.equal(log.model.at(-1).tools.some(x=>x.function.name==='ap_build_flow'),true);
+});
+test('native employee Flow listing removes other Flow data from text and structured output',async()=>{
+  const foreign='G'.repeat(21);
+  const {run,log}=setup({script:[use(['ap_list_flows',{}]),say('هذه طريقة عملي.')],toolResults:{ap_list_flows:{structuredContent:{flows:[{id:flowId,displayName:'نور'},{id:foreign,displayName:'secret-other'}],count:2},content:[{type:'text',text:'secret-other '+foreign}]}}});
+  await run({employee:{id:'employee-1',status:'draft',activepieces_flow_id:flowId}});
+  const outputs=toolMessages(log.model.at(-1));
+  assert.equal(outputs.length,1);assert.doesNotMatch(outputs[0],/secret-other|GGGGG/);
+  assert.equal(JSON.parse(outputs[0]).structuredContent.count,1);
+});
+test('employee retry cannot dispatch a run belonging to a different Flow',async()=>{
+  const {run,log}=setup({script:[use(['ap_retry_run',{flowRunId:runId,strategy:'FROM_FAILED_STEP'}]),say('هذا التشغيل لا يخصني.')],toolResults:{ap_get_run:{structuredContent:{id:runId,flowId:'G'.repeat(21),status:'FAILED'}}}});
+  await run({employee:{id:'employee-1',status:'draft',activepieces_flow_id:flowId}});
+  assert.deepEqual(log.tools.map(x=>x[0]),['ap_get_run']);assert.equal(log.effects,0);
+  assert.match(toolMessages(log.model.at(-1))[0],/employee_run_scope/);
+});
+test('employee create Flow uses native MCP and links its existing record',async()=>{
+  const {run,log}=setup({script:[use(['ap_create_flow',{flowName:'نور'}]),say('حفظت المسودة الفارغة.')],toolResults:{ap_create_flow:{structuredContent:{flowId,displayName:'نور'}}}});
+  const result=await run({employee:{id:'employee-1',status:'draft',activepieces_flow_id:null}});
+  assert.deepEqual(log.tools.map(x=>x[0]),['ap_create_flow']);assert.equal(result.employee.recordId,'employee-1');assert.equal(result.employee.flowId,flowId);
+});
+
+
+test('employee duplication creates a company artifact without replacing its saved Flow',async()=>{
+  const duplicate='D'.repeat(21);
+  const {run,log}=setup({script:[use(['ap_duplicate_flow',{name:'نسخة مستقلة'}]),say('أنشأت نسخة مستقلة في الشركة.')],toolResults:{ap_duplicate_flow:{structuredContent:{flowId:duplicate}}}});
+  const answer=await run({employee:{id:'employee-1',status:'draft',activepieces_flow_id:flowId}});
+  assert.equal(log.tools[0][1].flowId,flowId);assert.equal(answer.employee,undefined);assert.equal(log.states.length,0);
+  const context=JSON.parse(toolMessages(log.model.at(-1))[0]).siyadahContext;
+  assert.equal(context.employee_flow_id,flowId);assert.equal(context.employee_link_changed,false);assert.equal(context.duplicate_scope,'independent_company_flow');
+});
+
+
+test('accepted native deletion pauses the employee without claiming final Flow deletion',async()=>{
+  const {run,log}=setup({published:true,flowStatus:'ENABLED',script:[use(['ap_delete_flow',{}]),say('طلب الحذف قُبل وأوقفت الموظف.')],toolResults:{ap_delete_flow:{structuredContent:{success:true}}}});
+  const result=await run({employee:{id:'employee-1',status:'active',activepieces_flow_id:flowId}});
+  assert.deepEqual(log.states,[['employee-1','disabled']]);assert.equal(result.employee.status,'disabled');assert.equal(result.employee.flowId,flowId);
+  assert.equal(result.readinessReceipt,undefined);assert.equal(log.model.at(-1).tools.some(x=>x.function.name===flowToolName),true);
+});
+
+
+test('main and every employee state receive the complete native catalog without a fixed count',async()=>{
+  for(const employee of [null,{id:'employee-1',status:'draft',activepieces_flow_id:null},{id:'employee-1',status:'disabled',activepieces_flow_id:flowId},{id:'employee-1',status:'active',activepieces_flow_id:flowId}]){
+    const {run,log}=setup({script:[say('الكتالوج متاح')],published:true,flowStatus:'ENABLED'});
+    await run({employee});
+    assert.deepEqual(log.model[0].tools.map(x=>x.function.name),catalog.map(x=>x.name));
+  }
+});
+
+test('saved draft sees creation tools but cannot create a replacement Flow',async()=>{
+  const {run,log}=setup({script:[use(['ap_create_flow',{flowName:'replacement'}]),say('نستخدم المسودة الموجودة')]});
+  await run({draftEmployee:{id:'employee-1',status:'draft',activepieces_flow_id:flowId}});
+  assert.ok(log.model[0].tools.some(x=>x.function.name==='ap_create_flow'));
+  assert.deepEqual(log.tools,[]);
+  assert.match(toolMessages(log.model[1])[0],/employee_flow_conflict/);
+});
+
+test('completed effect stays visible but cannot be dispatched again in a continuation',async()=>{
+  const {run,log}=setup({script:[use(['ap_list_tables',{}]),say('أكمل من النتيجة')]});
+  await run({excludedTools:['ap_list_tables']});
+  assert.ok(log.model[0].tools.some(x=>x.function.name==='ap_list_tables'));
+  assert.deepEqual(log.tools,[]);
+  assert.match(toolMessages(log.model[1])[0],/mcp_effect_already_completed/);
 });

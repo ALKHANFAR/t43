@@ -53,8 +53,8 @@ test('manual activation and connection resume share one tested activation path',
 
 test('explicit employee disable consumes auto activation intent so hydrate cannot restart it',()=>{
   const helper=server.slice(server.indexOf('async function changeEmployeeState('),server.indexOf("if(input.op==='employee_state')"));
-  assert.match(helper,/changeFlowStatus\(\{tenantId:companyId,flowId:saved\.activepieces_flow_id,status:status==='active'\?'ENABLED':'DISABLED'\}\)/);
+  assert.match(helper,/name:'ap_change_flow_status',arguments:\{flowId:saved\.activepieces_flow_id,status:desired\}/);
   assert.match(helper,/if\(status==='disabled'\)await profiles\.clearEmployeeActivationIntent/);
-  assert.ok(helper.indexOf("if(status==='disabled')await profiles.clearEmployeeActivationIntent")<helper.indexOf('changeFlowStatus('));
+  assert.ok(helper.indexOf("if(status==='disabled')await profiles.clearEmployeeActivationIntent")<helper.indexOf("name:'ap_change_flow_status'"));
   assert.match(helper,/const updated=await profiles\.setEmployeeState\(\{companyId,employeeId:saved\.id,status\}\);\s*if\(status==='active'\)await profiles\.clearEmployeeActivationIntent/);
 });

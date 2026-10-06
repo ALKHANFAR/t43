@@ -3,6 +3,73 @@
   "repository": "ALKHANFAR/t43",
   "features": [
     {
+      "id": "native_mcp_chat_capabilities",
+      "name": "كل قدرات MCP في الشات وشات الموظف",
+      "aliases": ["إمكانيات MCP", "أدوات الموظف الأصلية", "استخدام MCP فعليًا"],
+      "state": "draft_pr",
+      "meaning": "الشات الرئيسي وشات الموظف يعرضان كامل كتالوج أدوات MCP المشروع المعلن دون عدد ثابت أو إخفاء وفق حالة الموظف. قيود الملكية وتبديل المشروع وتكرار الأثر تُطبق عند التنفيذ، لا بفلترة الكتالوج. البناء والتعديل واكتشاف الحقول عبر MCP فقط. التغيير في PR60 غير منشور.",
+      "linear": "ABO-69",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/60",
+      "locations": [
+        {"role": "scope", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function visibleMcpTool"},
+        {"role": "live_catalog", "path": "server.mjs", "anchor": "const modelTools=()=>available.filter"},
+        {"role": "run_scope", "path": "server.mjs", "anchor": "employee_run_scope"},
+        {"role": "test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "paused employee actually uses native action tables and AI discovery"},
+        {"role": "build_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "employee without a Flow builds and edits its own linked Flow"}
+      ]
+    },
+    {
+      "id": "native_mcp_build_discovery_boundary",
+      "name": "إيقاف إنشاء الفلو واكتشاف الأدوات والحقول عبر REST",
+      "aliases": ["بناء الفلو", "منع REST", "اكتشاف الحقول", "MCP فقط للبناء"],
+      "state": "draft_pr",
+      "meaning": "حذف إنشاء الفلو وتغيير حالته من محول REST؛ المسار الداخلي القديم يعيد 410. البناء والاكتشاف في MCP الشركة، وتغيير الحالة عبر MCP مع قراءة تأكيد. قراءة تفاصيل الفلو وتهيئة المشاريع وإدارة الاتصالات الحالية تبقى. تجهيز اتصالات جديدة يتوقف حتى توفر عقد حقول مصادقة أصلي؛ لا بديل REST. تغيير محلي غير منشور.",
+      "linear": "ABO-69",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/60",
+      "locations": [
+        {"role": "closed_route", "path": "server.mjs", "anchor": "native_mcp_creation_required"},
+        {"role": "native_status", "path": "server.mjs", "anchor": "mcp=mcp||await activepiecesMcp();"},
+        {"role": "closed_metadata", "path": "lib/tool-connections.mjs", "anchor": "native_mcp_discovery_required"},
+        {"role": "contract", "path": "docs/mcp-tool-discovery-boundary.md", "anchor": "# Tool discovery boundary"},
+        {"role": "test", "path": "scripts/native-mcp-boundary-runtime.test.mjs", "anchor": "closed internal create route never initializes a provider"}
+      ]
+    },
+    {
+      "id": "native_user_qa_auth_probe",
+      "name": "اختبار المصادقة الأصلية لرمز مشروع QA",
+      "aliases": [
+        "تفويض MCP التلقائي",
+        "native USER authentication",
+        "QA token issuance"
+      ],
+      "state": "draft_pr",
+      "meaning": "اختبار تشخيصي معزول لتسجيل دخول USER الأصلي وإصدار رمز MCP لمشروع QA المحدد ثم tools/list فقط. لا يغيّر مسار الإنتاج أو منح OAuth ولا يبني أو يشغّل Flows؛ بيانات الدخول تبقى في العملية الآمنة. نجاح الاختبارات المحلية لا يثبت التفويض الحي أو التجديد التلقائي.",
+      "linear": "ABO-69",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/60",
+      "locations": [
+        {
+          "role": "probe",
+          "path": "scripts/native-user-auth-probe.mjs",
+          "anchor": "export async function runNativeAuthProbe"
+        },
+        {
+          "role": "qa_scope",
+          "path": "scripts/native-user-auth-probe.mjs",
+          "anchor": "const QA_PROJECTS"
+        },
+        {
+          "role": "test",
+          "path": "scripts/native-user-auth-probe-runtime.test.mjs",
+          "anchor": "missing configuration and non-QA project stop before any sign-in"
+        },
+        {
+          "role": "contract",
+          "path": "docs/native-user-auth-probe.md",
+          "anchor": "# Isolated native USER authentication probe"
+        }
+      ]
+    },
+    {
       "id": "employee_instructions_context",
       "name": "تعليمات الموظف وتطبيقها على طريقة العمل",
       "aliases": ["تعليمات الموظف", "تعديل التعليمات", "طبق التعليمات", "employee instructions"],
@@ -48,7 +115,7 @@
       "pr": "https://github.com/ALKHANFAR/t43/pull/17",
       "locations": [
         {"role": "route", "path": "server.mjs", "anchor": "const draft=existing?.status==='draft'?existing:null"},
-        {"role": "build", "path": "server.mjs", "anchor": "if(name==='ap_build_flow'&&!employee)"},
+        {"role": "build", "path": "server.mjs", "anchor": "if(['ap_build_flow','ap_create_flow'].includes(name))"},
         {"role": "storage", "path": "lib/company-profile.mjs", "anchor": "async function createManualEmployeeDraft({companyId,name,requestId})"},
         {"role": "migration", "path": "migrations/0002-local-employee-drafts.sql", "anchor": "ADD COLUMN IF NOT EXISTS creation_request_id"},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "| Employee saved |"},
@@ -106,7 +173,7 @@
         {"role": "resume_ui", "path": "app/chat.js", "anchor": "async function siyResumePendingActivation(employeeId)"},
         {"role": "editor_continuity_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "late activation redraw preserves the instruction panel, edit, focus and selection"},
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='employee_state')"},
-        {"role": "provider", "path": "lib/tenant-projects.mjs", "anchor": "async function changeFlowStatus({tenantId,flowId,status})"},
+        {"role": "provider", "path": "server.mjs", "anchor": "mcp=mcp||await activepiecesMcp();"},
         {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "op:'employee_state'"}
       ]
     },
@@ -133,9 +200,9 @@
       "name": "ربط أداة الشركة عند الحاجة",
       "aliases": ["ربط الأدوات", "اتصال أداة", "تسجيل دخول الأداة", "OAuth الأداة", "كتالوج الأدوات", "company tool connection", "tool catalog"],
       "state": "gap",
-      "meaning": "كتالوج الأدوات يعرض 762 أداة بأيقونات من نطاق سيادة. الفرع الحالي يعيد مسار OAuth الافتراضي في Activepieces للأدوات التي يعلنها الوسيط، ويطلب النطاقات التي تعلنها القطعة، مع محاولة واحدة مرتبطة بجلسة الشركة واتصال PROJECT حصري. تُقرأ صفحات اتصالات مشروع الشركة كلها قبل عرضها؛ لم تثبت بعد موافقة مزود حية أو تشغيل موظف دائم بهذا المسار. Gmail يختار Activepieces مرحليًا للربط الجديد، ومسار OAuth سيادة المحفوظ يطلب gmail.send فقط وينتظر موافقة Google. لا تحول تلقائيًا لاتصالات العملاء. التفويض الدائم لكل موظف وأداة يحتاج إنفاذًا في بوابة العمل، ولا تنشئ نافذة الربط وحدها هذا التفويض. عند استخدام تدفق لاتصال، يرفض طلب الفصل برسالة واضحة؛ إزالة الاعتماد من التدفق قبل الفصل ما زالت تحتاج مسارًا وظيفيًا.",
+      "meaning": "ربط أدوات جديدة متوقف في PR #60 لأن تجهيز حقول المصادقة كان يعتمد على REST metadata المحظور. إدارة الاتصالات القائمة وإنهاء محاولات OAuth السابقة باقية؛ يلزم عقد أصلي لحقول المصادقة عبر MCP قبل إعادة تجهيز اتصال جديد. التغيير غير منشور.",
       "linear": "ABO-61",
-      "pr": "https://github.com/ALKHANFAR/t43/pull/39",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/60",
       "locations": [
         {"role": "catalog", "path": "pieces.js", "anchor": "window.PIECES="},
         {"role": "catalog_mapping", "path": "app/chat.js", "anchor": "x.s===c.slug"},
@@ -144,14 +211,17 @@
         {"role": "catalog_test", "path": "scripts/check-pieces.js", "anchor": "Customer catalog integrity"},
         {"role": "customer_action", "path": "app/chat.js", "anchor": "async function rcOAuth(values)"},
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='oauth_start')"},
-        {"role": "tenant_scope", "path": "lib/tool-connections.mjs", "anchor": "async function selected({tenantId,piece,type})"},
+        {"role": "tenant_scope", "path": "lib/tool-connections.mjs", "anchor": "async function selected("},
+        {"role": "method_schema", "path": "lib/tool-connections.mjs", "anchor": "function authFingerprint"},
+        {"role": "grant_guard", "path": "lib/tool-connections.mjs", "anchor": "unsupported_oauth_grant"},
+        {"role": "typed_field_ui", "path": "app/chat.js", "anchor": "function rcField(field,index)"},
         {"role": "project_connections_list", "path": "lib/tool-connections.mjs", "anchor": "async function list(tenantId)"},
         {"role": "project_connections_pagination_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "lists every page of the company project connections"},
-        {"role": "owned_google_start", "path": "lib/tool-connections.mjs", "anchor": "async function oauthStart({tenantId,sessionBinding,requestOrigin,piece,values={}})"},
+        {"role": "owned_google_start", "path": "lib/tool-connections.mjs", "anchor": "async function oauthStart("},
         {"role": "owned_google_finish", "path": "lib/tool-connections.mjs", "anchor": "async function oauthFinish({tenantId,sessionBinding,state,code})"},
         {"role": "cloud_oauth_start", "path": "lib/tool-connections.mjs", "anchor": "if(cloudFor(pieceName(piece)))"},
         {"role": "cloud_oauth_finish", "path": "lib/tool-connections.mjs", "anchor": "async function cloudOauthFinish({tenantId,sessionBinding,attempt,code})"},
-        {"role": "cloud_oauth_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "the same connection path supports another OAuth app"},
+        {"role": "cloud_oauth_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "connection methods, fields and new connection preparation never fall back to REST metadata"},
         {"role": "cloud_popup_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "cloud OAuth accepts only the opened popup"},
         {"role": "disconnect_guard", "path": "lib/tool-connections.mjs", "anchor": "if(connection.flowIds.length)fail('connection_in_use'"},
         {"role": "disconnect_unknown_guard", "path": "lib/tool-connections.mjs", "anchor": "if(!Array.isArray(rawFlowIds)||rawFlowIds.some"},
@@ -162,7 +232,7 @@
         {"role": "callback", "path": "server.mjs", "anchor": "async function googleOAuthCallback(req,res,url)"},
         {"role": "migration", "path": "migrations/0003-google-oauth-attempts.sql", "anchor": "CREATE TABLE IF NOT EXISTS siyadah_google_oauth_attempts"},
         {"role": "handoff", "path": "GOOGLE-OAUTH-PILOT.md", "anchor": "# Gmail connection under Siyadah"},
-        {"role": "test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "owned Google Gmail OAuth is session-bound, single-use and project-exclusive"},
+        {"role": "test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "connection methods, fields and new connection preparation never fall back to REST metadata"},
         {"role": "disconnect_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "in-use connection stays attached and is not reported as disconnected"},
         {"role": "disconnect_unknown_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "unknown or malformed flow references fail closed before disconnect"},
         {"role": "ledger_test", "path": "scripts/google-oauth-attempts-runtime.test.mjs", "anchor": "OAuth attempt ledger stores hashes and consumes exactly once"}
@@ -242,16 +312,15 @@
       "name": "جرد أدوات Pilot واتصالات مشروع الشركة",
       "aliases": ["جرد الأدوات", "اكتشاف الأدوات", "tool inventory", "pilot tool discovery", "ABO-40"],
       "state": "draft_pr",
-      "meaning": "جرد قراءة فقط لثلاث قطع Pilot واتصالات مشروع الشركة. هذا فحص داخلي لا يُعرض عبر API العميل لأنه يحوي تفاصيل محرك التنفيذ. لا يثبت جاهزية التنفيذ أو نتيجة مزود.",
+      "meaning": "جرد REST القديم مغلق؛ اكتشاف الأدوات والحقول يتم عبر MCP مشروع الشركة بلا بديل REST. استدعاء المكتبة القديمة يفشل قبل HTTP. الحظر في PR #60 ولم يُنشر بعد.",
       "linear": "ABO-40",
-      "pr": "https://github.com/ALKHANFAR/t43/pull/22",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/60",
       "locations": [
         {"role": "service", "path": "lib/pilot-tool-discovery.mjs", "anchor": "export function createPilotToolDiscovery"},
-        {"role": "pinned_detail", "path": "lib/pilot-tool-discovery.mjs", "anchor": "const detail=version?await get"},
-        {"role": "pilot_set", "path": "lib/pilot-tool-discovery.mjs", "anchor": "export const PILOT_PIECES"},
-        {"role": "contract", "path": "PILOT_TOOL_DISCOVERY.md", "anchor": "an inventory"},
-        {"role": "test", "path": "scripts/pilot-tool-discovery-runtime.test.mjs", "anchor": "pilot inventory reads three exact pieces"},
-        {"role": "test_mismatch", "path": "scripts/pilot-tool-discovery-runtime.test.mjs", "anchor": "detail name or version mismatch is rejected"}
+        {"role": "closed_inventory", "path": "lib/pilot-tool-discovery.mjs", "anchor": "native_mcp_discovery_required"},
+        {"role": "contract", "path": "PILOT_TOOL_DISCOVERY.md", "anchor": "The legacy REST inventory is closed"},
+        {"role": "test", "path": "scripts/pilot-tool-discovery-runtime.test.mjs", "anchor": "legacy inventory cannot fall back to REST discovery"},
+        {"role": "test_mismatch", "path": "scripts/pilot-tool-discovery-runtime.test.mjs", "anchor": "legacy discovery preserves the company-project gate"}
       ]
     },
     {
@@ -263,6 +332,8 @@
       "linear": "ABO-69",
       "locations": [
         {"role": "verify", "path": "server.mjs", "anchor": "customer project setup pending retry"},
+        {"role": "verified_account_guard", "path": "lib/tenant-provisioning.mjs", "anchor": "export async function provisionVerifiedTenant"},
+        {"role": "guard_test", "path": "scripts/tenant-provisioning-runtime.test.mjs", "anchor": "internal provisioning rejects an absent company before provider access"},
         {"role": "request", "path": "server.mjs", "anchor": "await (await tenantProjects()).ensure({tenantId,displayName:resolved.account.company_name})"},
         {"role": "recovery", "path": "lib/tenant-projects.mjs", "anchor": "project=projectFrom(await provider("},
         {"role": "test", "path": "scripts/tenant-projects-runtime.test.mjs", "anchor": "recovers the provider project after a concurrent or ambiguous create failure"}
@@ -295,6 +366,11 @@
         {"role": "route", "path": "server.mjs", "anchor": "if(answer.flowToolAttempted||answer.effects?.length)"},
         {"role": "native_run_readback", "path": "server.mjs", "anchor": "const execution=result?.structuredContent?.execution,projects=await tenantProjects();"},
         {"role": "native_run_contract", "path": "CHAT_CONTRACT.md", "anchor": "## Native employee production run receipt"},
+        {"role": "durable_identity", "path": "lib/employee-run-recovery.mjs", "anchor": "async function capture("},
+        {"role": "exact_run_recovery", "path": "lib/employee-run-recovery.mjs", "anchor": "async function reconcile("},
+        {"role": "identity_migration", "path": "migrations/0006-native-execution-identity.sql", "anchor": "execution_identity_json jsonb"},
+        {"role": "recovery_contract", "path": "CHAT_CONTRACT.md", "anchor": "## Durable native employee receipt recovery"},
+        {"role": "recovery_pg_test", "path": "scripts/employee-run-recovery-runtime.test.mjs", "anchor": "durable native receipts survive restart, expiry and concurrent reconciliation in PostgreSQL"},
         {"role": "native_run_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "native employee execution receipt reads its exact production run and saves proof before the next model call"},
         {"role": "flow_tool", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function employeeFlowMcpToolName("},
         {"role": "mcp_transport", "path": "lib/activepieces-mcp.mjs", "anchor": "async function rpc(token,method,params)"},
@@ -325,6 +401,7 @@
         {"role": "client_approval", "path": "app/chat.js", "anchor": "if(data.approval.kind==='tool_action')"},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "## Project MCP chat"},
         {"role": "test", "path": "scripts/activepieces-mcp-runtime.test.mjs", "anchor": "MCP OAuth grant is bound to the server-owned company project"},
+        {"role": "expired_grant_test", "path": "scripts/activepieces-mcp-runtime.test.mjs", "anchor": "an expired native OAuth refresh grant requests consent without replaying tools or changing stored grants"},
         {"role": "employee_flow_test", "path": "scripts/mcp-flow-scope-runtime.test.mjs", "anchor": "employee Flow ID comes from its saved record"},
         {"role": "intact_results", "path": "server.mjs", "anchor": "const modelResult="},
         {"role": "employee_state_context", "path": "server.mjs", "anchor": "const syncEmployeeState=async()=>"},
@@ -339,6 +416,41 @@
         {"role": "native_receipt", "path": "lib/chat-outcome.mjs", "anchor": "export function nativeActionReceipt(name,result)"},
         {"role": "usage", "path": "server.mjs", "anchor": "console.info('chat_model_usage'"},
         {"role": "outcome_test", "path": "scripts/chat-outcome-runtime.test.mjs", "anchor": "native ActionRun completion is distinct from provider or FlowRun proof"}
+      ]
+    },
+    {
+      "id": "customer_mcp_consent",
+      "aliases": ["تفويض الشركة", "بدء موافقة MCP", "ربط مساحة التنفيذ"],
+      "name": "موافقة أدوات الشركة من جلسة العميل",
+      "state": "draft_pr",
+      "meaning": "تبدأ موافقة MCP الأصلية من جلسة الشركة المؤكدة، وتعود إلى نفس الجلسة والشركة؛ حالة المنحة المحفوظة ليست إثبات جاهزية حية. لا ينشئ هذا موافقة تلقائية نيابة عن العميل أو اتصال أداة.",
+      "linear": "ABO-69",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/60",
+      "locations": [
+        {
+          "role": "route",
+          "path": "server.mjs",
+          "anchor": "async function customerMcpAccess(req,res,op)"
+        },
+        {
+          "role": "callback",
+          "path": "server.mjs",
+          "anchor": "async function finishMcpGrant(req,res)"
+        },
+        {
+          "role": "adapter",
+          "path": "lib/activepieces-mcp.mjs",
+          "anchor": "async function begin(tenantId,{sessionBinding}={})"
+        },
+        {
+          "role": "status",
+          "path": "lib/activepieces-mcp.mjs",
+          "anchor": "async function status(tenantId)"
+        },
+        {"role": "ui", "path": "app/chat.js", "anchor": "async function authorizeWorkspace()"},
+        {"role": "ui_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "workspace consent opens only after a customer click and saved authorization never claims tool readiness"},
+        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "### Customer MCP consent"},
+        {"role": "test", "path": "scripts/mcp-customer-session-runtime.test.mjs", "anchor": "customer MCP start uses verified session company and binds the original authorization"}
       ]
     },
     {

@@ -97,7 +97,7 @@ test('chat shows only safe tool receipt metadata while the request remains unver
   }finally{p.close();}
 });
 
-async function page({storage={},locale,hydrate=empty,message,work,approve,employee_state,employee_instructions,resume_employee_activation={ok:true,activation_status:'none'},add_knowledge,update_company_settings,export:exportResponse,integrations={list:{ok:true,connections:[]}},integrationStatus={ok:true,connected:false},integrationConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد',{pieceName:'@activepieces/piece-gmail'}]]}={}){
+async function page({storage={},locale,hydrate=empty,message,work,approve,employee_state,employee_instructions,resume_employee_activation={ok:true,activation_status:'none'},add_knowledge,update_company_settings,export:exportResponse,integrations={list:{ok:true,connections:[]}},integrationStatus={ok:true,connected:false},integrationConnect,mcpStatus={ok:true,state:'authorization_stored',liveVerified:false},mcpConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد',{pieceName:'@activepieces/piece-gmail'}]]}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
   const w=dom.window,requests=[],activationRequests=[],alerts=[],polls=[],navigations=[];let hydrateTimer;
   w.matchMedia=()=>({matches:true,addEventListener(){}});
@@ -113,6 +113,14 @@ async function page({storage={},locale,hydrate=empty,message,work,approve,employ
     return realTimeout(cb,ms);
   };
   w.fetch=async(url,options={})=>{
+    if(String(url).includes('/v1/mcp/')){
+      requests.push({url,body:options.body?JSON.parse(options.body):null,headers:options.headers,credentials:options.credentials,method:options.method||'GET'});
+      const handler=String(url).endsWith('/status')?mcpStatus:mcpConnect;
+      const response=typeof handler==='function'?await handler():handler;
+      if(response instanceof Error)throw response;
+      if(response?.httpStatus)return {ok:false,status:response.httpStatus,json:async()=>response};
+      return {ok:true,status:200,json:async()=>response};
+    }
     if(String(url).includes('/v1/integrations/activepieces/')){
       requests.push({url,body:null,headers:options.headers,credentials:options.credentials,method:options.method||'GET'});
       const response=String(url).endsWith('/status')?integrationStatus:integrationConnect;
@@ -1148,5 +1156,79 @@ test('global activation error appears in the visible footer while a scoped notic
   let calls=0;const p=await page({hydrate:{...empty,team:[publishedEmployee]},resume_employee_activation:()=>++calls===1?new Error('global activation failed'):{ok:true,activation_status:'pending',employee_id:publishedEmployee.recordId,message:'employee connection missing'}});try{
     assert.equal(p.d.querySelector('#pop').classList.contains('on'),false);assert.match(p.d.querySelector('.comp__f').textContent,/global activation failed/);
     p.d.querySelector('#emps .emp').click();await flush();await flush();assert.match(p.d.querySelector('.comp__f').textContent,/employee connection missing/);p.d.querySelector('#newChat').click();assert.match(p.d.querySelector('.comp__f').textContent,/تظهر حالة كل طلب/);
+  }finally{p.close();}
+});
+
+test('connection UI preserves exact method, multi-select defaults and excludes instruction markdown',async()=>{
+  const fields=[{name:'algorithms',label:'Algorithms',type:'multiselect',required:true,defaultValue:['b'],options:[{label:'A',value:'a'},{label:'B',value:'b'}]},{name:'info',label:'Instructions',type:'markdown',description:'<b>Safe instructions</b>'}];
+  const connection={id:'C'.repeat(21),slug:'gmail',status:'ACTIVE',scope:'PROJECT'};
+  const p=await page({integrations:{list:{ok:true,connections:[]},methods:{ok:true,methods:[{id:'CUSTOM_AUTH:0',type:'CUSTOM_AUTH',available:true,fields:[]},{id:'CUSTOM_AUTH:1',type:'CUSTOM_AUTH',available:true,fields}]},connect:{ok:true,connection}},hash:''});
+  try{
+    p.d.querySelector('#toolsLink').click();await flush();p.d.querySelector('#allTgl').click();await flush();p.d.querySelector('[data-c="gmail"]').click();await flush();
+    p.d.querySelector('[data-method="1"]').click();
+    const select=p.d.querySelector('#mf0');assert.equal(select.multiple,true);assert.deepEqual(Array.from(select.selectedOptions).map(option=>option.value),['1']);assert.equal(p.d.querySelector('#mf1'),null);assert.equal(p.d.querySelector('#mF b'),null);
+    select.options[1].selected=true;
+    p.d.querySelector('#mF form').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));await flush();
+    const request=p.requests.find(request=>request.body?.op==='connect').body;
+    assert.equal(request.methodId,'CUSTOM_AUTH:1');assert.deepEqual(request.values,{algorithms:['a','b']});
+  }finally{p.close();}
+});
+
+test('blocked REST field discovery displays its unavailable state without inventing a connection form',async()=>{
+  const message='حقول الربط تحتاج اكتشافًا أصليًا عبر أدوات الشركة؛ مسار REST متوقف.';
+  const p=await page({integrations:{list:{ok:true,connections:[]},methods:new Error(message)},hash:''});
+  try{
+    p.d.querySelector('#toolsLink').click();await flush();p.d.querySelector('#allTgl').click();await flush();p.d.querySelector('[data-c="gmail"]').click();await flush();
+    assert.match(p.d.querySelector('#mF').textContent,/مسار REST متوقف/);assert.equal(p.d.querySelector('#mF form'),null);
+    assert.equal(p.requests.some(request=>['connect','oauth_start'].includes(request.body?.op)),false);
+  }finally{p.close();}
+});
+
+test('workspace consent opens only after a customer click and saved authorization never claims tool readiness',async()=>{
+  let reads=0,opened=0;
+  const popup={closed:false,close(){this.closed=true;},location:{replace(url){this.url=url;}}};
+  const p=await page({mcpStatus:()=>({ok:true,state:++reads===1?'authorization_required':'authorization_stored',grantRevision:reads===1?null:'a'.repeat(64),liveVerified:false}),mcpConnect:{ok:true,state:'authorization_required',authorizationRevision:'a'.repeat(64),authorizationUrl:'https://activepieces.example/authorize?state=sealed'},integrations:{list:{ok:true,connections:[]},methods:new Error('تجهيز حقول الربط غير متاح حاليًا.')},hash:''});
+  try{
+    p.w.open=()=>{opened++;return popup;};
+    p.d.querySelector('#toolsLink').click();await flush();p.d.querySelector('#allTgl').click();await flush();p.d.querySelector('[data-c="gmail"]').click();await flush();
+    assert.equal(opened,0);assert.equal(p.requests.some(r=>r.url.endsWith('/mcp/connect')),false);assert.equal(p.requests.some(r=>r.body?.op==='methods'),false);
+    p.d.querySelector('[data-workspace-connect]').click();assert.equal(opened,1);await flush();
+    const start=p.requests.find(r=>r.url.endsWith('/mcp/connect'));assert.deepEqual(start.body,{});assert.equal(start.credentials,'include');assert.equal(start.method,'POST');
+    await p.polls.at(-1)();await flush();
+    assert.equal(popup.closed,true);assert.match(p.d.querySelector('#mF').textContent,/تفويض مساحة الشركة محفوظ/);assert.match(p.d.querySelector('#mF').textContent,/جاهزية الأدوات تحتاج تحقق/);
+    assert.equal(p.requests.filter(r=>r.body?.op==='methods').length,1);assert.equal(p.requests.some(r=>['message','connect','oauth_start'].includes(r.body?.op)),false);
+    assert.ok(p.requests.filter(r=>r.url.endsWith('/mcp/status')).every(r=>r.method==='GET'&&r.credentials==='include'));
+  }finally{p.close();}
+});
+
+test('closed workspace popup stops polling without replaying the customer request',async()=>{
+  const popup={closed:false,close(){this.closed=true;},location:{replace(){}}};
+  const p=await page({mcpStatus:{ok:true,state:'project_required',liveVerified:false},mcpConnect:{ok:true,state:'authorization_required',authorizationRevision:'a'.repeat(64),authorizationUrl:'https://activepieces.example/authorize'},hash:''});
+  try{
+    p.w.open=()=>popup;p.d.querySelector('#toolsLink').click();await flush();p.d.querySelector('#allTgl').click();await flush();p.d.querySelector('[data-c="gmail"]').click();await flush();p.d.querySelector('[data-workspace-connect]').click();await flush();
+    const before=p.requests.length;popup.closed=true;await p.polls.at(-1)();await flush();assert.equal(p.requests.length,before);assert.match(p.d.querySelector('#mF').textContent,/لم يتم تأكيد حفظ التفويض/);assert.ok(p.d.querySelector('[data-workspace-connect]'));
+  }finally{p.close();}
+});
+
+test('modal close cancels pending workspace status polling and closes its popup',async()=>{
+  const popup={closed:false,close(){this.closed=true;},location:{replace(){}}};
+  const p=await page({mcpStatus:{ok:true,state:'authorization_required',liveVerified:false},mcpConnect:{ok:true,state:'authorization_required',authorizationRevision:'a'.repeat(64),authorizationUrl:'https://activepieces.example/authorize'},hash:''});
+  try{
+    p.w.open=()=>popup;p.d.querySelector('#toolsLink').click();await flush();p.d.querySelector('#allTgl').click();await flush();p.d.querySelector('[data-c="gmail"]').click();await flush();p.d.querySelector('[data-workspace-connect]').click();await flush();
+    const poll=p.polls.at(-1),before=p.requests.length;p.d.querySelector('#mX').click();await poll();await flush();assert.equal(p.requests.length,before);assert.equal(popup.closed,true);
+  }finally{p.close();}
+});
+
+test('workspace reconnect accepts only its fresh OAuth client grant and ignores an unrelated saved grant',async()=>{
+  let revision='b'.repeat(64);
+  const popup={closed:false,close(){this.closed=true;},location:{replace(){}}};
+  const p=await page({mcpStatus:()=>({ok:true,state:'authorization_stored',grantRevision:revision,liveVerified:false}),mcpConnect:{ok:true,state:'authorization_required',authorizationRevision:'a'.repeat(64),authorizationUrl:'https://activepieces.example/authorize'},integrations:{list:{ok:true,connections:[]},methods:new Error('fields unavailable')},hash:''});
+  try{
+    p.w.open=()=>popup;p.d.querySelector('#toolsLink').click();await flush();p.d.querySelector('#allTgl').click();await flush();p.d.querySelector('[data-c="gmail"]').click();await flush();p.d.querySelector('[data-workspace-connect]').click();await flush();
+    const methodsBefore=p.requests.filter(r=>r.body?.op==='methods').length;
+    await p.polls.at(-1)();await flush();assert.equal(popup.closed,false);assert.equal(p.requests.filter(r=>r.body?.op==='methods').length,methodsBefore);assert.match(p.d.querySelector('#mF').textContent,/لم نتأكد من جاهزية الأدوات/);
+    revision='c'.repeat(64);await p.polls.at(-1)();await flush();assert.equal(popup.closed,false);assert.equal(p.requests.filter(r=>r.body?.op==='methods').length,methodsBefore);
+    revision='a'.repeat(64);await p.polls.at(-1)();await flush();assert.equal(popup.closed,true);assert.equal(p.requests.filter(r=>r.body?.op==='methods').length,methodsBefore+1);
+    assert.equal(p.requests.filter(r=>r.url.endsWith('/mcp/connect')).length,1);
   }finally{p.close();}
 });

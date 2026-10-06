@@ -122,7 +122,7 @@ test('employee activation reads provider state after publish and requires struct
 test('generic MCP flow build is returned as a disabled draft only after owned readback',()=>{
   const start=server.indexOf("if(input.op==='approve')"),end=server.indexOf("if(input.op==='message')",start),approval=server.slice(start,end);
   assert.ok(start>=0&&end>start);
-  const branch=approval.slice(approval.indexOf("if(pending.toolName==='ap_build_flow'&&!employee)"));
+  const branch=approval.slice(approval.indexOf("if(['ap_build_flow','ap_create_flow'].includes(pending.toolName)&&!employee)"));
   assert.match(branch,/builtFlowResult\(result\)/);
   assert.match(branch,/ownedFlow\(companyId,flowDraft\.flowId\)/);
   assert.match(branch,/flow\.status!=='DISABLED'/);
@@ -152,7 +152,7 @@ test('confirmed table resumes planning without creating another table and keeps 
   assert.match(continuation,/deepseekReply\(/);
   assert.match(continuation,/excludedTools:\['ap_create_table'\]/);
   assert.match(continuation,/answer\?\.approval\?\{approval:answer\.approval\}/);
-  assert.match(server,/!excludedTools\.includes\(tool\.name\)/);
+  assert.match(server,/excludedTools\.includes\(name\)/);
   assert.ok(continuation.indexOf('createdTableReadback(result,listed)')<continuation.indexOf('deepseekReply('));
   assert.match(server.slice(end,end+700),/outcome_kind:'unverified'/);
 });

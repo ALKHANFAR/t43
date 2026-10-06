@@ -11,6 +11,16 @@ This contract belongs to `ALKHANFAR/t43`. The customer frontend may change later
 
 ## Project MCP chat
 
+### Customer MCP consent (draft PR, not deployed)
+
+`GET /siyadah-api/v1/mcp/status` uses the authenticated company session and performs only local grant/project reads. It returns `state: project_required | authorization_required | authorization_stored` and `liveVerified: false`. Stored authorization is not proof of a working native MCP call.
+
+`POST /siyadah-api/v1/mcp/connect` accepts only `{}` and requires the configured same Origin. The server verifies the company account, reuses its existing project ensure, and returns the native OAuth authorization URL. Company/project IDs and scope supplied by the browser are rejected. Native consent still requires the customer's action.
+
+Customer OAuth state is encrypted and bound to the initiating company session. Callback completion rejects a missing, changed or foreign session before token exchange or grant storage. Existing internal unbound OAuth starts retain compatibility. No Flow mutation or tool/auth-field discovery REST endpoint is introduced.
+
+The start response includes `authorizationRevision`, a digest of the native registration's public OAuth client ID. Status includes `grantRevision` for the stored client registration. The UI confirms this consent attempt only when these match; refresh-token rotation cannot complete an unrelated consent attempt. These markers are not access tokens and do not prove native tool readiness. The modal opens consent only on a user click and polls while open with a bounded deadline; closing it cancels observation without replaying chat requests or tool actions.
+
 - Within one model/tool request, the adapter reuses a project access token until its advertised lifetime approaches expiry. Every call still reads the current company project and saved grant; changing or deleting either prevents reuse. Separate requests have separate token state. Failed calls discard that state without automatically replaying tool writes.
 
 - The main chat and selected employee chat use the same server-side Activepieces MCP adapter. The server resolves the company project; no project ID, MCP token, or provider credential is accepted from the browser.
@@ -84,8 +94,35 @@ After building or changing the owned Flow's published state, the model receives 
 
 ## Native employee production run receipt
 
-The selected employee's native Flow MCP result may carry `structuredContent.execution` from Activepieces' existing `onRunCreated` callback: `runId`, `flowId`, `projectId`, `flowVersionId`, and `environment`. This identifies a created run, not a completed task. Siyadah accepts only its own project, saved employee Flow, current published version, and `PRODUCTION`, then reads that exact ID with scoped `ap_get_run`. Only `SUCCEEDED` with recorded steps and a matching `recordEmployeeRun` readback produces `outcome:flow_completed` and `run_id` in the receipt. Missing, mismatched, nonterminal, failed, or unsaved evidence remains unknown without repeating execution. The existing verification gate emits a scalar-only diagnostic reason and observed run status without logging provider content or credentials. Mixed effects remain unverified. Flow completion does not establish a generic provider or business KPI; provider results require their own native evidence.
+The selected employee's native Flow MCP result may carry `structuredContent.execution` from Activepieces' existing `onRunCreated` callback: `runId`, `flowId`, `projectId`, `flowVersionId`, and `environment`. This identifies a created run, not a completed task. Siyadah accepts only its own project, saved employee Flow, current published version, and `PRODUCTION`, then reads that exact ID with scoped `ap_get_run`. Only `SUCCEEDED` with recorded steps and a durably saved, scoped request receipt produces `outcome:flow_completed` and `run_id` in the receipt. The employee result update preserves later configuration and newer runs as described below. Missing, mismatched, nonterminal, failed, or unsaved evidence remains unknown without repeating execution. The existing verification gate emits a scalar-only diagnostic reason and observed run status without logging provider content or credentials. Mixed effects remain unverified. Flow completion does not establish a generic provider or business KPI; provider results require their own native evidence.
+
+## Durable native employee receipt recovery (ABO-37 / ABO-69)
+
+Migration `0006-native-execution-identity.sql` adds nullable `execution_identity_json` to the existing company/request ledger. The server persists the native run/project/Flow/version/environment identity, employee ID and dispatch-time employee snapshot before run readback. Response expiry and settlement cannot remove this independent identity. No credentials, provider outputs or tool inputs are stored in this identity.
+
+Native employee dispatch must be the sole effect in its chat request: prior attempted effects prevent dispatch, and after dispatch further effectful calls are rejected while read-only calls remain available. This keeps a confirmed native receipt from hiding mixed or ambiguous effects.
+
+The existing authenticated `op=work` rechecks company/project/Flow ownership and reads only the exact native `ap_get_run` ID. `SUCCEEDED` with matching identity and recorded steps upgrades the ledger to `request_status:succeeded`, `work_status:succeeded`, `outcome_kind:tool_result` and `run_id`. It never invokes the Flow again, uses recent runs, or claims a provider KPI. Later Flow disablement/version publication does not invalidate ownership of the original execution.
+
+Ledger and optional employee result updates share one atomic PostgreSQL statement. The employee update preserves status and requires the dispatch-time configuration `updated_at` plus request time ordering; a disabled, edited or more recently run employee remains unchanged. Saving a run result does not change configuration `updated_at`, so two already-dispatched requests retain their correct chronological order in either recovery order. Concurrent reconciliation is idempotent. The confirmed response keeps the native run identity and a readable output excerpt bounded to 5,000 characters. The new recovery helper stores only numeric status metadata in the existing employee result field for recent-work display; Activepieces remains the full-output source. Immediate settlement returns this receipt instead of a later model summary. A process failure before receiving/persisting native identity stays unverified. Without the new schema `/health` fails closed; rollback keeps the additive nullable column.
 
 ## Retired fixed-company Gmail pilot
 
 The old company-43 recovery exception no longer runs in the production chat route. A read-only check on 6 October found no account, employee, chat request, tenant mapping, MCP grant or Flow for that historical pilot. Its verifier helpers remain under `scripts/support` for historical tests only. The existing general work ledger and project-scoped native MCP result paths serve every current company. This retirement deletes no data and adds no execution path.
+
+## Native MCP construction and discovery boundary
+
+Siyadah must not call direct REST endpoints to create/mutate Flows or discover pieces, actions, triggers, operation fields or auth fields. These capabilities belong to the company-scoped native MCP. Read-only Flow information/detail remains allowed for ownership and receipt validation; existing native authentication/project provisioning scope is unchanged. Existing connection management and pending OAuth completion remain distinct from tool/field discovery.
+
+The authenticated legacy internal Flow creation route returns 410 `native_mcp_creation_required` without provider initialization. Employee status mutations use `ap_change_flow_status` over MCP and read back the owned Flow status before recording employee state. Unconfirmed native status returns an error without REST mutation fallback. Connection method preparation returns 409 `native_mcp_discovery_required` before HTTP until an original auth-schema contract is available; the dialog shows a plain availability error.
+
+These boundaries are draft PR #60 behavior, not a production claim. See `docs/mcp-tool-discovery-boundary.md`.
+
+## Native capabilities in main and employee chat
+
+Both chat paths use the original company MCP tool catalog and schemas. Employee scope limits Flow/run identity, not an arbitrary whitelist of project action, table, record, AI or guidance capabilities. Native Flow creation for a Flow-less employee links its existing record and refreshes tool visibility for the next model turn. Existing linked Flows are edited. Flow-list text and structured data are limited to that employee, and run inspection/retry verifies the exact saved Flow before dispatch. Production employee Flow invocation still requires activation, exact native receipt and existing recovery boundaries. Local tests prove dispatch wiring, not live provider acceptance of every tool.
+
+
+### Full native catalog exposure (draft PR #60)
+
+Main and employee chat pass every protocol-valid tool advertised by the company MCP `tools/list` to the model, preserving native schemas and order without a fixed tool count. Employee state, linked Flow and continuation exclusions do not hide catalog entries. Company/project boundaries, employee Flow ownership, activation and duplicate-effect checks apply before dispatch. Project switching remains rejected; an existing draft cannot be replaced by another created Flow. This changes catalog exposure only, with no REST construction or discovery fallback and no claim that every tool has passed a live provider test.
