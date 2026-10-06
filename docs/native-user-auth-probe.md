@@ -2,6 +2,12 @@
 
 This is a prepared QA probe, not a production authentication adapter or a completed live test. It leaves the existing OAuth grants and their storage untouched. It writes no database data and neither creates projects nor builds or executes Flows.
 
+## Deferred operating-account check — 6 October 2026
+
+The owner explicitly deferred activation and role changes for `d10ksa3@gmail.com` so other readiness work can continue. The last native platform UI readback showed `Pending / Operator`; the invitation-acceptance screenshot alone did not establish an activated account. Admin elevation and this account's live USER sign-in → project MCP issuance → tools/list test remain incomplete.
+
+Before automatic customer onboarding is approved, confirm activation, review the operating account's permissions, configure its credentials through an approved secret store, and capture the probe's successful native receipt. This deferral does not waive company isolation or authorize a substitute authentication mechanism.
+
 `scripts/native-user-auth-probe.mjs` reads `ACTIVEPIECES_OPERATOR_EMAIL` and `ACTIVEPIECES_OPERATOR_PASSWORD` only from its process environment. Store them through an approved secret store or sealed service settings, never in chat, command arguments, files or logs. The CLI accepts no arguments. With missing variables it emits `configuration / missing_config` and exits 2 before making any network request.
 
 The origin is pinned to the current Railway Activepieces instance. The sole project allowlist entry is QA1 `rPMd07kp7x3epzOdvdiQJ`, verified in the read-only production evidence on 6 October 2026. Optional `SIYADAH_NATIVE_AUTH_QA_PROJECT_ID` may only select that verified project. The probe always obtains fresh native authentication; it accepts no supplied USER/MCP token.

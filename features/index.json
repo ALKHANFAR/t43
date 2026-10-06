@@ -401,6 +401,7 @@
         {"role": "client_approval", "path": "app/chat.js", "anchor": "if(data.approval.kind==='tool_action')"},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "## Project MCP chat"},
         {"role": "test", "path": "scripts/activepieces-mcp-runtime.test.mjs", "anchor": "MCP OAuth grant is bound to the server-owned company project"},
+        {"role": "expired_grant_test", "path": "scripts/activepieces-mcp-runtime.test.mjs", "anchor": "an expired native OAuth refresh grant requests consent without replaying tools or changing stored grants"},
         {"role": "employee_flow_test", "path": "scripts/mcp-flow-scope-runtime.test.mjs", "anchor": "employee Flow ID comes from its saved record"},
         {"role": "intact_results", "path": "server.mjs", "anchor": "const modelResult="},
         {"role": "employee_state_context", "path": "server.mjs", "anchor": "const syncEmployeeState=async()=>"},

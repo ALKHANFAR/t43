@@ -22,7 +22,7 @@ function harness(tokenProject=projectA,sse=false){
   const fetchImpl=async(url,options)=>{
     if(url.endsWith('/register'))return json({client_id:'siyadah-client'});
     if(url.endsWith('/token')){
-      if(options.body.get('grant_type')==='refresh_token'){refreshCalls++;if(rejectRefresh)return new Response('{}',{status:400});}
+      if(options.body.get('grant_type')==='refresh_token'){refreshCalls++;if(rejectRefresh)return new Response(JSON.stringify(typeof rejectRefresh==='string'?{error:rejectRefresh,error_description:'private provider details'}:{}),{status:400});}
       return json({access_token:token(tokenProject),refresh_token:rotate?'refresh-secret-'+refreshCalls:'refresh-secret',expires_in:lifetime});
     }
     if(url.endsWith('/mcp')){
@@ -132,6 +132,24 @@ test('failed refresh is not retained, and missing lifetime is never reused',asyn
   h.rejectRefresh(false);h.setLifetime(0);
   await request.call('company-a','tools/list',{});await request.call('company-a','tools/list',{});
   assert.equal(h.refreshCalls,3);
+});
+
+test('an expired native OAuth refresh grant requests consent without replaying tools or changing stored grants',async()=>{
+  const h=harness();await connect(h);const request=h.service.forRequest(),cipher=h.grant.refresh_token_cipher,calls=h.mcpCalls;
+  h.rejectRefresh('invalid_grant');
+  await assert.rejects(()=>request.call('company-a','tools/call',{name:'ap_build_flow',arguments:{}}),error=>{
+    assert.equal(error.code,'mcp_grant_expired');assert.equal(error.status,409);
+    assert.ok(!error.message.includes('private provider details'));return true;
+  });
+  assert.equal(h.mcpCalls,calls);assert.equal(h.refreshCalls,1);assert.equal(h.grant.refresh_token_cipher,cipher);
+  // The owner re-completes the existing native OAuth flow; no fabricated token or account is needed.
+  h.rejectRefresh(false);await connect(h);await request.call('company-a','tools/list',{});
+  assert.equal(h.refreshCalls,2);
+});
+
+test('other native OAuth refresh failures remain provider errors rather than a false consent requirement',async()=>{
+  const h=harness();await connect(h);h.rejectRefresh('temporarily_unavailable');
+  await assert.rejects(()=>h.service.call('company-a','tools/list',{}),{code:'mcp_provider_error',status:502});
 });
 
 
