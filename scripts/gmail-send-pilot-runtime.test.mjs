@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHmac} from 'node:crypto';
-import {GMAIL_PILOT_REQUEST_ID,signedGmailPilotWebhook,validateGmailPilotFlow,verifyGmailPilotRun} from '../lib/gmail-send-pilot.mjs';
+import {GMAIL_PILOT_REQUEST_ID,signedGmailPilotWebhook,validateGmailPilotFlow,verifyGmailPilotRun} from './support/gmail-send-pilot.mjs';
 
 const projectId='IgVzWxZU2AsDQMo6ZCugr',flowId='F'.repeat(21),connectionId='q1jirYwoeM1gDH3wtkksz',runId='R'.repeat(21),companyId='company_Vo6C04LfL8-hsuPAF_0y9f0N';
 const expected={to:'owner@example.com',from:'sender@example.com',subject:'اختبار سيادة',body:'رسالة اختبار واحدة.'};

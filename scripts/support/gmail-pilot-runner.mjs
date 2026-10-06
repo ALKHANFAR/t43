@@ -1,8 +1,8 @@
+// Historical test-only recovery helper. Never imported by production.
 import {createHash} from 'node:crypto';
-import {GMAIL_PILOT_COMPANY_ID,GMAIL_PILOT_PROJECT_ID,GMAIL_PILOT_FLOW_ID,GMAIL_PILOT_CONNECTION_ID,GMAIL_PILOT_REQUEST_ID,GmailPilotError,validateGmailPilotFlow,verifyGmailPilotRun} from './gmail-send-pilot.mjs';
+import {GMAIL_PILOT_COMPANY_ID,GMAIL_PILOT_PROJECT_ID,GMAIL_PILOT_FLOW_ID,GMAIL_PILOT_CONNECTION_ID,GMAIL_PILOT_REQUEST_ID,GmailPilotError,verifyGmailPilotRun} from './gmail-send-pilot.mjs';
 
 const AP_ID=/^[A-Za-z0-9]{21}$/;
-const EXPECTED={to:'a@sondos-ai.com',from:'a@sondos-ai.com',subject:'SIY-ABO61-PILOT-20261002',body:'اختبار إرسال سيادة من الشات للشركة 43'};
 export const GMAIL_PILOT_COMMAND='Send a test email to my inbox';
 export function gmailPilotLedgerIdentity(){return {conversationId:'chat_gmail_send_review_demo_v2',requestId:GMAIL_PILOT_REQUEST_ID,requestHash:createHash('sha256').update(GMAIL_PILOT_COMMAND).digest('hex')};}
 export function gmailPilotSuccessResponse({conversationId,receipt}){
@@ -14,30 +14,13 @@ export async function recordGmailPilotConversation({profiles,companyId,response}
   await profiles.recordConversation({companyId,conversationId,employeeId:null,requestId,userMessage:GMAIL_PILOT_COMMAND,assistantMessage:response.reply});
 }
 
-export function createGmailPilotRunner({requireProject,fetchImpl=fetch,activepiecesUrl,apiKey,flowId,connectionId,secret,sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms))}){
+export function createGmailPilotRunner({requireProject,fetchImpl=fetch,activepiecesUrl,apiKey,flowId,connectionId}){
   const base=String(activepiecesUrl||'').replace(/\/$/,'');
-  let preparedResult=null;
   async function provider(path){
     if(!base||!apiKey)throw new GmailPilotError('pilot_provider_not_configured');
     const response=await fetchImpl(base+path,{headers:{Authorization:`Bearer ${apiKey}`,'Content-Type':'application/json'}});
     if(!response.ok)throw new GmailPilotError('pilot_provider_read_failed');
     return response.json();
-  }
-  async function preflight({companyId}){
-    if(companyId!==GMAIL_PILOT_COMPANY_ID)throw new GmailPilotError('pilot_company_forbidden');
-    if(!AP_ID.test(String(flowId||''))||!AP_ID.test(String(connectionId||''))||typeof secret!=='string'||secret.length<32)throw new GmailPilotError('pilot_not_configured');
-    const projectId=await requireProject(companyId);
-    if(projectId!==GMAIL_PILOT_PROJECT_ID)throw new GmailPilotError('pilot_project_mismatch');
-    const [flowMeta,connection]=await Promise.all([
-      provider(`/api/v1/flows/${flowId}`),
-      provider(`/api/v1/app-connections/${connectionId}?projectId=${encodeURIComponent(projectId)}`),
-    ]);
-    if(flowMeta?.projectId!==projectId||flowMeta.status!=='ENABLED'||!AP_ID.test(String(flowMeta.publishedVersionId||'')))throw new GmailPilotError('pilot_flow_not_published');
-    const flow=await provider(`/api/v1/flows/${flowId}?versionId=${encodeURIComponent(flowMeta.publishedVersionId)}`);
-    if(flow?.publishedVersionId!==flowMeta.publishedVersionId)throw new GmailPilotError('pilot_flow_version_mismatch');
-    const gate=validateGmailPilotFlow({companyId,allowedCompanyId:GMAIL_PILOT_COMPANY_ID,projectId,flow,connection,expected:EXPECTED,expectedFlowId:flowId,expectedConnectionId:connectionId});
-    preparedResult={companyId,projectId,gate};
-    return preparedResult;
   }
   async function recover({companyId,notBefore}){
     if(companyId!==GMAIL_PILOT_COMPANY_ID||flowId!==GMAIL_PILOT_FLOW_ID||connectionId!==GMAIL_PILOT_CONNECTION_ID)throw new GmailPilotError('pilot_recovery_scope_mismatch');
@@ -58,5 +41,5 @@ export function createGmailPilotRunner({requireProject,fetchImpl=fetch,activepie
     if(verified.size>1)throw new GmailPilotError('pilot_recovery_ambiguous');
     return verified.values().next().value||null;
   }
-  return {preflight,recover};
+  return {recover};
 }

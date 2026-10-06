@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createCompanyProfileService,CompanyProfileError} from '../lib/company-profile.mjs';
-import {gmailPilotLedgerIdentity} from '../lib/gmail-pilot-runner.mjs';
+import {gmailPilotLedgerIdentity} from './support/gmail-pilot-runner.mjs';
 
 function fixture(){
   const rows=new Map(),calls=[];
