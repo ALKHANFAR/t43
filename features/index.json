@@ -3,6 +3,19 @@
   "repository": "ALKHANFAR/t43",
   "features": [
     {
+      "id": "mixed_native_action_receipts",
+      "name": "توضيح نجاح إجراء مع نتيجة طلب غير مؤكدة",
+      "aliases": ["النتيجة غير مؤكدة", "نجحت القراءة بعد تعذر محاولة"],
+      "state": "draft_pr",
+      "meaning": "توضح الواجهة اكتمال إجراء ذي مرجع صالح عند وجود محاولة أخرى غير مؤكدة، دون تحويل حالة الطلب unknown إلى نجاح. تغيير عرض فقط؛ لا تعديل تنفيذ MCP أو حدود REST.",
+      "linear": "ABO-69",
+      "locations": [
+        {"role": "badge", "path": "app/chat.js", "anchor": "function siyRequestStateHtml(state,partialActionResult)"},
+        {"role": "receipt", "path": "app/chat.js", "anchor": "var partialActionResult=state==='unknown'"},
+        {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "mixed action receipts explain completed action"}
+      ]
+    },
+    {
       "id": "native_mcp_chat_capabilities",
       "name": "كل قدرات MCP في الشات وشات الموظف",
       "aliases": ["إمكانيات MCP", "أدوات الموظف الأصلية", "استخدام MCP فعليًا"],
@@ -286,7 +299,7 @@
         {"role": "retry", "path": "app/chat.js", "anchor": "row.siyRetry=function(){submit(true);}"},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "| Uncertain outcome |"},
         {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "terminal unknown request shows the actual tool account without claiming success"},
-        {"role": "request_state", "path": "app/chat.js", "anchor": "function siyRequestStateHtml(state)"},
+        {"role": "request_state", "path": "app/chat.js", "anchor": "function siyRequestStateHtml(state,partialActionResult)"},
         {"role": "recorded_team", "path": "app/chat.js", "anchor": "function renderPlan()"}
       ]
     },
