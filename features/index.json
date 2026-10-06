@@ -3,6 +3,41 @@
   "repository": "ALKHANFAR/t43",
   "features": [
     {
+      "id": "native_user_qa_auth_probe",
+      "name": "اختبار المصادقة الأصلية لرمز مشروع QA",
+      "aliases": [
+        "تفويض MCP التلقائي",
+        "native USER authentication",
+        "QA token issuance"
+      ],
+      "state": "draft_pr",
+      "meaning": "اختبار تشخيصي معزول لتسجيل دخول USER الأصلي وإصدار رمز MCP لمشروع QA المحدد ثم tools/list فقط. لا يغيّر مسار الإنتاج أو منح OAuth ولا يبني أو يشغّل Flows؛ بيانات الدخول تبقى في العملية الآمنة. نجاح الاختبارات المحلية لا يثبت التفويض الحي أو التجديد التلقائي.",
+      "linear": "ABO-69",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/60",
+      "locations": [
+        {
+          "role": "probe",
+          "path": "scripts/native-user-auth-probe.mjs",
+          "anchor": "export async function runNativeAuthProbe"
+        },
+        {
+          "role": "qa_scope",
+          "path": "scripts/native-user-auth-probe.mjs",
+          "anchor": "const QA_PROJECTS"
+        },
+        {
+          "role": "test",
+          "path": "scripts/native-user-auth-probe-runtime.test.mjs",
+          "anchor": "missing configuration and non-QA project stop before any sign-in"
+        },
+        {
+          "role": "contract",
+          "path": "docs/native-user-auth-probe.md",
+          "anchor": "# Isolated native USER authentication probe"
+        }
+      ]
+    },
+    {
       "id": "employee_instructions_context",
       "name": "تعليمات الموظف وتطبيقها على طريقة العمل",
       "aliases": ["تعليمات الموظف", "تعديل التعليمات", "طبق التعليمات", "employee instructions"],
