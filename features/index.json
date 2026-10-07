@@ -334,22 +334,6 @@
       ]
     },
     {
-      "id": "pilot_tool_discovery",
-      "name": "جرد أدوات Pilot واتصالات مشروع الشركة",
-      "aliases": ["جرد الأدوات", "اكتشاف الأدوات", "tool inventory", "pilot tool discovery", "ABO-40"],
-      "state": "draft_pr",
-      "meaning": "جرد REST القديم مغلق؛ اكتشاف الأدوات والحقول يتم عبر MCP مشروع الشركة بلا بديل REST. استدعاء المكتبة القديمة يفشل قبل HTTP. الحظر في PR #60 ولم يُنشر بعد.",
-      "linear": "ABO-40",
-      "pr": "https://github.com/ALKHANFAR/t43/pull/60",
-      "locations": [
-        {"role": "service", "path": "lib/pilot-tool-discovery.mjs", "anchor": "export function createPilotToolDiscovery"},
-        {"role": "closed_inventory", "path": "lib/pilot-tool-discovery.mjs", "anchor": "native_mcp_discovery_required"},
-        {"role": "contract", "path": "PILOT_TOOL_DISCOVERY.md", "anchor": "The legacy REST inventory is closed"},
-        {"role": "test", "path": "scripts/pilot-tool-discovery-runtime.test.mjs", "anchor": "legacy inventory cannot fall back to REST discovery"},
-        {"role": "test_mismatch", "path": "scripts/pilot-tool-discovery-runtime.test.mjs", "anchor": "legacy discovery preserves the company-project gate"}
-      ]
-    },
-    {
       "id": "customer_project_on_demand",
       "name": "تجهيز مشروع أدوات الشركة بعد تأكيد الحساب وعند أول اتصال",
       "aliases": ["مشروع العميل الجديد", "تهيئة أدوات الشركة", "project provisioning", "first connection"],
