@@ -20,7 +20,7 @@ import {assertSchemaReady} from './lib/schema-ready.mjs';
 import {toolIcon} from './lib/tool-icons.mjs';
 import {createPublicWaitlist,PublicWaitlistError} from './lib/public-waitlist.mjs';
 import {createActivepiecesMcp} from './lib/activepieces-mcp.mjs';
-import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool} from './lib/mcp-flow-scope.mjs';
+import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext} from './lib/mcp-flow-scope.mjs';
 
 const root=process.cwd();
 const port=Number(process.env.PORT||3000);
@@ -394,6 +394,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   const messages=[{role:'system',content:system}];
   for(const item of (history||[]).slice(-16))if(['user','assistant'].includes(item.role)&&typeof item.content==='string')messages.push({role:item.role,content:item.content.slice(0,4000)});
   messages.push({role:'user',content:String(message||'').slice(0,5000)});
+  const executionHistory=messages.slice(1,-1);
   let available=[];
   let flowToolName=null,publishedEmployeeVersion=null;
   if(employee?.status==='active'&&employee.activepieces_flow_id){
@@ -488,6 +489,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           if(name===flowToolName&&flowToolAttempted)throw new TenantProjectError('employee_run_already_dispatched','أُرسل تشغيل الموظف لهذا الطلب. تحقّق من نتيجته دون إعادة تشغيله.',409);
           if(name===flowToolName&&effects.length||flowToolAttempted&&!readOnly(name))throw new TenantProjectError('employee_run_mixed_effects','تشغيل الموظف يحتاج طلبًا مستقلًا عن تعديل طريقة عمله. يمكنك قراءة نتيجة التشغيل الحالي.',409);
           args=scopeMcpTool(available.find(tool=>tool.name===name),args,employee,flowToolName);
+          if(name===flowToolName)args=bindEmployeeFlowContext(available.find(tool=>tool.name===name),args,{request:String(message||''),context:{company:context.company,selectedEmployee:context.selectedEmployee,settings:context.settings,knowledge:context.knowledge},memory,history:executionHistory});
           const employeeFlow=employee?.activepieces_flow_id||flowId||draftEmployee?.activepieces_flow_id;
           if(employee&&['ap_get_run','ap_retry_run'].includes(name)){
             if(!/^[A-Za-z0-9]{21}$/.test(String(args.flowRunId||'')))throw new TenantProjectError('employee_run_scope','معرّف تشغيل الموظف غير صالح.',403);
