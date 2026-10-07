@@ -427,6 +427,7 @@
         {"role": "direct_reply_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "direct replies retain company and employee context without a configured MCP connection"},
         {"role": "employee_context_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "employee chat loads the selected saved employee and company knowledge before calling the model"},
         {"role": "flow_context_binding", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function bindEmployeeFlowContext"},
+        {"role": "flow_context_setup_guide", "path": "server.mjs", "anchor": "عند تجهيز طريقة عمل موظف تحتاج سياق سيادة"},
         {"role": "flow_context_binding_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "a declared native context field receives saved knowledge and instructions without assuming a task field"},
         {"role": "flow_context_compatibility_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "undeclared context leaves native inputs unchanged and invalid context types never dispatch"},
         {"role": "memory_scope_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "a previous task restriction in memory does not block the current explicit publish request"},

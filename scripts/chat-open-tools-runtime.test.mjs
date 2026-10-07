@@ -643,7 +643,11 @@ test('a declared native context field receives saved knowledge and instructions 
   for(const [field,type,omit] of [['company_context','object',false],['بيانات_سيادة','string',false],['other_context','object',true],['request_context','string',true]]){
   const saved={...runningEmployee,prompt:'راجع أسعار الشركة قبل تقديم عرض.',prompt_version:8};
   const flowInputSchema={type:'object',properties:{customer:{type:'string'},[field]:{type,description:'Server supplied [siyadah:context]'}},required:['customer',field]};
-  const {run,log}=setup({flowInputSchema,published:true,flowStatus:'ENABLED',toolResults:{[flowToolName]:executionResult(),ap_get_run:productionRun()},script:[use([flowToolName,{customer:'خالد',...(omit?{}:{[field]:type==='string'?'forged':{company:'foreign'}})}]),say('وصلت النتيجة.')]});
+  const {run,log}=setup({flowInputSchema,published:true,flowStatus:'ENABLED',toolResults:{[flowToolName]:executionResult(),ap_get_run:productionRun()},script:[request=>{
+    assert.match(request.messages[0].content,/\[siyadah:context\]/);
+    assert.match(request.messages[0].content,/اربطه بخطوات/);
+    return use([flowToolName,{customer:'خالد',...(omit?{}:{[field]:type==='string'?'forged':{company:'foreign'}})}]);
+  },say('وصلت النتيجة.')]});
   await run({employee:saved,message:'جهز عرض الخدمة الحالية.',company:{name:'شركة الاختبار'},settings:{language:'ar'},knowledge:{facts:[{topic:'الأسعار',value:'الخدمة بـ١٢٠٠ ريال',certainty:'confirmed'}]},history:[{role:'user',content:'أريد العرض بالعربية.'}]});
   const args=log.tools.find(([name])=>name===flowToolName)[1],sent=type==='string'?JSON.parse(args[field]):args[field];
   assert.equal(args.customer,'خالد');assert.equal(Object.hasOwn(args,'task'),false);

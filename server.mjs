@@ -422,6 +422,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   const modelTools=()=>available.filter(tool=>/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(tool.name)).map(tool=>({type:'function',function:{name:tool.name,description:String(tool.description||'').slice(0,4000),parameters:tool.inputSchema||{type:'object',properties:{}}}}));
   let tools=modelTools();
   if(available.length)messages[0].content+='\nاكتشف الأدوات والحقول ونفّذ عبر MCP مشروع الشركة وفق دليله الأصلي. احترم طلب المسودة أو القراءة فقط؛ النشر والتفعيل يحتاجان طلب المستخدم واختبار النسخة الحالية.';
+  if(available.length)messages[0].content+='\nعند تجهيز طريقة عمل موظف تحتاج سياق سيادة، أعلن حقلًا نصيًا أو كائنًا بوصف [siyadah:context] واربطه بخطوات الفلو التي تحتاجه؛ الخادم يملؤه عند تشغيل فلو الموظف. اكتشف حقوله عبر MCP واقرأ الربط واختبر النسخة الحالية قبل النشر.';
   if(employee||draftEmployee)messages[0].content+='\nالطلب بموظف يعمل يستهدف نتيجة تشغيل موثقة؛ المسودة مرحلة تجهيز وليست النتيجة النهائية. استخدم موظف السياق وطريقة عمله. تعليمات المحادثة ليست دليلًا على تعليمات التشغيل؛ طبّق المطلوب على طريقة العمل واقرأ نتيجته قبل تأكيده.';
   if(employee?.status==='active'&&!flowToolName)messages[0].content+='\nلم تُتحقق أداة تشغيل هذا الموظف التي تعيد النتيجة؛ اكتشف ما يلزم لتجهيزها عبر MCP قبل ادعاء التنفيذ.';
   const ask=async withTools=>{
