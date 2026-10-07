@@ -164,14 +164,6 @@ test('unknown or malformed flow references fail closed before disconnect',async(
   }
 });
 
-test('connection methods, fields and new connection preparation never fall back to REST metadata',async()=>{
-  const {service,calls,pending}=harness({customerOrigin:ORIGIN,gmailOAuthProvider:'activepieces'});
-  for(const op of [()=>service.methods({tenantId:'company-a',piece:'gmail',requestOrigin:ORIGIN}),()=>service.connect({tenantId:'company-a',piece:'stripe',type:'SECRET_TEXT',values:{secret_text:'test'}}),()=>service.oauthStart({tenantId:'company-a',sessionBinding:'session-a',requestOrigin:ORIGIN,piece:'gmail'})]){
-    await assert.rejects(op,error=>error.code==='native_mcp_discovery_required'&&error.status===409);
-  }
-  assert.equal(calls.length,0);assert.equal(pending.size,0);
-});
-
 const originalGoogle={clientId:'google-client',clientSecret:'test-client-secret',redirectUrl:`${ORIGIN}/siyadah-api/v1/integrations/oauth/callback`};
 test('a previously issued own Google attempt still completes in its company without metadata discovery',async()=>{
   const h=harness({googleOAuth:originalGoogle,customerOrigin:ORIGIN}),state=seedExistingAttempt(h);
@@ -215,4 +207,144 @@ test('existing OAuth attempts remain single-use under concurrent completion',asy
     assert.equal(results.filter(result=>result.status==='rejected'&&result.reason.code==='invalid_oauth_state').length,1);
     assert.equal(h.calls.length,1);assert.equal(h.pending.size,0);
   }
+});
+
+test('Activepieces Gmail OAuth requests declared scopes, binds the attempt and preserves project isolation',async()=>{
+  const {service,calls,pending}=harness({customerOrigin:ORIGIN,gmailOAuthProvider:'activepieces'});
+  const method=(await service.methods({tenantId:'company-a',requestOrigin:ORIGIN,piece:'gmail'})).methods[0];
+  assert.equal(method.available,true);assert.deepEqual(method.scopes,gmail.auth[0].scope);assert.match(method.description,/Activepieces/);
+  const started=await service.oauthStart({tenantId:'company-a',sessionBinding:'session-a',requestOrigin:ORIGIN,piece:'gmail'});
+  assert.equal(started.provider,'cloud');assert.equal(started.allowedOrigin,'https://secrets.activepieces.com');assert.equal(pending.size,1);
+  const url=new URL(started.authorizationUrl);
+  assert.equal(url.hostname,'accounts.google.com');assert.equal(url.searchParams.get('scope'),gmail.auth[0].scope.join(' '));assert.equal(url.searchParams.get('redirect_uri'),'https://secrets.activepieces.com/redirect');assert.equal(url.searchParams.get('access_type'),'offline');
+  assert.equal(calls.some(call=>call.url.includes('/oauth2/authorization-url')),false);
+  await assert.rejects(()=>service.cloudOauthFinish({tenantId:'company-b',sessionBinding:'session-a',attempt:started.attempt,code:'code'}),error=>error.code==='invalid_oauth_state');
+  await assert.rejects(()=>service.cloudOauthFinish({tenantId:'company-a',sessionBinding:'session-b',attempt:started.attempt,code:'code'}),error=>error.code==='invalid_oauth_state');
+  const saved=await service.cloudOauthFinish({tenantId:'company-a',sessionBinding:'session-a',attempt:started.attempt,code:'code'});
+  assert.equal(saved.scope,'PROJECT');
+  const upsert=calls.find(call=>call.url.endsWith('/api/v1/app-connections')).body;
+  assert.equal(upsert.projectId,PROJECT);assert.equal(upsert.type,'CLOUD_OAUTH2');assert.equal(upsert.value.scope,gmail.auth[0].scope.join(' '));assert.equal(upsert.value.client_id,'google-client');
+  await assert.rejects(()=>service.cloudOauthFinish({tenantId:'company-a',sessionBinding:'session-a',attempt:started.attempt,code:'code'}),error=>error.code==='invalid_oauth_state');
+});
+
+test('the same connection path supports another OAuth app and keeps its declared scope',async()=>{
+  const {service,calls}=harness({customerOrigin:ORIGIN,gmailOAuthProvider:'activepieces'});
+  const method=(await service.methods({tenantId:'company-a',requestOrigin:ORIGIN,piece:'slack'})).methods[0];
+  assert.equal(method.available,true);assert.deepEqual(method.scopes,['chat:write']);
+  const started=await service.oauthStart({tenantId:'company-a',sessionBinding:'session-a',requestOrigin:ORIGIN,piece:'slack'});
+  assert.equal(new URL(started.authorizationUrl).hostname,'slack.com');assert.equal(new URL(started.authorizationUrl).searchParams.get('scope'),'chat:write');
+  await service.cloudOauthFinish({tenantId:'company-a',sessionBinding:'session-a',attempt:started.attempt,code:'slack-code'});
+  assert.equal(calls.find(call=>call.url.endsWith('/api/v1/app-connections')).body.pieceName,'@activepieces/piece-slack');
+});
+
+test('reads live auth schema and keeps secrets out of the response',async()=>{
+  const {service}=harness(),methods=await service.methods({tenantId:'company-a',piece:'stripe'});
+  assert.equal(Object.hasOwn(methods,'pieceName'),false);
+  assert.equal(Object.hasOwn(methods,'pieceVersion'),false);
+  assert.equal(methods.methods[0].fields[0].type,'password');
+  const connected=await service.connect({tenantId:'company-a',piece:'stripe',type:'SECRET_TEXT',values:{secret_text:'sk_live_secret'}});
+  assert.equal(connected.scope,'PROJECT');assert.equal(JSON.stringify(connected).includes('sk_live_secret'),false);
+  assertCustomerConnection(connected,'stripe');
+  assert.doesNotMatch(JSON.stringify({methods,connected}),/activepieces/i);
+});
+
+test('builds custom auth only from authoritative fields',async()=>{
+  const {service,calls}=harness();
+  await service.connect({tenantId:'company-a',piece:'whatsapp',type:'CUSTOM_AUTH',values:{access_token:'token',businessAccountId:'123',injected:'no'}});
+  const request=calls.find(call=>call.url.endsWith('/api/v1/app-connections')).body;
+  assert.deepEqual(request.value,{type:'CUSTOM_AUTH',props:{access_token:'token',businessAccountId:'123'}});
+  assert.equal(request.projectId,PROJECT);assert.equal(request.scope,undefined);
+});
+
+test('customer OAuth is blocked until a Siyadah-owned flow is ready',async()=>{
+  const {service,calls}=harness();
+  const methods=await service.methods({tenantId:'company-a',piece:'gmail'});
+  const oauth=methods.methods.find(method=>method.type==='OAUTH2');
+  assert.equal(oauth.available,false);
+  assert.match(oauth.message,/سيادة/);
+  await assert.rejects(()=>service.oauthStart({tenantId:'company-a',piece:'gmail'}),error=>error.code==='siyadah_oauth_not_ready'&&error.status===409);
+  await assert.rejects(()=>service.oauthFinish({tenantId:'company-a',attempt:'old',state:'old',code:'oauth-code'}),error=>error.code==='siyadah_oauth_not_ready'&&error.status===409);
+  assert.equal(calls.some(call=>call.url.startsWith('https://cloud.example/apps')),false);
+  assert.equal(calls.some(call=>call.url.endsWith('/api/v1/app-connections')&&call.options.method==='POST'),false);
+});
+
+test('owned Google Gmail OAuth is session-bound, single-use and project-exclusive',async()=>{
+  const googleOAuth={clientId:'siyadah-client',clientSecret:'server-only-secret',redirectUrl:'https://accounts.siyadah-ai.com/siyadah-api/v1/integrations/oauth/callback'};
+  const {service,calls,pending}=harness({googleOAuth});
+  const method=(await service.methods({tenantId:'company-a',requestOrigin:ORIGIN,piece:'gmail'})).methods[0];assert.equal(method.available,true);assert.deepEqual(method.scopes,[SEND_SCOPE]);
+  const started=await service.oauthStart({tenantId:'company-a',sessionBinding:'session-a',requestOrigin:ORIGIN,piece:'gmail'}),url=new URL(started.authorizationUrl),state=url.searchParams.get('state');
+  assert.equal(url.searchParams.get('redirect_uri'),googleOAuth.redirectUrl);assert.equal(url.searchParams.get('client_id'),'siyadah-client');assert.equal(url.searchParams.get('code_challenge_method'),'S256');
+  assert.equal(url.searchParams.get('scope'),SEND_SCOPE);assert.equal(url.searchParams.get('prompt'),'consent');assert.doesNotMatch(started.authorizationUrl,/readonly|modify|compose|email/);
+  assert.equal(started.allowedOrigin,'https://accounts.siyadah-ai.com');assert.equal(pending.size,1);assert.doesNotMatch(JSON.stringify(started),/server-only-secret|activepieces/i);
+  await assert.rejects(()=>service.oauthFinish({tenantId:'company-b',sessionBinding:'session-a',state,code:'code'}),error=>error.code==='invalid_oauth_state');
+  await assert.rejects(()=>service.oauthFinish({tenantId:'company-a',sessionBinding:'session-b',state,code:'code'}),error=>error.code==='invalid_oauth_state');
+  assert.equal(pending.size,1);
+  const saved=await service.oauthFinish({tenantId:'company-a',sessionBinding:'session-a',state,code:'code'});assert.equal(saved.scope,'PROJECT');
+  const request=calls.find(call=>call.url.endsWith('/api/v1/app-connections')).body;assert.equal(request.projectId,PROJECT);assert.equal(request.type,'OAUTH2');assert.equal(request.value.client_secret,'server-only-secret');assert.equal(request.value.scope,SEND_SCOPE);
+  await assert.rejects(()=>service.oauthFinish({tenantId:'company-a',sessionBinding:'session-a',state,code:'code2'}),error=>error.code==='invalid_oauth_state');
+  assert.equal(calls.filter(call=>call.url.endsWith('/api/v1/app-connections')).length,1);
+  assert.equal(calls.some(call=>call.url.startsWith('https://cloud.example/apps')),false);
+});
+
+test('owned OAuth rejects altered state, unsupported providers and shared connection results',async()=>{
+  const googleOAuth={clientId:'siyadah-client',clientSecret:'server-only-secret',redirectUrl:'https://accounts.siyadah-ai.com/siyadah-api/v1/integrations/oauth/callback'};
+  const {service,pending}=harness({googleOAuth,create:[PROJECT,OTHER]});
+  assert.equal((await service.methods({tenantId:'company-a',piece:'slack'})).methods[0].available,false);
+  await assert.rejects(()=>service.oauthStart({tenantId:'company-a',sessionBinding:'session-a',requestOrigin:ORIGIN,piece:'slack'}),error=>error.code==='siyadah_oauth_not_ready');
+  const started=await service.oauthStart({tenantId:'company-a',sessionBinding:'session-a',requestOrigin:ORIGIN,piece:'gmail'}),state=new URL(started.authorizationUrl).searchParams.get('state');
+  await assert.rejects(()=>service.oauthFinish({tenantId:'company-a',sessionBinding:'session-a',state:state+'x',code:'code'}),error=>error.code==='invalid_oauth_state');
+  assert.equal(pending.size,1);
+  await assert.rejects(()=>service.oauthFinish({tenantId:'company-a',sessionBinding:'session-a',state,code:'code'}),error=>error.code==='connection_project_mismatch');
+  assert.equal(pending.size,0);
+});
+
+test('Google linking stays unavailable when the page origin differs from the callback origin',async()=>{
+  const googleOAuth={clientId:'siyadah-client',clientSecret:'server-only-secret',redirectUrl:`${ORIGIN}/siyadah-api/v1/integrations/oauth/callback`};
+  const {service,pending}=harness({googleOAuth});
+  const methods=await service.methods({tenantId:'company-a',piece:'gmail',requestOrigin:'https://preview.siyadah-ai.com'});
+  assert.equal(methods.methods[0].available,false);
+  assert.match(methods.methods[0].message,/نطاق/);
+  await assert.rejects(()=>service.oauthStart({tenantId:'company-a',sessionBinding:'session-a',requestOrigin:'https://preview.siyadah-ai.com',piece:'gmail'}),error=>error.code==='oauth_origin_mismatch');
+  assert.equal(pending.size,0);
+});
+
+test('a shared provider result after create or revalidation is rejected',async()=>{
+  const created=harness({create:[PROJECT,OTHER]});
+  await assert.rejects(()=>created.service.connect({tenantId:'company-a',piece:'stripe',type:'SECRET_TEXT',values:{secret_text:'test'}}),error=>error.code==='connection_project_mismatch');
+  const revalidated=harness({revalidate:[PROJECT,OTHER]});
+  await assert.rejects(()=>revalidated.service.revalidate({tenantId:'company-a',id:CONNECTION}),error=>error.code==='connection_project_mismatch');
+});
+
+test('client-credentials-only OAuth is unavailable and rejected before an attempt',async()=>{
+  const configured=harness({customerOrigin:ORIGIN,gmailOAuthProvider:'activepieces',gmail:{...gmail,auth:{...gmail.auth[0],grantType:'client_credentials'}}});
+  const result=await configured.service.methods({tenantId:'company-a',piece:'gmail',requestOrigin:ORIGIN});
+  assert.equal(result.methods[0].grantType,'client_credentials');assert.equal(result.methods[0].available,false);
+  await assert.rejects(()=>configured.service.oauthStart({tenantId:'company-a',sessionBinding:'session-a',requestOrigin:ORIGIN,piece:'gmail'}),error=>error.code==='unsupported_oauth_grant');
+});
+
+test('dual-grant OAuth keeps the supported authorization-code route explicit',async()=>{
+  const configured=harness({customerOrigin:ORIGIN,gmailOAuthProvider:'activepieces',gmail:{...gmail,auth:{...gmail.auth[0],grantType:'both_client_credentials_and_authorization_code'}}});
+  const result=await configured.service.methods({tenantId:'company-a',piece:'gmail',requestOrigin:ORIGIN});
+  assert.equal(result.methods[0].grantType,'both_client_credentials_and_authorization_code');assert.equal(result.methods[0].available,true);
+  const started=await configured.service.oauthStart({tenantId:'company-a',sessionBinding:'session-a',requestOrigin:ORIGIN,piece:'gmail'});
+  assert.equal(new URL(started.authorizationUrl).searchParams.get('response_type'),'code');
+});
+
+test('exact auth method and structured multi-select come from metadata; markdown is never submitted',async()=>{
+  const configured=harness({gmail:{...gmail,auth:[{type:'CUSTOM_AUTH',props:{first:{required:true,type:'SHORT_TEXT'}}},{type:'CUSTOM_AUTH',props:{algorithms:{required:true,type:'STATIC_MULTI_SELECT_DROPDOWN',options:{options:[{label:'A',value:'a'},{label:'B',value:'b'}]}},info:{required:true,type:'MARKDOWN',description:'Instructions'}}}]}});
+  const result=await configured.service.methods({tenantId:'company-a',piece:'gmail'});
+  assert.equal(result.methods[1].fields[0].type,'multiselect');assert.equal(result.methods[1].fields[1].type,'markdown');
+  await assert.rejects(()=>configured.service.connect({tenantId:'company-a',piece:'gmail',type:'CUSTOM_AUTH',values:{algorithms:['a']}}),error=>error.code==='auth_method_required');
+  await assert.rejects(()=>configured.service.connect({tenantId:'company-a',piece:'gmail',type:'CUSTOM_AUTH',methodId:'CUSTOM_AUTH:1',values:{algorithms:['unknown']}}),error=>error.code==='invalid_connection_field');
+  await configured.service.connect({tenantId:'company-a',piece:'gmail',type:'CUSTOM_AUTH',methodId:'CUSTOM_AUTH:1',values:{algorithms:['a','b'],info:'injected'}});
+  const request=configured.calls.find(call=>call.url.endsWith('/api/v1/app-connections')).body;
+  assert.deepEqual(request.value.props,{algorithms:['a','b']});
+});
+
+test('changed auth metadata is rejected before connection write instead of silently changing methods',async()=>{
+  const meta={...gmail,auth:[{type:'CUSTOM_AUTH',props:{first:{type:'SHORT_TEXT'}}},{type:'CUSTOM_AUTH',props:{second:{type:'SHORT_TEXT'}}}]},configured=harness({gmail:meta});
+  const chosen=(await configured.service.methods({tenantId:'company-a',piece:'gmail'})).methods[1];
+  meta.auth.reverse();
+  await assert.rejects(()=>configured.service.connect({tenantId:'company-a',piece:'gmail',type:chosen.type,methodId:chosen.id,methodFingerprint:chosen.fingerprint,values:{second:'value'}}),error=>error.code==='stale_auth_method');
+  assert.equal(configured.calls.some(call=>call.url.endsWith('/api/v1/app-connections')),false);
 });

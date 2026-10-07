@@ -49,13 +49,13 @@
       "name": "إيقاف إنشاء الفلو واكتشاف الأدوات والحقول عبر REST",
       "aliases": ["بناء الفلو", "منع REST", "اكتشاف الحقول", "MCP فقط للبناء"],
       "state": "draft_pr",
-      "meaning": "حذف إنشاء الفلو وتغيير حالته من محول REST؛ المسار الداخلي القديم يعيد 410. البناء والاكتشاف في MCP الشركة، وتغيير الحالة عبر MCP مع قراءة تأكيد. قراءة تفاصيل الفلو وتهيئة المشاريع وإدارة الاتصالات الحالية تبقى. تجهيز اتصالات جديدة يتوقف حتى توفر عقد حقول مصادقة أصلي؛ لا بديل REST. تغيير محلي غير منشور.",
+      "meaning": "حذف إنشاء الفلو وتغيير حالته من محول REST؛ المسار الداخلي القديم يعيد 410. البناء والاكتشاف في MCP الشركة، وتغيير الحالة عبر MCP مع قراءة تأكيد. قراءة تفاصيل الفلو وتهيئة المشاريع وإدارة الاتصالات الحالية تبقى. تجهيز اتصال جديد يستعيد مسار موافقة Activepieces وبيانات المصادقة فقط، منفصلًا عن اكتشاف الأفعال وحقول التشغيل عبر MCP. تغيير محلي غير منشور.",
       "linear": "ABO-69",
       "pr": "https://github.com/ALKHANFAR/t43/pull/60",
       "locations": [
         {"role": "closed_route", "path": "server.mjs", "anchor": "native_mcp_creation_required"},
         {"role": "native_status", "path": "server.mjs", "anchor": "mcp=mcp||await activepiecesMcp();"},
-        {"role": "closed_metadata", "path": "lib/tool-connections.mjs", "anchor": "native_mcp_discovery_required"},
+        {"role": "native_connection_auth_metadata", "path": "lib/tool-connections.mjs", "anchor": "Connection consent uses Activepieces auth metadata"},
         {"role": "contract", "path": "docs/mcp-tool-discovery-boundary.md", "anchor": "# Tool discovery boundary"},
         {"role": "test", "path": "scripts/native-mcp-boundary-runtime.test.mjs", "anchor": "closed internal create route never initializes a provider"}
       ]
@@ -226,7 +226,7 @@
       "name": "ربط أداة الشركة عند الحاجة",
       "aliases": ["ربط الأدوات", "اتصال أداة", "تسجيل دخول الأداة", "OAuth الأداة", "كتالوج الأدوات", "company tool connection", "tool catalog"],
       "state": "gap",
-      "meaning": "ربط أدوات جديدة متوقف في PR #60 لأن تجهيز حقول المصادقة كان يعتمد على REST metadata المحظور. إدارة الاتصالات القائمة وإنهاء محاولات OAuth السابقة باقية؛ يلزم عقد أصلي لحقول المصادقة عبر MCP قبل إعادة تجهيز اتصال جديد. حُذف في فرع التوحيد كود توليد الحقول وروابط OAuth غير القابل للوصول؛ إكمال المحاولات السابقة باقٍ. التغيير غير منشور.",
+      "meaning": "أُعيد في فرع التوحيد مسار ربط أدوات الشركة الموجود: بيانات المصادقة والموافقة من Activepieces، اتصال PROJECT حصري للشركة، وعودة OAuth مرتبطة بالجلسة وتُستهلك مرة واحدة. اكتشاف الأفعال وحقول التشغيل وبناء وتنفيذ الفلو تبقى عبر MCP. الاختبارات محلية؛ الربط الجديد على نسخة التوحيد غير منشور وغير مثبت حيًا.",
       "linear": "ABO-61",
       "pr": "https://github.com/ALKHANFAR/t43/pull/60",
       "locations": [
@@ -237,7 +237,7 @@
         {"role": "catalog_test", "path": "scripts/check-pieces.js", "anchor": "Customer catalog integrity"},
         {"role": "customer_action", "path": "app/chat.js", "anchor": "async function rcOAuth(values)"},
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='oauth_start')"},
-        {"role": "tenant_scope", "path": "lib/tool-connections.mjs", "anchor": "async function methods({tenantId,piece})"},
+        {"role": "tenant_scope", "path": "lib/tool-connections.mjs", "anchor": "async function selected("},
         {"role": "unavailable_setup_message", "path": "app/chat.js", "anchor": "Connecting a new tool is currently unavailable."},
         {"role": "unavailable_setup_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "unavailable native connection setup explains availability without exposing server details"},
         {"role": "typed_field_ui", "path": "app/chat.js", "anchor": "function rcField(field,index)"},
@@ -247,7 +247,7 @@
         {"role": "owned_google_finish", "path": "lib/tool-connections.mjs", "anchor": "async function oauthFinish({tenantId,sessionBinding,state,code})"},
         {"role": "cloud_oauth_start", "path": "lib/tool-connections.mjs", "anchor": "if(cloudFor(pieceName(piece)))"},
         {"role": "cloud_oauth_finish", "path": "lib/tool-connections.mjs", "anchor": "async function cloudOauthFinish({tenantId,sessionBinding,attempt,code})"},
-        {"role": "cloud_oauth_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "connection methods, fields and new connection preparation never fall back to REST metadata"},
+        {"role": "cloud_oauth_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "Activepieces Gmail OAuth requests declared scopes, binds the attempt and preserves project isolation"},
         {"role": "cloud_popup_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "cloud OAuth accepts only the opened popup"},
         {"role": "disconnect_guard", "path": "lib/tool-connections.mjs", "anchor": "if(connection.flowIds.length)fail('connection_in_use'"},
         {"role": "disconnect_unknown_guard", "path": "lib/tool-connections.mjs", "anchor": "if(!Array.isArray(rawFlowIds)||rawFlowIds.some"},
@@ -258,7 +258,7 @@
         {"role": "callback", "path": "server.mjs", "anchor": "async function googleOAuthCallback(req,res,url)"},
         {"role": "migration", "path": "migrations/0003-google-oauth-attempts.sql", "anchor": "CREATE TABLE IF NOT EXISTS siyadah_google_oauth_attempts"},
         {"role": "handoff", "path": "GOOGLE-OAUTH-PILOT.md", "anchor": "# Gmail connection under Siyadah"},
-        {"role": "test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "connection methods, fields and new connection preparation never fall back to REST metadata"},
+        {"role": "test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "Activepieces Gmail OAuth requests declared scopes, binds the attempt and preserves project isolation"},
         {"role": "disconnect_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "in-use connection stays attached and is not reported as disconnected"},
         {"role": "disconnect_unknown_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "unknown or malformed flow references fail closed before disconnect"},
         {"role": "ledger_test", "path": "scripts/google-oauth-attempts-runtime.test.mjs", "anchor": "OAuth attempt ledger stores hashes and consumes exactly once"}
