@@ -1290,8 +1290,9 @@ var I = {
       if(response.status===401){location.replace("../auth.html");throw siyAccessError(ui("انتهت جلستك. سجّل الدخول من جديد.","Your session ended. Sign in again."));}
       if(response.status===403) throw siyAccessError(ui("تعذّر التحقق من صلاحية هذا الطلب لحسابك.","This request could not be authorized for your account."));
       if(!response.ok){
-        if(url==="/siyadah-api/v1/integrations"&&body.op==="disconnect"&&response.status===409){
+        if(url==="/siyadah-api/v1/integrations"&&response.status===409){
           var failure=await response.json().catch(function(){return null;});
+          if(body.op==="methods"&&failure&&failure.error==="native_mcp_discovery_required")throw new Error(ui("ربط أداة جديدة غير متاح حاليًا. اتصالاتك المحفوظة باقية.","Connecting a new tool is currently unavailable. Your saved connections remain."));
           if(failure&&failure.error==="connection_in_use")throw new Error(ui("الاتصال مستخدم في مهمة. أوقف المهمة أو تواصل مع الدعم قبل فصله.","A task still uses this connection. Stop the task or contact support before disconnecting."));
           if(failure&&failure.error==="connection_usage_unknown")throw new Error(ui("تعذّر التأكد من المهام المرتبطة بالاتصال. بقي نشطًا؛ حاول مجددًا أو تواصل مع الدعم.","Could not verify tasks linked to this connection. It remains active; try again or contact support."));
         }

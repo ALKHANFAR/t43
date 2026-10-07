@@ -293,6 +293,21 @@ test('tool buttons show saved connection details without claiming a provider run
     assert.equal(p.d.querySelector('#input').value,'أحتاج أداة غير موجودة في القائمة: ');assert.equal(p.d.activeElement,p.d.querySelector('#input'));
   }finally{p.close();}
 });
+test('unavailable native connection setup explains availability without exposing server details',async()=>{
+  for(const locale of ['ar','en']){
+    const p=await page({locale,integrations:{list:{ok:true,connections:[]},methods:{httpStatus:409,error:'native_mcp_discovery_required',message:'internal detail must not appear'}},hash:''});
+    try{
+      p.d.querySelector('#toolsLink').click();await flush();
+      p.d.querySelector('#allTgl').click();await flush();
+      p.d.querySelector('[data-c="gmail"]').click();await flush();
+      const text=p.d.querySelector('#mF').textContent;
+      assert.match(text,locale==='ar'?/ربط أداة جديدة غير متاح حاليًا/:/Connecting a new tool is currently unavailable/);
+      assert.doesNotMatch(text,/internal detail|تعذّر الاتصال بالخادم|Could not reach the server/);
+      assert.equal(p.requests.some(request=>['connect','oauth_start'].includes(request.body?.op)),false);
+    }finally{p.close();}
+  }
+});
+
 test('Google connect popup opens in the submit gesture before OAuth preparation returns',async()=>{
   let finishStart,opened=0;
   const start=new Promise(resolve=>{finishStart=resolve;});

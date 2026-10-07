@@ -239,6 +239,8 @@
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='oauth_start')"},
         {"role": "tenant_scope", "path": "lib/tool-connections.mjs", "anchor": "async function selected("},
         {"role": "method_schema", "path": "lib/tool-connections.mjs", "anchor": "function authFingerprint"},
+        {"role": "unavailable_setup_message", "path": "app/chat.js", "anchor": "Connecting a new tool is currently unavailable."},
+        {"role": "unavailable_setup_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "unavailable native connection setup explains availability without exposing server details"},
         {"role": "grant_guard", "path": "lib/tool-connections.mjs", "anchor": "unsupported_oauth_grant"},
         {"role": "typed_field_ui", "path": "app/chat.js", "anchor": "function rcField(field,index)"},
         {"role": "project_connections_list", "path": "lib/tool-connections.mjs", "anchor": "async function list(tenantId)"},
