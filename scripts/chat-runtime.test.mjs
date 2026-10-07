@@ -716,6 +716,29 @@ test('reconciled production run uses its own verified ID and ignores an older pr
  }finally{p.close();}
 });
 
+test('simple JSON array reply is shown as a readable escaped table',async()=>{
+ const p=await page({message:{ok:true,conversation_id:'json',request_status:'succeeded',work_status:'not_started',outcome_kind:'conversation_reply',reply:'اكتملت القراءة.\n'+JSON.stringify({workspaces:[{name:'sondos-ai.com',gid:'123',is_organization:true},{name:'<script>',gid:'456',is_organization:false}]})}});try{
+  send(p,'المساحات');await flush();
+  const table=p.d.querySelector('.m__c .reply-table table');assert.ok(table);
+  assert.match(thread(p),/اكتملت القراءة/);
+  assert.equal(table.querySelectorAll('tbody tr').length,2);
+  assert.match(table.textContent,/sondos-ai.com/);
+  assert.equal(table.querySelector('script'),null);
+ }finally{p.close();}
+});
+
+test('JSON result rendering preserves every column and falls back for nested or large results',async()=>{
+  const wide=Object.fromEntries(Array.from({length:13},(_,i)=>['field_'+i,'value_'+i]));
+  for(const rows of [[wide],[{name:'nested',details:{value:'keep nested'}}],Array.from({length:51},(_,i)=>({name:'row_'+i}))]){
+    const reply=JSON.stringify(rows),p=await page({message:{ok:true,conversation_id:'json-complete',reply}});try{
+      send(p,'اعرض النتيجة');await flush();
+      const result=p.d.querySelectorAll('.m__c');const last=result[result.length-1];
+      if(rows[0]===wide){assert.equal(last.querySelectorAll('th').length,13);assert.match(last.textContent,/value_12/);}
+      else{assert.equal(last.querySelector('table'),null);assert.equal(last.textContent,reply);}
+    }finally{p.close();}
+  }
+});
+
 test('explicit cancel after timeout has a new request ID and targets prior request without replay',async()=>{
  let calls=0;
  const p=await page({message:body=>++calls===1?Error('timeout'):{ok:true,conversation_id:'cancel-c',reply:'طلب الإلغاء قيد التحقق'},work:{ok:true,request_status:'not_observed',work_status:'unknown'}});try{

@@ -1387,6 +1387,21 @@ var I = {
     // Provider text stays verbatim; escape before adding our own formatting tags.
     function inline(value){ return esc(value).replace(/\*\*([^*\n]+)\*\*/g,"<strong>$1</strong>").replace(/`([^`\n]+)`/g,"<code>$1</code>"); }
     function cells(line){ return line.trim().replace(/^\|/,"").replace(/\|$/,"").split(/(?<!\\)\|/).map(function(cell){return cell.trim().replace(/\\\|/g,"|");}); }
+    var trimmed=String(text||'').trim();
+    var jsonStart=trimmed.search(/\n\s*[\[{]/);
+    if(jsonStart>0){
+      var intro=trimmed.slice(0,jsonStart).trim(),tail=trimmed.slice(jsonStart).trim();
+      try{var suffix=JSON.parse(tail);if(suffix&&typeof suffix==='object')return siyReplyHtml(intro)+siyReplyHtml(tail);}catch(error){}
+    }
+    if((trimmed[0]==='{'&&trimmed.at(-1)==='}')||(trimmed[0]==='['&&trimmed.at(-1)===']')){
+      try{
+        var parsed=JSON.parse(trimmed), rows=Array.isArray(parsed)?parsed:(parsed&&typeof parsed==='object'&&Object.keys(parsed).length===1&&Array.isArray(Object.values(parsed)[0])?Object.values(parsed)[0]:null);
+        if(rows&&rows.length&&rows.length<=50&&rows.every(function(row){return row&&Object.keys(row).length&&typeof row==='object'&&!Array.isArray(row)&&Object.values(row).every(function(v){return v===null||['string','number','boolean'].includes(typeof v);});})){
+          var keys=Array.from(new Set(rows.flatMap(function(row){return Object.keys(row);})));
+          return '<div class="reply-table" role="region" tabindex="0" aria-label="'+ui('نتيجة منظمة','Structured result')+'"><table><thead><tr>'+keys.map(function(key){return '<th scope="col">'+esc(key)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(row){return '<tr>'+keys.map(function(key){return '<td dir="auto">'+esc(row[key]===undefined||row[key]===null?'':String(row[key]))+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
+        }
+      }catch(error){}
+    }
     var lines=String(text||"").replace(/\r\n?/g,"\n").split("\n"), blocks=[], plain=[];
     function flush(){ if(plain.length){blocks.push('<p>'+plain.map(inline).join('<br>')+'</p>');plain=[];} }
     for(var i=0;i<lines.length;i++){
