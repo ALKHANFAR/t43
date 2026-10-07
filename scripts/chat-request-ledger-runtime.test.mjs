@@ -121,6 +121,16 @@ test('expiry leaves a completed request unchanged if completion wins the race',a
   assert.equal(after.response.reply,'done');
 });
 
+test('a final model reply cannot replace a run already reconciled for the request',async()=>{
+  const {service}=fixture(),input={companyId:'company_a',conversationId:'chat_a',requestId:'req_run',requestHash:'e'.repeat(64)};
+  const claim=await service.claimChatRequest(input);
+  const verified={ok:true,conversation_id:'chat_a',request_status:'succeeded',work_status:'succeeded',outcome_kind:'tool_result',run_id:'AyDcS8RxKFU1u8L4Bggki',flow_id:'wlyKFTxiAOHCMHWS1GIKd'};
+  await service.completeChatRequest({companyId:input.companyId,requestId:input.requestId,status:'succeeded',httpStatus:200,response:verified});
+  const settled=await service.settleChatRequest({companyId:input.companyId,requestId:input.requestId,status:'succeeded',httpStatus:200,response:{ok:true,reply:'model reply without run identity'},claimToken:claim.claimToken});
+  assert.deepEqual(settled.response,verified);
+  assert.deepEqual((await service.readChatRequest({companyId:input.companyId,requestId:input.requestId})).response,verified);
+});
+
 test('the original claim can upgrade an expired unknown to its verified late success',async()=>{
   const {service,rows}=fixture(),input={companyId:'company_a',conversationId:'chat_a',requestId:'req_3',requestHash:'c'.repeat(64)};
   const claim=await service.claimChatRequest(input);

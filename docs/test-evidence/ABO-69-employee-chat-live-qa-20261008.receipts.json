@@ -1,0 +1,234 @@
+{
+  "response": {
+    "ok": true,
+    "reply": "اكتملت المهمة وتأكدت نتيجة التشغيل.\n{\"status\":200,\"headers\":{},\"body\":{\"response\":{\"city\":\"Riyadh\",\"weather\":{\"latitude\":24.710016,\"longitude\":46.688103,\"generationtime_ms\":0.062465667724609375,\"utc_offset_seconds\":10800,\"timezone\":\"Asia/Riyadh\",\"timezone_abbreviation\":\"GMT+3\",\"elevation\":634,\"current_units\":{\"time\":\"iso8601\",\"interval\":\"seconds\",\"temperature_2m\":\"°C\",\"precipitation\":\"mm\",\"wind_speed_10m\":\"km/h\"},\"current\":{\"time\":\"2026-10-08T00:45\",\"interval\":900,\"temperature_2m\":32,\"precipitation\":0,\"wind_speed_10m\":9}},\"provider\":\"Open-Meteo\",\"httpStatus\":200}}}",
+    "run_id": "Z0PKrmvHrcpJS9nuqghUS",
+    "flow_id": "qqFeRj6zI7ZriM2aB03Mi",
+    "work_id": "request_qa_delivery_employee_utf8_live_20261008",
+    "work_status": "succeeded",
+    "outcome_kind": "tool_result",
+    "request_status": "succeeded",
+    "conversation_id": "qa_delivery_employee_20261008"
+  },
+  "run": {
+    "id": "Z0PKrmvHrcpJS9nuqghUS",
+    "projectId": "4msYLTmprIPfuRTmJMvhz",
+    "flowId": "qqFeRj6zI7ZriM2aB03Mi",
+    "flowVersionId": "6tJ9Ix5kiR7ka9EYU9TtB",
+    "environment": "PRODUCTION",
+    "status": "SUCCEEDED",
+    "startTime": "2026-10-07T21:52:30.614Z",
+    "finishTime": "2026-10-07T21:52:31.302Z",
+    "steps": {
+      "trigger": {
+        "type": "PIECE_TRIGGER",
+        "status": "SUCCEEDED",
+        "input": {},
+        "output": {}
+      },
+      "step_1": {
+        "type": "PIECE",
+        "status": "SUCCEEDED",
+        "input": {
+          "url": "https://api.open-meteo.com/v1/forecast",
+          "method": "GET",
+          "headers": {},
+          "timeout": 30,
+          "authType": "NONE",
+          "body_type": "none",
+          "use_proxy": false,
+          "failureMode": "continue_none",
+          "queryParams": {
+            "current": "temperature_2m,precipitation,wind_speed_10m",
+            "latitude": "24.7136",
+            "timezone": "Asia/Riyadh",
+            "longitude": "46.6753"
+          },
+          "followRedirects": false,
+          "response_is_binary": false
+        },
+        "output": {
+          "status": 200,
+          "headers": {
+            "connection": "keep-alive",
+            "content-encoding": "deflate",
+            "content-type": "application/json; charset=utf-8",
+            "date": "Wed, 07 Oct 2026 21:52:31 GMT",
+            "transfer-encoding": "chunked"
+          },
+          "body": {
+            "latitude": 24.710016,
+            "longitude": 46.688103,
+            "generationtime_ms": 0.062465667724609375,
+            "utc_offset_seconds": 10800,
+            "timezone": "Asia/Riyadh",
+            "timezone_abbreviation": "GMT+3",
+            "elevation": 634,
+            "current_units": {
+              "time": "iso8601",
+              "interval": "seconds",
+              "temperature_2m": "°C",
+              "precipitation": "mm",
+              "wind_speed_10m": "km/h"
+            },
+            "current": {
+              "time": "2026-10-08T00:45",
+              "interval": 900,
+              "temperature_2m": 32,
+              "precipitation": 0,
+              "wind_speed_10m": 9
+            }
+          }
+        },
+        "duration": 663.4520550000016
+      },
+      "step_2": {
+        "type": "PIECE",
+        "status": "SUCCEEDED",
+        "input": {
+          "mode": "advanced",
+          "respond": "stop",
+          "response": {
+            "response": {
+              "city": "Riyadh",
+              "weather": {
+                "latitude": 24.710016,
+                "longitude": 46.688103,
+                "generationtime_ms": 0.062465667724609375,
+                "utc_offset_seconds": 10800,
+                "timezone": "Asia/Riyadh",
+                "timezone_abbreviation": "GMT+3",
+                "elevation": 634,
+                "current_units": {
+                  "time": "iso8601",
+                  "interval": "seconds",
+                  "temperature_2m": "°C",
+                  "precipitation": "mm",
+                  "wind_speed_10m": "km/h"
+                },
+                "current": {
+                  "time": "2026-10-08T00:45",
+                  "interval": 900,
+                  "temperature_2m": 32,
+                  "precipitation": 0,
+                  "wind_speed_10m": 9
+                }
+              },
+              "provider": "Open-Meteo",
+              "httpStatus": 200
+            }
+          }
+        },
+        "output": {
+          "status": 200,
+          "headers": {},
+          "body": {
+            "response": {
+              "city": "Riyadh",
+              "weather": {
+                "latitude": 24.710016,
+                "longitude": 46.688103,
+                "generationtime_ms": 0.062465667724609375,
+                "utc_offset_seconds": 10800,
+                "timezone": "Asia/Riyadh",
+                "timezone_abbreviation": "GMT+3",
+                "elevation": 634,
+                "current_units": {
+                  "time": "iso8601",
+                  "interval": "seconds",
+                  "temperature_2m": "°C",
+                  "precipitation": "mm",
+                  "wind_speed_10m": "km/h"
+                },
+                "current": {
+                  "time": "2026-10-08T00:45",
+                  "interval": 900,
+                  "temperature_2m": 32,
+                  "precipitation": 0,
+                  "wind_speed_10m": 9
+                }
+              },
+              "provider": "Open-Meteo",
+              "httpStatus": 200
+            }
+          }
+        },
+        "duration": 9.354685999976937
+      }
+    }
+  },
+  "durable": {
+    "request": {
+      "status": "succeeded",
+      "execution_identity_json": {
+        "runId": "Z0PKrmvHrcpJS9nuqghUS",
+        "flowId": "qqFeRj6zI7ZriM2aB03Mi",
+        "projectId": "4msYLTmprIPfuRTmJMvhz",
+        "employeeId": "98145e25-9016-44e4-8320-80c61e2df6b4",
+        "environment": "PRODUCTION",
+        "flowVersionId": "6tJ9Ix5kiR7ka9EYU9TtB",
+        "previousRunId": null,
+        "employeeUpdatedAt": "2026-10-08 00:52:26.327552+03"
+      },
+      "response_json": {
+        "ok": true,
+        "reply": "اكتملت المهمة وتأكدت نتيجة التشغيل.\n{\"status\":200,\"headers\":{},\"body\":{\"response\":{\"city\":\"Riyadh\",\"weather\":{\"latitude\":24.710016,\"longitude\":46.688103,\"generationtime_ms\":0.062465667724609375,\"utc_offset_seconds\":10800,\"timezone\":\"Asia/Riyadh\",\"timezone_abbreviation\":\"GMT+3\",\"elevation\":634,\"current_units\":{\"time\":\"iso8601\",\"interval\":\"seconds\",\"temperature_2m\":\"°C\",\"precipitation\":\"mm\",\"wind_speed_10m\":\"km/h\"},\"current\":{\"time\":\"2026-10-08T00:45\",\"interval\":900,\"temperature_2m\":32,\"precipitation\":0,\"wind_speed_10m\":9}},\"provider\":\"Open-Meteo\",\"httpStatus\":200}}}",
+        "run_id": "Z0PKrmvHrcpJS9nuqghUS",
+        "flow_id": "qqFeRj6zI7ZriM2aB03Mi",
+        "work_id": "request_qa_delivery_employee_utf8_live_20261008",
+        "work_status": "succeeded",
+        "outcome_kind": "tool_result",
+        "request_status": "succeeded",
+        "conversation_id": "qa_delivery_employee_20261008"
+      }
+    },
+    "employee": {
+      "id": "98145e25-9016-44e4-8320-80c61e2df6b4",
+      "last_run_id": "Z0PKrmvHrcpJS9nuqghUS",
+      "last_result_json": {
+        "status": 200
+      },
+      "last_conversation_id": "qa_delivery_employee_20261008"
+    },
+    "replay": {
+      "ok": true,
+      "reply": "اكتملت المهمة وتأكدت نتيجة التشغيل.\n{\"status\":200,\"headers\":{},\"body\":{\"response\":{\"city\":\"Riyadh\",\"weather\":{\"latitude\":24.710016,\"longitude\":46.688103,\"generationtime_ms\":0.062465667724609375,\"utc_offset_seconds\":10800,\"timezone\":\"Asia/Riyadh\",\"timezone_abbreviation\":\"GMT+3\",\"elevation\":634,\"current_units\":{\"time\":\"iso8601\",\"interval\":\"seconds\",\"temperature_2m\":\"°C\",\"precipitation\":\"mm\",\"wind_speed_10m\":\"km/h\"},\"current\":{\"time\":\"2026-10-08T00:45\",\"interval\":900,\"temperature_2m\":32,\"precipitation\":0,\"wind_speed_10m\":9}},\"provider\":\"Open-Meteo\",\"httpStatus\":200}}}",
+      "run_id": "Z0PKrmvHrcpJS9nuqghUS",
+      "flow_id": "qqFeRj6zI7ZriM2aB03Mi",
+      "work_id": "request_qa_delivery_employee_utf8_live_20261008",
+      "work_status": "succeeded",
+      "outcome_kind": "tool_result",
+      "request_status": "succeeded",
+      "conversation_id": "qa_delivery_employee_20261008"
+    }
+  },
+  "isolation": [
+    {
+      "op": "employee_state",
+      "status": 404,
+      "data": {
+        "ok": false,
+        "error": "employee_not_found",
+        "message": "الموظف غير موجود في شركتك."
+      }
+    },
+    {
+      "op": "work",
+      "status": 200,
+      "data": {
+        "ok": true,
+        "request_status": "not_observed",
+        "work_status": "unknown",
+        "outcome_kind": "unverified"
+      }
+    }
+  ],
+  "ui": {
+    "kind": "DOM",
+    "source": "app/chat.js",
+    "verifiedRunLabel": true,
+    "providerValues": true,
+    "exactRunId": true,
+    "browserScreenshot": false
+  }
+}

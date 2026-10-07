@@ -1,0 +1,147 @@
+{
+  "id": "MRNXti6hGYjrHcJG1j5RI",
+  "projectId": "4msYLTmprIPfuRTmJMvhz",
+  "flowId": "qqFeRj6zI7ZriM2aB03Mi",
+  "flowVersionId": "6tJ9Ix5kiR7ka9EYU9TtB",
+  "status": "SUCCEEDED",
+  "environment": "PRODUCTION",
+  "startTime": "2026-10-07T21:47:08.153Z",
+  "finishTime": "2026-10-07T21:47:08.820Z",
+  "steps": {
+    "trigger": {
+      "type": "PIECE_TRIGGER",
+      "status": "SUCCEEDED",
+      "input": {},
+      "output": {}
+    },
+    "step_1": {
+      "type": "PIECE",
+      "status": "SUCCEEDED",
+      "input": {
+        "url": "https://api.open-meteo.com/v1/forecast",
+        "method": "GET",
+        "headers": {},
+        "timeout": 30,
+        "authType": "NONE",
+        "body_type": "none",
+        "use_proxy": false,
+        "failureMode": "continue_none",
+        "queryParams": {
+          "current": "temperature_2m,precipitation,wind_speed_10m",
+          "latitude": "24.7136",
+          "timezone": "Asia/Riyadh",
+          "longitude": "46.6753"
+        },
+        "followRedirects": false,
+        "response_is_binary": false
+      },
+      "output": {
+        "status": 200,
+        "headers": {
+          "connection": "keep-alive",
+          "content-encoding": "deflate",
+          "content-type": "application/json; charset=utf-8",
+          "date": "Wed, 07 Oct 2026 21:47:08 GMT",
+          "transfer-encoding": "chunked"
+        },
+        "body": {
+          "latitude": 24.710016,
+          "longitude": 46.688103,
+          "generationtime_ms": 0.07474422454833984,
+          "utc_offset_seconds": 10800,
+          "timezone": "Asia/Riyadh",
+          "timezone_abbreviation": "GMT+3",
+          "elevation": 634,
+          "current_units": {
+            "time": "iso8601",
+            "interval": "seconds",
+            "temperature_2m": "°C",
+            "precipitation": "mm",
+            "wind_speed_10m": "km/h"
+          },
+          "current": {
+            "time": "2026-10-08T00:45",
+            "interval": 900,
+            "temperature_2m": 32,
+            "precipitation": 0,
+            "wind_speed_10m": 9
+          }
+        }
+      },
+      "duration": 644.1089530000027
+    },
+    "step_2": {
+      "type": "PIECE",
+      "status": "SUCCEEDED",
+      "input": {
+        "mode": "advanced",
+        "respond": "stop",
+        "response": {
+          "response": {
+            "city": "Riyadh",
+            "weather": {
+              "latitude": 24.710016,
+              "longitude": 46.688103,
+              "generationtime_ms": 0.07474422454833984,
+              "utc_offset_seconds": 10800,
+              "timezone": "Asia/Riyadh",
+              "timezone_abbreviation": "GMT+3",
+              "elevation": 634,
+              "current_units": {
+                "time": "iso8601",
+                "interval": "seconds",
+                "temperature_2m": "°C",
+                "precipitation": "mm",
+                "wind_speed_10m": "km/h"
+              },
+              "current": {
+                "time": "2026-10-08T00:45",
+                "interval": 900,
+                "temperature_2m": 32,
+                "precipitation": 0,
+                "wind_speed_10m": 9
+              }
+            },
+            "provider": "Open-Meteo",
+            "httpStatus": 200
+          }
+        }
+      },
+      "output": {
+        "status": 200,
+        "headers": {},
+        "body": {
+          "response": {
+            "city": "Riyadh",
+            "weather": {
+              "latitude": 24.710016,
+              "longitude": 46.688103,
+              "generationtime_ms": 0.07474422454833984,
+              "utc_offset_seconds": 10800,
+              "timezone": "Asia/Riyadh",
+              "timezone_abbreviation": "GMT+3",
+              "elevation": 634,
+              "current_units": {
+                "time": "iso8601",
+                "interval": "seconds",
+                "temperature_2m": "°C",
+                "precipitation": "mm",
+                "wind_speed_10m": "km/h"
+              },
+              "current": {
+                "time": "2026-10-08T00:45",
+                "interval": 900,
+                "temperature_2m": 32,
+                "precipitation": 0,
+                "wind_speed_10m": 9
+              }
+            },
+            "provider": "Open-Meteo",
+            "httpStatus": 200
+          }
+        }
+      },
+      "duration": 4.702349999999569
+    }
+  }
+}

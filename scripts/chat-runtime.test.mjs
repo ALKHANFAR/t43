@@ -474,7 +474,7 @@ test('complete disconnected draft gets its own 10/10 without a production claim'
   }finally{p.close();}
 });
 test('accepted work appears pending, then proof readback upserts stable employee without clearing chat',async()=>{
-  const p=await page({message:{ok:true,conversation_id:'conversation-1',work_id:'work-1',work_status:'queued'},work:{ok:true,work_id:'work-1',work_status:'succeeded',reply:'سُجلت النتيجة.',employee,recent_work:[proof]}});try{
+  const p=await page({message:{ok:true,conversation_id:'conversation-1',work_id:'work-1',work_status:'queued'},work:{ok:true,conversation_id:'conversation-1',work_id:'work-1',work_status:'succeeded',reply:'سُجلت النتيجة.',employee,recent_work:[{...proof,conversation_id:'conversation-1'}]}});try{
     send(p,'أنشئ موظف الفرص');await flush();assert.match(thread(p),/بانتظار التنفيذ/);assert.ok(!thread(p).includes('✓'));
     assert.equal(p.w.EMPS.length,0);assert.equal(p.polls.length,1);await p.polls.shift()();await flush();
     assert.equal(p.d.querySelector('#emps .emp').dataset.emp,employee.recordId);assert.equal(p.w.EMPS[0].flowId,employee.flowId);
@@ -677,6 +677,38 @@ test('restored proofs match conversation and legacy evidence is labelled separat
   {...proof,recordId:'legacy',subject:'دليل قديم'}
  ]}});try{
   p.d.querySelector('[data-chat="c-here"]').click();assert.match(thread(p),/دليل هذه المحادثة/);assert.ok(!thread(p).includes('دليل محادثة أخرى'));assert.match(thread(p),/نشاط سابق للموظف — غير مرتبط بهذه المحادثة/);assert.match(thread(p),/دليل قديم/);
+ }finally{p.close();}
+});
+
+test('older proof in the same conversation is not presented as the latest request result',async()=>{
+ const older={...proof,conversation_id:'same',work_id:'old-request',subject:'نتيجة قديمة'};
+ const p=await page({hydrate:{...empty,team:[employee],recent_work:[older],conversations:[{id:'same',employee_id:employee.recordId,title:'ريم',messages:[]}]},message:{ok:true,conversation_id:'same',work_id:'new-request',work_status:'succeeded',outcome_kind:'tool_result',reply:'وصلت نتيجة جديدة',recent_work:[older]}});try{
+  p.d.querySelector('[data-chat="same"]').click();send(p,'قراءة جديدة');await flush();
+  assert.equal(p.d.querySelectorAll('.m__c').length>0,true);
+  assert.match(thread(p),/غير مربوط برسالة محددة/);
+  assert.doesNotMatch(p.d.querySelector('.m__c').textContent,/old-request/);
+ }finally{p.close();}
+});
+
+test('simple JSON array reply is shown as a readable escaped table',async()=>{
+ const p=await page({message:{ok:true,conversation_id:'json',request_status:'succeeded',work_status:'not_started',outcome_kind:'conversation_reply',reply:'اكتملت القراءة.\n'+JSON.stringify({workspaces:[{name:'sondos-ai.com',gid:'123',is_organization:true},{name:'<script>',gid:'456',is_organization:false}]})}});try{
+  send(p,'المساحات');await flush();
+  const table=p.d.querySelector('.m__c .reply-table table');assert.ok(table);
+  assert.match(thread(p),/اكتملت القراءة/);
+  assert.equal(table.querySelectorAll('tbody tr').length,2);
+  assert.match(table.textContent,/sondos-ai.com/);
+  assert.equal(table.querySelector('script'),null);
+ }finally{p.close();}
+});
+
+test('reconciled production run uses its own verified ID and ignores an older proof',async()=>{
+ const run='AyDcS8RxKFU1u8L4Bggki',flow='wlyKFTxiAOHCMHWS1GIKd',older={...proof,conversation_id:'same',work_id:'old-request'};
+ const p=await page({hydrate:{...empty,team:[employee],recent_work:[older],conversations:[{id:'same',employee_id:employee.recordId,title:'ريم',messages:[]}]},message:{ok:true,conversation_id:'same',work_id:'new-request',request_status:'succeeded',work_status:'succeeded',outcome_kind:'tool_result',run_id:run,flow_id:flow,reply:'اكتملت المهمة',recent_work:[older]}});try{
+  p.d.querySelector('[data-chat="same"]').click();send(p,'اقرأ');await flush();
+  const result=Array.from(p.d.querySelectorAll('.m__c')).find(x=>x.textContent.includes('اكتملت المهمة'));
+  assert.ok(result);assert.match(result.textContent,/نتيجة تشغيل هذا الطلب مؤكدة/);
+  assert.match(result.textContent,/AyDcS8RxKFU1u8L4Bggki/);
+  assert.doesNotMatch(result.textContent,/old-request|run-1/);
  }finally{p.close();}
 });
 
@@ -985,6 +1017,17 @@ test('instruction application does not overwrite the manager’s unsent message'
 });
 
 const readyEmployee={...employee,flowId:'f'.repeat(21)};
+test('native draft receipt shows scoped TESTING proof without production claim',async()=>{
+  for(const locale of ['ar','en']){
+    const p=await page({locale,message:{ok:true,conversation_id:'draft-proof',request_status:'succeeded',work_status:'succeeded',outcome_kind:'flow_draft_saved',draft_receipt:{flow_id:'F'.repeat(21),version_id:'v1',status:'DRAFT',test_run_id:'R'.repeat(21),test_environment:'TESTING'}}});try{
+      send(p,'جهز المسودة واختبرها');await flush();
+      const details=p.d.querySelector('.m__c .siyrefs');assert.ok(details);
+      assert.deepEqual([...details.querySelectorAll('code')].map(x=>x.textContent),['F'.repeat(21),'R'.repeat(21)]);
+      assert.match(thread(p),locale==='ar'?/لم تُنشر أو تُشغّل إنتاجيًا/:/not published or run in production/);
+      assert.equal(p.d.querySelector('.request-state'),null);
+    }finally{p.close();}
+  }
+});
 const readiness={employee_id:employee.recordId,flow_id:readyEmployee.flowId,published_version_id:'v'.repeat(21),test_run_id:'r'.repeat(21),test_environment:'TESTING',used_mock_trigger_data:true};
 test('employee readiness uses collapsed TESTING evidence without claiming provider or KPI success in RTL and LTR',async()=>{
   for(const locale of ['ar','en']){

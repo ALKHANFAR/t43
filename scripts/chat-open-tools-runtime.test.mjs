@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
-import {builtFlowResult,conversationMemory} from '../lib/chat-intelligence.mjs';
+import {builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent} from '../lib/chat-intelligence.mjs';
 import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool} from '../lib/mcp-flow-scope.mjs';
 import {TenantProjectError} from '../lib/tenant-projects.mjs';
 import {nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget,failedChatExecution} from '../lib/chat-outcome.mjs';
@@ -59,7 +59,7 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false,edit
   const ctx={
     console:{error:()=>{},info:()=>{},warn:()=>{}},process:{env:{DEEPSEEK_API_KEY:'test-key'}},
     AbortController,setTimeout,clearTimeout,Date,JSON,String,Array,Object,Math,
-    TenantProjectError,CompanyProfileError,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,
+    TenantProjectError,CompanyProfileError,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,
     fetch:async(url,options)=>{
       const request=JSON.parse(options.body);log.model.push(request);
       const message=script[Math.min(step++,script.length-1)];
@@ -105,6 +105,20 @@ test('the model builds, tests and publishes in one request and writes the reply 
   assert.ok(first.tools.some(tool=>tool.function.name==='ap_set_project_context'));
   assert.equal(toolMessages(last).length,5);
   assert.match(toolMessages(last)[1],/Flow created/);
+});
+
+test('an explicit draft request blocks model publish and enable calls at MCP dispatch',async()=>{
+  const {run,log}=setup({script:[
+    use(['ap_build_flow',{flowName:'مسودة اختبار'}]),
+    use(['ap_lock_and_publish',{flowId}],['ap_change_flow_status',{flowId,status:'enabled'}],['ap_test_flow',{flowId}]),
+    say('بقي الفلو مسودة.'),
+  ]});
+  const answer=await run({message:'أنشئ فلو مسودة. لا تنشر أو تفعّل أو تشغّل.',draftEmployee:{id:'employee-1',name:'مسودة اختبار',activepieces_flow_id:null}});
+  assert.equal(answer.flowId,flowId);
+  assert.deepEqual(log.tools.map(item=>item[0]),['ap_build_flow']);
+  assert.equal(log.states.length,0);
+  assert.match(toolMessages(log.model[2]).join(' '),/draft_only_publish_forbidden/);
+  assert.match(toolMessages(log.model[2]).join(' '),/flow_run_forbidden/);
 });
 
 test('an employee cannot be published from chat without a successful test run readback',async()=>{
@@ -219,11 +233,11 @@ test('the step limit ends with a written account instead of a fixed sentence',as
 
 test('a request that runs out of time still ends with an account of what ran',async()=>{
   const near=setup({script:[request=>request.tools?use(['ap_add_step',{flowId}]):say('أضفت خطوة واحدة وبقي النشر.')]});
-  const written=await near.run({deadlineMs:60_000});
+  const written=await near.run({deadlineMs:5_000});
   assert.equal(written.reply,'أضفت خطوة واحدة وبقي النشر.');
   assert.equal(near.log.tools.length,0);
   const late=setup({script:[use(['ap_add_step',{flowId}])],toolResults:{ap_add_step:async()=>{await new Promise(resolve=>setTimeout(resolve,30));return {content:[{type:'text',text:'ok'}]};}}});
-  const fallback=await late.run({deadlineMs:75_020});
+  const fallback=await late.run({deadlineMs:5_020});
   assert.match(fallback.reply,/ap_add_step/);
   assert.match(fallback.reply,/أكمل/);
 });
@@ -256,7 +270,7 @@ test('a long request answers queued once, keeps working, and settles the same re
     console:{error:()=>{},info:()=>{},warn:()=>{}},JSON,String,Object,Number,Array,Boolean,
     setTimeout:(fn,ms)=>{timers.push({fn,ms});return timers.length;},clearTimeout:id=>{if(timers[id-1])timers[id-1].cleared=true;},
     randomUUID:()=>'11111111-1111-4111-8111-111111111111',createHash:()=>({update(){return this;},digest:()=>'hash'}),
-    TenantProjectError,CompanyProfileError,chatExecutionBudget,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
+    TenantProjectError,CompanyProfileError,chatExecutionBudget,draftOnlyIntent,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
     body:async()=>({op:'message',message:'ابنِ طريقة عمل كاملة',conversation_id:'c1',request_id:'r1'}),
     tenantSession:async()=>({session:{companyId:'company-1'},account:{company_name:'شركة'},headers:{}}),
     companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),
@@ -309,7 +323,7 @@ test('a second message waits for the first result before reaching the model',asy
   const ctx={console:{error:()=>{}},JSON,String,Object,Number,Array,Boolean,Date,
     setTimeout:(fn,ms)=>ms===1000?setTimeout(fn,1):1,clearTimeout:()=>{},
     randomUUID:()=> 'u1',createHash:()=>({update(){return this;},digest:()=> 'hash'}),
-    TenantProjectError,CompanyProfileError,chatExecutionBudget,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
+    TenantProjectError,CompanyProfileError,chatExecutionBudget,draftOnlyIntent,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
     body:async req=>({op:'message',message:req.id,conversation_id:'c1',request_id:req.id}),
     tenantSession:async()=>({session:{companyId:'company-1'},account:{company_name:'شركة'},headers:{}}),
     companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),
@@ -495,6 +509,22 @@ const executionResult=(overrides={})=>({content:[{type:'text',text:'native reply
 const productionRun=(overrides={})=>({structuredContent:{id:runId,flowId,environment:'PRODUCTION',status:'SUCCEEDED',steps:[{name:'trigger',output:{}},{name:'reply',output:{status:200,body:{result:'QA'}}}],...overrides}});
 const runningEmployee={id:'employee-9',status:'active',activepieces_flow_id:flowId,tools_json:['mcp']};
 
+test('saved native draft and exact TESTING run settle with scoped draft proof',async()=>{
+  const {run,log}=setup({script:[use(['ap_build_flow',{flowName:'طلب جملة'}]),use(['ap_test_flow',{flowId}]),say('حفظت المسودة واختبرتها.') ]});
+  const answer=await run({message:'جهز مسودة فقط واختبرها'});
+  assert.deepEqual(log.tools.map(item=>item[0]),['ap_build_flow','ap_test_flow','ap_get_run']);
+  assert.deepEqual(JSON.parse(JSON.stringify(answer.draftReceipt)),{flow_id:flowId,version_id:'v1',status:'DRAFT',test_run_id:runId,test_environment:'TESTING',used_mock_trigger_data:false});
+  assert.deepEqual(JSON.parse(JSON.stringify(completedToolActions(answer))),{request_status:'succeeded',work_status:'succeeded',outcome_kind:'flow_draft_saved',draft_receipt:JSON.parse(JSON.stringify(answer.draftReceipt))});
+});
+
+test('a changed draft after TESTING does not settle the requested test',async()=>{
+  const {run}=setup({script:[use(['ap_build_flow',{flowName:'طلب جملة'}]),use(['ap_test_flow',{flowId}]),use(['ap_add_step',{flowId}]),say('عدلت المسودة بعد الاختبار.') ]});
+  const answer=await run({message:'جهز مسودة فقط واختبرها'});
+  assert.equal(answer.draftReceipt?.status,'DRAFT');
+  assert.equal(answer.draftReceipt?.test_run_id,undefined);
+  assert.equal(completedToolActions(answer).work_status,'unknown');
+});
+
 test('earlier Flow edits including failed writes block native dispatch in the same batch or next turn',async()=>{
   for(const sameBatch of [true,false])for(const failedWrite of [true,false]){
     let nativeReconciliations=0;
@@ -629,4 +659,11 @@ test('completed effect stays visible but cannot be dispatched again in a continu
   assert.ok(log.model[0].tools.some(x=>x.function.name==='ap_list_tables'));
   assert.deepEqual(log.tools,[]);
   assert.match(toolMessages(log.model[1])[0],/mcp_effect_already_completed/);
+});
+
+test('short continuation budget still dispatches native MCP discovery before replying',async()=>{
+  const {run,log}=setup({script:[use(['ap_list_connections',{}]),say('قرأت الاتصالات وأكملت من الجدول المحفوظ.')]});
+  const answer=await run({deadlineMs:25_000,excludedTools:['ap_create_table']});
+  assert.deepEqual(log.tools.map(item=>item[0]),['ap_list_connections']);
+  assert.equal(answer.reply,'قرأت الاتصالات وأكملت من الجدول المحفوظ.');
 });

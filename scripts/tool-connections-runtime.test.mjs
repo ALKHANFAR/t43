@@ -47,7 +47,7 @@ function harness(overrides={}){
     if(url.endsWith('/api/v1/app-connections')){const b=JSON.parse(options.body);return response(201,{id:CONNECTION,pieceName:b.pieceName,pieceVersion:b.pieceVersion,displayName:b.displayName,status:'ACTIVE',scope:'PROJECT',projectIds:projects('create')});}
     throw new Error(`unexpected ${url}`);
   };
-  return {calls,pending,service:createToolConnectionService({requireProject:async tenant=>tenant==='company-a'?PROJECT:OTHER,fetchImpl,activepiecesUrl:'https://ap.example',apiKey:'platform-key',attemptSecret:'s'.repeat(48),attemptStore,googleOAuth:overrides.googleOAuth,customerOrigin:overrides.customerOrigin,gmailOAuthProvider:overrides.gmailOAuthProvider})};
+  return {calls,pending,service:createToolConnectionService({requireProject:async tenant=>tenant==='company-a'?PROJECT:OTHER,mcp:overrides.mcp,fetchImpl,activepiecesUrl:'https://ap.example',apiKey:'platform-key',attemptSecret:'s'.repeat(48),attemptStore,googleOAuth:overrides.googleOAuth,customerOrigin:overrides.customerOrigin,gmailOAuthProvider:overrides.gmailOAuthProvider})};
 }
 
 test('shows only valid flow references from a project-owned connection',async()=>{
@@ -170,6 +170,39 @@ test('connection methods, fields and new connection preparation never fall back 
     await assert.rejects(op,error=>error.code==='native_mcp_discovery_required'&&error.status===409);
   }
   assert.equal(calls.length,0);assert.equal(pending.size,0);
+});
+
+test('company MCP auth schema prepares a project-owned connection without REST piece discovery',async()=>{
+  const mcpCalls=[],mcp={call:async(tenant,method,params)=>{mcpCalls.push({tenant,method,params});return {structuredContent:{schemaVersion:1,piece:stripe}};}};
+  const {service,calls}=harness({mcp});
+  const methods=await service.methods({tenantId:'company-a',piece:'stripe'});
+  assert.equal(methods.methods[0].fields[0].type,'password');
+  const connection=await service.connect({tenantId:'company-a',piece:'stripe',type:'SECRET_TEXT',methodId:methods.methods[0].id,methodFingerprint:methods.methods[0].fingerprint,values:{secret_text:'test-secret'}});
+  assert.equal(connection.scope,'PROJECT');
+  assert.equal(calls.find(item=>item.url.endsWith('/api/v1/app-connections')).body.projectId,PROJECT);
+  assert.equal(calls.some(item=>item.url.includes('/api/v1/pieces')),false);
+  assert.deepEqual(mcpCalls.map(item=>item.tenant),['company-a','company-a']);
+  assert.ok(mcpCalls.every(item=>item.method==='tools/call'&&item.params.name==='ap_setup_guide'&&item.params.arguments.pieceName===stripe.name));
+});
+
+test('native MCP OAuth schema starts a company-bound provider consent attempt',async()=>{
+  const {service,calls,pending}=harness({customerOrigin:ORIGIN,gmailOAuthProvider:'activepieces',mcp:{call:async()=>({structuredContent:{schemaVersion:1,piece:slack}})}});
+  const method=(await service.methods({tenantId:'company-a',piece:'slack',requestOrigin:ORIGIN})).methods[0];
+  assert.equal(method.available,true);
+  assert.deepEqual(method.scopes,['chat:write']);
+  const started=await service.oauthStart({tenantId:'company-a',sessionBinding:'session-a',requestOrigin:ORIGIN,piece:'slack',methodId:method.id,methodFingerprint:method.fingerprint});
+  assert.equal(new URL(started.authorizationUrl).hostname,'slack.com');
+  assert.equal(new URL(started.authorizationUrl).searchParams.get('scope'),'chat:write');
+  assert.equal(pending.size,1);
+  assert.equal(calls.some(item=>item.url.includes('/api/v1/pieces')||item.url.endsWith('/api/v1/app-connections')),false);
+});
+
+test('missing or foreign MCP auth schema fails closed before connection writes',async()=>{
+  for(const structuredContent of [undefined,{schemaVersion:1,piece:{...stripe,name:'@activepieces/piece-gmail'}},{schemaVersion:1,piece:{...stripe,auth:undefined}}]){
+    const {service,calls}=harness({mcp:{call:async()=>({structuredContent})}});
+    await assert.rejects(()=>service.connect({tenantId:'company-a',piece:'stripe',type:'SECRET_TEXT',values:{secret_text:'test'}}),error=>error.code==='native_mcp_discovery_required');
+    assert.equal(calls.length,0);
+  }
 });
 
 const originalGoogle={clientId:'google-client',clientSecret:'test-client-secret',redirectUrl:`${ORIGIN}/siyadah-api/v1/integrations/oauth/callback`};

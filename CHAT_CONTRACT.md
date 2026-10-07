@@ -40,7 +40,7 @@ The start response includes `authorizationRevision`, a digest of the native regi
 | Field | Meaning | May prove an external action? |
 | --- | --- | --- |
 | `request_status` | Whether Siyadah recorded and handled this request: `queued`, `succeeded`, `failed`, `not_observed` | No |
-| `outcome_kind` | What kind of response was produced: `conversation_reply`, `employee_draft`, `external_run`, `tool_result`, `employee_ready`, `unverified` | Only identifies the kind; proof is separate |
+| `outcome_kind` | What kind of response was produced: `conversation_reply`, `employee_draft`, `flow_draft_saved`, `external_run`, `tool_result`, `employee_ready`, `unverified` | Only identifies the kind; proof is separate |
 | `work_status` | Legacy progress/status field; `not_started` for a reply or disabled employee draft | Never by itself |
 | `work_id` | Identifier for status tracking; a `request_…` value is not a provider run | No |
 | `recent_work[].runId` | Activepieces run reference | Proves a run reference, not a provider outcome |
@@ -55,7 +55,8 @@ The start response includes `authorizationRevision`, a digest of the native regi
 | Employee saved | `request_status:succeeded`, `outcome_kind:employee_draft`, `work_status:not_started`, `employee.status:disabled`, `employee.flowId:null` until prepared | The employee is saved as a draft in Siyadah; its tools and runnable flow are not ready and it has not acted. |
 | Flow draft linked | `outcome_kind:employee_draft`, `employee.status:disabled`, `employee.flowId` after owned Flow readback | The Flow was saved for this employee and remains disabled; no task or provider action is proven. |
 | Activation after connection | A newly built, linked, disabled employee Flow may carry `auto_activate_after_connection:true` with its exact employee and Flow IDs in the saved request receipt. `resume_employee_activation` returns `none`, `pending`, or `active`. | Only the single matching employee is tested and activated after every required connection is active; `pending` never means it has started. A test run can have real external effects even in TESTING. |
-| General Flow draft | `outcome_kind:conversation_reply`, `flow_id` after owned Flow readback, no employee | The Flow was saved disabled in this company's project; no task or provider action is proven. |
+| Verified Flow draft | `outcome_kind:flow_draft_saved`, `request_status:succeeded`, `work_status:succeeded`, `draft_receipt` with `flow_id`, `version_id`, `status:DRAFT` after owned Flow readback | The requested native Flow edits returned and the current Flow is saved disabled in this company's project. A verified exact `TESTING` run adds `test_run_id`, `test_environment:TESTING` and the native `used_mock_trigger_data` flag when provided; an edit after the test or an unverified test keeps the overall request unknown. This proves no publication, production run, provider result or KPI. |
+| General Flow draft without a settled receipt | `outcome_kind:conversation_reply` or `unverified`, `flow_id` after owned Flow readback | A saved draft can be shown without claiming the whole multi-step request succeeded. |
 | Uncertain outcome | `request_status:not_observed`, `outcome_kind:unverified`, `work_status:unknown` | The result is unverified; check the same request ID. |
 | Rejected before dispatch | `request_status:failed`, `outcome_kind:unverified`, `work_status:failed`, no `transport_receipt` | The employee's task did not start. |
 | Employee tested and activated | `request_status:succeeded`, `work_status:succeeded`, `outcome_kind:employee_ready`, verified `readiness_receipt` | Configuration test and activation verified; no production task or KPI is implied. Mixed effects keep the overall request unverified. |
@@ -66,6 +67,8 @@ The start response includes `authorizationRevision`, a digest of the native regi
 For a provider result from a Flow, require a terminal scoped FlowRun, the relevant step output, and validation specific to that tool. For a one-shot `ap_run_action`, use its returned ActionRun output and validate the evidence specific to that action; it does not create a Flow. `isError:false` or HTTP 200 alone is insufficient, especially for writes or empty output. A customer-visible result and a KPI need their own evidence.
 
 Saving an employee draft requires the company database and does not provision Activepieces. In main chat the model decides whether the user's goal calls for a Flow, then creates at most one employee draft when it invokes `ap_build_flow`; scoped MCP readback is required before linking. A saved draft alone must never be described as execution-ready or activated. A real test and provider result must precede the customer's decision to enable ongoing work.
+
+When the current customer request explicitly says to keep the Flow as a draft or not publish it, the chat MCP dispatcher rejects publish and enable calls and does not queue automatic activation. An explicit instruction not to run also rejects Flow test, retry, direct action, and selected employee Flow execution calls. These request-level guards leave the Flow disabled; a later request to publish or run is evaluated on its own permissions and readiness evidence.
 
 ## Release boundary
 

@@ -3,6 +3,63 @@
   "repository": "ALKHANFAR/t43",
   "features": [
     {
+      "id": "native_flow_draft_test_receipt",
+      "name": "إثبات حفظ مسودة الفلو واختبارها في الشات",
+      "aliases": ["دليل مسودة الفلو", "نتيجة اختبار الفلو", "draft flow test receipt"],
+      "state": "draft_pr",
+      "meaning": "بعد أدوات MCP الأصلية، تؤكد سيادة من Activepieces أن الفلو المملوك للشركة ما زال DRAFT وDISABLED. لا تعرض اختبار TESTING إلا بعد قراءة رقم تشغيله ومطابقة النسخة الحالية؛ التعديل بعد الاختبار أو الأثر المختلط يبقي الطلب غير مؤكد. لا يثبت ذلك نشرًا أو تشغيلًا إنتاجيًا أو نتيجة مزود. التغيير غير منشور.",
+      "linear": "ABO-69",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/64",
+      "locations": [
+        {"role": "readback", "path": "server.mjs", "anchor": "let draftReceipt=null;"},
+        {"role": "settlement", "path": "lib/chat-outcome.mjs", "anchor": "outcome_kind:'flow_draft_saved'"},
+        {"role": "render", "path": "app/chat.js", "anchor": "function siyDraftReceipt(data)"},
+        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "| Verified Flow draft |"},
+        {"role": "server_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "saved native draft and exact TESTING run settle with scoped draft proof"},
+        {"role": "ui_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "native draft receipt shows scoped TESTING proof without production claim"}
+      ]
+    },
+    {
+      "id": "chat_structured_result_and_proof_scope",
+      "name": "عرض نتيجة الموظف ودليل الطلب الصحيح",
+      "aliases": ["رد JSON للموظف", "بطاقة دليل التشغيل القديم"],
+      "state": "draft_pr",
+      "meaning": "يعرض صفوف JSON البسيطة كجدول مقروء، ويعرض معرّف التشغيل المؤكد العائد من تسوية الطلب نفسه. لا يربط طلبًا جديدًا بدليل سابق إلا عند تطابق معرّفي الطلب والمحادثة. التعديل محلي وغير منشور.",
+      "linear": "ABO-69",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/64",
+      "locations": [
+        {"role": "render", "path": "app/chat.js", "anchor": "function siyReplyHtml(text)"},
+        {"role": "verified_run", "path": "app/chat.js", "anchor": "var verifiedRun=kind==='tool_result'"},
+        {"role": "proof_scope", "path": "app/chat.js", "anchor": "r.work_id===data.work_id"},
+        {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "older proof in the same conversation is not presented as the latest request result"},
+        {"role": "ledger_test", "path": "scripts/chat-request-ledger-runtime.test.mjs", "anchor": "a final model reply cannot replace a run already reconciled for the request"}
+      ]
+    },
+    {
+      "id": "short_chat_execution_resume",
+      "name": "استكمال التنفيذ بعد تجهيز الجدول",
+      "aliases": [
+        "أكمل بعد الجدول",
+        "مهلة استكمال المحادثة"
+      ],
+      "state": "draft_pr",
+      "meaning": "يحجز وقت الرد بحسب مهلة الطلب، حتى تستخدم متابعة الـ25 ثانية أدوات MCP بدل التوقف قبل أول استدعاء. تعديل محلي غير منشور.",
+      "linear": "ABO-69",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/64",
+      "locations": [
+        {
+          "role": "execution",
+          "path": "server.mjs",
+          "anchor": "deadline-Date.now()<=Math.min(75_000,Math.max(5_000,deadlineMs/5))"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "short continuation budget still dispatches native MCP discovery"
+        }
+      ]
+    },
+    {
       "id": "mixed_native_action_receipts",
       "name": "توضيح نجاح إجراء مع نتيجة طلب غير مؤكدة",
       "aliases": ["النتيجة غير مؤكدة", "نجحت القراءة بعد تعذر محاولة"],
@@ -176,7 +233,7 @@
       "name": "تفعيل الموظف أو إيقافه",
       "aliases": ["تشغيل الموظف", "ايقاف الموظف", "زر الموظف", "employee state"],
       "state": "live",
-      "meaning": "تفعيل Flow الموظف داخل مشروع الشركة بعد اختبار النسخة الحالية وقراءة النسخة المنشورة. إيصال الجاهزية يثبت الاختبار والتفعيل فقط؛ الطلب المختلط يبقى غير مؤكد ولا يتحول الاختبار إلى نتيجة إنتاجية أو KPI. التفعيل التلقائي يعرض الانتظار ورسالة النقص أو الخطأ على الأسطح الموجودة، ولا يغير مفتاح الحالة إلا بعد قراءة موظف مطابق.",
+      "meaning": "تفعيل Flow الموظف داخل مشروع الشركة بعد اختبار النسخة الحالية وقراءة النسخة المنشورة. إصلاح فرع المراجعة يمنع استدعاء نشر الفلو أو تفعيله عبر MCP ويمنع تسجيل نية التفعيل التلقائي عند طلب المسودة أو عدم النشر. ويمنع اختبار الفلو أو تشغيله عند طلب عدم التشغيل صراحة؛ لم يُنشر الإصلاح بعد. إيصال الجاهزية يثبت الاختبار والتفعيل فقط؛ الطلب المختلط يبقى غير مؤكد ولا يتحول الاختبار إلى نتيجة إنتاجية أو KPI. التفعيل التلقائي يعرض الانتظار ورسالة النقص أو الخطأ على الأسطح الموجودة، ولا يغير مفتاح الحالة إلا بعد قراءة موظف مطابق.",
       "linear": "ABO-17",
       "locations": [
         {"role": "readiness_contract", "path": "CHAT_CONTRACT.md", "anchor": "## Employee readiness receipt"},
@@ -186,6 +243,11 @@
         {"role": "resume_ui", "path": "app/chat.js", "anchor": "async function siyResumePendingActivation(employeeId)"},
         {"role": "editor_continuity_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "late activation redraw preserves the instruction panel, edit, focus and selection"},
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='employee_state')"},
+        {"role": "draft_only_intent", "path": "lib/chat-intelligence.mjs", "anchor": "export function draftOnlyIntent(message)"},
+        {"role": "do_not_run_intent", "path": "lib/chat-intelligence.mjs", "anchor": "export function doNotRunIntent(message)"},
+        {"role": "draft_only_mcp_guard", "path": "server.mjs", "anchor": "draft_only_publish_forbidden"},
+        {"role": "draft_only_mcp_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "an explicit draft request blocks model publish and enable calls at MCP dispatch"},
+        {"role": "draft_only_test", "path": "scripts/employee-activation-resume-runtime.test.mjs", "anchor": "a request to leave the Flow unpublished and disabled cannot queue activation"},
         {"role": "provider", "path": "server.mjs", "anchor": "mcp=mcp||await activepiecesMcp();"},
         {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "op:'employee_state'"}
       ]
@@ -212,10 +274,10 @@
       "id": "customer_tool_oauth_connection",
       "name": "ربط أداة الشركة عند الحاجة",
       "aliases": ["ربط الأدوات", "اتصال أداة", "تسجيل دخول الأداة", "OAuth الأداة", "كتالوج الأدوات", "company tool connection", "tool catalog"],
-      "state": "gap",
-      "meaning": "ربط أدوات جديدة متوقف في PR #60 لأن تجهيز حقول المصادقة كان يعتمد على REST metadata المحظور. إدارة الاتصالات القائمة وإنهاء محاولات OAuth السابقة باقية؛ يلزم عقد أصلي لحقول المصادقة عبر MCP قبل إعادة تجهيز اتصال جديد. التغيير غير منشور.",
+      "state": "draft_pr",
+      "meaning": "PR #64 يقرأ حقول الربط من ap_setup_guide ضمن MCP مشروع الشركة. اجتاز العقد اختبارًا حيًا مع صورة PR #4 في QA معزولة وأظهر طريقة Asana متاحة؛ لم تنشر النسختان على خدمات العملاء، ولم تثبت موافقة عميل أو اتصال مزود محفوظ أو نتيجة شات الموظف. أثبتت QA بشكل منفصل فلو منشورًا وتشغيل PRODUCTION ناجحًا وقراءة حقيقية من Open-Meteo.",
       "linear": "ABO-61",
-      "pr": "https://github.com/ALKHANFAR/t43/pull/60",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/64",
       "locations": [
         {"role": "catalog", "path": "pieces.js", "anchor": "window.PIECES="},
         {"role": "catalog_mapping", "path": "app/chat.js", "anchor": "x.s===c.slug"},
@@ -226,6 +288,8 @@
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='oauth_start')"},
         {"role": "tenant_scope", "path": "lib/tool-connections.mjs", "anchor": "async function selected("},
         {"role": "method_schema", "path": "lib/tool-connections.mjs", "anchor": "function authFingerprint"},
+        {"role": "native_auth_schema", "path": "lib/tool-connections.mjs", "anchor": "name:'ap_setup_guide'"},
+        {"role": "native_auth_schema_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "company MCP auth schema prepares a project-owned connection without REST piece discovery"},
         {"role": "grant_guard", "path": "lib/tool-connections.mjs", "anchor": "unsupported_oauth_grant"},
         {"role": "typed_field_ui", "path": "app/chat.js", "anchor": "function rcField(field,index)"},
         {"role": "project_connections_list", "path": "lib/tool-connections.mjs", "anchor": "async function list(tenantId)"},

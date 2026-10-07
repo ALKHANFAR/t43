@@ -1386,6 +1386,21 @@ var I = {
     // Provider text stays verbatim; escape before adding our own formatting tags.
     function inline(value){ return esc(value).replace(/\*\*([^*\n]+)\*\*/g,"<strong>$1</strong>").replace(/`([^`\n]+)`/g,"<code>$1</code>"); }
     function cells(line){ return line.trim().replace(/^\|/,"").replace(/\|$/,"").split(/(?<!\\)\|/).map(function(cell){return cell.trim().replace(/\\\|/g,"|");}); }
+    var trimmed=String(text||'').trim();
+    var jsonStart=trimmed.search(/\n\s*[\[{]/);
+    if(jsonStart>0){
+      var intro=trimmed.slice(0,jsonStart).trim(),tail=trimmed.slice(jsonStart).trim();
+      try{var suffix=JSON.parse(tail);if(suffix&&typeof suffix==='object')return siyReplyHtml(intro)+siyReplyHtml(tail);}catch(error){}
+    }
+    if((trimmed[0]==='{'&&trimmed.at(-1)==='}')||(trimmed[0]==='['&&trimmed.at(-1)===']')){
+      try{
+        var parsed=JSON.parse(trimmed), rows=Array.isArray(parsed)?parsed:(parsed&&typeof parsed==='object'&&Object.keys(parsed).length===1&&Array.isArray(Object.values(parsed)[0])?Object.values(parsed)[0]:null);
+        if(rows&&rows.length&&rows.length<=50&&rows.every(function(row){return row&&typeof row==='object'&&!Array.isArray(row)&&Object.values(row).every(function(v){return v===null||['string','number','boolean'].includes(typeof v);});})){
+          var keys=Array.from(new Set(rows.flatMap(function(row){return Object.keys(row);}))).slice(0,12);
+          return '<div class="reply-table" role="region" tabindex="0" aria-label="'+ui('نتيجة منظمة','Structured result')+'"><table><thead><tr>'+keys.map(function(key){return '<th scope="col">'+esc(key)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(row){return '<tr>'+keys.map(function(key){return '<td dir="auto">'+esc(row[key]===undefined||row[key]===null?'':String(row[key]))+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
+        }
+      }catch(error){}
+    }
     var lines=String(text||"").replace(/\r\n?/g,"\n").split("\n"), blocks=[], plain=[];
     function flush(){ if(plain.length){blocks.push('<p>'+plain.map(inline).join('<br>')+'</p>');plain=[];} }
     for(var i=0;i<lines.length;i++){
@@ -1526,22 +1541,29 @@ var I = {
     var r=data.readiness_receipt,e=data.employee;
     return r&&e&&e.status==='active'&&typeof r.employee_id==='string'&&r.employee_id===e.recordId&&r.flow_id===e.flowId&&r.test_environment==='TESTING'&&[r.flow_id,r.published_version_id,r.test_run_id].every(function(id){return typeof id==='string'&&/^[0-9A-Za-z]{21}$/.test(id);})&&(!Object.prototype.hasOwnProperty.call(r,'used_mock_trigger_data')||typeof r.used_mock_trigger_data==='boolean')?r:null;
   }
+  function siyDraftReceipt(data){
+    var r=data.draft_receipt;
+    return data.outcome_kind==='flow_draft_saved'&&data.request_status==='succeeded'&&data.work_status==='succeeded'&&r&&r.status==='DRAFT'&&typeof r.flow_id==='string'&&/^[0-9A-Za-z]{21}$/.test(r.flow_id)&&(!data.flow_id||data.flow_id===r.flow_id)&&(!data.employee?.flowId||data.employee.flowId===r.flow_id)&&typeof r.version_id==='string'&&r.version_id.length>0&&r.version_id.length<=100&&(!Object.prototype.hasOwnProperty.call(r,'used_mock_trigger_data')||typeof r.used_mock_trigger_data==='boolean')&&(!Object.prototype.hasOwnProperty.call(r,'test_run_id')||r.test_environment==='TESTING'&&/^[0-9A-Za-z]{21}$/.test(r.test_run_id))?r:null;
+  }
   function siyResultRow(data){
-    var state=data.work_status, kind=data.outcome_kind, text=data.reply,ready=siyReadinessReceipt(data);
+    var state=data.work_status, kind=data.outcome_kind, text=data.reply,ready=siyReadinessReceipt(data),savedDraft=siyDraftReceipt(data);
     if(kind==='employee_ready'){var complete=ready&&data.request_status==='succeeded'&&state==='succeeded';if(!complete)state='unknown';if(!text)text=complete?ui('اختبرنا طريقة العمل وفعّلناها. لم تُثبت نتيجة مهمة إنتاجية بعد.','We tested and activated the workflow. A production task result is not verified yet.'):ui('لم نتأكد من اختبار طريقة العمل وتفعيلها.','Workflow testing and activation are unverified.');}
     if(!text&&kind==='conversation_reply'&&state==='not_started') text=ui('اكتملت معالجة السؤال دون تشغيل أداة، لكن تفاصيل الرد غير متاحة.','The question was processed without running a tool, but the reply details are unavailable.');
     if(!text&&kind==='tool_result'&&state==='succeeded') text=ui('اكتمل استدعاء الأداة، لكن تفاصيل النتيجة غير متاحة.','The tool action completed, but the result details are unavailable.');
     if(!text&&kind==='employee_draft'&&state==='not_started') text=ui('حُفظت مسودة الموظف. لم يبدأ تشغيل أدواته.','The employee draft was saved. Its tools have not run.');
+    if(!text&&savedDraft)text=savedDraft.test_run_id?ui('حُفظت المسودة واجتازت اختبار التهيئة. لم تُنشر أو تُشغّل إنتاجيًا.','The draft was saved and passed a configuration test. It was not published or run in production.'):ui('حُفظت المسودة ولم تُنشر أو تُشغّل إنتاجيًا.','The draft was saved and was not published or run in production.');
     if(!text&&data.request_status==='not_observed'&&state==='unknown') text=ui('لم نتأكد من نتيجة الطلب. لم نعد تنفيذه.','The request outcome is unverified. We did not run it again.');
     if(!text) text=(locale==='en'?{queued:'Request received, awaiting execution.',running:'Work in progress.',succeeded:'The run is recorded; verify the tool result.',failed:'Work could not be completed. Review the result details.',awaiting_input:'Work needs more information from you.',cancelled:'Request cancelled.'}:{queued:"تم استلام الطلب، بانتظار التنفيذ.",running:"العمل قيد التنفيذ.",succeeded:"سُجّل التشغيل؛ تحقّق من نتيجة الأداة.",failed:"تعذّر إكمال العمل. راجع تفاصيل النتيجة.",awaiting_input:"العمل ينتظر معلومات إضافية منك.",cancelled:"أُلغي الطلب."})[state]||ui("وصل الرد دون تفاصيل إضافية.","Response received without further details.");
-    var noExecution=["conversation_reply","employee_draft","employee_ready","unverified"].includes(kind),records=(noExecution?[]:Array.isArray(data.recent_work)?data.recent_work:[]).filter(function(r){return (!r.conversation_id||r.conversation_id===data.conversation_id)&&(!r.work_id||r.work_id===data.work_id);});
+    var noExecution=["conversation_reply","employee_draft","employee_ready","flow_draft_saved","unverified"].includes(kind),records=(noExecution?[]:Array.isArray(data.recent_work)?data.recent_work:[]).filter(function(r){return !!data.work_id&&r.work_id===data.work_id&&!!data.conversation_id&&r.conversation_id===data.conversation_id;});
     var scoped=records.filter(function(r){return r.conversation_id;});
     var readiness=ready?siyRefsHtml([['طريقة العمل',ready.flow_id],['النسخة المنشورة',ready.published_version_id],['اختبار التهيئة',ready.test_run_id]],ui('اختبار تهيئة (TESTING)، وليس تنفيذ مهمة إنتاجية.','Configuration test (TESTING), not a production task.')+(ready.used_mock_trigger_data===true?ui(' استخدم بيانات مشغّل تجريبية.',' Used mock trigger data.'):'')):'';
-    var draft=data.draft&&data.flow_id?siyRefsHtml([['طريقة العمل',data.flow_id],['المهمة',data.work_id]]):'';
+    var draftProof=savedDraft?siyRefsHtml([['طريقة العمل',savedDraft.flow_id]].concat(savedDraft.test_run_id?[['اختبار التهيئة',savedDraft.test_run_id]]:[]),ui('مسودة داخل مساحة شركتك؛ لم تُنشر أو تُشغّل إنتاجيًا.','Draft in your workspace; not published or run in production.')+(savedDraft.used_mock_trigger_data===true?ui(' استخدم الاختبار بيانات مشغّل تجريبية.',' The test used mock trigger data.'):'')):'';
+    var verifiedRun=kind==='tool_result'&&state==='succeeded'&&data.request_status==='succeeded'&&typeof data.run_id==='string'&&/^[0-9A-Za-z]{21}$/.test(data.run_id)&&typeof data.flow_id==='string'&&/^[0-9A-Za-z]{21}$/.test(data.flow_id)?siyRefsHtml([['التشغيل',data.run_id],['طريقة العمل',data.flow_id]],ui('نتيجة تشغيل هذا الطلب مؤكدة من سجل التنفيذ.','This request’s run was verified from the execution record.')):'';
+    var draft=!savedDraft&&data.draft&&data.flow_id?siyRefsHtml([['طريقة العمل',data.flow_id],['المهمة',data.work_id]]):'';
     var receipts=Array.isArray(data.tool_receipts)?data.tool_receipts.filter(function(r){return r&&typeof r.name==='string'&&['returned','error'].includes(r.status);}).slice(0,80):[];
     var partialActionResult=state==='unknown'&&receipts.some(function(r){return r.name==='ap_run_action'&&r.status==='returned'&&r.outcome==='action_completed'&&typeof r.run_id==='string'&&/^[0-9A-Za-z]{21}$/.test(r.run_id);})&&receipts.some(function(r){return r.status==='error'||r.effect_attempted===true&&r.outcome!=='action_completed';});
     var tools=receipts.length?'<details class="plan nr" style="margin-top:10px"><summary>'+ui('استدعاءات الأدوات','Tool calls')+' · '+receipts.length+'</summary>'+receipts.map(function(r,i){var run=r.name==='ap_run_action'&&typeof r.run_id==='string'&&/^[0-9A-Za-z]{21}$/.test(r.run_id)?r.run_id:'';return '<div class="prow"><b>'+(i+1)+'</b><span>'+esc(r.name)+' · '+(r.status==='error'?ui('تعذّر الاستدعاء','Call failed'):run&&r.outcome==='action_completed'?ui('اكتمل استدعاء الإجراء','Action completed'):ui('أعادت ردًا','Returned a response'))+(run?'<small>'+ui('مرجع الإجراء: ','Action run: ')+'<code>'+esc(run)+'</code></small>':'')+(r.output_limited===true?'<small>'+ui('اختصرت الخدمة بعض الحقول؛ اطلب نطاقًا أضيق لعرضها كاملة.','The service shortened some fields; request a narrower scope to display them in full.')+'</small>':'')+'</span></div>';}).join('')+'<p>'+ui('رد الأداة وحده لا يثبت نتيجة الخدمة.','A tool response alone does not prove the provider outcome.')+'</p></details>':'';
-    return {me:false,at:now(),requestState:state,partialActionResult:partialActionResult,t:siyReplyHtml(text)+readiness+tools+siyBuilderProposalHtml(data)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,ui('نتائج هذا الطلب','Results for this request')):'')+siyLegacyProofHtml(records)+draft,workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;}),builderApproval:data.approval&&data.approval.required===true?{id:data.approval.approval_id,conversationId:data.conversation_id}:null};
+    return {me:false,at:now(),requestState:state,partialActionResult:partialActionResult,t:siyReplyHtml(text)+readiness+draftProof+verifiedRun+tools+siyBuilderProposalHtml(data)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,ui('نتائج هذا الطلب','Results for this request')):'')+siyLegacyProofHtml(records)+draft,workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;}),builderApproval:data.approval&&data.approval.required===true?{id:data.approval.approval_id,conversationId:data.conversation_id}:null};
   }
   async function siyDecideBuilder(row,decision){
     if(!row||!row.builderApproval||row.siyInFlight) return;
@@ -1619,7 +1641,7 @@ var I = {
         (!r.conversation_id||r.conversation_id===list.siyConversationId)&&
         !list.some(function(m){return Array.isArray(m.proofIds)&&m.proofIds.includes(r.recordId);});
     });
-    return proofs.length?'<div class="m m--ai"><span class="m__av">'+avHtml(e.id)+'</span><div class="m__b"><div class="m__c">'+(proofs.some(function(r){return r.conversation_id;})?siyWorkHtml(proofs.filter(function(r){return r.conversation_id;}),ui('نتائج هذه المحادثة','Results from this conversation')):'')+siyLegacyProofHtml(proofs)+'</div></div></div>':"";
+    return proofs.length?'<div class="m m--ai"><span class="m__av">'+avHtml(e.id)+'</span><div class="m__b"><div class="m__c">'+(proofs.some(function(r){return r.conversation_id;})?siyWorkHtml(proofs.filter(function(r){return r.conversation_id;}),ui('سجل تشغيل في هذه المحادثة — غير مربوط برسالة محددة','Run history in this conversation — not linked to a specific message')):'')+siyLegacyProofHtml(proofs)+'</div></div></div>':"";
   }
   function siyLegacyProofHtml(records){
     var legacy=records.filter(function(r){return !r.conversation_id;});
