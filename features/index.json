@@ -502,7 +502,7 @@
       "state": "draft_pr",
       "meaning": "وصلت PR64 إلى الإنتاج، وثبتت موافقة MCP من مستخدم Activepieces جديد بصلاحية MEMBER لمشروع شركته ونفس جلسة سيادة. الفرع الحالي يضيف دعوة PROJECT/Editor الأصلية قبل بدء الموافقة اعتمادًا على بريد واحد مؤكد من الخادم؛ لا يختار المتصفح البريد أو المشروع أو الصلاحية. لا يزال تسجيل الدخول أو التسجيل في نافذة الموافقة الأصلية مطلوبًا، ولم تثبت موافقة مزود خارجي بعد.",
       "linear": "ABO-69",
-      "pr": "https://github.com/ALKHANFAR/t43/pull/60",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/65",
       "locations": [
         {"role": "verified_native_identity", "path": "lib/account-auth.mjs", "anchor": "async function verifiedEmail(companyId)"},
         {"role": "native_project_membership", "path": "lib/tenant-projects.mjs", "anchor": "async function ensureMember({tenantId,email})"},

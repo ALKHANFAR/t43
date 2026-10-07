@@ -23,3 +23,9 @@ The real production model built Flow `9fAnDkFec1jeo8DSNouL2` through native `ap_
 Full npm test exited 0: 417 runtime tests, 416 passed, 1 skipped, 0 failed; feature index, static checks and Chrome accessibility passed (all ten pages 100/100). Tests reject absent/ambiguous verified identities, cross-project or mismatched native invitation readback, pending/platform invitations and OAuth registration before verified membership. Shared contract documented in CHAT_CONTRACT.md. Manual SQL/route/native adapter contract review completed; GitHub CI billing blockage remains a limitation, not a passing check.
 
 Authenticated Asana OAuth reached the provider login page through Skyvern. No saved Skyvern credentials were available. Provider connection and authenticated provider result remain unproved pending the user's personal login and consent. No passwords or OAuth credentials are included in this evidence.
+
+## Production employee execution and provider connection
+
+Actual employee chat request `prod_delivery_execute_20261008` completed with `work_status:succeeded`, exact FlowRun `2MQyyg5KpKgqQ6YHTXOCQ`, and public provider values at 2026-10-08T01:00 Riyadh: 31.8 C, precipitation 0 mm, wind 9 km/h. This is separate from the build/test run.
+
+Using the operator-requested existing Google Chrome session, actual Asana OAuth code was exchanged through the original company-bound sealed attempt. The native PROJECT-scoped connection `Yc2pGMva051J3MMUa0Uk1` read back ACTIVE in the new company project. No token was copied from another company. Asana-specific execution/readback is still a separate pending proof.
