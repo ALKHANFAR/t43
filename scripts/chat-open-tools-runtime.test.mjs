@@ -43,7 +43,7 @@ const catalog=[
 const say=content=>({content});
 const use=(...calls)=>({content:'',tool_calls:calls.map(([name,args],index)=>({id:`call_${name}_${index}`,function:{name,arguments:typeof args==='string'?args:JSON.stringify(args||{})}}))});
 
-function setup({script,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false}={}){
+function setup({script,clock=Date,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false}={}){
   const log={model:[],tools:[],effects:0,states:[],owned:[],runs:[]};
   let stateAttempts=0,step=0,status=flowStatus,publishedVersionId=published?'v1':null,draftVersionId='v1',versionState=published?'LOCKED':'DRAFT',sampleData,updated='before',updatedBy,taskInput='{{trigger.task}}';
   const mcp={call:async(_company,method,params)=>{
@@ -60,7 +60,7 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false,edit
   }};
   const ctx={
     console:{error:()=>{},info:()=>{},warn:()=>{}},process:{env:{DEEPSEEK_API_KEY:'test-key'}},
-    AbortController,setTimeout,clearTimeout,Date,JSON,String,Array,Object,Math,
+    AbortController,setTimeout,clearTimeout,Date:clock,JSON,String,Array,Object,Math,
     TenantProjectError,CompanyProfileError,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,
     fetch:async(url,options)=>{
       const request=JSON.parse(options.body);log.model.push(request);
@@ -261,15 +261,29 @@ test('the step limit ends with a written account instead of a fixed sentence',as
   assert.equal(log.model.at(-1).tools,undefined);
 });
 
+test('short continuations retain native tools at 2, 3 and 25 seconds',async()=>{
+  for(const deadlineMs of [2_000,3_000,25_000]){
+    const {run,log}=setup({clock:{now:()=>0},script:[use(['ap_research_pieces',{}]),say('قرأت الأدوات بعد تجهيز الجدول.')]});
+    const answer=await run({deadlineMs,excludedTools:['ap_create_table']});
+    assert.deepEqual(log.tools,[['ap_research_pieces',{}]],`native tool missing at ${deadlineMs}ms`);
+    assert.equal(answer.reply,'قرأت الأدوات بعد تجهيز الجدول.');
+    assert.equal(log.effects,0);
+  }
+});
+
 test('a request that runs out of time still ends with an account of what ran',async()=>{
-  const near=setup({script:[request=>request.tools?use(['ap_add_step',{flowId}]):say('أضفت خطوة واحدة وبقي النشر.')]});
+  let now=0;
+  const near=setup({clock:{now:()=>now},script:[request=>request.tools?use(['ap_add_step',{flowId}]):say('أضفت خطوة واحدة وبقي النشر.')],toolResults:{ap_add_step:()=>{now=49_000;return {content:[{type:'text',text:'ok'}]};}}});
   const written=await near.run({deadlineMs:60_000});
   assert.equal(written.reply,'أضفت خطوة واحدة وبقي النشر.');
-  assert.equal(near.log.tools.length,0);
-  const late=setup({script:[use(['ap_add_step',{flowId}])],toolResults:{ap_add_step:async()=>{await new Promise(resolve=>setTimeout(resolve,30));return {content:[{type:'text',text:'ok'}]};}}});
-  const fallback=await late.run({deadlineMs:75_020});
+  assert.equal(near.log.tools.length,1);
+  assert.equal(near.log.model.at(-1).tools,undefined);
+  now=0;
+  const late=setup({clock:{now:()=>now},script:[use(['ap_add_step',{flowId}])],toolResults:{ap_add_step:()=>{now=26_000;return {content:[{type:'text',text:'ok'}]};}}});
+  const fallback=await late.run({deadlineMs:25_000});
   assert.match(fallback.reply,/ap_add_step/);
   assert.match(fallback.reply,/أكمل/);
+  assert.equal(late.log.tools.length,1);
 });
 
 test('selected employee chat calls only its published native MCP Flow tool',async()=>{

@@ -41,7 +41,9 @@
         {"role": "live_catalog", "path": "server.mjs", "anchor": "const modelTools=()=>available.filter"},
         {"role": "run_scope", "path": "server.mjs", "anchor": "employee_run_scope"},
         {"role": "test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "paused employee actually uses native action tables and AI discovery"},
-        {"role": "build_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "employee without a Flow builds and edits its own linked Flow"}
+        {"role": "build_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "employee without a Flow builds and edits its own linked Flow"},
+        {"role": "continuation_budget", "path": "server.mjs", "anchor": "const replyReserve="},
+        {"role": "continuation_budget_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "short continuations retain native tools at 2, 3 and 25 seconds"}
       ]
     },
     {

@@ -381,6 +381,7 @@ async function deepseekReply({company,settings,knowledge,team,history,message,em
   const key=process.env.DEEPSEEK_API_KEY;
   if(!key)throw new TenantProjectError('assistant_not_configured','مساعد سيادة غير مهيأ الآن.',503);
   const deadline=deadlineMs?Date.now()+deadlineMs:null;
+  const replyReserve=deadlineMs?Math.min(75_000,deadlineMs*.2):0;
   const checkDeadline=()=>{if(deadline&&Date.now()>=deadline)throw new TenantProjectError('assistant_timeout','لم يكتمل تجهيز المسودة ضمن وقت المحادثة.',504);};
   const facts=(knowledge?.facts||[]).slice(0,40).map(item=>({topic:item.topic,value:item.value,source:item.sourceUrl,certainty:item.certainty}));
   const selectedEmployee=employee?{id:employee.id,flowId:employee.activepieces_flow_id,name:employee.name,role:employee.role_title,status:employee.status,instructions:employee.prompt,instructionSource:employee.prompt_source,instructionVersion:Number(employee.prompt_version||1),knowledgeTopics:employee.knowledge_topics_json||[],tools:employee.tools_json||[]}:null;
@@ -460,8 +461,8 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   };
   try{
     for(let turn=0;turn<40;turn++){
-      // Keep the last minute for the written account; a request never ends without one.
-      if(deadline&&deadline-Date.now()<75_000)break;
+      // Reserve time for the written account without consuming a short continuation budget.
+      if(deadline&&deadline-Date.now()<replyReserve)break;
       const answer=await ask(true);
       const calls=Array.isArray(answer?.tool_calls)?answer.tool_calls:[];
       if(!calls.length){
