@@ -3,6 +3,23 @@
   "repository": "ALKHANFAR/t43",
   "features": [
     {
+      "id": "native_flow_draft_test_receipt",
+      "name": "إثبات حفظ مسودة الفلو واختبارها في الشات",
+      "aliases": ["دليل مسودة الفلو", "نتيجة اختبار الفلو", "draft flow test receipt"],
+      "state": "draft_pr",
+      "meaning": "بعد أدوات MCP الأصلية، تؤكد سيادة من Activepieces أن الفلو المملوك للشركة ما زال DRAFT وDISABLED. لا تعرض اختبار TESTING إلا بعد قراءة رقم تشغيله ومطابقة النسخة الحالية؛ التعديل بعد الاختبار أو الأثر المختلط يبقي الطلب غير مؤكد. لا يثبت ذلك نشرًا أو تشغيلًا إنتاجيًا أو نتيجة مزود. التغيير غير منشور.",
+      "linear": "ABO-69",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/64",
+      "locations": [
+        {"role": "readback", "path": "server.mjs", "anchor": "let draftReceipt=null;"},
+        {"role": "settlement", "path": "lib/chat-outcome.mjs", "anchor": "outcome_kind:'flow_draft_saved'"},
+        {"role": "render", "path": "app/chat.js", "anchor": "function siyDraftReceipt(data)"},
+        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "| Verified Flow draft |"},
+        {"role": "server_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "saved native draft and exact TESTING run settle with scoped draft proof"},
+        {"role": "ui_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "native draft receipt shows scoped TESTING proof without production claim"}
+      ]
+    },
+    {
       "id": "chat_structured_result_and_proof_scope",
       "name": "عرض نتيجة الموظف ودليل الطلب الصحيح",
       "aliases": ["رد JSON للموظف", "بطاقة دليل التشغيل القديم"],

@@ -495,7 +495,19 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   };
   const finish=async reply=>{
     await syncEmployeeState();
-    return {reply:String(reply).slice(0,6000),effects,toolReceipts,flowToolAttempted,...(readinessReceipt?{readinessReceipt}:{}),...(flowId?{flowId}:{}),...(linked||createdDraft?{employee:linked||createdDraft}:{})};
+    let draftReceipt=null;
+    const draftFlow=flowId||employee?.activepieces_flow_id;
+    if(draftFlow&&effects.length&&!flowToolAttempted)try{
+      const {flow}=await (await tenantProjects()).ownedFlow(companyId,draftFlow);
+      if(flow.id===draftFlow&&flow.status==='DISABLED'&&!flow.publishedVersionId&&flow.version?.state==='DRAFT'&&typeof flow.version.id==='string'&&flow.version.id){
+        draftReceipt={flow_id:draftFlow,version_id:flow.version.id,status:'DRAFT'};
+        if(testedFlowId===draftFlow&&testedRun?.id&&testedRun.environment==='TESTING'&&testedVersion===flowTestSnapshot(flow.version)){
+          draftReceipt.test_run_id=testedRun.id;draftReceipt.test_environment='TESTING';
+          if(typeof testedRun.usedMockTriggerData==='boolean')draftReceipt.used_mock_trigger_data=testedRun.usedMockTriggerData;
+        }
+      }
+    }catch(error){console.error('draft flow readback failed',error?.code||error?.name||'unknown_error');}
+    return {reply:String(reply).slice(0,6000),effects,toolReceipts,flowToolAttempted,...(readinessReceipt?{readinessReceipt}:{}),...(draftReceipt?{draftReceipt}:{}),...(flowId?{flowId}:{}),...(linked||createdDraft?{employee:linked||createdDraft}:{})};
   };
   try{
     for(let turn=0;turn<40;turn++){

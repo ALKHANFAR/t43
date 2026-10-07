@@ -1017,6 +1017,17 @@ test('instruction application does not overwrite the manager’s unsent message'
 });
 
 const readyEmployee={...employee,flowId:'f'.repeat(21)};
+test('native draft receipt shows scoped TESTING proof without production claim',async()=>{
+  for(const locale of ['ar','en']){
+    const p=await page({locale,message:{ok:true,conversation_id:'draft-proof',request_status:'succeeded',work_status:'succeeded',outcome_kind:'flow_draft_saved',draft_receipt:{flow_id:'F'.repeat(21),version_id:'v1',status:'DRAFT',test_run_id:'R'.repeat(21),test_environment:'TESTING'}}});try{
+      send(p,'جهز المسودة واختبرها');await flush();
+      const details=p.d.querySelector('.m__c .siyrefs');assert.ok(details);
+      assert.deepEqual([...details.querySelectorAll('code')].map(x=>x.textContent),['F'.repeat(21),'R'.repeat(21)]);
+      assert.match(thread(p),locale==='ar'?/لم تُنشر أو تُشغّل إنتاجيًا/:/not published or run in production/);
+      assert.equal(p.d.querySelector('.request-state'),null);
+    }finally{p.close();}
+  }
+});
 const readiness={employee_id:employee.recordId,flow_id:readyEmployee.flowId,published_version_id:'v'.repeat(21),test_run_id:'r'.repeat(21),test_environment:'TESTING',used_mock_trigger_data:true};
 test('employee readiness uses collapsed TESTING evidence without claiming provider or KPI success in RTL and LTR',async()=>{
   for(const locale of ['ar','en']){

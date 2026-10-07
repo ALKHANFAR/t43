@@ -509,6 +509,22 @@ const executionResult=(overrides={})=>({content:[{type:'text',text:'native reply
 const productionRun=(overrides={})=>({structuredContent:{id:runId,flowId,environment:'PRODUCTION',status:'SUCCEEDED',steps:[{name:'trigger',output:{}},{name:'reply',output:{status:200,body:{result:'QA'}}}],...overrides}});
 const runningEmployee={id:'employee-9',status:'active',activepieces_flow_id:flowId,tools_json:['mcp']};
 
+test('saved native draft and exact TESTING run settle with scoped draft proof',async()=>{
+  const {run,log}=setup({script:[use(['ap_build_flow',{flowName:'طلب جملة'}]),use(['ap_test_flow',{flowId}]),say('حفظت المسودة واختبرتها.') ]});
+  const answer=await run({message:'جهز مسودة فقط واختبرها'});
+  assert.deepEqual(log.tools.map(item=>item[0]),['ap_build_flow','ap_test_flow','ap_get_run']);
+  assert.deepEqual(JSON.parse(JSON.stringify(answer.draftReceipt)),{flow_id:flowId,version_id:'v1',status:'DRAFT',test_run_id:runId,test_environment:'TESTING',used_mock_trigger_data:false});
+  assert.deepEqual(JSON.parse(JSON.stringify(completedToolActions(answer))),{request_status:'succeeded',work_status:'succeeded',outcome_kind:'flow_draft_saved',draft_receipt:JSON.parse(JSON.stringify(answer.draftReceipt))});
+});
+
+test('a changed draft after TESTING does not settle the requested test',async()=>{
+  const {run}=setup({script:[use(['ap_build_flow',{flowName:'طلب جملة'}]),use(['ap_test_flow',{flowId}]),use(['ap_add_step',{flowId}]),say('عدلت المسودة بعد الاختبار.') ]});
+  const answer=await run({message:'جهز مسودة فقط واختبرها'});
+  assert.equal(answer.draftReceipt?.status,'DRAFT');
+  assert.equal(answer.draftReceipt?.test_run_id,undefined);
+  assert.equal(completedToolActions(answer).work_status,'unknown');
+});
+
 test('earlier Flow edits including failed writes block native dispatch in the same batch or next turn',async()=>{
   for(const sameBatch of [true,false])for(const failedWrite of [true,false]){
     let nativeReconciliations=0;
