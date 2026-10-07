@@ -13,7 +13,7 @@ import {createFirecrawlClient,FirecrawlError} from './lib/firecrawl.mjs';
 import {createCompanyProfileService,CompanyProfileError} from './lib/company-profile.mjs';
 import {createAccountAuthService,AccountAuthError} from './lib/account-auth.mjs';
 import {createMailer,MailerError} from './lib/mailer.mjs';
-import {builtFlowResult,conversationMemory,createdTableReadback,draftOnlyIntent,flowName,hasActiveFlowConnections,publishedAIInstructionSteps} from './lib/chat-intelligence.mjs';
+import {builtFlowResult,conversationMemory,createdTableReadback,draftOnlyIntent,doNotRunIntent,flowName,hasActiveFlowConnections,publishedAIInstructionSteps} from './lib/chat-intelligence.mjs';
 import {completedWithoutExecution,failedChatExecution,nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget} from './lib/chat-outcome.mjs';
 import {assertSchemaReady} from './lib/schema-ready.mjs';
 import {toolIcon} from './lib/tool-icons.mjs';
@@ -407,6 +407,8 @@ async function successfulFlowTest(mcp,companyId,flowId,test){
 }
 async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null,mcp=null,companyId=null,conversationId=null,deadlineMs=null,excludedTools=[],onEffectStart=null,onNativeExecution=null,createDraft=null}){
   mcp=mcp?.forRequest?.()||mcp;
+  const draftOnly=draftOnlyIntent(message);
+  const doNotRun=doNotRunIntent(message);
   const key=process.env.DEEPSEEK_API_KEY;
   if(!key)throw new TenantProjectError('assistant_not_configured','مساعد سيادة غير مهيأ الآن.',503);
   const deadline=deadlineMs?Date.now()+deadlineMs:null;
@@ -453,6 +455,8 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   const modelTools=()=>available.filter(tool=>/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(tool.name)).map(tool=>({type:'function',function:{name:tool.name,description:String(tool.description||'').slice(0,4000),parameters:tool.inputSchema||{type:'object',properties:{}}}}));
   let tools=modelTools();
   if(available.length)messages[0].content+='\nأدوات Activepieces تخص مشروع هذه الشركة. اختر منها بحرية ما يخدم هدف المستخدم، وصغ التعليمات والمدخلات داخل Flow/Agent عبر MCP، واستند إلى نتائج الأدوات في وصف ما حدث. إذا أراد المستخدم عملًا مستمرًا، اختبره ثم فعّله عند نجاح التجربة واكتمال اتصالاته؛ وإن نقص اتصال فاذكره وانتظر اكتماله. لا تدّع تشغيلًا أو نتيجة مزود لم تتحقق منها.';
+  if(draftOnly)messages[0].content+='\nطلب المستخدم إبقاء الفلو مسودة: لا تنشره ولا تفعّله في هذه الرسالة، حتى إن نجح التحقق أو الاختبار.';
+  if(doNotRun)messages[0].content+='\nطلب المستخدم عدم التشغيل: لا تختبر الفلو ولا تنفذه أو تعيد تشغيله في هذه الرسالة.';
   if(draftEmployee)messages[0].content+='\nللمستخدم مسودة موظف محفوظة في currentDraft. إن لم يكن لها flowId فابنِ طريقة عملها بـ ap_build_flow وستُربط بها؛ وإن وُجد flowId فاقرأها وعدّلها بأدوات التعديل ولا تنشئ لها Flow ثانيًا. إن كان سيستقبل مهام من شاته فاجعل مشغّل الفلو MCP Tool مع Wait for Response وأضف Reply to MCP Client؛ اكتشف حقول القطعتين من Activepieces قبل البناء.';
   if(employee||draftEmployee)messages[0].content+='\nتعليمات الموظف في السياق محفوظة للمحادثة؛ ليست دليلًا على تعليمات التشغيل. عند طلب تطبيقها على العمل، اقرأ طريقة العمل من Activepieces وحدّد خطوة AI وحقولها، ثم عدّل تعليمات الخطوة داخل Flow الموظف مع حفظ متغيرات المهمة ومراجع الخطوات. اقرأ التعديل ثانية وبيّن هل هو مسودة أم منشور. لا تعدّل Agent مشتركًا؛ تعليمات خطوة Run Agent تخص هذا Flow. إن لم توجد خطوة مناسبة فاشرح ما يلزم دون ادعاء تطبيقها.';
   if(employee)messages[0].content+='\nهذه محادثة الموظف المحدد. استخدم جميع أدوات المشروع الأصلية التي تخدم طلب المستخدم، بما فيها إجراءات التطبيقات والجداول والنماذج والإرشادات. عند قراءة طريقة عمل الموظف أو تعديلها استخدم flowId الموجود في selectedEmployee فقط؛ إن غاب فجهّزها بأداة البناء الأصلية وستُربط بنفس الموظف. لا تنفّذ طريقة عمل موظف آخر ولا تبدّل المشروع.';
@@ -517,6 +521,8 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           if(draftEmployee?.activepieces_flow_id&&['ap_build_flow','ap_create_flow'].includes(name))throw new TenantProjectError('employee_flow_conflict','طريقة عمل المسودة محفوظة؛ اقرأها وعدّلها دون إنشاء نسخة ثانية.',409);
           let args;try{args=JSON.parse(call.function.arguments||'{}');}catch{args=null;}
           if(!args||typeof args!=='object'||Array.isArray(args))throw new TenantProjectError('mcp_arguments_invalid','مدخلات الأداة يجب أن تكون كائن JSON واحدًا.',502);
+          if(draftOnly&&(name==='ap_lock_and_publish'||name==='ap_change_flow_status'&&String(args.status||'').toUpperCase()==='ENABLED'))throw new TenantProjectError('draft_only_publish_forbidden','طلب المستخدم إبقاء الفلو مسودة؛ لا تنشره أو تفعّله.',403);
+          if(doNotRun&&(['ap_test_flow','ap_retry_run','ap_run_action'].includes(name)||name===flowToolName))throw new TenantProjectError('flow_run_forbidden','طلب المستخدم عدم تشغيل الفلو أو اختبار تنفيذه.',403);
           if(['ap_build_flow','ap_create_flow'].includes(name)&&flowId)throw new TenantProjectError('employee_flow_conflict','بُني Flow في هذا الطلب. اقرأه وعدّل خطواته بدل إنشاء نسخة ثانية.',409);
           if(name===flowToolName&&flowToolAttempted)throw new TenantProjectError('employee_run_already_dispatched','أُرسل تشغيل الموظف لهذا الطلب. تحقّق من نتيجته دون إعادة تشغيله.',409);
           if(name===flowToolName&&effects.length||flowToolAttempted&&!readOnly(name))throw new TenantProjectError('employee_run_mixed_effects','تشغيل الموظف يحتاج طلبًا مستقلًا عن تعديل طريقة عمله. يمكنك قراءة نتيجة التشغيل الحالي.',409);

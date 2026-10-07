@@ -67,6 +67,8 @@ For a provider result from a Flow, require a terminal scoped FlowRun, the releva
 
 Saving an employee draft requires the company database and does not provision Activepieces. In main chat the model decides whether the user's goal calls for a Flow, then creates at most one employee draft when it invokes `ap_build_flow`; scoped MCP readback is required before linking. A saved draft alone must never be described as execution-ready or activated. A real test and provider result must precede the customer's decision to enable ongoing work.
 
+When the current customer request explicitly says to keep the Flow as a draft or not publish it, the chat MCP dispatcher rejects publish and enable calls and does not queue automatic activation. An explicit instruction not to run also rejects Flow test, retry, direct action, and selected employee Flow execution calls. These request-level guards leave the Flow disabled; a later request to publish or run is evaluated on its own permissions and readiness evidence.
+
 ## Release boundary
 
 Before merging, compare the exact head and base, verify the resolved Railway pre-deploy command and schema, run the relevant acceptance tests, and read provider results at their own evidence level. A deployed build, an open PR, a merged commit, an Activepieces Flow, and a provider outcome are separate facts.

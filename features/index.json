@@ -216,7 +216,7 @@
       "name": "تفعيل الموظف أو إيقافه",
       "aliases": ["تشغيل الموظف", "ايقاف الموظف", "زر الموظف", "employee state"],
       "state": "live",
-      "meaning": "تفعيل Flow الموظف داخل مشروع الشركة بعد اختبار النسخة الحالية وقراءة النسخة المنشورة. إصلاح فرع المراجعة يمنع تسجيل نية التفعيل التلقائي عند طلب المسودة أو عدم النشر، حتى مع صياغات عربية مثل لا تنشر أو DRAFT وDISABLED؛ لم يُنشر الإصلاح بعد. إيصال الجاهزية يثبت الاختبار والتفعيل فقط؛ الطلب المختلط يبقى غير مؤكد ولا يتحول الاختبار إلى نتيجة إنتاجية أو KPI. التفعيل التلقائي يعرض الانتظار ورسالة النقص أو الخطأ على الأسطح الموجودة، ولا يغير مفتاح الحالة إلا بعد قراءة موظف مطابق.",
+      "meaning": "تفعيل Flow الموظف داخل مشروع الشركة بعد اختبار النسخة الحالية وقراءة النسخة المنشورة. إصلاح فرع المراجعة يمنع استدعاء نشر الفلو أو تفعيله عبر MCP ويمنع تسجيل نية التفعيل التلقائي عند طلب المسودة أو عدم النشر. ويمنع اختبار الفلو أو تشغيله عند طلب عدم التشغيل صراحة؛ لم يُنشر الإصلاح بعد. إيصال الجاهزية يثبت الاختبار والتفعيل فقط؛ الطلب المختلط يبقى غير مؤكد ولا يتحول الاختبار إلى نتيجة إنتاجية أو KPI. التفعيل التلقائي يعرض الانتظار ورسالة النقص أو الخطأ على الأسطح الموجودة، ولا يغير مفتاح الحالة إلا بعد قراءة موظف مطابق.",
       "linear": "ABO-17",
       "locations": [
         {"role": "readiness_contract", "path": "CHAT_CONTRACT.md", "anchor": "## Employee readiness receipt"},
@@ -227,6 +227,9 @@
         {"role": "editor_continuity_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "late activation redraw preserves the instruction panel, edit, focus and selection"},
         {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='employee_state')"},
         {"role": "draft_only_intent", "path": "lib/chat-intelligence.mjs", "anchor": "export function draftOnlyIntent(message)"},
+        {"role": "do_not_run_intent", "path": "lib/chat-intelligence.mjs", "anchor": "export function doNotRunIntent(message)"},
+        {"role": "draft_only_mcp_guard", "path": "server.mjs", "anchor": "draft_only_publish_forbidden"},
+        {"role": "draft_only_mcp_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "an explicit draft request blocks model publish and enable calls at MCP dispatch"},
         {"role": "draft_only_test", "path": "scripts/employee-activation-resume-runtime.test.mjs", "anchor": "a request to leave the Flow unpublished and disabled cannot queue activation"},
         {"role": "provider", "path": "server.mjs", "anchor": "mcp=mcp||await activepiecesMcp();"},
         {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "op:'employee_state'"}

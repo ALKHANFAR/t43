@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
-import {builtFlowResult,conversationMemory,draftOnlyIntent} from '../lib/chat-intelligence.mjs';
+import {builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent} from '../lib/chat-intelligence.mjs';
 import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool} from '../lib/mcp-flow-scope.mjs';
 import {TenantProjectError} from '../lib/tenant-projects.mjs';
 import {nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget,failedChatExecution} from '../lib/chat-outcome.mjs';
@@ -59,7 +59,7 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false,edit
   const ctx={
     console:{error:()=>{},info:()=>{},warn:()=>{}},process:{env:{DEEPSEEK_API_KEY:'test-key'}},
     AbortController,setTimeout,clearTimeout,Date,JSON,String,Array,Object,Math,
-    TenantProjectError,CompanyProfileError,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,draftOnlyIntent,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,
+    TenantProjectError,CompanyProfileError,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,
     fetch:async(url,options)=>{
       const request=JSON.parse(options.body);log.model.push(request);
       const message=script[Math.min(step++,script.length-1)];
@@ -105,6 +105,20 @@ test('the model builds, tests and publishes in one request and writes the reply 
   assert.ok(first.tools.some(tool=>tool.function.name==='ap_set_project_context'));
   assert.equal(toolMessages(last).length,5);
   assert.match(toolMessages(last)[1],/Flow created/);
+});
+
+test('an explicit draft request blocks model publish and enable calls at MCP dispatch',async()=>{
+  const {run,log}=setup({script:[
+    use(['ap_build_flow',{flowName:'مسودة اختبار'}]),
+    use(['ap_lock_and_publish',{flowId}],['ap_change_flow_status',{flowId,status:'enabled'}],['ap_test_flow',{flowId}]),
+    say('بقي الفلو مسودة.'),
+  ]});
+  const answer=await run({message:'أنشئ فلو مسودة. لا تنشر أو تفعّل أو تشغّل.',draftEmployee:{id:'employee-1',name:'مسودة اختبار',activepieces_flow_id:null}});
+  assert.equal(answer.flowId,flowId);
+  assert.deepEqual(log.tools.map(item=>item[0]),['ap_build_flow']);
+  assert.equal(log.states.length,0);
+  assert.match(toolMessages(log.model[2]).join(' '),/draft_only_publish_forbidden/);
+  assert.match(toolMessages(log.model[2]).join(' '),/flow_run_forbidden/);
 });
 
 test('an employee cannot be published from chat without a successful test run readback',async()=>{
