@@ -9,13 +9,14 @@ const accessSource=source.slice(source.indexOf('async function customerMcpAccess
 const callbackSource=source.slice(source.indexOf('async function finishMcpGrant('),source.indexOf('async function customerMcpAccess('));
 class TenantProjectError extends Error{constructor(code,message,status){super(message);this.code=code;this.status=status;}}
 const origin='https://accounts.example';
-function harness({invalidSession=false,input={},grantPresent=false,grantRevision=null,projectMissing=false,verificationError=false,boundCallback=false,authorizationUrl='https://ap.example/authorize?client_id=registered-client&state=sealed'}={}){
+function harness({invalidSession=false,input={},grantPresent=false,grantRevision=null,projectMissing=false,verificationError=false,membershipError=false,boundCallback=false,authorizationUrl='https://ap.example/authorize?client_id=registered-client&state=sealed'}={}){
   const calls=[];
-  const context={TenantProjectError,createHash,URL,console:{warn(){}},publicOrigin:()=>origin,
+  const context={TenantProjectError,AccountAuthError:TenantProjectError,createHash,URL,console:{warn(){}},publicOrigin:()=>origin,
     tenantSession:async()=>{calls.push('session');if(invalidSession)throw new TenantProjectError('unauthorized','login',401);return {session:{companyId:'company-a'}};},
     body:async()=>{calls.push('body');return input;},oauthSessionBinding:()=> 'session-bound',
     database:async()=>{calls.push('database');return {query:async()=>({rows:[]})};},
-    tenantProjects:async()=>({ensure:async()=>{throw Error('must use verified provisioning');}}),
+    accountAuth:async()=>({verifiedEmail:async company=>{calls.push(['identity',company]);return 'owner@example.com';}}),
+    tenantProjects:async()=>({ensure:async()=>{throw Error('must use verified provisioning');},ensureMember:async value=>{calls.push(['membership',value.tenantId,value.email]);if(membershipError)throw new TenantProjectError('customer_membership_unverified','membership',502);}}),
     provisionVerifiedTenant:async value=>{calls.push(['provision',value.tenantId]);if(verificationError)throw new TenantProjectError('email_not_verified','verify',403);},
     activepiecesMcp:async()=>{calls.push('adapter');return {
       begin:async(company,options)=>{calls.push(['begin',company,options.sessionBinding]);return authorizationUrl;},
@@ -40,7 +41,12 @@ test('customer MCP start requires the exact customer origin before body or provi
 test('customer MCP start uses verified session company and binds the original authorization',async()=>{
   const h=harness();const r=await h.run({headers:{origin}}, {},'start');assert.equal(r.status,200);assert.equal(r.body.state,'authorization_required');assert.ok(r.body.authorizationUrl);
   assert.equal(r.body.authorizationRevision,createHash('sha256').update('registered-client').digest('hex'));
-  assert.deepEqual(h.calls,['session','body','database',['provision','company-a'],'adapter',['begin','company-a','session-bound']]);
+  assert.deepEqual(h.calls,['session','body','database',['provision','company-a'],['identity','company-a'],['membership','company-a','owner@example.com'],'adapter',['begin','company-a','session-bound']]);
+});
+test('unverified project membership stops OAuth registration before access is offered',async()=>{
+  const h=harness({membershipError:true});const r=await h.run({headers:{origin}},{},'start');
+  assert.equal(r.status,502);assert.equal(r.body.error,'customer_membership_unverified');
+  assert.equal(h.calls.includes('adapter'),false);assert.equal(r.body.authorizationUrl,undefined);
 });
 test('missing native registration client cannot produce a successful customer authorization receipt',async()=>{
   const h=harness({authorizationUrl:'https://ap.example/authorize?state=sealed'});const r=await h.run({headers:{origin}},{},'start');

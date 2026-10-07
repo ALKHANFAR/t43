@@ -154,6 +154,8 @@ async function customerMcpAccess(req,res,op){
       if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).length)throw new TenantProjectError('client_scope_forbidden','نطاق الشركة يحدده الخادم فقط.',400);
       const pool=await database();
       await provisionVerifiedTenant({tenantId,query:(sql,values)=>pool.query(sql,values),ensureProject:async value=>(await tenantProjects()).ensure(value)});
+      const email=await (await accountAuth()).verifiedEmail(tenantId);
+      await (await tenantProjects()).ensureMember({tenantId,email});
       const authorizationUrl=await (await activepiecesMcp()).begin(tenantId,{sessionBinding:oauthSessionBinding(req)});
       const clientId=new URL(authorizationUrl).searchParams.get('client_id');
       if(!clientId)throw new TenantProjectError('mcp_registration_invalid','تعذّر تهيئة الموافقة.',502);
@@ -164,7 +166,7 @@ async function customerMcpAccess(req,res,op){
     return json(res,200,{ok:true,state:result.grantPresent?'authorization_stored':'authorization_required',grantRevision:result.grantPresent?result.grantRevision:null,liveVerified:false});
   }catch(error){
     if(op==='status'&&error?.code==='project_not_ready')return json(res,200,{ok:true,state:'project_required',liveVerified:false});
-    if(error instanceof TenantProjectError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
+    if(error instanceof TenantProjectError||error instanceof AccountAuthError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
     console.warn('customer MCP access failed',error?.code||error?.name||'unknown_error');
     return json(res,502,{ok:false,error:'mcp_unavailable'});
   }

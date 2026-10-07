@@ -129,3 +129,7 @@ Both chat paths use the original company MCP tool catalog and schemas. Employee 
 ### Full native catalog exposure (draft PR #60)
 
 Main and employee chat pass every protocol-valid tool advertised by the company MCP `tools/list` to the model, preserving native schemas and order without a fixed tool count. Employee state, linked Flow and continuation exclusions do not hide catalog entries. Company/project boundaries, employee Flow ownership, activation and duplicate-effect checks apply before dispatch. Project switching remains rejected; an existing draft cannot be replaced by another created Flow. This changes catalog exposure only, with no REST construction or discovery fallback and no claim that every tool has passed a live provider test.
+
+## Native customer project membership
+
+Customer MCP start first provisions the verified company project, reads exactly one verified owner email from the server account, and upserts an Activepieces PROJECT invitation with Editor role through the platform service API. Its returned email, project, type and ACCEPTED status must match before OAuth client registration. The browser still sends an empty body and chooses no identity/project/role. The customer signs in or registers with the same email in the native consent window and approves the intended company project; the callback remains bound to the original company session. This is project membership, not provider OAuth consent or an embedded SSO claim. Existing native project entitlement/seat checks remain authoritative.

@@ -500,10 +500,14 @@
       "aliases": ["تفويض الشركة", "بدء موافقة MCP", "ربط مساحة التنفيذ"],
       "name": "موافقة أدوات الشركة من جلسة العميل",
       "state": "draft_pr",
-      "meaning": "تبدأ موافقة MCP الأصلية من جلسة الشركة المؤكدة، وتعود إلى نفس الجلسة والشركة؛ حالة المنحة المحفوظة ليست إثبات جاهزية حية. لا ينشئ هذا موافقة تلقائية نيابة عن العميل أو اتصال أداة.",
+      "meaning": "وصلت PR64 إلى الإنتاج، وثبتت موافقة MCP من مستخدم Activepieces جديد بصلاحية MEMBER لمشروع شركته ونفس جلسة سيادة. الفرع الحالي يضيف دعوة PROJECT/Editor الأصلية قبل بدء الموافقة اعتمادًا على بريد واحد مؤكد من الخادم؛ لا يختار المتصفح البريد أو المشروع أو الصلاحية. لا يزال تسجيل الدخول أو التسجيل في نافذة الموافقة الأصلية مطلوبًا، ولم تثبت موافقة مزود خارجي بعد.",
       "linear": "ABO-69",
-      "pr": "https://github.com/ALKHANFAR/t43/pull/60",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/65",
       "locations": [
+        {"role": "verified_native_identity", "path": "lib/account-auth.mjs", "anchor": "async function verifiedEmail(companyId)"},
+        {"role": "native_project_membership", "path": "lib/tenant-projects.mjs", "anchor": "async function ensureMember({tenantId,email})"},
+        {"role": "membership_test", "path": "scripts/tenant-projects-runtime.test.mjs", "anchor": "customer membership uses the stored project and native Editor invitation only"},
+        {"role": "membership_registration_gate", "path": "scripts/mcp-customer-session-runtime.test.mjs", "anchor": "unverified project membership stops OAuth registration before access is offered"},
         {
           "role": "route",
           "path": "server.mjs",
