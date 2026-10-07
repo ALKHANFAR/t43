@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
-import {builtFlowResult,conversationMemory} from '../lib/chat-intelligence.mjs';
+import {builtFlowResult,conversationMemory,draftOnlyIntent} from '../lib/chat-intelligence.mjs';
 import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool} from '../lib/mcp-flow-scope.mjs';
 import {TenantProjectError} from '../lib/tenant-projects.mjs';
 import {nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget,failedChatExecution} from '../lib/chat-outcome.mjs';
@@ -59,7 +59,7 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false,edit
   const ctx={
     console:{error:()=>{},info:()=>{},warn:()=>{}},process:{env:{DEEPSEEK_API_KEY:'test-key'}},
     AbortController,setTimeout,clearTimeout,Date,JSON,String,Array,Object,Math,
-    TenantProjectError,CompanyProfileError,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,
+    TenantProjectError,CompanyProfileError,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,draftOnlyIntent,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,
     fetch:async(url,options)=>{
       const request=JSON.parse(options.body);log.model.push(request);
       const message=script[Math.min(step++,script.length-1)];
@@ -256,7 +256,7 @@ test('a long request answers queued once, keeps working, and settles the same re
     console:{error:()=>{},info:()=>{},warn:()=>{}},JSON,String,Object,Number,Array,Boolean,
     setTimeout:(fn,ms)=>{timers.push({fn,ms});return timers.length;},clearTimeout:id=>{if(timers[id-1])timers[id-1].cleared=true;},
     randomUUID:()=>'11111111-1111-4111-8111-111111111111',createHash:()=>({update(){return this;},digest:()=>'hash'}),
-    TenantProjectError,CompanyProfileError,chatExecutionBudget,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
+    TenantProjectError,CompanyProfileError,chatExecutionBudget,draftOnlyIntent,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
     body:async()=>({op:'message',message:'ابنِ طريقة عمل كاملة',conversation_id:'c1',request_id:'r1'}),
     tenantSession:async()=>({session:{companyId:'company-1'},account:{company_name:'شركة'},headers:{}}),
     companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),
@@ -309,7 +309,7 @@ test('a second message waits for the first result before reaching the model',asy
   const ctx={console:{error:()=>{}},JSON,String,Object,Number,Array,Boolean,Date,
     setTimeout:(fn,ms)=>ms===1000?setTimeout(fn,1):1,clearTimeout:()=>{},
     randomUUID:()=> 'u1',createHash:()=>({update(){return this;},digest:()=> 'hash'}),
-    TenantProjectError,CompanyProfileError,chatExecutionBudget,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
+    TenantProjectError,CompanyProfileError,chatExecutionBudget,draftOnlyIntent,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
     body:async req=>({op:'message',message:req.id,conversation_id:'c1',request_id:req.id}),
     tenantSession:async()=>({session:{companyId:'company-1'},account:{company_name:'شركة'},headers:{}}),
     companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),

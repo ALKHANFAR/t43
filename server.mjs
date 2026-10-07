@@ -13,7 +13,7 @@ import {createFirecrawlClient,FirecrawlError} from './lib/firecrawl.mjs';
 import {createCompanyProfileService,CompanyProfileError} from './lib/company-profile.mjs';
 import {createAccountAuthService,AccountAuthError} from './lib/account-auth.mjs';
 import {createMailer,MailerError} from './lib/mailer.mjs';
-import {builtFlowResult,conversationMemory,createdTableReadback,flowName,hasActiveFlowConnections,publishedAIInstructionSteps} from './lib/chat-intelligence.mjs';
+import {builtFlowResult,conversationMemory,createdTableReadback,draftOnlyIntent,flowName,hasActiveFlowConnections,publishedAIInstructionSteps} from './lib/chat-intelligence.mjs';
 import {completedWithoutExecution,failedChatExecution,nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget} from './lib/chat-outcome.mjs';
 import {assertSchemaReady} from './lib/schema-ready.mjs';
 import {toolIcon} from './lib/tool-icons.mjs';
@@ -906,7 +906,7 @@ async function publicChat(req,res){
       const draft=existing?.status==='draft'?existing:null;
       let answer;
       answer=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history,message:input.message,draftEmployee:draft,mcp:await activepiecesMcp(),companyId,conversationId,deadlineMs:chatExecutionBudget(acceptedAt),onEffectStart:()=>{activeRequest.effectStarted=true;activeRequest.executionAttempt=true;},createDraft:async name=>profiles.findEmployee(companyId,(await profiles.createManualEmployeeDraft({companyId,name:flowName(String(name||input.message)),requestId})).recordId)});
-      const draftOnly=/(?:مسودة\s*فقط|بدون\s+(?:تشغيل|تفعيل)|لا\s+تفعّل|لا\s+تفعل\s+الموظف|لا\s+تشغّ?ل|draft\s+only|do\s+not\s+activate)/i.test(String(input.message||''));
+      const draftOnly=draftOnlyIntent(input.message);
       const activationIntent=!draftOnly&&answer.flowId&&answer.employee?.flowId===answer.flowId&&answer.employee.status==='disabled'?{auto_activate_after_connection:true,auto_activate_employee_id:answer.employee.recordId,auto_activate_flow_id:answer.flowId}:{};
       const reply=answer.employee&&!answer.flowId&&!answer.readinessReceipt?`حُفظ سجل ${answer.employee.name}، وحالة بناء طريقة عمله غير مؤكدة؛ تحقّق من مشروع الشركة قبل إعادة البناء. ${answer.reply}`:answer.reply;
       await profiles.recordConversation({companyId,conversationId,employeeId:null,requestId,userMessage:input.message,assistantMessage:reply});
