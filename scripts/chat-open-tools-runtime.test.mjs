@@ -82,6 +82,48 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false,edit
 }
 const toolMessages=request=>request.messages.filter(item=>item.role==='tool').map(item=>item.content);
 
+test('a previous task restriction in memory does not block the current explicit publish request',async()=>{
+  const prior='أريد مسودة فقط للمهمة السابقة، بدون تشغيل أو تفعيل.';
+  const current='اختبر النسخة الحالية ثم انشرها وفعّل الموظف الآن.';
+  const {run,log}=setup({script:[use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),say('اختبرت ونشرت النسخة الحالية.')]});
+  const answer=await run({history:[{role:'user',content:prior},{role:'assistant',content:'المهمة السابقة انتهت.'}],message:current,draftEmployee:{id:'employee-1',activepieces_flow_id:flowId}});
+  // This scripted harness verifies the prompt contract, not live LLM interpretation.
+  assert.match(log.model[0].messages[0].content,/قيد مهمة سابقة ليس قاعدة دائمة/);
+  assert.match(log.model[0].messages[0].content,/التوجيه الأحدث يحسم التعارض/);
+  assert.ok(log.model[0].messages[0].content.includes(prior.slice(0,-1)));
+  assert.equal(log.model[0].messages.at(-1).content,current);
+  assert.deepEqual(log.tools.map(([name])=>name),['ap_test_flow','ap_get_run','ap_lock_and_publish']);
+  assert.deepEqual(log.states,[['employee-1','active']]);
+  assert.equal(answer.readinessReceipt.published_version_id,'v1');
+});
+
+test('current draft-only or read-only requests block every effectful call while permitting reads',async()=>{
+  for(const message of ['أريد مسودة فقط، بدون تشغيل أو تفعيل.','راجع الموظف للقراءة فقط.','draft only','read-only']){
+    const {run,log}=setup({script:[use(['ap_validate_flow',{flowId}],['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}],['ap_change_flow_status',{flowId,status:'ENABLED'}],['ap_run_action',{pieceName:'gmail',actionName:'send_email'}]),say('راجعت دون تنفيذ.')]});
+    const answer=await run({message,history:[{role:'user',content:'اختبر وانشر وفعّل الموظف.'}],draftEmployee:{id:'employee-1',activepieces_flow_id:flowId}});
+    assert.deepEqual(log.tools.map(([name])=>name),['ap_validate_flow'],message);
+    assert.equal(log.effects,0,message);
+    assert.deepEqual(log.states,[]);
+    assert.deepEqual(log.runs,[]);
+    assert.equal(answer.readinessReceipt,undefined);
+    assert.equal(answer.effects.length,0);
+    assert.ok(answer.toolReceipts.filter(item=>item.status==='error').every(item=>!item.effect_attempted));
+    assert.equal(toolMessages(log.model.at(-1)).filter(item=>/chat_read_only/.test(item)).length,4);
+  }
+});
+
+test('explicit publication requires a successful test of the current version even with old memory approval',async()=>{
+  for(const changed of [false,true]){
+    const {run,log}=setup({editDuringTest:changed,script:[...(changed?[use(['ap_test_flow',{flowId}])]:[]),use(['ap_lock_and_publish',{flowId}],['ap_change_flow_status',{flowId,status:'ENABLED'}]),say('يلزم اختبار النسخة الحالية.') ]});
+    const answer=await run({message:'انشر وفعّل الموظف الآن.',history:[{role:'user',content:'اختبرت النسخة السابقة ووافقت على النشر.'}],draftEmployee:{id:'employee-1',activepieces_flow_id:flowId}});
+    assert.deepEqual(log.tools.map(([name])=>name),changed?['ap_test_flow','ap_get_run']:[]);
+    assert.deepEqual(log.states,[]);
+    assert.equal(answer.readinessReceipt,undefined);
+    assert.equal(toolMessages(log.model.at(-1)).filter(item=>/employee_test_required/.test(item)).length,2);
+    assert.ok(answer.toolReceipts.slice(-2).every(item=>item.status==='error'&&!item.effect_attempted));
+  }
+});
+
 test('the model builds, tests and publishes in one request and writes the reply itself',async()=>{
   const {run,log}=setup({script:[
     use(['ap_list_connections',{}]),
