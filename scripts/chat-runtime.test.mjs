@@ -79,7 +79,7 @@ test('routine draft work skips approval while an MCP action is approval gated',(
 });
 
 test('employee MCP response remains unverified without provider proof',()=>{
-  assert.match(serverSource,/if\(answer\.flowToolAttempted\|\|answer\.effects\?\.length\)return finish\(200,\{[^\n]+completedToolActions\(answer\)/);
+  assert.match(serverSource,/if\(answer\.flowToolAttempted\|\|answer\.effects\?\.length\)return (?:await )?finish\(200,\{[^\n]+completedToolActions\(answer\)/);
   assert.doesNotMatch(serverSource,/const proof=\{[^\n]+conversation_id:conversationId/);
 });
 
@@ -293,6 +293,21 @@ test('tool buttons show saved connection details without claiming a provider run
     assert.equal(p.d.querySelector('#input').value,'أحتاج أداة غير موجودة في القائمة: ');assert.equal(p.d.activeElement,p.d.querySelector('#input'));
   }finally{p.close();}
 });
+test('unavailable native connection setup explains availability without exposing server details',async()=>{
+  for(const locale of ['ar','en']){
+    const p=await page({locale,integrations:{list:{ok:true,connections:[]},methods:{httpStatus:409,error:'native_mcp_discovery_required',message:'internal detail must not appear'}},hash:''});
+    try{
+      p.d.querySelector('#toolsLink').click();await flush();
+      p.d.querySelector('#allTgl').click();await flush();
+      p.d.querySelector('[data-c="gmail"]').click();await flush();
+      const text=p.d.querySelector('#mF').textContent;
+      assert.match(text,locale==='ar'?/ربط أداة جديدة غير متاح حاليًا/:/Connecting a new tool is currently unavailable/);
+      assert.doesNotMatch(text,/internal detail|تعذّر الاتصال بالخادم|Could not reach the server/);
+      assert.equal(p.requests.some(request=>['connect','oauth_start'].includes(request.body?.op)),false);
+    }finally{p.close();}
+  }
+});
+
 test('Google connect popup opens in the submit gesture before OAuth preparation returns',async()=>{
   let finishStart,opened=0;
   const start=new Promise(resolve=>{finishStart=resolve;});
@@ -333,6 +348,40 @@ test('tools page distinguishes a saved connection from one assigned to an employ
     assert.doesNotMatch(thread(p),/اكتمل اختبار فعلي/);
   }finally{p.close();}
 });
+test('disconnect shows the impact before requesting a confirmed deletion',async()=>{
+  const connection={id:'C'.repeat(21),slug:'gmail',displayName:'Gmail',status:'ACTIVE',scope:'PROJECT',flowIds:[]};
+  const p=await page({integrations:{list:{ok:true,connections:[connection]},disconnect:{ok:true,disconnected:true}}});try{
+    p.d.querySelector('#toolsLink').click();await flush();
+    p.d.querySelector('[data-tool-details="gmail"]').click();
+    p.d.querySelector('[data-disconnect]').click();
+    assert.equal(p.requests.some(request=>request.body?.op==='disconnect'),false);
+    assert.equal(p.d.querySelector('#mDisconnectConfirm').hidden,false);
+    assert.match(p.d.querySelector('#mDisconnectConfirm').textContent,/قد يؤثر.*سجل العمل محفوظ/);
+    p.d.querySelector('#localeToggle').click();
+    assert.match(p.d.querySelector('#mDisconnectConfirm').textContent,/Disconnecting may affect/);
+    p.d.querySelector('#localeToggle').click();
+    p.d.querySelector('[data-disconnect-cancel]').click();
+    assert.equal(p.d.querySelector('#mDisconnectConfirm').hidden,true);
+    p.d.querySelector('[data-disconnect]').click();
+    p.d.querySelector('[data-disconnect-confirm]').click();await flush();
+    assert.deepEqual(p.requests.find(request=>request.body?.op==='disconnect').body,{op:'disconnect',connection_id:connection.id,confirm_in_use:true});
+    assert.match(p.d.querySelector('#mF').textContent,/سيبقى سجل العمل محفوظًا/);
+  }finally{p.close();}
+});
+
+test('confirmed disconnect keeps an in-use connection attached when the server rejects removal',async()=>{
+  const connection={id:'C'.repeat(21),slug:'gmail',displayName:'Gmail',status:'ACTIVE',scope:'PROJECT',flowIds:['F'.repeat(21)]};
+  const p=await page({integrations:{list:{ok:true,connections:[connection]},disconnect:{ok:false,httpStatus:409,error:'connection_in_use'}}});try{
+    p.d.querySelector('#toolsLink').click();await flush();p.d.querySelector('[data-tool-details="gmail"]').click();
+    p.d.querySelector('[data-disconnect]').click();p.d.querySelector('[data-disconnect-confirm]').click();await flush();
+    assert.equal(p.d.querySelector('#mE').hidden,false);
+    assert.doesNotMatch(p.d.querySelector('#mF').textContent,/تم فصل الأداة/);
+    p.d.querySelector('#mX').click();p.d.querySelector('[data-tool-details="gmail"]').click();
+    assert.equal(p.d.querySelector('#modal').classList.contains('on'),true);
+    assert.ok(p.d.querySelector('[data-disconnect]'));
+  }finally{p.close();}
+});
+
 test('real employee shows natural instructions without exposing a compiled prompt',async()=>{
   const changed='تابعي الفرص الجديدة وأرسلي ملخصًا واضحًا.';
   const p=await page({hydrate:{...empty,team:[{...employee,instructions:'تابعي الفرص الجديدة واكتبي ملخصًا واضحًا.',instructionSource:'company_profile',instructionVersion:1}]},employee_instructions:body=>({ok:true,instruction_scope:'conversation',instructions_verified:true,employee:{...employee,instructions:body.instructions,instructionSource:'owner',instructionVersion:2}})});try{
@@ -474,7 +523,7 @@ test('complete disconnected draft gets its own 10/10 without a production claim'
   }finally{p.close();}
 });
 test('accepted work appears pending, then proof readback upserts stable employee without clearing chat',async()=>{
-  const p=await page({message:{ok:true,conversation_id:'conversation-1',work_id:'work-1',work_status:'queued'},work:{ok:true,work_id:'work-1',work_status:'succeeded',reply:'سُجلت النتيجة.',employee,recent_work:[proof]}});try{
+  const p=await page({message:{ok:true,conversation_id:'conversation-1',work_id:'work-1',work_status:'queued'},work:{ok:true,conversation_id:'conversation-1',work_id:'work-1',work_status:'succeeded',reply:'سُجلت النتيجة.',employee,recent_work:[{...proof,conversation_id:'conversation-1'}]}});try{
     send(p,'أنشئ موظف الفرص');await flush();assert.match(thread(p),/بانتظار التنفيذ/);assert.ok(!thread(p).includes('✓'));
     assert.equal(p.w.EMPS.length,0);assert.equal(p.polls.length,1);await p.polls.shift()();await flush();
     assert.equal(p.d.querySelector('#emps .emp').dataset.emp,employee.recordId);assert.equal(p.w.EMPS[0].flowId,employee.flowId);
@@ -678,6 +727,50 @@ test('restored proofs match conversation and legacy evidence is labelled separat
  ]}});try{
   p.d.querySelector('[data-chat="c-here"]').click();assert.match(thread(p),/دليل هذه المحادثة/);assert.ok(!thread(p).includes('دليل محادثة أخرى'));assert.match(thread(p),/نشاط سابق للموظف — غير مرتبط بهذه المحادثة/);assert.match(thread(p),/دليل قديم/);
  }finally{p.close();}
+});
+
+test('older proof in the same conversation is not presented as the latest request result',async()=>{
+ const older={...proof,conversation_id:'same',work_id:'old-request',subject:'نتيجة قديمة'};
+ const p=await page({hydrate:{...empty,team:[employee],recent_work:[older],conversations:[{id:'same',employee_id:employee.recordId,title:'ريم',messages:[]}]},message:{ok:true,conversation_id:'same',work_id:'new-request',work_status:'succeeded',outcome_kind:'tool_result',reply:'وصلت نتيجة جديدة',recent_work:[older]}});try{
+  p.d.querySelector('[data-chat="same"]').click();send(p,'قراءة جديدة');await flush();
+  assert.equal(p.d.querySelectorAll('.m__c').length>0,true);
+  assert.match(thread(p),/غير مربوط برسالة محددة/);
+  assert.doesNotMatch(p.d.querySelector('.m__c').textContent,/old-request/);
+ }finally{p.close();}
+});
+
+test('reconciled production run uses its own verified ID and ignores an older proof',async()=>{
+ const run='AyDcS8RxKFU1u8L4Bggki',flow='wlyKFTxiAOHCMHWS1GIKd',older={...proof,conversation_id:'same',work_id:'old-request'};
+ const p=await page({hydrate:{...empty,team:[employee],recent_work:[older],conversations:[{id:'same',employee_id:employee.recordId,title:'ريم',messages:[]}]},message:{ok:true,conversation_id:'same',work_id:'new-request',request_status:'succeeded',work_status:'succeeded',outcome_kind:'tool_result',run_id:run,flow_id:flow,reply:'اكتملت المهمة',recent_work:[older]}});try{
+  p.d.querySelector('[data-chat="same"]').click();send(p,'اقرأ');await flush();
+  const result=Array.from(p.d.querySelectorAll('.m__c')).find(x=>x.textContent.includes('اكتملت المهمة'));
+  assert.ok(result);assert.match(result.textContent,/نتيجة تشغيل هذا الطلب مؤكدة/);
+  assert.match(result.textContent,/AyDcS8RxKFU1u8L4Bggki/);
+  assert.doesNotMatch(result.textContent,/old-request|run-1/);
+ }finally{p.close();}
+});
+
+test('simple JSON array reply is shown as a readable escaped table',async()=>{
+ const p=await page({message:{ok:true,conversation_id:'json',request_status:'succeeded',work_status:'not_started',outcome_kind:'conversation_reply',reply:'اكتملت القراءة.\n'+JSON.stringify({workspaces:[{name:'sondos-ai.com',gid:'123',is_organization:true},{name:'<script>',gid:'456',is_organization:false}]})}});try{
+  send(p,'المساحات');await flush();
+  const table=p.d.querySelector('.m__c .reply-table table');assert.ok(table);
+  assert.match(thread(p),/اكتملت القراءة/);
+  assert.equal(table.querySelectorAll('tbody tr').length,2);
+  assert.match(table.textContent,/sondos-ai.com/);
+  assert.equal(table.querySelector('script'),null);
+ }finally{p.close();}
+});
+
+test('JSON result rendering preserves every column and falls back for nested or large results',async()=>{
+  const wide=Object.fromEntries(Array.from({length:13},(_,i)=>['field_'+i,'value_'+i]));
+  for(const rows of [[wide],[{name:'nested',details:{value:'keep nested'}}],Array.from({length:51},(_,i)=>({name:'row_'+i}))]){
+    const reply=JSON.stringify(rows),p=await page({message:{ok:true,conversation_id:'json-complete',reply}});try{
+      send(p,'اعرض النتيجة');await flush();
+      const result=p.d.querySelectorAll('.m__c');const last=result[result.length-1];
+      if(rows[0]===wide){assert.equal(last.querySelectorAll('th').length,13);assert.match(last.textContent,/value_12/);}
+      else{assert.equal(last.querySelector('table'),null);assert.equal(last.textContent,reply);}
+    }finally{p.close();}
+  }
 });
 
 test('explicit cancel after timeout has a new request ID and targets prior request without replay',async()=>{

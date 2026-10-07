@@ -2,15 +2,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
-import {builtFlowResult,conversationMemory} from '../lib/chat-intelligence.mjs';
-import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool} from '../lib/mcp-flow-scope.mjs';
+import {builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent} from '../lib/chat-intelligence.mjs';
+import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext} from '../lib/mcp-flow-scope.mjs';
 import {TenantProjectError} from '../lib/tenant-projects.mjs';
 import {nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget,failedChatExecution} from '../lib/chat-outcome.mjs';
+import {selectKnowledgeContext} from '../lib/knowledge-context.mjs';
+import {createCumulativeMemory,MEMORY_TABLE,MEMORY_FIELDS,MEMORY_LIMITS} from '../lib/cumulative-memory.mjs';
+import {createCompanyEffectLock} from '../lib/company-effect-lock.mjs';
 import {CompanyProfileError} from '../lib/company-profile.mjs';
 
-// Runs the real chat loop from server.mjs against a scripted model and a scripted Activepieces MCP.
+// Runs the real chat loop and Flow lifecycle against a scripted model and Activepieces MCP.
 const source=readFileSync(new URL('../server.mjs',import.meta.url),'utf8');
-const start=source.indexOf('async function buildOwnedDraftFlow('),end=source.indexOf('async function publicChat(',start);
+const lifecycle=readFileSync(new URL('../lib/chat-flow-lifecycle.mjs',import.meta.url),'utf8');
+const helpers=lifecycle.slice(lifecycle.indexOf('async function buildOwnedDraftFlow('),lifecycle.indexOf('  return {buildOwnedDraftFlow,successfulFlowTest};'));
+const start=source.indexOf('async function deepseekReply('),end=source.indexOf('async function publicChat(',start);
 assert.ok(start>0&&end>start);
 const flowId='F'.repeat(21);
 const runId='R'.repeat(21);
@@ -22,6 +27,7 @@ const catalog=[
   {name:'ap_research_pieces',...hint(true)},
   {name:'ap_validate_flow',...hint(true),inputSchema:{type:'object',properties:{flowId:{type:'string'}}}},
   {name:'ap_test_flow',...hint(false),inputSchema:{type:'object',properties:{flowId:{type:'string'}}}},
+  {name:'ap_test_step',...hint(false),inputSchema:{type:'object',properties:{flowId:{type:'string'}}}},
   {name:'ap_get_run',...hint(true),inputSchema:{type:'object',properties:{flowRunId:{type:'string'}}}},
   {name:'ap_build_flow',...hint(false)},
   {name:'ap_create_flow',...hint(false)},
@@ -41,13 +47,21 @@ const catalog=[
 const say=content=>({content});
 const use=(...calls)=>({content:'',tool_calls:calls.map(([name,args],index)=>({id:`call_${name}_${index}`,function:{name,arguments:typeof args==='string'?args:JSON.stringify(args||{})}}))});
 
-function setup({script,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false}={}){
+function setup({script,clock=Date,flowInputSchema=null,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false,memoryRows=null}={}){
   const log={model:[],tools:[],effects:0,states:[],owned:[],runs:[]};
+  const savedMemories=memoryRows===null?null:structuredClone(memoryRows);let memorySerial=1;
+  const memoryTools=['ap_find_records','ap_insert_records','ap_update_record','ap_delete_records','ap_create_table'].map(name=>({name,...hint(name==='ap_find_records'),inputSchema:{type:'object',properties:{}}}));
   let stateAttempts=0,step=0,status=flowStatus,publishedVersionId=published?'v1':null,draftVersionId='v1',versionState=published?'LOCKED':'DRAFT',sampleData,updated='before',updatedBy,taskInput='{{trigger.task}}';
   const mcp={call:async(_company,method,params)=>{
-    if(method==='tools/list')return {tools:catalog};
+    if(method==='tools/list')return {tools:[...catalog,...(savedMemories?memoryTools:[])].map(tool=>tool.name===flowToolName&&flowInputSchema?{...tool,inputSchema:flowInputSchema}:tool)};
     if(method==='initialize')return {instructions:'## Activepieces MCP Server\n1. Discover 2. Schema 3. Build 4. Validate 5. Publish'};
     log.tools.push([params.name,params.arguments]);
+    if(savedMemories!==null){
+      if(params.name==='ap_list_tables')return {structuredContent:{tables:[{id:'T'.repeat(21),name:MEMORY_TABLE,rowCount:savedMemories.length,fields:MEMORY_FIELDS.map(name=>({name,type:'TEXT'}))}],count:1}};
+      if(params.name==='ap_find_records'){const records=savedMemories.filter(row=>!(params.arguments.filters||[]).some(f=>row.cells[f.fieldName]!==f.value)).slice(0,params.arguments.limit);return {structuredContent:{records:structuredClone(records),count:records.length}};}
+      if(params.name==='ap_insert_records'){for(const cells of params.arguments.records)savedMemories.push({id:String(memorySerial++).padStart(21,'0'),cells});return {content:[{type:'text',text:'inserted'}]};}
+      if(params.name==='ap_update_record'){Object.assign(savedMemories.find(row=>row.id===params.arguments.recordId).cells,params.arguments.fields);return {content:[{type:'text',text:'updated'}]};}
+    }
     if(Object.hasOwn(toolResults,params.name)){const value=toolResults[params.name];return typeof value==='function'?value(params.arguments):value;}
     if(params.name==='ap_build_flow')return {content:[{type:'text',text:`✅ Flow created (id: ${flowId})`}],structuredContent:{flowId,invalidSteps:[],skippedSteps:[],unknownProps:[]}};
     if(params.name==='ap_test_flow'){if(editDuringTest)draftVersionId='v2';if(nativeTestMetadata){sampleData={lastTestDate:'2026-10-05T21:13:05.105Z',sampleDataFileId:'S'.repeat(21)};updated='after';updatedBy='test-user';}if(editInputDuringTest)taskInput='changed task';return {structuredContent:{runId,status:'SUCCEEDED',usedMockTriggerData:false}};}
@@ -58,8 +72,8 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false,edit
   }};
   const ctx={
     console:{error:()=>{},info:()=>{},warn:()=>{}},process:{env:{DEEPSEEK_API_KEY:'test-key'}},
-    AbortController,setTimeout,clearTimeout,Date,JSON,String,Array,Object,Math,
-    TenantProjectError,CompanyProfileError,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,
+    AbortController,setTimeout,clearTimeout,Date:clock,JSON,String,Array,Object,Math,
+    TenantProjectError,CompanyProfileError,selectKnowledgeContext,createCumulativeMemory,MEMORY_TABLE,MEMORY_FIELDS,MEMORY_LIMITS,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext,
     fetch:async(url,options)=>{
       const request=JSON.parse(options.body);log.model.push(request);
       const message=script[Math.min(step++,script.length-1)];
@@ -76,11 +90,85 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false,edit
     tenantProjects:async()=>({requireProject:async()=> 'P'.repeat(21),ownedFlow:async(_company,id)=>{log.owned.push(id);return {flow:{...publishedFlow,id,status,publishedVersionId,version:{...publishedFlow.version,id:draftVersionId,state:versionState,updated,...(updatedBy?{updatedBy}:{}),trigger:{...publishedFlow.version.trigger,settings:{...publishedFlow.version.trigger.settings,input:{...publishedFlow.version.trigger.settings.input,task:taskInput},...(sampleData?{sampleData}:{})}}}}};}}),
     toolConnections:async()=>({assertOwnedExternal:async({externalId})=>{if(externalId==='foreign')throw new TenantProjectError('connection_not_owned','الاتصال لا يخص هذه الشركة.',403);}}),
   };
-  const deepseekReply=runInNewContext(`${source.slice(start,end)}; deepseekReply`,ctx);
+  const deepseekReply=runInNewContext(`${helpers}\n${source.slice(start,end)}; deepseekReply`,ctx);
   const run=(extra={})=>deepseekReply({company:{name:'شركة'},settings:{},knowledge:{},team:[],history:[],message:'جهّز الموظف',mcp,companyId:'company-1',conversationId:'c1',deadlineMs:600_000,onEffectStart:()=>{log.effects++;},...extra});
-  return {run,log};
+  return {run,log,savedMemories,setVersion:id=>{draftVersionId=id;}};
 }
 const toolMessages=request=>request.messages.filter(item=>item.role==='tool').map(item=>item.content);
+
+test('direct replies retain company and employee context without a configured MCP connection',async()=>{
+  for(const code of ['mcp_not_connected','project_not_ready','mcp_not_configured']){
+    const calls=[];
+    const {run,log}=setup({script:[say('هذه توصية مبنية على معرفة الشركة.')]});
+    const answer=await run({
+      message:'اقترح تحسينًا لخدمة العملاء.',
+      company:{name:'شركة الاختبار'},settings:{language:'ar'},
+      knowledge:{facts:[{topic:'خدمة العملاء',value:'الرد خلال دقيقة',certainty:'confirmed'}]},
+      employee:{id:'employee-1',name:'نور',status:'draft',role_title:'خدمة العملاء',prompt:'ابدأ بتوصية عملية.',prompt_version:3},
+      history:[{role:'user',content:'نركز على سرعة الرد.'}],
+      mcp:{call:async(_company,method)=>{calls.push(method);throw new TenantProjectError(code,'غير مهيأ',409);}},
+    });
+    assert.equal(answer.reply,'هذه توصية مبنية على معرفة الشركة.');
+    assert.equal(log.model.length,1);
+    const request=log.model[0],system=request.messages[0].content;
+    const context=JSON.parse(system.split('سياق العمل الحالي بصيغة JSON:\n')[1].split('\n')[0]);
+    assert.equal(context.company.name,'شركة الاختبار');
+    assert.equal(context.settings.language,'ar');
+    assert.equal(context.knowledge.facts[0].value,'الرد خلال دقيقة');
+    assert.equal(context.selectedEmployee.instructions,'ابدأ بتوصية عملية.');
+    assert.equal(context.selectedEmployee.instructionVersion,3);
+    assert.equal(request.messages[1].content,'نركز على سرعة الرد.');
+    assert.equal(request.tools,undefined);
+    assert.deepEqual(calls,['tools/list']);
+    assert.equal(answer.effects.length,0);
+    assert.equal(answer.toolReceipts.length,0);
+    assert.equal(log.effects,0);
+    assert.deepEqual(log.states,[]);
+    assert.deepEqual(log.runs,[]);
+  }
+});
+
+test('a previous task restriction in memory does not block the current explicit publish request',async()=>{
+  const prior='أريد مسودة فقط للمهمة السابقة، بدون تشغيل أو تفعيل.';
+  const current='اختبر النسخة الحالية ثم انشرها وفعّل الموظف الآن.';
+  const {run,log}=setup({script:[use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),say('اختبرت ونشرت النسخة الحالية.')]});
+  const answer=await run({history:[{role:'user',content:prior},{role:'assistant',content:'المهمة السابقة انتهت.'}],message:current,draftEmployee:{id:'employee-1',activepieces_flow_id:flowId}});
+  // This scripted harness verifies the prompt contract, not live LLM interpretation.
+  assert.match(log.model[0].messages[0].content,/قيد مهمة سابقة ليس قاعدة دائمة/);
+  assert.match(log.model[0].messages[0].content,/التوجيه الأحدث يحسم التعارض/);
+  assert.ok(log.model[0].messages[0].content.includes(prior.slice(0,-1)));
+  assert.equal(log.model[0].messages.at(-1).content,current);
+  assert.deepEqual(log.tools.map(([name])=>name),['ap_test_flow','ap_get_run','ap_lock_and_publish']);
+  assert.deepEqual(log.states,[['employee-1','active']]);
+  assert.equal(answer.readinessReceipt.published_version_id,'v1');
+});
+
+test('current draft-only or read-only requests block every effectful call while permitting reads',async()=>{
+  for(const message of ['أريد مسودة فقط، بدون تشغيل أو تفعيل.','راجع الموظف للقراءة فقط.','draft only','read-only']){
+    const {run,log}=setup({script:[use(['ap_validate_flow',{flowId}],['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}],['ap_change_flow_status',{flowId,status:'ENABLED'}],['ap_run_action',{pieceName:'gmail',actionName:'send_email'}]),say('راجعت دون تنفيذ.')]});
+    const answer=await run({message,history:[{role:'user',content:'اختبر وانشر وفعّل الموظف.'}],draftEmployee:{id:'employee-1',activepieces_flow_id:flowId}});
+    assert.deepEqual(log.tools.map(([name])=>name),['ap_validate_flow'],message);
+    assert.equal(log.effects,0,message);
+    assert.deepEqual(log.states,[]);
+    assert.deepEqual(log.runs,[]);
+    assert.equal(answer.readinessReceipt,undefined);
+    assert.equal(answer.effects.length,0);
+    assert.ok(answer.toolReceipts.filter(item=>item.status==='error').every(item=>!item.effect_attempted));
+    assert.equal(toolMessages(log.model.at(-1)).filter(item=>/chat_read_only/.test(item)).length,4);
+  }
+});
+
+test('explicit publication requires a successful test of the current version even with old memory approval',async()=>{
+  for(const changed of [false,true]){
+    const {run,log}=setup({editDuringTest:changed,script:[...(changed?[use(['ap_test_flow',{flowId}])]:[]),use(['ap_lock_and_publish',{flowId}],['ap_change_flow_status',{flowId,status:'ENABLED'}]),say('يلزم اختبار النسخة الحالية.') ]});
+    const answer=await run({message:'انشر وفعّل الموظف الآن.',history:[{role:'user',content:'اختبرت النسخة السابقة ووافقت على النشر.'}],draftEmployee:{id:'employee-1',activepieces_flow_id:flowId}});
+    assert.deepEqual(log.tools.map(([name])=>name),changed?['ap_test_flow','ap_get_run']:[]);
+    assert.deepEqual(log.states,[]);
+    assert.equal(answer.readinessReceipt,undefined);
+    assert.equal(toolMessages(log.model.at(-1)).filter(item=>/employee_test_required/.test(item)).length,2);
+    assert.ok(answer.toolReceipts.slice(-2).every(item=>item.status==='error'&&!item.effect_attempted));
+  }
+});
 
 test('the model builds, tests and publishes in one request and writes the reply itself',async()=>{
   const {run,log}=setup({script:[
@@ -100,11 +188,50 @@ test('the model builds, tests and publishes in one request and writes the reply 
   assert.ok(log.effects>=2);
   const first=log.model[0],last=log.model.at(-1);
   assert.deepEqual(first.thinking,{type:'enabled'});
+  assert.equal(first.model,'deepseek-v4-pro');
+  assert.equal(first.reasoning_effort,'high');
   assert.match(first.messages[0].content,/## Activepieces MCP Server/);
   assert.ok(first.tools.some(tool=>tool.function.name==='ap_lock_and_publish'));
   assert.ok(first.tools.some(tool=>tool.function.name==='ap_set_project_context'));
   assert.equal(toolMessages(last).length,5);
   assert.match(toolMessages(last)[1],/Flow created/);
+});
+
+test('DeepSeek continues tool reasoning with results and saved employee context',async()=>{
+  const first={...use(['ap_list_connections',{}]),reasoning_content:'Need the available connection before choosing the action.'};
+  const {run,log}=setup({script:[first,request=>{
+    const prior=request.messages.find(item=>item.role==='assistant'&&item.tool_calls);
+    assert.equal(prior.reasoning_content,first.reasoning_content);
+    assert.equal(request.messages.at(-1).role,'tool');
+    assert.match(request.messages[0].content,/راجع أسعار الشركة/);
+    assert.match(request.messages[0].content,/DeepSeek/);
+    return say('نتيجة القراءة وصلت.');
+  }]});
+  const answer=await run({employee:{id:'employee-1',status:'draft',prompt:'راجع أسعار الشركة'},message:'اقرأ الاتصالات فقط'});
+  assert.equal(answer.reply,'نتيجة القراءة وصلت.');
+  assert.equal(log.model.length,2);assert.equal(log.effects,0);
+});
+
+test('an explicit draft request blocks model publish and enable calls at MCP dispatch',async()=>{
+  const {run,log}=setup({script:[
+    use(['ap_build_flow',{flowName:'مسودة اختبار'}]),
+    use(['ap_lock_and_publish',{flowId}],['ap_change_flow_status',{flowId,status:'enabled'}],['ap_test_flow',{flowId}]),
+    say('بقي الفلو مسودة.'),
+  ]});
+  const answer=await run({message:'أنشئ فلو مسودة. لا تنشر أو تفعّل أو تشغّل.',draftEmployee:{id:'employee-1',name:'مسودة اختبار',activepieces_flow_id:null}});
+  assert.equal(answer.flowId,flowId);
+  assert.deepEqual(log.tools.map(item=>item[0]),['ap_build_flow']);
+  assert.equal(log.states.length,0);
+  assert.match(toolMessages(log.model[2]).join(' '),/draft_only_publish_forbidden/);
+  assert.match(toolMessages(log.model[2]).join(' '),/flow_run_forbidden/);
+});
+
+test('a current no-run request blocks native execution while allowing Flow draft edits',async()=>{
+  const {run,log}=setup({script:[use(['ap_build_flow',{flowName:'مسودة'}]),use(['ap_test_flow',{flowId}],['ap_test_step',{flowId,stepName:'step_1'}],['ap_run_action',{pieceName:'gmail',actionName:'send_email'}],[flowToolName,{task:'نفذ'}]),say('حُفظت المسودة بلا تشغيل.')]});
+  await run({message:'جهز طريقة العمل بدون تنفيذ'});
+  assert.deepEqual(log.tools.map(([name])=>name),['ap_build_flow']);
+  assert.equal(log.effects,1);
+  assert.ok(toolMessages(log.model.at(-1)).slice(-4).every(value=>value.includes('flow_run_forbidden')));
 });
 
 test('an employee cannot be published from chat without a successful test run readback',async()=>{
@@ -217,15 +344,29 @@ test('the step limit ends with a written account instead of a fixed sentence',as
   assert.equal(log.model.at(-1).tools,undefined);
 });
 
+test('short continuations retain native tools at 2, 3 and 25 seconds',async()=>{
+  for(const deadlineMs of [2_000,3_000,25_000]){
+    const {run,log}=setup({clock:{now:()=>0},script:[use(['ap_research_pieces',{}]),say('قرأت الأدوات بعد تجهيز الجدول.')]});
+    const answer=await run({deadlineMs,excludedTools:['ap_create_table']});
+    assert.deepEqual(log.tools,[['ap_research_pieces',{}]],`native tool missing at ${deadlineMs}ms`);
+    assert.equal(answer.reply,'قرأت الأدوات بعد تجهيز الجدول.');
+    assert.equal(log.effects,0);
+  }
+});
+
 test('a request that runs out of time still ends with an account of what ran',async()=>{
-  const near=setup({script:[request=>request.tools?use(['ap_add_step',{flowId}]):say('أضفت خطوة واحدة وبقي النشر.')]});
+  let now=0;
+  const near=setup({clock:{now:()=>now},script:[request=>request.tools?use(['ap_add_step',{flowId}]):say('أضفت خطوة واحدة وبقي النشر.')],toolResults:{ap_add_step:()=>{now=49_000;return {content:[{type:'text',text:'ok'}]};}}});
   const written=await near.run({deadlineMs:60_000});
   assert.equal(written.reply,'أضفت خطوة واحدة وبقي النشر.');
-  assert.equal(near.log.tools.length,0);
-  const late=setup({script:[use(['ap_add_step',{flowId}])],toolResults:{ap_add_step:async()=>{await new Promise(resolve=>setTimeout(resolve,30));return {content:[{type:'text',text:'ok'}]};}}});
-  const fallback=await late.run({deadlineMs:75_020});
+  assert.equal(near.log.tools.length,1);
+  assert.equal(near.log.model.at(-1).tools,undefined);
+  now=0;
+  const late=setup({clock:{now:()=>now},script:[use(['ap_add_step',{flowId}])],toolResults:{ap_add_step:()=>{now=26_000;return {content:[{type:'text',text:'ok'}]};}}});
+  const fallback=await late.run({deadlineMs:25_000});
   assert.match(fallback.reply,/ap_add_step/);
   assert.match(fallback.reply,/أكمل/);
+  assert.equal(late.log.tools.length,1);
 });
 
 test('selected employee chat calls only its published native MCP Flow tool',async()=>{
@@ -240,8 +381,62 @@ test('selected employee chat calls only its published native MCP Flow tool',asyn
   assert.ok(!log.model[0].tools.some(tool=>tool.function.name==='siyadah_run_employee_flow'));
 });
 
+test('account company name survives researched website identity in hydrate and export',async()=>{
+  const chatStart=source.indexOf('async function publicChat('),chatEnd=source.indexOf('function staticFile(req,res)',chatStart);
+  for(const op of ['hydrate','export']){
+    const profiles={read:async()=>({company_name:'Website Vendor'}),listEmployees:async()=>[],recentWork:async()=>[],readSettings:async()=>({}),ownedKnowledge:async()=>({}),listConversations:async()=>[],pendingChatWork:async()=>[]};
+    let response;
+    const ctx={JSON,String,Object,Number,Array,Date,TenantProjectError,CompanyProfileError,GmailPilotError:class extends Error{},
+      body:async()=>({op}),tenantSession:async()=>({session:{companyId:'company-1'},account:{company_name:'Registered Company'},headers:{}}),companyProfiles:async()=>profiles,
+      json:(_res,status,value)=>{assert.equal(status,200);response=value;}};
+    const publicChat=runInNewContext(`${source.slice(chatStart,chatEnd)};publicChat`,ctx);
+    await publicChat({headers:{}},{});
+    assert.equal(op==='hydrate'?response.company:response.export.company.name,'Registered Company');
+    if(op==='export')assert.equal(response.filename,'Registered Company-siyadah.json');
+  }
+});
+
+test('employee chat loads the selected saved employee and company knowledge before calling the model',async()=>{
+  const chatStart=source.indexOf("      if(typeof input.employee_id==='string'&&input.employee_id){",source.indexOf('async function publicChat('));
+  const chatEnd=source.indexOf('\n      const profile=await profiles.read(companyId)',chatStart);
+  assert.ok(chatStart>0&&chatEnd>chatStart);
+  const employees=[
+    {id:'sales',status:'draft',prompt:'تابع فرص البيع.',prompt_version:2,activepieces_flow_id:'S'.repeat(21)},
+    {id:'support',status:'active',prompt:'حل مشاكل العملاء.',prompt_version:7,activepieces_flow_id:'H'.repeat(21)},
+  ];
+  const knowledge={facts:[{topic:'الشركة',value:'المعرفة المحفوظة'}]},settings={language:'ar'},calls=[],recorded=[];
+  const profiles={
+    findEmployee:async(company,id)=>{assert.equal(company,'company-1');return employees.find(e=>e.id===id);},
+    read:async()=>({company_name:'Website name',profile_json:{industry:'services'}}),
+    readSettings:async()=>settings,ownedKnowledge:async()=>knowledge,listEmployees:async()=>employees,
+    conversationHistory:async args=>{assert.equal(args.companyId,'company-1');return [{role:'user',content:args.conversationId}];},
+    recordConversation:async entry=>recorded.push(entry),
+  };
+  for(const saved of employees){
+    const ctx={input:{employee_id:saved.id,message:'اقترح الخطوة التالية.',prompt:'client override'},companyId:'company-1',conversationId:`chat-${saved.id}`,requestId:`req-${saved.id}`,userMemoryId:null,acceptedAt:Date.now(),claim:{claimToken:'claim'},
+      resolved:{account:{company_name:'Registered name'}},profiles,companyProfiles:async()=>profiles,
+      database:async()=>({query:()=>{throw new Error('unexpected database execution');}}),activepiecesMcp:async()=>({}),tenantProjects:async()=>({}),createEmployeeRunRecovery:()=>({}),
+      chatExecutionBudget,CompanyProfileError,Number,
+      deepseekReply:async args=>{calls.push(args);return {reply:'توصية',effects:[],toolReceipts:[]};},
+      completedWithoutExecution:(kind,value)=>({...value,outcome_kind:kind,work_status:'not_started'}),
+      finish:async(status,value)=>({status,value}),
+    };
+    const result=await runInNewContext(`(async()=>{${source.slice(chatStart,chatEnd)}})()`,ctx);
+    const args=calls.at(-1);
+    assert.equal(args.employee,saved);
+    assert.equal(args.employee.prompt,saved.prompt);
+    assert.equal(args.knowledge,knowledge);assert.equal(args.settings,settings);
+    assert.equal(args.company.name,'Registered name');
+    assert.equal(args.history[0].content,`chat-${saved.id}`);
+    assert.equal(result.value.experience.employee_id,saved.id);
+    assert.equal(result.value.experience.instruction_version,saved.prompt_version);
+    assert.equal(result.value.experience.external_execution,false);
+    assert.equal(recorded.at(-1).employeeId,saved.id);
+  }
+});
+
 test('a long request answers queued once, keeps working, and settles the same request ID',async()=>{
-  const chatStart=source.indexOf('async function publicChat('),chatEnd=source.indexOf('async function deepseek(req,res)',chatStart);
+  const chatStart=source.indexOf('async function publicChat('),chatEnd=source.indexOf('function staticFile(req,res)',chatStart);
   const jsonStart=source.indexOf('function json(res,status,body,headers={})'),jsonEnd=source.indexOf('\n',jsonStart);
   assert.ok(chatStart>0&&chatEnd>chatStart&&jsonStart>0);
   const timers=[],settled=[],recorded=[];let release;
@@ -256,11 +451,11 @@ test('a long request answers queued once, keeps working, and settles the same re
     console:{error:()=>{},info:()=>{},warn:()=>{}},JSON,String,Object,Number,Array,Boolean,
     setTimeout:(fn,ms)=>{timers.push({fn,ms});return timers.length;},clearTimeout:id=>{if(timers[id-1])timers[id-1].cleared=true;},
     randomUUID:()=>'11111111-1111-4111-8111-111111111111',createHash:()=>({update(){return this;},digest:()=>'hash'}),
-    TenantProjectError,CompanyProfileError,chatExecutionBudget,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
+    TenantProjectError,CompanyProfileError,chatExecutionBudget,draftOnlyIntent,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
     body:async()=>({op:'message',message:'ابنِ طريقة عمل كاملة',conversation_id:'c1',request_id:'r1'}),
     tenantSession:async()=>({session:{companyId:'company-1'},account:{company_name:'شركة'},headers:{}}),
     companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),
-    employeeRequestMode:()=>'explore',explicitNewEmployee:()=>false,flowName:()=>'x',
+    flowName:()=>'x',
     completedWithoutExecution:(kind,response)=>({...response,request_status:'succeeded',outcome_kind:kind,work_status:'not_started'}),
     failedChatExecution,
     deepseekReply:()=>new Promise(resolve=>{release=resolve;}),
@@ -295,7 +490,7 @@ test('a long request answers queued once, keeps working, and settles the same re
 });
 
 test('a second message waits for the first result before reaching the model',async()=>{
-  const chatStart=source.indexOf('async function publicChat('),chatEnd=source.indexOf('async function deepseek(req,res)',chatStart);
+  const chatStart=source.indexOf('async function publicChat('),chatEnd=source.indexOf('function staticFile(req,res)',chatStart);
   const jsonStart=source.indexOf('function json(res,status,body,headers={})'),jsonEnd=source.indexOf('\n',jsonStart);
   let firstDone=false,releaseFirst,modelCalls=0;const messages=[];
   const profiles={
@@ -309,7 +504,7 @@ test('a second message waits for the first result before reaching the model',asy
   const ctx={console:{error:()=>{}},JSON,String,Object,Number,Array,Boolean,Date,
     setTimeout:(fn,ms)=>ms===1000?setTimeout(fn,1):1,clearTimeout:()=>{},
     randomUUID:()=> 'u1',createHash:()=>({update(){return this;},digest:()=> 'hash'}),
-    TenantProjectError,CompanyProfileError,chatExecutionBudget,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
+    TenantProjectError,CompanyProfileError,chatExecutionBudget,draftOnlyIntent,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
     body:async req=>({op:'message',message:req.id,conversation_id:'c1',request_id:req.id}),
     tenantSession:async()=>({session:{companyId:'company-1'},account:{company_name:'شركة'},headers:{}}),
     companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),
@@ -495,6 +690,62 @@ const executionResult=(overrides={})=>({content:[{type:'text',text:'native reply
 const productionRun=(overrides={})=>({structuredContent:{id:runId,flowId,environment:'PRODUCTION',status:'SUCCEEDED',steps:[{name:'trigger',output:{}},{name:'reply',output:{status:200,body:{result:'QA'}}}],...overrides}});
 const runningEmployee={id:'employee-9',status:'active',activepieces_flow_id:flowId,tools_json:['mcp']};
 
+test('a declared native context field receives saved knowledge and instructions without assuming a task field',async()=>{
+  for(const [field,type,omit] of [['company_context','object',false],['بيانات_سيادة','string',false],['other_context','object',true],['request_context','string',true]]){
+  const saved={...runningEmployee,prompt:'راجع أسعار الشركة قبل تقديم عرض.',prompt_version:8};
+  const flowInputSchema={type:'object',properties:{customer:{type:'string'},[field]:{type,description:'Server supplied [siyadah:context]'}},required:['customer',field]};
+  const {run,log}=setup({flowInputSchema,published:true,flowStatus:'ENABLED',toolResults:{[flowToolName]:executionResult(),ap_get_run:productionRun()},script:[request=>{
+    assert.match(request.messages[0].content,/\[siyadah:context\]/);
+    assert.match(request.messages[0].content,/اربطه بخطوات/);
+    return use([flowToolName,{customer:'خالد',...(omit?{}:{[field]:type==='string'?'forged':{company:'foreign'}})}]);
+  },say('وصلت النتيجة.')]});
+  await run({employee:saved,message:'جهز عرض الخدمة الحالية.',company:{name:'شركة الاختبار'},settings:{language:'ar'},knowledge:{facts:[{topic:'الأسعار',value:'الخدمة بـ١٢٠٠ ريال',certainty:'confirmed'}]},history:[{role:'user',content:'أريد العرض بالعربية.'}]});
+  const args=log.tools.find(([name])=>name===flowToolName)[1],sent=type==='string'?JSON.parse(args[field]):args[field];
+  assert.equal(args.customer,'خالد');assert.equal(Object.hasOwn(args,'task'),false);
+  assert.equal(sent.request,'جهز عرض الخدمة الحالية.');
+  assert.equal(sent.context.company.name,'شركة الاختبار');
+  assert.equal(sent.context.selectedEmployee.id,saved.id);
+  assert.equal(sent.context.selectedEmployee.instructions,saved.prompt);
+  assert.equal(sent.context.selectedEmployee.instructionVersion,8);
+  assert.equal(sent.context.knowledge.facts[0].value,'الخدمة بـ١٢٠٠ ريال');
+  assert.equal(sent.context.settings.language,'ar');
+  assert.equal(sent.history[0].content,'أريد العرض بالعربية.');
+  assert.match(sent.memory,/أريد العرض بالعربية/);
+  assert.equal(JSON.stringify(sent).includes('test-key'),false);
+  assert.equal(log.tools.filter(([name])=>name===flowToolName).length,1);
+  }
+});
+
+test('undeclared context leaves native inputs unchanged and invalid context types never dispatch',async()=>{
+  for(const marked of [false,true]){
+    const flowInputSchema={type:'object',properties:{amount:{type:'number',description:marked?'[siyadah:context]':'Business amount'}}};
+    const {run,log}=setup({flowInputSchema,published:true,flowStatus:'ENABLED',script:[use([flowToolName,{amount:1200}]),say('انتهى الطلب.')]});
+    const answer=await run({employee:runningEmployee});
+    if(marked){assert.deepEqual(log.tools,[]);assert.equal(log.effects,0);assert.match(toolMessages(log.model.at(-1))[0],/employee_context_schema/);}
+    else assert.deepEqual(log.tools,[[flowToolName,{amount:1200}]]);
+    assert.equal(answer.toolReceipts.length,1);
+  }
+});
+
+test('a newly prepared employee executes a subsequent work request through its published native tool',async()=>{
+  const preparation=setup({nativeTestMetadata:true,script:[use(['ap_build_flow',{flowName:'نور'}]),use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),say('الموظف جاهز.')]});
+  const ready=await preparation.run({message:'ابن الموظف واختبره وانشره وفعّله',draftEmployee:{id:'employee-1',name:'نور',activepieces_flow_id:null}});
+  assert.equal(completedToolActions(ready).outcome_kind,'employee_ready');
+  assert.equal(ready.employee.status,'active');
+  assert.equal(ready.employee.flowId,ready.readinessReceipt.flow_id);
+  const employee={id:ready.employee.recordId,status:ready.employee.status,activepieces_flow_id:ready.employee.flowId,tools_json:['mcp']};
+  const work=setup({published:true,flowStatus:'ENABLED',toolResults:{[flowToolName]:executionResult(),ap_get_run:productionRun()},script:[use([flowToolName,{task:'أرجع نتيجة العمل'}]),say('native reply')]});
+  const result=await work.run({message:'نفّذ العمل الآن',employee});
+  assert.deepEqual(JSON.parse(JSON.stringify(work.log.tools)),[[flowToolName,{task:'أرجع نتيجة العمل'}],['ap_get_run',{flowRunId:runId}]]);
+  assert.equal(work.log.runs[0].employeeId,employee.id);
+  assert.equal(work.log.runs[0].flowId,ready.readinessReceipt.flow_id);
+  assert.equal(result.toolReceipts[0].run_id,runId);
+  assert.equal(result.toolReceipts[0].outcome,'flow_completed');
+  assert.equal(completedToolActions(result).outcome_kind,'tool_result');
+  assert.equal(completedToolActions(result).work_status,'succeeded');
+  assert.equal(result.reply,'native reply');
+});
+
 test('earlier Flow edits including failed writes block native dispatch in the same batch or next turn',async()=>{
   for(const sameBatch of [true,false])for(const failedWrite of [true,false]){
     let nativeReconciliations=0;
@@ -629,4 +880,115 @@ test('completed effect stays visible but cannot be dispatched again in a continu
   assert.ok(log.model[0].tools.some(x=>x.function.name==='ap_list_tables'));
   assert.deepEqual(log.tools,[]);
   assert.match(toolMessages(log.model[1])[0],/mcp_effect_already_completed/);
+});
+
+test('an asynchronous effect gate resolves before any MCP mutation is dispatched',async()=>{
+  let enter,unlock;const entered=new Promise(resolve=>{enter=resolve;});
+  const h=setup({script:[use(['ap_run_action',{pieceName:'gmail',actionName:'send_email'}]),say('انتهى.')]});
+  const pending=h.run({onEffectStart:async()=>{enter();await new Promise(resolve=>{unlock=resolve;});}});
+  await entered;
+  assert.deepEqual(h.log.tools,[]);
+  unlock();await pending;
+  assert.deepEqual(h.log.tools.map(t=>t[0]),['ap_run_action']);
+});
+test('a busy company effect gate returns to the model without executing and still allows reads',async()=>{
+  const h=setup({script:[use(['ap_run_action',{pieceName:'gmail',actionName:'send_email'}]),use(['ap_list_connections',{}]),say('الإجراء الآخر يعمل؛ قرأت الاتصالات.')]});
+  await h.run({onEffectStart:async()=>{throw new TenantProjectError('company_effect_busy','إجراء آخر يعمل',409);}});
+  assert.deepEqual(h.log.tools.map(t=>t[0]),['ap_list_connections']);
+  assert.match(toolMessages(h.log.model[1])[0],/company_effect_busy/);
+});
+
+test('different server contexts block overlapping company effects while direct replies continue and release permits retry',async()=>{
+  const held=new Set(),events=[];let finishFirst,entered,finishSettlement;
+  const firstEntered=new Promise(resolve=>{entered=resolve;});
+  const database=async()=>({connect:async()=>({
+    query:async(sql,keys)=>{const key=JSON.stringify(keys);if(sql.includes('pg_try_advisory_lock')){const locked=!held.has(key);if(locked)held.add(key);return {rows:[{locked}]};}return {rows:[{unlocked:held.delete(key)}]};},release:()=>{}
+  })});
+  const profiles={claimChatRequest:async()=>({claimed:true,claimToken:'t'}),earlierPendingChatRequest:async()=>null,
+    recordConversation:async()=>{},settleChatRequest:async entry=>{if(entry.requestId==='first')await new Promise(resolve=>{finishSettlement=resolve;});return {httpStatus:entry.httpStatus,response:entry.response};},
+    read:async()=>({}),readSettings:async()=>({}),ownedKnowledge:async()=>({}),listEmployees:async()=>[],conversationHistory:async()=>[],findConversationDraft:async()=>null};
+  const chatStart=source.indexOf('async function publicChat('),chatEnd=source.indexOf('function staticFile(req,res)',chatStart);
+  const jsonStart=source.indexOf('function json(res,status,body,headers={})'),jsonEnd=source.indexOf('\n',jsonStart);
+  function instance(){
+    const ctx={console:{error:()=>{}},JSON,String,Object,Number,Array,Boolean,Date,setTimeout,clearTimeout,
+      randomUUID:()=> 'unused',createHash:()=>({update(){return this;},digest:()=> 'hash'}),
+      TenantProjectError,CompanyProfileError,chatExecutionBudget,draftOnlyIntent,createCompanyEffectLock,database,effectDatabase:database,
+      body:async req=>({op:'message',message:req.id,conversation_id:req.id,request_id:req.id}),
+      tenantSession:async()=>({session:{companyId:'company-a'},account:{company_name:'شركة'},headers:{}}),
+      companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),failedChatExecution,
+      completedWithoutExecution:(_kind,response)=>({...response,request_status:'succeeded'}),
+      deepseekReply:async args=>{if(args.message!=='read'){await args.onEffectStart();events.push(args.message);if(args.message==='first'){entered();await new Promise(resolve=>{finishFirst=resolve;});}}return {reply:'رد '+args.message};}
+    };
+    const handler=runInNewContext(`${source.slice(jsonStart,jsonEnd)}\n${source.slice(chatStart,chatEnd)};publicChat`,ctx);
+    return async id=>{let result;const res={headersSent:false,writeHead(){this.headersSent=true;},end(text){result=JSON.parse(text);}};await handler({id,headers:{}},res);return result;};
+  }
+  const a=instance(),b=instance(),first=a('first');await firstEntered;
+  const blocked=await b('second');assert.equal(blocked.request_status,'failed');assert.deepEqual(events,['first']);
+  assert.equal((await b('read')).reply,'رد read');assert.equal(held.size,1);
+  finishFirst();while(!finishSettlement)await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(held.size,1,'effect lock must remain held while settlement is pending');
+  finishSettlement();await first;assert.equal(held.size,0);
+  assert.equal((await b('retry')).reply,'رد retry');assert.deepEqual(events,['first','retry']);assert.equal(held.size,0);
+});
+
+test('publish checks the tested version after acquiring the shared effect lock',async()=>{
+  const h=setup({script:[use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),say('تغيرت النسخة.')]});
+  await h.run({draftEmployee:{id:'employee-1',name:'موظف',activepieces_flow_id:flowId},beforeEffect:async({name})=>{if(name==='ap_lock_and_publish')h.setVersion('v2');}});
+  assert.equal(h.log.tools.some(([name])=>name==='ap_lock_and_publish'),false);
+  assert.match(toolMessages(h.log.model.at(-1)).at(-1),/employee_test_required/);
+});
+
+test('main and employee chat retrieve shared knowledge and only the selected employee cumulative memory',async()=>{
+  const make=(id,scope,owner,key)=>({id:id.repeat(21),cells:{scope,owner,key,value:'saved '+key,source_quote:'معلومة سابقة',source_request:'old',updated_at:'2026-10-07T10:00:00Z'}});
+  const rows=[make('A','company','company-1','shared'),make('B','employee','employee-1','selected'),make('C','employee','employee-2','other'),make('D','user','user-1','private')];
+  for(const employee of [null,{id:'employee-1',name:'نور',status:'draft'}]){
+    const h=setup({memoryRows:rows,script:[say('رد مباشر من المعرفة.')]});await h.run({employee,memoryRequestId:'current'});
+    const system=h.log.model[0].messages[0].content;
+    assert.match(system,/saved shared/);assert.doesNotMatch(system,/saved other|saved private/);
+    if(employee)assert.match(system,/saved selected/);else assert.doesNotMatch(system,/saved selected/);
+    assert.equal(h.log.effects,0);assert.deepEqual(h.log.tools.map(t=>t[0]),['ap_list_tables',...Array(employee?2:1).fill('ap_find_records')]);
+  }
+});
+test('both chats persist a sourced fact through native AP and reuse it from a new conversation',async()=>{
+  for(const employee of [null,{id:'employee-1',name:'نور',status:'draft'}]){
+    const h=setup({memoryRows:[],script:[use(['ap_insert_records',{tableId:'T'.repeat(21),records:[{scope:employee?'employee':'company',key:'pricing',value:'100',source_quote:'سعرنا 100'}]}]),say('حفظت المعلومة.')]});
+    const answer=await h.run({employee,memoryRequestId:'first',message:'تذكر: سعرنا 100',conversationId:'first-chat'});
+    assert.equal(h.savedMemories.length,1);assert.equal(h.savedMemories[0].cells.owner,employee?'employee-1':'company-1');
+    assert.equal(completedToolActions(answer).outcome_kind,'memory_updated');
+    const next=setup({memoryRows:h.savedMemories,script:[say('سعرنا 100.')]});await next.run({employee,memoryRequestId:'second',message:'ما السعر؟',conversationId:'new-chat'});
+    assert.match(next.log.model[0].messages[0].content,/"value":"100"/);
+  }
+});
+test('read-only and draft-only messages cannot persist cumulative memory',async()=>{
+  for(const message of ['قراءة فقط: سعرنا 100','مسودة فقط: سعرنا 100']){
+    const h=setup({memoryRows:[],script:[use(['ap_insert_records',{tableId:'T'.repeat(21),records:[{scope:'company',key:'pricing',value:'100',source_quote:'سعرنا 100'}]}]),say('قرأت دون حفظ.')]});
+    await h.run({message,memoryRequestId:'current'});assert.equal(h.savedMemories.length,0);assert.equal(h.log.effects,0);
+    assert.equal(h.log.tools.some(t=>t[0]==='ap_insert_records'),false);assert.match(toolMessages(h.log.model[1])[0],/chat_read_only/);
+  }
+});
+
+test('saving employee memory after a verified run does not repeat the run or invalidate its receipt',async()=>{
+  const h=setup({memoryRows:[],published:true,flowStatus:'ENABLED',toolResults:{[flowToolName]:executionResult(),ap_get_run:productionRun()},script:[use([flowToolName,{}]),use(['ap_insert_records',{tableId:'T'.repeat(21),records:[{scope:'employee',key:'pricing',value:'100',source_quote:'سعرنا 100'}]}]),say('اكتملت المهمة وحفظت المعلومة.')]});
+  const answer=await h.run({employee:runningEmployee,memoryRequestId:'current',message:'شغّل المهمة وتذكر: سعرنا 100'});
+  assert.equal(h.savedMemories.length,1);assert.equal(h.log.tools.filter(t=>t[0]===flowToolName).length,1);
+  assert.equal(completedToolActions(answer).outcome_kind,'tool_result');assert.equal(completedToolActions(answer).memory_updates.length,1);
+});
+
+test('both chats retrieve older relevant company facts beyond the first forty with their source',async()=>{
+  const facts=Array.from({length:75},(_,i)=>({topic:'unrelated',key:'note '+i,value:'routine note '+i}));
+  facts.push({topic:'pricing',key:'سعر الخدمة',value:'سعر الخدمة 199',sourceUrl:'https://example.com/pricing',evidenceQuote:'سعر الخدمة 199',certainty:'user_confirmed',observedAt:'2020-01-01T00:00:00Z'});
+  for(const employee of [null,{id:'employee-1',status:'draft',name:'نور',knowledge_topics_json:['support']}]){
+    const h=setup({script:[say('سعر الخدمة 199.')]});await h.run({employee,knowledge:{facts},message:'ما سعر الخدمة؟'});
+    const context=JSON.parse(h.log.model[0].messages[0].content.split('سياق العمل الحالي بصيغة JSON:\n')[1].split('\n')[0]);
+    assert.equal(context.knowledge.facts[0].value,'سعر الخدمة 199');assert.equal(context.knowledge.facts[0].source,'https://example.com/pricing');
+    assert.equal(h.log.effects,0);
+  }
+});
+test('both chats bound the company knowledge context without truncating individual evidence',async()=>{
+  const facts=Array.from({length:40},(_,i)=>({topic:'support',key:'answer '+i,value:'x'.repeat(1500),sourceUrl:'https://example.com/'+i,certainty:'observed'}));
+  for(const employee of [null,{id:'employee-1',status:'draft',name:'نور'}]){
+    const h=setup({script:[say('رد مباشر.')]});await h.run({employee,knowledge:{facts}});
+    const context=JSON.parse(h.log.model[0].messages[0].content.split('سياق العمل الحالي بصيغة JSON:\n')[1].split('\n')[0]);
+    assert.ok(JSON.stringify(context.knowledge.facts).length<=6000);assert.equal(context.knowledge.facts[0].value.length,1500);assert.equal(h.log.effects,0);
+  }
 });
