@@ -5,6 +5,7 @@ import {createHash,randomUUID,timingSafeEqual} from 'node:crypto';
 import pg from 'pg';
 import {createTenantProjectService,TenantProjectError} from './lib/tenant-projects.mjs';
 import {provisionVerifiedTenant} from './lib/tenant-provisioning.mjs';
+import {createChatFlowLifecycle} from './lib/chat-flow-lifecycle.mjs';
 import {createEmployeeRunRecovery} from './lib/employee-run-recovery.mjs';
 import {createToolConnectionService} from './lib/tool-connections.mjs';
 import {createGoogleOAuthAttemptStore} from './lib/google-oauth-attempts.mjs';
@@ -33,6 +34,7 @@ let accountAuthPromise;
 let databasePromise;
 let firecrawlClient;
 let mcpPromise;
+const {buildOwnedDraftFlow,successfulFlowTest}=createChatFlowLifecycle({database,companyProfiles,tenantProjects});
 const mailer=createMailer({apiKey:process.env.RESEND_API_KEY,from:process.env.SIYADAH_MAIL_FROM,replyTo:process.env.SIYADAH_MAIL_REPLY_TO});
 
 function json(res,status,body,headers={}){if(res.headersSent)return;res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...headers});res.end(JSON.stringify(body));}
@@ -373,37 +375,6 @@ async function authRoute(req,res,operation){
     if(error instanceof AccountAuthError||error instanceof TenantProjectError||error instanceof MailerError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
     console.error('account auth failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error',message:'تعذّر إكمال الدخول.'});
   }
-}
-async function buildOwnedDraftFlow({mcp,companyId,args,draftEmployee=null,onEffectStart,toolName='ap_build_flow'}){
-  const client=draftEmployee?await (await database()).connect():null;
-  let locked=false;
-  try{
-    if(client){
-      locked=(await client.query('SELECT pg_try_advisory_lock(hashtext($1),hashtext($2)) AS locked',[companyId,draftEmployee.id])).rows?.[0]?.locked===true;
-      if(!locked)throw new CompanyProfileError('employee_build_busy','تجهيز هذا الموظف قيد التنفيذ. تحقّق من نتيجته قبل المحاولة مجددًا.',409);
-      const current=await (await companyProfiles()).findEmployee(companyId,draftEmployee.id);
-      if(current?.status!=='draft'||current.activepieces_flow_id)throw new CompanyProfileError('employee_flow_conflict','طريقة عمل هذا الموظف مجهزة بالفعل.',409);
-    }
-    onEffectStart();
-    const result=await mcp.call(companyId,'tools/call',{name:toolName,arguments:args});
-    if(result?.isError===true)return {result,built:null,updated:null};
-    const built=builtFlowResult(result);
-    if(!built)throw new TenantProjectError('flow_build_unverified','تعذّر تأكيد إنشاء طريقة العمل؛ تحقّق من حالة الطلب قبل إعادته.',502);
-    const {flow}=await (await tenantProjects()).ownedFlow(companyId,built.flowId);
-    if(flow.status!=='DISABLED')throw new TenantProjectError('flow_state_invalid','طريقة العمل لم تُحفظ كمسودة متوقفة.',409);
-    const updated=draftEmployee?await (await companyProfiles()).linkEmployeeFlow({companyId,employeeId:draftEmployee.id,flowId:built.flowId}):null;
-    return {result,built,updated};
-  }finally{
-    if(locked)try{await client.query('SELECT pg_advisory_unlock(hashtext($1),hashtext($2))',[companyId,draftEmployee.id]);}catch(error){console.error('employee build lock release failed',error?.code||error?.name||'unknown_error');}
-    if(client)client.release();
-  }
-}
-async function successfulFlowTest(mcp,companyId,flowId,test){
-  const runId=test?.structuredContent?.runId;
-  if(test?.isError===true||test?.structuredContent?.status!=='SUCCEEDED'||!/^[A-Za-z0-9]{21}$/.test(String(runId||'')))return null;
-  const detail=await mcp.call(companyId,'tools/call',{name:'ap_get_run',arguments:{flowRunId:runId}});
-  const run=detail?.structuredContent;
-  return detail?.isError!==true&&run?.id===runId&&run.flowId===flowId&&run.environment==='TESTING'&&run.status==='SUCCEEDED'&&Array.isArray(run.steps)&&run.steps.length>0?{...run,...(typeof test.structuredContent.usedMockTriggerData==='boolean'?{usedMockTriggerData:test.structuredContent.usedMockTriggerData}:{})}:null;
 }
 async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null,mcp=null,companyId=null,conversationId=null,deadlineMs=null,excludedTools=[],onEffectStart=null,onNativeExecution=null,createDraft=null}){
   mcp=mcp?.forRequest?.()||mcp;

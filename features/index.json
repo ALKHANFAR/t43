@@ -402,7 +402,7 @@
         {"role": "retired_public_proxy_test", "path": "scripts/server-runtime.test.mjs", "anchor": "assert.equal(retired.status,405)"},
         {"role": "tool_receipt", "path": "server.mjs", "anchor": "const effects=[],toolReceipts=[];"},
         {"role": "tool_receipt_render", "path": "app/chat.js", "anchor": "var receipts=Array.isArray(data.tool_receipts)"},
-        {"role": "draft_build", "path": "server.mjs", "anchor": "async function buildOwnedDraftFlow("},
+        {"role": "draft_build", "path": "lib/chat-flow-lifecycle.mjs", "anchor": "async function buildOwnedDraftFlow("},
         {"role": "approval_route", "path": "server.mjs", "anchor": "if(input.op==='approve')"},
         {"role": "table_readback", "path": "lib/chat-intelligence.mjs", "anchor": "export function createdTableReadback("},
         {"role": "table_continuation", "path": "server.mjs", "anchor": "if(pending.toolName==='ap_create_table')"},

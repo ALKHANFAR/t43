@@ -8,9 +8,11 @@ import {TenantProjectError} from '../lib/tenant-projects.mjs';
 import {nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget,failedChatExecution} from '../lib/chat-outcome.mjs';
 import {CompanyProfileError} from '../lib/company-profile.mjs';
 
-// Runs the real chat loop from server.mjs against a scripted model and a scripted Activepieces MCP.
+// Runs the real chat loop and Flow lifecycle against a scripted model and Activepieces MCP.
 const source=readFileSync(new URL('../server.mjs',import.meta.url),'utf8');
-const start=source.indexOf('async function buildOwnedDraftFlow('),end=source.indexOf('async function publicChat(',start);
+const lifecycle=readFileSync(new URL('../lib/chat-flow-lifecycle.mjs',import.meta.url),'utf8');
+const helpers=lifecycle.slice(lifecycle.indexOf('async function buildOwnedDraftFlow('),lifecycle.indexOf('  return {buildOwnedDraftFlow,successfulFlowTest};'));
+const start=source.indexOf('async function deepseekReply('),end=source.indexOf('async function publicChat(',start);
 assert.ok(start>0&&end>start);
 const flowId='F'.repeat(21);
 const runId='R'.repeat(21);
@@ -76,7 +78,7 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false,edit
     tenantProjects:async()=>({requireProject:async()=> 'P'.repeat(21),ownedFlow:async(_company,id)=>{log.owned.push(id);return {flow:{...publishedFlow,id,status,publishedVersionId,version:{...publishedFlow.version,id:draftVersionId,state:versionState,updated,...(updatedBy?{updatedBy}:{}),trigger:{...publishedFlow.version.trigger,settings:{...publishedFlow.version.trigger.settings,input:{...publishedFlow.version.trigger.settings.input,task:taskInput},...(sampleData?{sampleData}:{})}}}}};}}),
     toolConnections:async()=>({assertOwnedExternal:async({externalId})=>{if(externalId==='foreign')throw new TenantProjectError('connection_not_owned','الاتصال لا يخص هذه الشركة.',403);}}),
   };
-  const deepseekReply=runInNewContext(`${source.slice(start,end)}; deepseekReply`,ctx);
+  const deepseekReply=runInNewContext(`${helpers}\n${source.slice(start,end)}; deepseekReply`,ctx);
   const run=(extra={})=>deepseekReply({company:{name:'شركة'},settings:{},knowledge:{},team:[],history:[],message:'جهّز الموظف',mcp,companyId:'company-1',conversationId:'c1',deadlineMs:600_000,onEffectStart:()=>{log.effects++;},...extra});
   return {run,log};
 }

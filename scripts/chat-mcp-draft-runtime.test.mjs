@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 
-const source=readFileSync(new URL('../server.mjs',import.meta.url),'utf8');
+const source=readFileSync(new URL('../lib/chat-flow-lifecycle.mjs',import.meta.url),'utf8');
 const start=source.indexOf('async function buildOwnedDraftFlow(');
-const end=source.indexOf('async function deepseekReply(',start);
+const end=source.indexOf('  return {buildOwnedDraftFlow,successfulFlowTest};',start);
 assert.ok(start>0&&end>start);
 const helper=source.slice(start,end);
 const id='012345678901234567890';
