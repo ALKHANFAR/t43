@@ -345,6 +345,45 @@ test('account company name survives researched website identity in hydrate and e
   }
 });
 
+test('employee chat loads the selected saved employee and company knowledge before calling the model',async()=>{
+  const chatStart=source.indexOf("      if(typeof input.employee_id==='string'&&input.employee_id){",source.indexOf('async function publicChat('));
+  const chatEnd=source.indexOf('\n      const profile=await profiles.read(companyId)',chatStart);
+  assert.ok(chatStart>0&&chatEnd>chatStart);
+  const employees=[
+    {id:'sales',status:'draft',prompt:'تابع فرص البيع.',prompt_version:2,activepieces_flow_id:'S'.repeat(21)},
+    {id:'support',status:'active',prompt:'حل مشاكل العملاء.',prompt_version:7,activepieces_flow_id:'H'.repeat(21)},
+  ];
+  const knowledge={facts:[{topic:'الشركة',value:'المعرفة المحفوظة'}]},settings={language:'ar'},calls=[],recorded=[];
+  const profiles={
+    findEmployee:async(company,id)=>{assert.equal(company,'company-1');return employees.find(e=>e.id===id);},
+    read:async()=>({company_name:'Website name',profile_json:{industry:'services'}}),
+    readSettings:async()=>settings,ownedKnowledge:async()=>knowledge,listEmployees:async()=>employees,
+    conversationHistory:async args=>{assert.equal(args.companyId,'company-1');return [{role:'user',content:args.conversationId}];},
+    recordConversation:async entry=>recorded.push(entry),
+  };
+  for(const saved of employees){
+    const ctx={input:{employee_id:saved.id,message:'اقترح الخطوة التالية.',prompt:'client override'},companyId:'company-1',conversationId:`chat-${saved.id}`,requestId:`req-${saved.id}`,acceptedAt:Date.now(),claim:{claimToken:'claim'},
+      resolved:{account:{company_name:'Registered name'}},profiles,companyProfiles:async()=>profiles,
+      database:async()=>({query:()=>{throw new Error('unexpected database execution');}}),activepiecesMcp:async()=>({}),tenantProjects:async()=>({}),createEmployeeRunRecovery:()=>({}),
+      chatExecutionBudget,CompanyProfileError,Number,
+      deepseekReply:async args=>{calls.push(args);return {reply:'توصية',effects:[],toolReceipts:[]};},
+      completedWithoutExecution:(kind,value)=>({...value,outcome_kind:kind,work_status:'not_started'}),
+      finish:async(status,value)=>({status,value}),
+    };
+    const result=await runInNewContext(`(async()=>{${source.slice(chatStart,chatEnd)}})()`,ctx);
+    const args=calls.at(-1);
+    assert.equal(args.employee,saved);
+    assert.equal(args.employee.prompt,saved.prompt);
+    assert.equal(args.knowledge,knowledge);assert.equal(args.settings,settings);
+    assert.equal(args.company.name,'Registered name');
+    assert.equal(args.history[0].content,`chat-${saved.id}`);
+    assert.equal(result.value.experience.employee_id,saved.id);
+    assert.equal(result.value.experience.instruction_version,saved.prompt_version);
+    assert.equal(result.value.experience.external_execution,false);
+    assert.equal(recorded.at(-1).employeeId,saved.id);
+  }
+});
+
 test('a long request answers queued once, keeps working, and settles the same request ID',async()=>{
   const chatStart=source.indexOf('async function publicChat('),chatEnd=source.indexOf('function staticFile(req,res)',chatStart);
   const jsonStart=source.indexOf('function json(res,status,body,headers={})'),jsonEnd=source.indexOf('\n',jsonStart);
@@ -365,7 +404,7 @@ test('a long request answers queued once, keeps working, and settles the same re
     body:async()=>({op:'message',message:'ابنِ طريقة عمل كاملة',conversation_id:'c1',request_id:'r1'}),
     tenantSession:async()=>({session:{companyId:'company-1'},account:{company_name:'شركة'},headers:{}}),
     companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),
-    employeeRequestMode:()=>'explore',explicitNewEmployee:()=>false,flowName:()=>'x',
+    flowName:()=>'x',
     completedWithoutExecution:(kind,response)=>({...response,request_status:'succeeded',outcome_kind:kind,work_status:'not_started'}),
     failedChatExecution,
     deepseekReply:()=>new Promise(resolve=>{release=resolve;}),
