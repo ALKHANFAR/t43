@@ -685,7 +685,7 @@ test('older proof in the same conversation is not presented as the latest reques
  const p=await page({hydrate:{...empty,team:[employee],recent_work:[older],conversations:[{id:'same',employee_id:employee.recordId,title:'ريم',messages:[]}]},message:{ok:true,conversation_id:'same',work_id:'new-request',work_status:'succeeded',outcome_kind:'tool_result',reply:'وصلت نتيجة جديدة',recent_work:[older]}});try{
   p.d.querySelector('[data-chat="same"]').click();send(p,'قراءة جديدة');await flush();
   assert.equal(p.d.querySelectorAll('.m__c').length>0,true);
-  assert.match(thread(p),/لا يثبت الطلب الأخير/);
+  assert.match(thread(p),/غير مربوط برسالة محددة/);
   assert.doesNotMatch(p.d.querySelector('.m__c').textContent,/old-request/);
  }finally{p.close();}
 });

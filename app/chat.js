@@ -1635,7 +1635,7 @@ var I = {
         (!r.conversation_id||r.conversation_id===list.siyConversationId)&&
         !list.some(function(m){return Array.isArray(m.proofIds)&&m.proofIds.includes(r.recordId);});
     });
-    return proofs.length?'<div class="m m--ai"><span class="m__av">'+avHtml(e.id)+'</span><div class="m__b"><div class="m__c">'+(proofs.some(function(r){return r.conversation_id;})?siyWorkHtml(proofs.filter(function(r){return r.conversation_id;}),ui('سجل أعمال سابقة في هذه المحادثة — لا يثبت الطلب الأخير','Earlier work in this conversation — does not verify the latest request')):'')+siyLegacyProofHtml(proofs)+'</div></div></div>':"";
+    return proofs.length?'<div class="m m--ai"><span class="m__av">'+avHtml(e.id)+'</span><div class="m__b"><div class="m__c">'+(proofs.some(function(r){return r.conversation_id;})?siyWorkHtml(proofs.filter(function(r){return r.conversation_id;}),ui('سجل تشغيل في هذه المحادثة — غير مربوط برسالة محددة','Run history in this conversation — not linked to a specific message')):'')+siyLegacyProofHtml(proofs)+'</div></div></div>':"";
   }
   function siyLegacyProofHtml(records){
     var legacy=records.filter(function(r){return !r.conversation_id;});

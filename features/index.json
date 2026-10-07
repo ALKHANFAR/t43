@@ -14,7 +14,8 @@
         {"role": "render", "path": "app/chat.js", "anchor": "function siyReplyHtml(text)"},
         {"role": "verified_run", "path": "app/chat.js", "anchor": "var verifiedRun=kind==='tool_result'"},
         {"role": "proof_scope", "path": "app/chat.js", "anchor": "r.work_id===data.work_id"},
-        {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "older proof in the same conversation is not presented as the latest request result"}
+        {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "older proof in the same conversation is not presented as the latest request result"},
+        {"role": "ledger_test", "path": "scripts/chat-request-ledger-runtime.test.mjs", "anchor": "a final model reply cannot replace a run already reconciled for the request"}
       ]
     },
     {
