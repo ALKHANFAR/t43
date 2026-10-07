@@ -282,6 +282,21 @@ test('selected employee chat calls only its published native MCP Flow tool',asyn
   assert.ok(!log.model[0].tools.some(tool=>tool.function.name==='siyadah_run_employee_flow'));
 });
 
+test('account company name survives researched website identity in hydrate and export',async()=>{
+  const chatStart=source.indexOf('async function publicChat('),chatEnd=source.indexOf('async function deepseek(req,res)',chatStart);
+  for(const op of ['hydrate','export']){
+    const profiles={read:async()=>({company_name:'Website Vendor'}),listEmployees:async()=>[],recentWork:async()=>[],readSettings:async()=>({}),ownedKnowledge:async()=>({}),listConversations:async()=>[],pendingChatWork:async()=>[]};
+    let response;
+    const ctx={JSON,String,Object,Number,Array,Date,TenantProjectError,CompanyProfileError,GmailPilotError:class extends Error{},
+      body:async()=>({op}),tenantSession:async()=>({session:{companyId:'company-1'},account:{company_name:'Registered Company'},headers:{}}),companyProfiles:async()=>profiles,
+      json:(_res,status,value)=>{assert.equal(status,200);response=value;}};
+    const publicChat=runInNewContext(`${source.slice(chatStart,chatEnd)};publicChat`,ctx);
+    await publicChat({headers:{}},{});
+    assert.equal(op==='hydrate'?response.company:response.export.company.name,'Registered Company');
+    if(op==='export')assert.equal(response.filename,'Registered Company-siyadah.json');
+  }
+});
+
 test('a long request answers queued once, keeps working, and settles the same request ID',async()=>{
   const chatStart=source.indexOf('async function publicChat('),chatEnd=source.indexOf('async function deepseek(req,res)',chatStart);
   const jsonStart=source.indexOf('function json(res,status,body,headers={})'),jsonEnd=source.indexOf('\n',jsonStart);

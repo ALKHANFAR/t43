@@ -502,6 +502,40 @@
         {"role": "test", "path": "scripts/gmail-pilot-runner-runtime.test.mjs", "anchor": "Gmail pilot runner has no outbound webhook dispatch"},
         {"role": "test", "path": "scripts/chat-request-ledger-runtime.test.mjs", "anchor": "Gmail pilot shares one ledger key across two chat conversations"}
       ]
+    },
+    {
+      "id": "registered_company_identity",
+      "name": "ثبات اسم الشركة المسجل",
+      "aliases": [
+        "اسم الشركة",
+        "اسم الموقع",
+        "company identity"
+      ],
+      "state": "draft_pr",
+      "meaning": "اسم الحساب هو اسم الشركة في الشات والتصدير وسياق الموظف؛ الاسم المستخرج من الموقع يبقى سياق بحث منفصلًا. اختبار محلي ولا نشر.",
+      "linear": "ABO-64",
+      "locations": [
+        {
+          "role": "hydrate",
+          "path": "server.mjs",
+          "anchor": "company:resolved.account.company_name,company_settings:"
+        },
+        {
+          "role": "model_context",
+          "path": "server.mjs",
+          "anchor": "researchedWebsiteName:profile?.company_name||null"
+        },
+        {
+          "role": "export",
+          "path": "server.mjs",
+          "anchor": "const name=resolved.account.company_name||'company'"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "account company name survives researched website identity in hydrate and export"
+        }
+      ]
     }
   ]
 }

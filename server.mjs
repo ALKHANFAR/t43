@@ -641,7 +641,7 @@ async function publicChat(req,res){
     if(input.op==='hydrate'){
       const profiles=await companyProfiles(),saved=await profiles.listEmployees(companyId);
       const profile=await profiles.read(companyId),recentWork=await profiles.recentWork(companyId);
-      return json(res,200,{ok:true,company:profile?.company_name||resolved.account.company_name,company_settings:await profiles.readSettings(companyId),team:saved,memory:[],owned_knowledge:await profiles.ownedKnowledge(companyId),recent_work:recentWork,work_count:recentWork.length,conversations:await profiles.listConversations(companyId),pending_work:await profiles.pendingChatWork(companyId)},sessionHeaders);
+      return json(res,200,{ok:true,company:resolved.account.company_name,company_settings:await profiles.readSettings(companyId),team:saved,memory:[],owned_knowledge:await profiles.ownedKnowledge(companyId),recent_work:recentWork,work_count:recentWork.length,conversations:await profiles.listConversations(companyId),pending_work:await profiles.pendingChatWork(companyId)},sessionHeaders);
     }
     if(input.op==='work'){
       const requestId=typeof input.request_id==='string'?input.request_id:typeof input.work_id==='string'&&input.work_id.startsWith('request_')?input.work_id.slice(8):'';
@@ -760,7 +760,7 @@ async function publicChat(req,res){
     }
     if(input.op==='export'){
       const profiles=await companyProfiles(),profile=await profiles.read(companyId),employees=await profiles.listEmployees(companyId),knowledge=await profiles.ownedKnowledge(companyId),settings=await profiles.readSettings(companyId),recentWork=await profiles.recentWork(companyId);
-      const name=profile?.company_name||resolved.account.company_name||'company',filename=`${String(name).replace(/[^\p{L}\p{N} _-]/gu,'').trim().slice(0,80)||'company'}-siyadah.json`;
+      const name=resolved.account.company_name||'company',filename=`${String(name).replace(/[^\p{L}\p{N} _-]/gu,'').trim().slice(0,80)||'company'}-siyadah.json`;
       return json(res,200,{ok:true,filename,export:{schemaVersion:1,kind:'siyadah_customer_bundle',exportedAt:new Date().toISOString(),company:{name,settings,knowledge},employees,recentWork,manifest:{complete:false,employeeCount:employees.length,knowledgeVersion:Number(knowledge?.knowledgeVersion||0)}}},sessionHeaders);
     }
     if(input.op==='approve'){
@@ -845,7 +845,7 @@ async function publicChat(req,res){
           const completed=`تحققنا من إنشاء جدول «${table.name}» في مشروع الشركة (id: ${table.id}, externalId: ${table.externalId}).`;
           let answer;
           try{
-            answer=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history:[...(conversation?.messages||[]),{role:'assistant',content:completed}],message:'تابع هدف المستخدم في هذه المحادثة بعد تجهيز الجدول المؤكد. إذا احتاج الهدف طريقة عمل، اقترح بناء Flow كمسودة عبر الأدوات والموافقة المعتادة. لا تنشئ جدولًا آخر ولا تدّع تشغيل مهمة.',draftEmployee:draft?.status==='draft'?draft:null,mcp,companyId,conversationId,deadlineMs:25_000,excludedTools:['ap_create_table']});
+            answer=await deepseekReply({company:{name:resolved.account.company_name,researchedWebsiteName:profile?.company_name||null,profile:profile?.profile_json||{}},settings,knowledge,team,history:[...(conversation?.messages||[]),{role:'assistant',content:completed}],message:'تابع هدف المستخدم في هذه المحادثة بعد تجهيز الجدول المؤكد. إذا احتاج الهدف طريقة عمل، اقترح بناء Flow كمسودة عبر الأدوات والموافقة المعتادة. لا تنشئ جدولًا آخر ولا تدّع تشغيل مهمة.',draftEmployee:draft?.status==='draft'?draft:null,mcp,companyId,conversationId,deadlineMs:25_000,excludedTools:['ap_create_table']});
           }catch(error){console.error('table continuation failed',error?.code||error?.name||'unknown_error');}
           const reply=`${completed} ${answer?.reply||'لم يكتمل تجهيز الخطوة التالية؛ يمكنك المتابعة من هذه المحادثة.'}`;
           const response={ok:true,conversation_id:conversationId,request_status:'succeeded',work_status:answer?.approval?'awaiting_input':'not_started',outcome_kind:'conversation_reply',reply,table:{id:table.id,externalId:table.externalId,name:table.name},...(answer?.toolReceipts?.length?{tool_receipts:answer.toolReceipts}:{}),...(answer?.approval?{approval:answer.approval}:{})};
@@ -893,7 +893,7 @@ async function publicChat(req,res){
         if(saved.status==='active'&&!saved.activepieces_flow_id)throw new CompanyProfileError('employee_not_ready','الموظف بلا طريقة عمل مهيأة.',409);
         const profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId),history=await profiles.conversationHistory({companyId,conversationId,requestId});
         const pool=await database(),employeeMcp=await activepiecesMcp(),recovery=createEmployeeRunRecovery({query:(sql,values)=>pool.query(sql,values),projects:await tenantProjects(),mcp:employeeMcp});
-        const answer=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history,message:input.message,employee:saved,mcp:employeeMcp,companyId,conversationId,deadlineMs:chatExecutionBudget(acceptedAt),onNativeExecution:async native=>{
+        const answer=await deepseekReply({company:{name:resolved.account.company_name,researchedWebsiteName:profile?.company_name||null,profile:profile?.profile_json||{}},settings,knowledge,team,history,message:input.message,employee:saved,mcp:employeeMcp,companyId,conversationId,deadlineMs:chatExecutionBudget(acceptedAt),onNativeExecution:async native=>{
           const identity=await recovery.capture({companyId,requestId,conversationId,claimToken:claim.claimToken,...native});
           return identity?recovery.reconcile({companyId,requestId,conversationId}):null;
         },onEffectStart:()=>{activeRequest.effectStarted=true;activeRequest.executionAttempt=true;}});
@@ -905,7 +905,7 @@ async function publicChat(req,res){
       const existing=await profiles.findConversationDraft(companyId,conversationId);
       const draft=existing?.status==='draft'?existing:null;
       let answer;
-      answer=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history,message:input.message,draftEmployee:draft,mcp:await activepiecesMcp(),companyId,conversationId,deadlineMs:chatExecutionBudget(acceptedAt),onEffectStart:()=>{activeRequest.effectStarted=true;activeRequest.executionAttempt=true;},createDraft:async name=>profiles.findEmployee(companyId,(await profiles.createManualEmployeeDraft({companyId,name:flowName(String(name||input.message)),requestId})).recordId)});
+      answer=await deepseekReply({company:{name:resolved.account.company_name,researchedWebsiteName:profile?.company_name||null,profile:profile?.profile_json||{}},settings,knowledge,team,history,message:input.message,draftEmployee:draft,mcp:await activepiecesMcp(),companyId,conversationId,deadlineMs:chatExecutionBudget(acceptedAt),onEffectStart:()=>{activeRequest.effectStarted=true;activeRequest.executionAttempt=true;},createDraft:async name=>profiles.findEmployee(companyId,(await profiles.createManualEmployeeDraft({companyId,name:flowName(String(name||input.message)),requestId})).recordId)});
       const draftOnly=/(?:مسودة\s*فقط|بدون\s+(?:تشغيل|تفعيل)|لا\s+تفعّل|لا\s+تفعل\s+الموظف|لا\s+تشغّ?ل|draft\s+only|do\s+not\s+activate)/i.test(String(input.message||''));
       const activationIntent=!draftOnly&&answer.flowId&&answer.employee?.flowId===answer.flowId&&answer.employee.status==='disabled'?{auto_activate_after_connection:true,auto_activate_employee_id:answer.employee.recordId,auto_activate_flow_id:answer.flowId}:{};
       const reply=answer.employee&&!answer.flowId&&!answer.readinessReceipt?`حُفظ سجل ${answer.employee.name}، وحالة بناء طريقة عمله غير مؤكدة؛ تحقّق من مشروع الشركة قبل إعادة البناء. ${answer.reply}`:answer.reply;
