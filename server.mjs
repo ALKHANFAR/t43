@@ -447,6 +447,8 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   }
   // Activepieces labels every tool with readOnlyHint; the name pattern only covers a server that omits it.
   const readOnly=name=>{const hint=available.find(tool=>tool.name===name)?.annotations?.readOnlyHint;return typeof hint==='boolean'?hint:/^ap_(?:search_|list_|get_|read_|research_|resolve_|find_|flow_structure$|validate_flow$|validate_step_config$|setup_guide$)/.test(name);};
+  // Scope this restriction to the current request, never to a previous task in memory.
+  const readOnlyRequest=/(?:مسودة\s*فقط|(?:للقراءة|قراءة|القراءة)\s*فقط|\bdraft\s+only\b|\bread[ -]only\b)/i.test(String(message||''));
   const modelTools=()=>available.filter(tool=>/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/.test(tool.name)).map(tool=>({type:'function',function:{name:tool.name,description:String(tool.description||'').slice(0,4000),parameters:tool.inputSchema||{type:'object',properties:{}}}}));
   let tools=modelTools();
   if(available.length)messages[0].content+='\nأدوات MCP تخص مشروع هذه الشركة؛ استخدم كامل الكتالوج الأصلي وفق هدف المستخدم. البناء والتعديل واكتشاف الحقول عبر MCP. احترم طلب المسودة أو القراءة فقط؛ النشر والتفعيل يحتاجان طلب المستخدم ونجاح اختبار النسخة الحالية.';
@@ -510,6 +512,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
         const toolStarted=Date.now();
         try{
           if(!tools.some(tool=>tool.function.name===name))throw new TenantProjectError('mcp_tool_invalid','هذه الأداة غير متاحة في هذه المحادثة.',502);
+          if(readOnlyRequest&&!readOnly(name))throw new TenantProjectError('chat_read_only','طلبك الحالي مسودة أو قراءة فقط؛ لن تُستدعى أداة مؤثرة.',403);
           if(excludedTools.includes(name))throw new TenantProjectError('mcp_effect_already_completed','اكتمل هذا الإجراء في الطلب الحالي؛ تابع من نتيجته دون تكراره.',409);
           if(draftEmployee?.activepieces_flow_id&&['ap_build_flow','ap_create_flow'].includes(name))throw new TenantProjectError('employee_flow_conflict','طريقة عمل المسودة محفوظة؛ اقرأها وعدّلها دون إنشاء نسخة ثانية.',409);
           let args;try{args=JSON.parse(call.function.arguments||'{}');}catch{args=null;}
