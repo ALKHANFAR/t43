@@ -585,6 +585,84 @@
           "anchor": "account company name survives researched website identity in hydrate and export"
         }
       ]
+    },
+    {
+      "id": "bounded_cumulative_chat_memory",
+      "name": "الذاكرة التراكمية المحدودة للشاتين",
+      "aliases": [
+        "ذاكرة الشركة",
+        "تعلم تراكمي",
+        "تذكر بين المحادثات",
+        "ذاكرة الموظف",
+        "bounded memory",
+        "cumulative memory"
+      ],
+      "state": "draft_pr",
+      "meaning": "حلقة أولى محلية: الشات الرئيسي وشات الموظف يسترجعان معلومات موثقة من جدول AP أصلي محفوظ داخل مشروع الشركة، والنموذج يختار أدوات الجداول للحفظ والتحديث. الخادم يفرض المصدر والنطاق وحد 128 سجلًا لكل نطاق ومالك مستقل وسقف 65536 سجلًا للجدول و512 حرفًا للقيمة و6000 حرف للسياق، ويحدث المفتاح المكرر بدل إضافة نسخة، ويقرأ النتيجة مستقلاً قبل تأكيد الحفظ. لا يحفظ نطاق task في الذاكرة الدائمة. ذاكرة المستخدم الشخصية غير مفعلة لأن الجلسة الحالية تعرف الشركة فقط. يحتاج تهيئة/اختبار الجدول والصلاحيات على النسخة الحية؛ الاسترجاع النصي يرتب حسب الصلة ثم الحداثة؛ الاسترجاع المتجهي والدمج الدلالي والتنظيف الآلي لم يكتملوا.",
+      "linear": "ABO-65",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/62",
+      "locations": [
+        {
+          "role": "adapter",
+          "path": "lib/cumulative-memory.mjs",
+          "anchor": "export function createCumulativeMemory("
+        },
+        {
+          "role": "budget",
+          "path": "lib/cumulative-memory.mjs",
+          "anchor": "export const MEMORY_LIMITS="
+        },
+        {
+          "role": "retrieval",
+          "path": "server.mjs",
+          "anchor": "context.cumulativeMemory=memoryState.facts"
+        },
+        {
+          "role": "verified_mutation",
+          "path": "server.mjs",
+          "anchor": "else{result=await cumulativeMemory.mutate(name,args)"
+        },
+        {
+          "role": "user_identity_gate",
+          "path": "server.mjs",
+          "anchor": "const userMemoryId=null;"
+        },
+        {
+          "role": "dedup_test",
+          "path": "scripts/cumulative-memory-runtime.test.mjs",
+          "anchor": "repeating a fact is a no-op"
+        },
+        {
+          "role": "scope_test",
+          "path": "scripts/cumulative-memory-runtime.test.mjs",
+          "anchor": "both chat scopes share company knowledge"
+        },
+        {
+          "role": "budget_test",
+          "path": "scripts/cumulative-memory-runtime.test.mjs",
+          "anchor": "storage cap rejects growth"
+        },
+        {
+          "role": "both_chats_test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "both chats persist a sourced fact"
+        },
+        {
+          "role": "readonly_test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "read-only and draft-only messages cannot persist"
+        },
+        {
+          "role": "provider_result_test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "saving employee memory after a verified run"
+        },
+        {
+          "role": "receipt",
+          "path": "lib/chat-outcome.mjs",
+          "anchor": "outcome_kind:'memory_updated'"
+        }
+      ]
     }
   ]
 }

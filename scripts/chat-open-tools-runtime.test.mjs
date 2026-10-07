@@ -6,6 +6,7 @@ import {builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent} from 
 import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext} from '../lib/mcp-flow-scope.mjs';
 import {TenantProjectError} from '../lib/tenant-projects.mjs';
 import {nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget,failedChatExecution} from '../lib/chat-outcome.mjs';
+import {createCumulativeMemory,MEMORY_TABLE,MEMORY_FIELDS,MEMORY_LIMITS} from '../lib/cumulative-memory.mjs';
 import {createCompanyEffectLock} from '../lib/company-effect-lock.mjs';
 import {CompanyProfileError} from '../lib/company-profile.mjs';
 
@@ -45,13 +46,21 @@ const catalog=[
 const say=content=>({content});
 const use=(...calls)=>({content:'',tool_calls:calls.map(([name,args],index)=>({id:`call_${name}_${index}`,function:{name,arguments:typeof args==='string'?args:JSON.stringify(args||{})}}))});
 
-function setup({script,clock=Date,flowInputSchema=null,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false}={}){
+function setup({script,clock=Date,flowInputSchema=null,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false,memoryRows=null}={}){
   const log={model:[],tools:[],effects:0,states:[],owned:[],runs:[]};
+  const savedMemories=memoryRows===null?null:structuredClone(memoryRows);let memorySerial=1;
+  const memoryTools=['ap_find_records','ap_insert_records','ap_update_record','ap_delete_records','ap_create_table'].map(name=>({name,...hint(name==='ap_find_records'),inputSchema:{type:'object',properties:{}}}));
   let stateAttempts=0,step=0,status=flowStatus,publishedVersionId=published?'v1':null,draftVersionId='v1',versionState=published?'LOCKED':'DRAFT',sampleData,updated='before',updatedBy,taskInput='{{trigger.task}}';
   const mcp={call:async(_company,method,params)=>{
-    if(method==='tools/list')return {tools:catalog.map(tool=>tool.name===flowToolName&&flowInputSchema?{...tool,inputSchema:flowInputSchema}:tool)};
+    if(method==='tools/list')return {tools:[...catalog,...(savedMemories?memoryTools:[])].map(tool=>tool.name===flowToolName&&flowInputSchema?{...tool,inputSchema:flowInputSchema}:tool)};
     if(method==='initialize')return {instructions:'## Activepieces MCP Server\n1. Discover 2. Schema 3. Build 4. Validate 5. Publish'};
     log.tools.push([params.name,params.arguments]);
+    if(savedMemories!==null){
+      if(params.name==='ap_list_tables')return {structuredContent:{tables:[{id:'T'.repeat(21),name:MEMORY_TABLE,rowCount:savedMemories.length,fields:MEMORY_FIELDS.map(name=>({name,type:'TEXT'}))}],count:1}};
+      if(params.name==='ap_find_records'){const records=savedMemories.filter(row=>!(params.arguments.filters||[]).some(f=>row.cells[f.fieldName]!==f.value)).slice(0,params.arguments.limit);return {structuredContent:{records:structuredClone(records),count:records.length}};}
+      if(params.name==='ap_insert_records'){for(const cells of params.arguments.records)savedMemories.push({id:String(memorySerial++).padStart(21,'0'),cells});return {content:[{type:'text',text:'inserted'}]};}
+      if(params.name==='ap_update_record'){Object.assign(savedMemories.find(row=>row.id===params.arguments.recordId).cells,params.arguments.fields);return {content:[{type:'text',text:'updated'}]};}
+    }
     if(Object.hasOwn(toolResults,params.name)){const value=toolResults[params.name];return typeof value==='function'?value(params.arguments):value;}
     if(params.name==='ap_build_flow')return {content:[{type:'text',text:`✅ Flow created (id: ${flowId})`}],structuredContent:{flowId,invalidSteps:[],skippedSteps:[],unknownProps:[]}};
     if(params.name==='ap_test_flow'){if(editDuringTest)draftVersionId='v2';if(nativeTestMetadata){sampleData={lastTestDate:'2026-10-05T21:13:05.105Z',sampleDataFileId:'S'.repeat(21)};updated='after';updatedBy='test-user';}if(editInputDuringTest)taskInput='changed task';return {structuredContent:{runId,status:'SUCCEEDED',usedMockTriggerData:false}};}
@@ -63,7 +72,7 @@ function setup({script,clock=Date,flowInputSchema=null,toolResults={},flowStatus
   const ctx={
     console:{error:()=>{},info:()=>{},warn:()=>{}},process:{env:{DEEPSEEK_API_KEY:'test-key'}},
     AbortController,setTimeout,clearTimeout,Date:clock,JSON,String,Array,Object,Math,
-    TenantProjectError,CompanyProfileError,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext,
+    TenantProjectError,CompanyProfileError,createCumulativeMemory,MEMORY_TABLE,MEMORY_FIELDS,MEMORY_LIMITS,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext,
     fetch:async(url,options)=>{
       const request=JSON.parse(options.body);log.model.push(request);
       const message=script[Math.min(step++,script.length-1)];
@@ -82,7 +91,7 @@ function setup({script,clock=Date,flowInputSchema=null,toolResults={},flowStatus
   };
   const deepseekReply=runInNewContext(`${helpers}\n${source.slice(start,end)}; deepseekReply`,ctx);
   const run=(extra={})=>deepseekReply({company:{name:'شركة'},settings:{},knowledge:{},team:[],history:[],message:'جهّز الموظف',mcp,companyId:'company-1',conversationId:'c1',deadlineMs:600_000,onEffectStart:()=>{log.effects++;},...extra});
-  return {run,log,setVersion:id=>{draftVersionId=id;}};
+  return {run,log,savedMemories,setVersion:id=>{draftVersionId=id;}};
 }
 const toolMessages=request=>request.messages.filter(item=>item.role==='tool').map(item=>item.content);
 
@@ -403,7 +412,7 @@ test('employee chat loads the selected saved employee and company knowledge befo
     recordConversation:async entry=>recorded.push(entry),
   };
   for(const saved of employees){
-    const ctx={input:{employee_id:saved.id,message:'اقترح الخطوة التالية.',prompt:'client override'},companyId:'company-1',conversationId:`chat-${saved.id}`,requestId:`req-${saved.id}`,acceptedAt:Date.now(),claim:{claimToken:'claim'},
+    const ctx={input:{employee_id:saved.id,message:'اقترح الخطوة التالية.',prompt:'client override'},companyId:'company-1',conversationId:`chat-${saved.id}`,requestId:`req-${saved.id}`,userMemoryId:null,acceptedAt:Date.now(),claim:{claimToken:'claim'},
       resolved:{account:{company_name:'Registered name'}},profiles,companyProfiles:async()=>profiles,
       database:async()=>({query:()=>{throw new Error('unexpected database execution');}}),activepiecesMcp:async()=>({}),tenantProjects:async()=>({}),createEmployeeRunRecovery:()=>({}),
       chatExecutionBudget,CompanyProfileError,Number,
@@ -926,4 +935,40 @@ test('publish checks the tested version after acquiring the shared effect lock',
   await h.run({draftEmployee:{id:'employee-1',name:'موظف',activepieces_flow_id:flowId},beforeEffect:async({name})=>{if(name==='ap_lock_and_publish')h.setVersion('v2');}});
   assert.equal(h.log.tools.some(([name])=>name==='ap_lock_and_publish'),false);
   assert.match(toolMessages(h.log.model.at(-1)).at(-1),/employee_test_required/);
+});
+
+test('main and employee chat retrieve shared knowledge and only the selected employee cumulative memory',async()=>{
+  const make=(id,scope,owner,key)=>({id:id.repeat(21),cells:{scope,owner,key,value:'saved '+key,source_quote:'معلومة سابقة',source_request:'old',updated_at:'2026-10-07T10:00:00Z'}});
+  const rows=[make('A','company','company-1','shared'),make('B','employee','employee-1','selected'),make('C','employee','employee-2','other'),make('D','user','user-1','private')];
+  for(const employee of [null,{id:'employee-1',name:'نور',status:'draft'}]){
+    const h=setup({memoryRows:rows,script:[say('رد مباشر من المعرفة.')]});await h.run({employee,memoryRequestId:'current'});
+    const system=h.log.model[0].messages[0].content;
+    assert.match(system,/saved shared/);assert.doesNotMatch(system,/saved other|saved private/);
+    if(employee)assert.match(system,/saved selected/);else assert.doesNotMatch(system,/saved selected/);
+    assert.equal(h.log.effects,0);assert.deepEqual(h.log.tools.map(t=>t[0]),['ap_list_tables',...Array(employee?2:1).fill('ap_find_records')]);
+  }
+});
+test('both chats persist a sourced fact through native AP and reuse it from a new conversation',async()=>{
+  for(const employee of [null,{id:'employee-1',name:'نور',status:'draft'}]){
+    const h=setup({memoryRows:[],script:[use(['ap_insert_records',{tableId:'T'.repeat(21),records:[{scope:employee?'employee':'company',key:'pricing',value:'100',source_quote:'سعرنا 100'}]}]),say('حفظت المعلومة.')]});
+    const answer=await h.run({employee,memoryRequestId:'first',message:'تذكر: سعرنا 100',conversationId:'first-chat'});
+    assert.equal(h.savedMemories.length,1);assert.equal(h.savedMemories[0].cells.owner,employee?'employee-1':'company-1');
+    assert.equal(completedToolActions(answer).outcome_kind,'memory_updated');
+    const next=setup({memoryRows:h.savedMemories,script:[say('سعرنا 100.')]});await next.run({employee,memoryRequestId:'second',message:'ما السعر؟',conversationId:'new-chat'});
+    assert.match(next.log.model[0].messages[0].content,/"value":"100"/);
+  }
+});
+test('read-only and draft-only messages cannot persist cumulative memory',async()=>{
+  for(const message of ['قراءة فقط: سعرنا 100','مسودة فقط: سعرنا 100']){
+    const h=setup({memoryRows:[],script:[use(['ap_insert_records',{tableId:'T'.repeat(21),records:[{scope:'company',key:'pricing',value:'100',source_quote:'سعرنا 100'}]}]),say('قرأت دون حفظ.')]});
+    await h.run({message,memoryRequestId:'current'});assert.equal(h.savedMemories.length,0);assert.equal(h.log.effects,0);
+    assert.equal(h.log.tools.some(t=>t[0]==='ap_insert_records'),false);assert.match(toolMessages(h.log.model[1])[0],/chat_read_only/);
+  }
+});
+
+test('saving employee memory after a verified run does not repeat the run or invalidate its receipt',async()=>{
+  const h=setup({memoryRows:[],published:true,flowStatus:'ENABLED',toolResults:{[flowToolName]:executionResult(),ap_get_run:productionRun()},script:[use([flowToolName,{}]),use(['ap_insert_records',{tableId:'T'.repeat(21),records:[{scope:'employee',key:'pricing',value:'100',source_quote:'سعرنا 100'}]}]),say('اكتملت المهمة وحفظت المعلومة.')]});
+  const answer=await h.run({employee:runningEmployee,memoryRequestId:'current',message:'شغّل المهمة وتذكر: سعرنا 100'});
+  assert.equal(h.savedMemories.length,1);assert.equal(h.log.tools.filter(t=>t[0]===flowToolName).length,1);
+  assert.equal(completedToolActions(answer).outcome_kind,'tool_result');assert.equal(completedToolActions(answer).memory_updates.length,1);
 });

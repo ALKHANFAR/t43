@@ -136,3 +136,12 @@ test('verified native Flow runs complete only the exact recorded effects without
   assert.deepEqual(completedToolActions(answer),{request_status:'succeeded',work_status:'succeeded',outcome_kind:'tool_result'});
   for(const modified of [{effects:['qa_mcp','ap_add_step']},{effects:['other_mcp']},{toolReceipts:[{...receipt,status:'error'}]},{flowToolAttempted:false}])assert.equal(completedToolActions({...answer,...modified}).work_status,'unknown');
 });
+
+test('verified memory persistence is distinct from a provider result and does not mask mixed action failures',()=>{
+  const memory={name:'ap_update_record',status:'returned',effect_attempted:true,outcome:'memory_saved',memory_table_id:'T'.repeat(21),memory_operation:'update'};
+  const only=completedToolActions({effects:[memory.name],toolReceipts:[memory]});assert.equal(only.outcome_kind,'memory_updated');
+  const action={name:'ap_run_action',status:'returned',effect_attempted:true,outcome:'action_completed'};
+  const mixed=completedToolActions({effects:[action.name,memory.name],toolReceipts:[action,memory]});assert.equal(mixed.outcome_kind,'tool_result');assert.equal(mixed.memory_updates.length,1);
+  const failed=completedToolActions({effects:[action.name,memory.name],toolReceipts:[{...action,outcome:'unverified'},memory]});assert.equal(failed.outcome_kind,'unverified');
+  assert.equal(completedToolActions({effects:[memory.name],toolReceipts:[{...memory,memory_table_id:'invalid'}]}).outcome_kind,'unverified');
+});
