@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
-import {builtFlowResult,conversationMemory} from '../lib/chat-intelligence.mjs';
+import {builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent} from '../lib/chat-intelligence.mjs';
 import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext} from '../lib/mcp-flow-scope.mjs';
 import {TenantProjectError} from '../lib/tenant-projects.mjs';
 import {nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget,failedChatExecution} from '../lib/chat-outcome.mjs';
@@ -24,6 +24,7 @@ const catalog=[
   {name:'ap_research_pieces',...hint(true)},
   {name:'ap_validate_flow',...hint(true),inputSchema:{type:'object',properties:{flowId:{type:'string'}}}},
   {name:'ap_test_flow',...hint(false),inputSchema:{type:'object',properties:{flowId:{type:'string'}}}},
+  {name:'ap_test_step',...hint(false),inputSchema:{type:'object',properties:{flowId:{type:'string'}}}},
   {name:'ap_get_run',...hint(true),inputSchema:{type:'object',properties:{flowRunId:{type:'string'}}}},
   {name:'ap_build_flow',...hint(false)},
   {name:'ap_create_flow',...hint(false)},
@@ -61,7 +62,7 @@ function setup({script,clock=Date,flowInputSchema=null,toolResults={},flowStatus
   const ctx={
     console:{error:()=>{},info:()=>{},warn:()=>{}},process:{env:{DEEPSEEK_API_KEY:'test-key'}},
     AbortController,setTimeout,clearTimeout,Date:clock,JSON,String,Array,Object,Math,
-    TenantProjectError,CompanyProfileError,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext,
+    TenantProjectError,CompanyProfileError,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext,
     fetch:async(url,options)=>{
       const request=JSON.parse(options.body);log.model.push(request);
       const message=script[Math.min(step++,script.length-1)];
@@ -198,6 +199,28 @@ test('DeepSeek continues tool reasoning with results and saved employee context'
   const answer=await run({employee:{id:'employee-1',status:'draft',prompt:'راجع أسعار الشركة'},message:'اقرأ الاتصالات فقط'});
   assert.equal(answer.reply,'نتيجة القراءة وصلت.');
   assert.equal(log.model.length,2);assert.equal(log.effects,0);
+});
+
+test('an explicit draft request blocks model publish and enable calls at MCP dispatch',async()=>{
+  const {run,log}=setup({script:[
+    use(['ap_build_flow',{flowName:'مسودة اختبار'}]),
+    use(['ap_lock_and_publish',{flowId}],['ap_change_flow_status',{flowId,status:'enabled'}],['ap_test_flow',{flowId}]),
+    say('بقي الفلو مسودة.'),
+  ]});
+  const answer=await run({message:'أنشئ فلو مسودة. لا تنشر أو تفعّل أو تشغّل.',draftEmployee:{id:'employee-1',name:'مسودة اختبار',activepieces_flow_id:null}});
+  assert.equal(answer.flowId,flowId);
+  assert.deepEqual(log.tools.map(item=>item[0]),['ap_build_flow']);
+  assert.equal(log.states.length,0);
+  assert.match(toolMessages(log.model[2]).join(' '),/draft_only_publish_forbidden/);
+  assert.match(toolMessages(log.model[2]).join(' '),/flow_run_forbidden/);
+});
+
+test('a current no-run request blocks native execution while allowing Flow draft edits',async()=>{
+  const {run,log}=setup({script:[use(['ap_build_flow',{flowName:'مسودة'}]),use(['ap_test_flow',{flowId}],['ap_test_step',{flowId,stepName:'step_1'}],['ap_run_action',{pieceName:'gmail',actionName:'send_email'}],[flowToolName,{task:'نفذ'}]),say('حُفظت المسودة بلا تشغيل.')]});
+  await run({message:'جهز طريقة العمل بدون تنفيذ'});
+  assert.deepEqual(log.tools.map(([name])=>name),['ap_build_flow']);
+  assert.equal(log.effects,1);
+  assert.ok(toolMessages(log.model.at(-1)).slice(-4).every(value=>value.includes('flow_run_forbidden')));
 });
 
 test('an employee cannot be published from chat without a successful test run readback',async()=>{
@@ -417,7 +440,7 @@ test('a long request answers queued once, keeps working, and settles the same re
     console:{error:()=>{},info:()=>{},warn:()=>{}},JSON,String,Object,Number,Array,Boolean,
     setTimeout:(fn,ms)=>{timers.push({fn,ms});return timers.length;},clearTimeout:id=>{if(timers[id-1])timers[id-1].cleared=true;},
     randomUUID:()=>'11111111-1111-4111-8111-111111111111',createHash:()=>({update(){return this;},digest:()=>'hash'}),
-    TenantProjectError,CompanyProfileError,chatExecutionBudget,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
+    TenantProjectError,CompanyProfileError,chatExecutionBudget,draftOnlyIntent,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
     body:async()=>({op:'message',message:'ابنِ طريقة عمل كاملة',conversation_id:'c1',request_id:'r1'}),
     tenantSession:async()=>({session:{companyId:'company-1'},account:{company_name:'شركة'},headers:{}}),
     companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),
@@ -470,7 +493,7 @@ test('a second message waits for the first result before reaching the model',asy
   const ctx={console:{error:()=>{}},JSON,String,Object,Number,Array,Boolean,Date,
     setTimeout:(fn,ms)=>ms===1000?setTimeout(fn,1):1,clearTimeout:()=>{},
     randomUUID:()=> 'u1',createHash:()=>({update(){return this;},digest:()=> 'hash'}),
-    TenantProjectError,CompanyProfileError,chatExecutionBudget,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
+    TenantProjectError,CompanyProfileError,chatExecutionBudget,draftOnlyIntent,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
     body:async req=>({op:'message',message:req.id,conversation_id:'c1',request_id:req.id}),
     tenantSession:async()=>({session:{companyId:'company-1'},account:{company_name:'شركة'},headers:{}}),
     companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),

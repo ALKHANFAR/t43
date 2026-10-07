@@ -69,6 +69,8 @@ Saving an employee draft requires the company database and does not provision Ac
 
 ## Release boundary
 
+Explicit current requests not to publish/activate block native publish and enable calls and suppress automatic activation intent. Requests not to run block Flow/step tests, retries, direct actions and published MCP Flow invocation, while still permitting draft construction/edits. These checks read the current message, not historical task instructions. The existing strict draft-only/read-only boundary continues to reject all effectful calls.
+
 Before merging, compare the exact head and base, verify the resolved Railway pre-deploy command and schema, run the relevant acceptance tests, and read provider results at their own evidence level. A deployed build, an open PR, a merged commit, an Activepieces Flow, and a provider outcome are separate facts.
 
 ## Employee instructions — conversation context and Activepieces work

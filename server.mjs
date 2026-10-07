@@ -14,7 +14,7 @@ import {createFirecrawlClient,FirecrawlError} from './lib/firecrawl.mjs';
 import {createCompanyProfileService,CompanyProfileError} from './lib/company-profile.mjs';
 import {createAccountAuthService,AccountAuthError} from './lib/account-auth.mjs';
 import {createMailer,MailerError} from './lib/mailer.mjs';
-import {builtFlowResult,conversationMemory,createdTableReadback,flowName,hasActiveFlowConnections,publishedAIInstructionSteps} from './lib/chat-intelligence.mjs';
+import {builtFlowResult,conversationMemory,createdTableReadback,draftOnlyIntent,doNotRunIntent,flowName,hasActiveFlowConnections,publishedAIInstructionSteps} from './lib/chat-intelligence.mjs';
 import {completedWithoutExecution,failedChatExecution,nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget} from './lib/chat-outcome.mjs';
 import {assertSchemaReady} from './lib/schema-ready.mjs';
 import {toolIcon} from './lib/tool-icons.mjs';
@@ -378,6 +378,7 @@ async function authRoute(req,res,operation){
 }
 async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null,mcp=null,companyId=null,conversationId=null,deadlineMs=null,excludedTools=[],onEffectStart=null,onNativeExecution=null,createDraft=null}){
   mcp=mcp?.forRequest?.()||mcp;
+  const draftOnly=draftOnlyIntent(message),doNotRun=doNotRunIntent(message);
   const key=process.env.DEEPSEEK_API_KEY;
   if(!key)throw new TenantProjectError('assistant_not_configured','مساعد سيادة غير مهيأ الآن.',503);
   const deadline=deadlineMs?Date.now()+deadlineMs:null;
@@ -486,6 +487,8 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           if(draftEmployee?.activepieces_flow_id&&['ap_build_flow','ap_create_flow'].includes(name))throw new TenantProjectError('employee_flow_conflict','طريقة عمل المسودة محفوظة؛ اقرأها وعدّلها دون إنشاء نسخة ثانية.',409);
           let args;try{args=JSON.parse(call.function.arguments||'{}');}catch{args=null;}
           if(!args||typeof args!=='object'||Array.isArray(args))throw new TenantProjectError('mcp_arguments_invalid','مدخلات الأداة يجب أن تكون كائن JSON واحدًا.',502);
+          if(draftOnly&&(name==='ap_lock_and_publish'||name==='ap_change_flow_status'&&String(args.status||'').toUpperCase()==='ENABLED'))throw new TenantProjectError('draft_only_publish_forbidden','طلب المستخدم إبقاء الفلو مسودة؛ لا تنشره أو تفعّله.',403);
+          if(doNotRun&&(['ap_test_flow','ap_test_step','ap_retry_run','ap_run_action'].includes(name)||name.endsWith('_mcp')))throw new TenantProjectError('flow_run_forbidden','طلب المستخدم عدم تشغيل الفلو أو اختبار تنفيذه.',403);
           if(['ap_build_flow','ap_create_flow'].includes(name)&&flowId)throw new TenantProjectError('employee_flow_conflict','بُني Flow في هذا الطلب. اقرأه وعدّل خطواته بدل إنشاء نسخة ثانية.',409);
           if(name===flowToolName&&flowToolAttempted)throw new TenantProjectError('employee_run_already_dispatched','أُرسل تشغيل الموظف لهذا الطلب. تحقّق من نتيجته دون إعادة تشغيله.',409);
           if(name===flowToolName&&effects.length||flowToolAttempted&&!readOnly(name))throw new TenantProjectError('employee_run_mixed_effects','تشغيل الموظف يحتاج طلبًا مستقلًا عن تعديل طريقة عمله. يمكنك قراءة نتيجة التشغيل الحالي.',409);
@@ -876,7 +879,7 @@ async function publicChat(req,res){
       const draft=existing?.status==='draft'?existing:null;
       let answer;
       answer=await deepseekReply({company:{name:resolved.account.company_name,researchedWebsiteName:profile?.company_name||null,profile:profile?.profile_json||{}},settings,knowledge,team,history,message:input.message,draftEmployee:draft,mcp:await activepiecesMcp(),companyId,conversationId,deadlineMs:chatExecutionBudget(acceptedAt),onEffectStart:()=>{activeRequest.effectStarted=true;activeRequest.executionAttempt=true;},createDraft:async name=>profiles.findEmployee(companyId,(await profiles.createManualEmployeeDraft({companyId,name:flowName(String(name||input.message)),requestId})).recordId)});
-      const draftOnly=/(?:مسودة\s*فقط|بدون\s+(?:تشغيل|تفعيل)|لا\s+تفعّل|لا\s+تفعل\s+الموظف|لا\s+تشغّ?ل|draft\s+only|do\s+not\s+activate)/i.test(String(input.message||''));
+      const draftOnly=draftOnlyIntent(input.message);
       const activationIntent=!draftOnly&&answer.flowId&&answer.employee?.flowId===answer.flowId&&answer.employee.status==='disabled'?{auto_activate_after_connection:true,auto_activate_employee_id:answer.employee.recordId,auto_activate_flow_id:answer.flowId}:{};
       const reply=answer.employee&&!answer.flowId&&!answer.readinessReceipt?`حُفظ سجل ${answer.employee.name}، وحالة بناء طريقة عمله غير مؤكدة؛ تحقّق من مشروع الشركة قبل إعادة البناء. ${answer.reply}`:answer.reply;
       await profiles.recordConversation({companyId,conversationId,employeeId:null,requestId,userMessage:input.message,assistantMessage:reply});

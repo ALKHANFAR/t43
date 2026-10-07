@@ -2,16 +2,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createCompanyProfileService} from '../lib/company-profile.mjs';
+import {draftOnlyIntent} from '../lib/chat-intelligence.mjs';
 
 const server=readFileSync(new URL('../server.mjs',import.meta.url),'utf8');
 
 test('only a new linked disabled Flow records a durable activation intent',()=>{
   assert.match(server,/!draftOnly&&answer\.flowId&&answer\.employee\?\.flowId===answer\.flowId&&answer\.employee\.status==='disabled'/);
-  assert.match(server,/مسودة\s*\\s\*فقط/);
-  assert.match(server,/بدون\\s\+\(\?:تشغيل\|تفعيل\)/);
-  assert.match(server,/do\s*\\s\+not\s*\\s\+activate/);
+  assert.match(server,/draftOnlyIntent\(input\.message\)/);
   assert.match(server,/auto_activate_after_connection:true,auto_activate_employee_id:answer\.employee\.recordId,auto_activate_flow_id:answer\.flowId/);
   assert.equal((server.match(/\.\.\.activationIntent/g)||[]).length,2);
+});
+
+test('a request to leave the Flow unpublished and disabled cannot queue activation',()=>{
+  for(const message of ['أنشئ مسودة. اتركه DRAFT وDISABLED. لا تنشر أو تفعّل أو تشغّل.','ابنِ Flow ولا تنشره','أنشئ Flow بدون نشر','Create a flow, do not publish it','جهز طريقة العمل بدون تنفيذ','Prepare without executing'])assert.equal(draftOnlyIntent(message),true);
+  assert.equal(draftOnlyIntent('أنشئ موظفًا واختبره ثم فعّله عند الجاهزية'),false);
 });
 
 test('resume selects at most two exact company employee and Flow matches and clears only that intent',async()=>{
