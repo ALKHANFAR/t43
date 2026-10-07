@@ -130,3 +130,7 @@ Both chat paths use the original company MCP tool catalog and schemas. Employee 
 ### Full native catalog exposure (draft PR #60)
 
 Main and employee chat pass every protocol-valid tool advertised by the company MCP `tools/list` to the model, preserving native schemas and order without a fixed tool count. Employee state, linked Flow and continuation exclusions do not hide catalog entries. Company/project boundaries, employee Flow ownership, activation and duplicate-effect checks apply before dispatch. Project switching remains rejected; an existing draft cannot be replaced by another created Flow. This changes catalog exposure only, with no REST construction or discovery fallback and no claim that every tool has passed a live provider test.
+
+### Confirmed connection disconnect
+
+`integrations` with `op:disconnect` accepts only literal `confirm_in_use:true` to pause dependencies. The server inventories draft and published versions plus connection flowIds, verifies company ownership, calls native `ap_change_flow_status` with `DISABLED`, independently reads status and syncs linked employees to disabled. It rechecks dependencies/status before deleting the project-owned connection. Missing inventory, MCP grant, failed pause/readback or local sync preserves the connection; some flows may already be paused after a partial failure. No flow history is deleted, no provider grant is revoked and in-progress runs are not cancelled. Final readback is not an atomic lock against independent concurrent Activepieces changes.

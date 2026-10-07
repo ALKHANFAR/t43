@@ -37,7 +37,7 @@ function harness(overrides={}){
     }
     if(url.includes('/oauth2/authorization-url'))return response(200,{authorizationUrl:'https://accounts.google.com/o/oauth2/auth?client_id=google-client'});
     if(url.includes('/revalidate'))return response(200,{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:projects('revalidate')});
-    if(options.method==='DELETE')return response(204,{});
+    if(options.method==='DELETE'){overrides.beforeDelete?.();return response(204,{});}
     if(url.includes(`/app-connections/${CONNECTION}`))return response(200,{id:CONNECTION,externalId:'company-a-stripe',pieceName:'@activepieces/piece-stripe',scope:'PROJECT',projectIds:projects('get'),flowIds:Object.hasOwn(overrides,'getFlowIds')?overrides.getFlowIds:[]});
     if(url.includes('/api/v1/flows?')){const query=new URL(url).searchParams,cursor=query.get('cursor'),state=query.get('versionState');return response(200,overrides.flowPages?.[state]?.[cursor||'first']??(state==='LOCKED'?overrides.publishedPages?.[cursor||'first']:undefined)??{data:[],next:null});}
     if(url.includes('/app-connections?')){
@@ -47,7 +47,7 @@ function harness(overrides={}){
     if(url.endsWith('/api/v1/app-connections')){const b=JSON.parse(options.body);return response(201,{id:CONNECTION,pieceName:b.pieceName,pieceVersion:b.pieceVersion,displayName:b.displayName,status:'ACTIVE',scope:'PROJECT',projectIds:projects('create')});}
     throw new Error(`unexpected ${url}`);
   };
-  return {calls,pending,service:createToolConnectionService({requireProject:async tenant=>tenant==='company-a'?PROJECT:OTHER,fetchImpl,activepiecesUrl:'https://ap.example',apiKey:'platform-key',attemptSecret:'s'.repeat(48),attemptStore,googleOAuth:overrides.googleOAuth,customerOrigin:overrides.customerOrigin,gmailOAuthProvider:overrides.gmailOAuthProvider})};
+  return {calls,pending,service:createToolConnectionService({requireProject:async tenant=>tenant==='company-a'?PROJECT:OTHER,fetchImpl,activepiecesUrl:'https://ap.example',apiKey:'platform-key',attemptSecret:'s'.repeat(48),attemptStore,googleOAuth:overrides.googleOAuth,customerOrigin:overrides.customerOrigin,gmailOAuthProvider:overrides.gmailOAuthProvider,mcpCall:overrides.mcpCall,readFlow:overrides.readFlow,onFlowPaused:overrides.onFlowPaused})};
 }
 
 test('shows only valid flow references from a project-owned connection',async()=>{
@@ -347,4 +347,41 @@ test('changed auth metadata is rejected before connection write instead of silen
   meta.auth.reverse();
   await assert.rejects(()=>configured.service.connect({tenantId:'company-a',piece:'gmail',type:chosen.type,methodId:chosen.id,methodFingerprint:chosen.fingerprint,values:{second:'value'}}),error=>error.code==='stale_auth_method');
   assert.equal(configured.calls.some(call=>call.url.endsWith('/api/v1/app-connections')),false);
+});
+
+function disconnectHarness({failAt,foreign=false,readback='DISABLED',syncFailure=false,lateDependency=false,secondEnabled=false}={}){
+  const events=[],states=new Map([[FLOW,'ENABLED'],['G'.repeat(21),secondEnabled?'ENABLED':'DISABLED']]);
+  const published={id:FLOW,projectId:PROJECT,publishedVersionId:'V'.repeat(21),version:{id:'V'.repeat(21),state:'LOCKED',connectionIds:['company-a-stripe']}};
+  let reads=0;const h=harness({beforeDelete:()=>events.push(['delete']),getFlowIds:['G'.repeat(21)],publishedPages:{first:{data:[published],next:null}},
+    readFlow:async(tenant,id)=>{events.push(['read',tenant,id]);reads++;if(lateDependency&&reads>5)states.set(FLOW,'ENABLED');return {id,projectId:foreign?OTHER:PROJECT,status:states.get(id)};},
+    mcpCall:async(tenant,method,params)=>{events.push(['mcp',tenant,method,params]);if(failAt===params.arguments.flowId)return {isError:true};states.set(params.arguments.flowId,readback);return {content:[{type:'text',text:'changed'}]};},
+    onFlowPaused:async(tenant,id)=>{events.push(['sync',tenant,id]);if(syncFailure)throw new Error('storage failed');}
+  });return {...h,events};
+}
+test('confirmed disconnect pauses dependencies through company MCP and verifies them before deletion',async()=>{
+  const h=disconnectHarness();
+  const result=await h.service.disconnect({tenantId:'company-a',id:CONNECTION,confirmInUse:true});
+  assert.equal(result.disconnected,true);
+  assert.deepEqual(result.pausedFlowIds,[FLOW]);
+  assert.deepEqual(h.events.filter(e=>e[0]==='mcp'),[['mcp','company-a','tools/call',{name:'ap_change_flow_status',arguments:{flowId:FLOW,status:'DISABLED'}}]]);
+  assert.equal(h.events.filter(e=>e[0]==='sync').length,2);
+  assert.equal(h.calls.filter(c=>c.options.method==='DELETE').length,1);
+  assert.equal(h.events.at(-1)[0],'delete');
+  assert.equal(h.calls.some(c=>c.options.method==='POST'&&c.url.includes('/flows')),false);
+});
+test('confirmed disconnect preserves connection on foreign flow, MCP failure, unverified pause or failed state sync',async()=>{
+  for(const options of [{foreign:true},{failAt:FLOW},{readback:'ENABLED'},{syncFailure:true},{lateDependency:true},{secondEnabled:true,failAt:FLOW}]){
+    const h=disconnectHarness(options);
+    await assert.rejects(()=>h.service.disconnect({tenantId:'company-a',id:CONNECTION,confirmInUse:true}));
+    assert.equal(h.calls.some(c=>c.options.method==='DELETE'),false);
+    if(options.foreign)assert.equal(h.events.some(e=>e[0]==='mcp'),false);
+  }
+});
+
+test('confirmed disconnect still rejects incomplete inventory and missing MCP dependencies before effects',async()=>{
+  for(const config of [{publishedPages:{first:{data:[]}}},{getFlowIds:[FLOW]}]){
+    const h=harness(config);
+    await assert.rejects(()=>h.service.disconnect({tenantId:'company-a',id:CONNECTION,confirmInUse:true}),{code:'connection_usage_unknown'});
+    assert.equal(h.calls.some(c=>c.options.method==='DELETE'),false);
+  }
 });

@@ -57,7 +57,7 @@ async function toolConnections(){
     const projects=await tenantProjects(),pool=await database();
     const origin=publicOrigin(),redirectUrl=origin?new URL('/siyadah-api/v1/integrations/oauth/callback',origin).toString():'';
     const googleOAuth=process.env.SIYADAH_GOOGLE_OAUTH_CLIENT_ID&&process.env.SIYADAH_GOOGLE_OAUTH_CLIENT_SECRET?{clientId:process.env.SIYADAH_GOOGLE_OAUTH_CLIENT_ID,clientSecret:process.env.SIYADAH_GOOGLE_OAUTH_CLIENT_SECRET,redirectUrl}:undefined;
-    return createToolConnectionService({requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY,attemptSecret:process.env.SIYADAH_SESSION_SECRET,attemptStore:createGoogleOAuthAttemptStore({query:(sql,values)=>pool.query(sql,values)}),googleOAuth,customerOrigin:origin,gmailOAuthProvider:process.env.SIYADAH_GMAIL_OAUTH_PROVIDER||'activepieces'});
+    return createToolConnectionService({requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,apiKey:process.env.ACTIVEPIECES_PLATFORM_API_KEY,attemptSecret:process.env.SIYADAH_SESSION_SECRET,attemptStore:createGoogleOAuthAttemptStore({query:(sql,values)=>pool.query(sql,values)}),googleOAuth,customerOrigin:origin,gmailOAuthProvider:process.env.SIYADAH_GMAIL_OAUTH_PROVIDER||'activepieces',mcpCall:async(...args)=>(await activepiecesMcp()).call(...args),readFlow:async(tenantId,flowId)=>(await projects.ownedFlow(tenantId,flowId)).flow,onFlowPaused:async(companyId,flowId)=>{const profiles=await companyProfiles();for(const employee of await profiles.listEmployees(companyId))if(employee.activepieces_flow_id===flowId)await profiles.setEmployeeState({companyId,employeeId:employee.recordId,status:'disabled'});}});
   })().catch(error=>{toolConnectionsPromise=null;throw error;});
   return toolConnectionsPromise;
 }
@@ -268,7 +268,7 @@ async function integrations(req,res){
     if(input.op==='oauth_start')return json(res,200,{ok:true,...await service.oauthStart({tenantId,sessionBinding:oauthSessionBinding(req),requestOrigin:req.headers.origin,piece:input.piece,methodId:input.methodId,methodFingerprint:input.methodFingerprint,values:input.values})});
     if(input.op==='oauth_finish')return json(res,200,{ok:true,connection:await service.cloudOauthFinish({tenantId,sessionBinding:oauthSessionBinding(req),attempt:input.attempt,code:input.code})});
     if(input.op==='revalidate')return json(res,200,{ok:true,connection:await service.revalidate({tenantId,id:input.connection_id})});
-    if(input.op==='disconnect')return json(res,200,{ok:true,...await service.disconnect({tenantId,id:input.connection_id})});
+    if(input.op==='disconnect')return json(res,200,{ok:true,...await service.disconnect({tenantId,id:input.connection_id,confirmInUse:input.confirm_in_use===true})});
     return json(res,400,{ok:false,error:'unsupported_operation'});
   }catch(error){
     if(error instanceof TenantProjectError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
