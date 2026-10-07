@@ -176,11 +176,28 @@ test('the model builds, tests and publishes in one request and writes the reply 
   assert.ok(log.effects>=2);
   const first=log.model[0],last=log.model.at(-1);
   assert.deepEqual(first.thinking,{type:'enabled'});
+  assert.equal(first.model,'deepseek-v4-pro');
+  assert.equal(first.reasoning_effort,'high');
   assert.match(first.messages[0].content,/## Activepieces MCP Server/);
   assert.ok(first.tools.some(tool=>tool.function.name==='ap_lock_and_publish'));
   assert.ok(first.tools.some(tool=>tool.function.name==='ap_set_project_context'));
   assert.equal(toolMessages(last).length,5);
   assert.match(toolMessages(last)[1],/Flow created/);
+});
+
+test('DeepSeek continues tool reasoning with results and saved employee context',async()=>{
+  const first={...use(['ap_list_connections',{}]),reasoning_content:'Need the available connection before choosing the action.'};
+  const {run,log}=setup({script:[first,request=>{
+    const prior=request.messages.find(item=>item.role==='assistant'&&item.tool_calls);
+    assert.equal(prior.reasoning_content,first.reasoning_content);
+    assert.equal(request.messages.at(-1).role,'tool');
+    assert.match(request.messages[0].content,/راجع أسعار الشركة/);
+    assert.match(request.messages[0].content,/DeepSeek/);
+    return say('نتيجة القراءة وصلت.');
+  }]});
+  const answer=await run({employee:{id:'employee-1',status:'draft',prompt:'راجع أسعار الشركة'},message:'اقرأ الاتصالات فقط'});
+  assert.equal(answer.reply,'نتيجة القراءة وصلت.');
+  assert.equal(log.model.length,2);assert.equal(log.effects,0);
 });
 
 test('an employee cannot be published from chat without a successful test run readback',async()=>{

@@ -424,6 +424,7 @@
         {"role": "reply_tables", "path": "app/chat.js", "anchor": "function siyReplyHtml(text)"},
         {"role": "riyadh_time", "path": "app/chat.js", "anchor": "function siyMessageTime("},
         {"role": "open_tools_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "the model builds, tests and publishes in one request and writes the reply itself"},
+        {"role": "deepseek_reasoning_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "DeepSeek continues tool reasoning with results and saved employee context"},
         {"role": "direct_reply_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "direct replies retain company and employee context without a configured MCP connection"},
         {"role": "employee_context_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "employee chat loads the selected saved employee and company knowledge before calling the model"},
         {"role": "flow_context_binding", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function bindEmployeeFlowContext"},
