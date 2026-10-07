@@ -3,6 +3,40 @@
   "repository": "ALKHANFAR/t43",
   "features": [
     {
+      "id": "chat_current_run_proof_scope",
+      "name": "دليل تشغيل الطلب الحالي في الشات",
+      "aliases": [
+        "بطاقة دليل التشغيل القديم",
+        "نتيجة الموظف الحالية"
+      ],
+      "state": "draft_pr",
+      "meaning": "يعرض معرّف التشغيل المؤكد من نتيجة الطلب الحالي، ولا يربط دليلًا برسالته إلا بتطابق معرّفي الطلب والمحادثة. سجل المحادثة مستقل عن نتيجة الرسالة. منقول جزئيًا من PR64 إلى فرع التجميع؛ غير منشور.",
+      "linear": "ABO-69",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/62",
+      "locations": [
+        {
+          "role": "verified_run",
+          "path": "app/chat.js",
+          "anchor": "var verifiedRun=kind==='tool_result'"
+        },
+        {
+          "role": "proof_scope",
+          "path": "app/chat.js",
+          "anchor": "r.work_id===data.work_id"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "older proof in the same conversation is not presented as the latest request result"
+        },
+        {
+          "role": "run_test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "reconciled production run uses its own verified ID and ignores an older proof"
+        }
+      ]
+    },
+    {
       "id": "chat_prompt_cleanup_experiment",
       "name": "تبسيط تعليمات الموظف والشات",
       "aliases": ["تنظيف البرومبت", "تعارض التعليمات", "الموظف يفهم من أول لحظة"],
