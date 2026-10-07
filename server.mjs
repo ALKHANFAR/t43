@@ -930,18 +930,6 @@ async function publicChat(req,res){
     console.error('public tenant chat failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error'},sessionHeaders);
   }
 }
-async function deepseek(req,res){
-  const key=process.env.DEEPSEEK_API_KEY;
-  if(!key)return json(res,503,{error:{message:'DeepSeek غير مهيأ على الخادم.'}});
-  let raw='';
-  for await(const chunk of req){raw+=chunk;if(raw.length>2_000_000)return json(res,413,{error:{message:'الطلب كبير جدًا.'}});}
-  let input;try{input=JSON.parse(raw);}catch{return json(res,400,{error:{message:'طلب غير صالح.'}});}
-  const payload={model:'deepseek-chat',messages:Array.isArray(input.messages)?input.messages:[],tools:Array.isArray(input.tools)?input.tools:undefined,tool_choice:input.tool_choice||'auto',stream:false};
-  try{
-    const upstream=await fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const text=await upstream.text();res.writeHead(upstream.status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store'});res.end(text);
-  }catch{return json(res,502,{error:{message:'تعذّر الوصول إلى DeepSeek.'}});}
-}
 function staticFile(req,res){
   const url=new URL(req.url,'http://localhost');
   const requested=url.pathname;
@@ -995,7 +983,6 @@ createServer((req,res)=>{
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/integrations')return integrations(req,res);
   if(req.method==='GET'&&pathname==='/siyadah-api/v1/integrations/oauth/callback')return googleOAuthCallback(req,res,new URL(req.url,'http://localhost'));
   if(req.method==='POST'&&req.url==='/siyadah-api/v1/chat')return publicChat(req,res);
-  if(req.method==='POST'&&req.url==='/deepseek/v1/chat/completions')return deepseek(req,res);
   if(req.method!=='GET'&&req.method!=='HEAD')return json(res,405,{error:'method_not_allowed'});
   return staticFile(req,res);
 }).listen(port,'0.0.0.0');

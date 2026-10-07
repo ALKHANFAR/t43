@@ -397,6 +397,7 @@
       "linear": "ABO-48",
       "locations": [
         {"role": "chat_route", "path": "server.mjs", "anchor": "async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null"},
+        {"role": "retired_public_proxy_test", "path": "scripts/server-runtime.test.mjs", "anchor": "assert.equal(retired.status,405)"},
         {"role": "tool_receipt", "path": "server.mjs", "anchor": "const effects=[],toolReceipts=[];"},
         {"role": "tool_receipt_render", "path": "app/chat.js", "anchor": "var receipts=Array.isArray(data.tool_receipts)"},
         {"role": "draft_build", "path": "server.mjs", "anchor": "async function buildOwnedDraftFlow("},

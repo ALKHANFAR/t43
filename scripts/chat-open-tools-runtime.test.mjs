@@ -283,7 +283,7 @@ test('selected employee chat calls only its published native MCP Flow tool',asyn
 });
 
 test('account company name survives researched website identity in hydrate and export',async()=>{
-  const chatStart=source.indexOf('async function publicChat('),chatEnd=source.indexOf('async function deepseek(req,res)',chatStart);
+  const chatStart=source.indexOf('async function publicChat('),chatEnd=source.indexOf('function staticFile(req,res)',chatStart);
   for(const op of ['hydrate','export']){
     const profiles={read:async()=>({company_name:'Website Vendor'}),listEmployees:async()=>[],recentWork:async()=>[],readSettings:async()=>({}),ownedKnowledge:async()=>({}),listConversations:async()=>[],pendingChatWork:async()=>[]};
     let response;
@@ -298,7 +298,7 @@ test('account company name survives researched website identity in hydrate and e
 });
 
 test('a long request answers queued once, keeps working, and settles the same request ID',async()=>{
-  const chatStart=source.indexOf('async function publicChat('),chatEnd=source.indexOf('async function deepseek(req,res)',chatStart);
+  const chatStart=source.indexOf('async function publicChat('),chatEnd=source.indexOf('function staticFile(req,res)',chatStart);
   const jsonStart=source.indexOf('function json(res,status,body,headers={})'),jsonEnd=source.indexOf('\n',jsonStart);
   assert.ok(chatStart>0&&chatEnd>chatStart&&jsonStart>0);
   const timers=[],settled=[],recorded=[];let release;
@@ -352,7 +352,7 @@ test('a long request answers queued once, keeps working, and settles the same re
 });
 
 test('a second message waits for the first result before reaching the model',async()=>{
-  const chatStart=source.indexOf('async function publicChat('),chatEnd=source.indexOf('async function deepseek(req,res)',chatStart);
+  const chatStart=source.indexOf('async function publicChat('),chatEnd=source.indexOf('function staticFile(req,res)',chatStart);
   const jsonStart=source.indexOf('function json(res,status,body,headers={})'),jsonEnd=source.indexOf('\n',jsonStart);
   let firstDone=false,releaseFirst,modelCalls=0;const messages=[];
   const profiles={
