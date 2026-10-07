@@ -348,6 +348,40 @@ test('tools page distinguishes a saved connection from one assigned to an employ
     assert.doesNotMatch(thread(p),/اكتمل اختبار فعلي/);
   }finally{p.close();}
 });
+test('disconnect shows the impact before requesting a confirmed deletion',async()=>{
+  const connection={id:'C'.repeat(21),slug:'gmail',displayName:'Gmail',status:'ACTIVE',scope:'PROJECT',flowIds:[]};
+  const p=await page({integrations:{list:{ok:true,connections:[connection]},disconnect:{ok:true,disconnected:true}}});try{
+    p.d.querySelector('#toolsLink').click();await flush();
+    p.d.querySelector('[data-tool-details="gmail"]').click();
+    p.d.querySelector('[data-disconnect]').click();
+    assert.equal(p.requests.some(request=>request.body?.op==='disconnect'),false);
+    assert.equal(p.d.querySelector('#mDisconnectConfirm').hidden,false);
+    assert.match(p.d.querySelector('#mDisconnectConfirm').textContent,/قد يؤثر.*سجل العمل محفوظ/);
+    p.d.querySelector('#localeToggle').click();
+    assert.match(p.d.querySelector('#mDisconnectConfirm').textContent,/Disconnecting may affect/);
+    p.d.querySelector('#localeToggle').click();
+    p.d.querySelector('[data-disconnect-cancel]').click();
+    assert.equal(p.d.querySelector('#mDisconnectConfirm').hidden,true);
+    p.d.querySelector('[data-disconnect]').click();
+    p.d.querySelector('[data-disconnect-confirm]').click();await flush();
+    assert.deepEqual(p.requests.find(request=>request.body?.op==='disconnect').body,{op:'disconnect',connection_id:connection.id,confirm_in_use:true});
+    assert.match(p.d.querySelector('#mF').textContent,/سيبقى سجل العمل محفوظًا/);
+  }finally{p.close();}
+});
+
+test('confirmed disconnect keeps an in-use connection attached when the server rejects removal',async()=>{
+  const connection={id:'C'.repeat(21),slug:'gmail',displayName:'Gmail',status:'ACTIVE',scope:'PROJECT',flowIds:['F'.repeat(21)]};
+  const p=await page({integrations:{list:{ok:true,connections:[connection]},disconnect:{ok:false,httpStatus:409,error:'connection_in_use'}}});try{
+    p.d.querySelector('#toolsLink').click();await flush();p.d.querySelector('[data-tool-details="gmail"]').click();
+    p.d.querySelector('[data-disconnect]').click();p.d.querySelector('[data-disconnect-confirm]').click();await flush();
+    assert.equal(p.d.querySelector('#mE').hidden,false);
+    assert.doesNotMatch(p.d.querySelector('#mF').textContent,/تم فصل الأداة/);
+    p.d.querySelector('#mX').click();p.d.querySelector('[data-tool-details="gmail"]').click();
+    assert.equal(p.d.querySelector('#modal').classList.contains('on'),true);
+    assert.ok(p.d.querySelector('[data-disconnect]'));
+  }finally{p.close();}
+});
+
 test('real employee shows natural instructions without exposing a compiled prompt',async()=>{
   const changed='تابعي الفرص الجديدة وأرسلي ملخصًا واضحًا.';
   const p=await page({hydrate:{...empty,team:[{...employee,instructions:'تابعي الفرص الجديدة واكتبي ملخصًا واضحًا.',instructionSource:'company_profile',instructionVersion:1}]},employee_instructions:body=>({ok:true,instruction_scope:'conversation',instructions_verified:true,employee:{...employee,instructions:body.instructions,instructionSource:'owner',instructionVersion:2}})});try{
