@@ -5,6 +5,7 @@ import {createHash,randomUUID,timingSafeEqual} from 'node:crypto';
 import pg from 'pg';
 import {createTenantProjectService,TenantProjectError} from './lib/tenant-projects.mjs';
 import {provisionVerifiedTenant} from './lib/tenant-provisioning.mjs';
+import {createCompanyEffectLock} from './lib/company-effect-lock.mjs';
 import {createChatFlowLifecycle} from './lib/chat-flow-lifecycle.mjs';
 import {createEmployeeRunRecovery} from './lib/employee-run-recovery.mjs';
 import {createToolConnectionService} from './lib/tool-connections.mjs';
@@ -32,6 +33,7 @@ let toolConnectionsPromise;
 let companyProfilesPromise;
 let accountAuthPromise;
 let databasePromise;
+let effectDatabasePromise;
 let firecrawlClient;
 let mcpPromise;
 const {buildOwnedDraftFlow,successfulFlowTest}=createChatFlowLifecycle({database,companyProfiles,tenantProjects});
@@ -68,14 +70,19 @@ async function activepiecesMcp(){
   })().catch(error=>{mcpPromise=null;throw error;});
   return mcpPromise;
 }
+function databaseOptions(){
+  if(!process.env.DATABASE_URL)throw new TenantProjectError('database_not_configured','قاعدة بيانات العزل غير مهيأة.',503);
+  const url=new URL(process.env.DATABASE_URL);
+  return {connectionString:process.env.DATABASE_URL,ssl:url.hostname.endsWith('.railway.internal')?false:(process.env.NODE_ENV==='production'?{rejectUnauthorized:false}:undefined),max:10};
+}
 async function database(){
-  if(!databasePromise)databasePromise=(async()=>{
-    if(!process.env.DATABASE_URL)throw new TenantProjectError('database_not_configured','قاعدة بيانات العزل غير مهيأة.',503);
-    const databaseUrl=new URL(process.env.DATABASE_URL);
-    const ssl=databaseUrl.hostname.endsWith('.railway.internal')?false:(process.env.NODE_ENV==='production'?{rejectUnauthorized:false}:undefined);
-    return new pg.Pool({connectionString:process.env.DATABASE_URL,ssl,max:10});
-  })().catch(error=>{databasePromise=null;throw error;});
+  if(!databasePromise)databasePromise=Promise.resolve().then(()=>new pg.Pool(databaseOptions())).catch(error=>{databasePromise=null;throw error;});
   return databasePromise;
+}
+async function effectDatabase(){
+  // Lock holders must not exhaust the pool needed to read ownership and save results.
+  if(!effectDatabasePromise)effectDatabasePromise=Promise.resolve().then(()=>new pg.Pool({...databaseOptions(),connectionTimeoutMillis:10_000})).catch(error=>{effectDatabasePromise=null;throw error;});
+  return effectDatabasePromise;
 }
 async function accountAuth(){
   if(!accountAuthPromise)accountAuthPromise=(async()=>{
@@ -256,6 +263,7 @@ async function onboarding(req,res){
 }
 
 async function integrations(req,res){
+  let effectLock=null;
   try{
     const input=await body(req),resolved=await tenantSession(req);
     if(['companyId','tenantId','projectId','scope'].some(key=>Object.hasOwn(input,key)))throw new TenantProjectError('client_scope_forbidden','نطاق الشركة يحدده الخادم فقط.',400);
@@ -268,12 +276,12 @@ async function integrations(req,res){
     if(input.op==='oauth_start')return json(res,200,{ok:true,...await service.oauthStart({tenantId,sessionBinding:oauthSessionBinding(req),requestOrigin:req.headers.origin,piece:input.piece,methodId:input.methodId,methodFingerprint:input.methodFingerprint,values:input.values})});
     if(input.op==='oauth_finish')return json(res,200,{ok:true,connection:await service.cloudOauthFinish({tenantId,sessionBinding:oauthSessionBinding(req),attempt:input.attempt,code:input.code})});
     if(input.op==='revalidate')return json(res,200,{ok:true,connection:await service.revalidate({tenantId,id:input.connection_id})});
-    if(input.op==='disconnect')return json(res,200,{ok:true,...await service.disconnect({tenantId,id:input.connection_id,confirmInUse:input.confirm_in_use===true})});
+    if(input.op==='disconnect'){effectLock=createCompanyEffectLock({database:effectDatabase,companyId:tenantId});await effectLock.acquire();return json(res,200,{ok:true,...await service.disconnect({tenantId,id:input.connection_id,confirmInUse:input.confirm_in_use===true})});}
     return json(res,400,{ok:false,error:'unsupported_operation'});
   }catch(error){
     if(error instanceof TenantProjectError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
     console.error('tool connection failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error'});
-  }
+  }finally{try{await effectLock?.release();}catch(error){console.error('company effect lock release failed',error?.code||error?.name);}}
 }
 
 function oauthSessionBinding(req){return createHash('sha256').update(cookieValue(req.headers.cookie,SESSION_COOKIE)).digest('hex');}
@@ -376,7 +384,7 @@ async function authRoute(req,res,operation){
     console.error('account auth failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error',message:'تعذّر إكمال الدخول.'});
   }
 }
-async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null,mcp=null,companyId=null,conversationId=null,deadlineMs=null,excludedTools=[],onEffectStart=null,onNativeExecution=null,createDraft=null}){
+async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null,mcp=null,companyId=null,conversationId=null,deadlineMs=null,excludedTools=[],beforeEffect=null,onEffectStart=null,onNativeExecution=null,createDraft=null}){
   mcp=mcp?.forRequest?.()||mcp;
   const draftOnly=draftOnlyIntent(message),doNotRun=doNotRunIntent(message);
   const key=process.env.DEEPSEEK_API_KEY;
@@ -494,6 +502,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           if(name===flowToolName&&effects.length||flowToolAttempted&&!readOnly(name))throw new TenantProjectError('employee_run_mixed_effects','تشغيل الموظف يحتاج طلبًا مستقلًا عن تعديل طريقة عمله. يمكنك قراءة نتيجة التشغيل الحالي.',409);
           args=scopeMcpTool(available.find(tool=>tool.name===name),args,employee,flowToolName);
           if(name===flowToolName)args=bindEmployeeFlowContext(available.find(tool=>tool.name===name),args,{request:String(message||''),context:{company:context.company,selectedEmployee:context.selectedEmployee,settings:context.settings,knowledge:context.knowledge},memory,history:executionHistory});
+          if(!readOnly(name))await beforeEffect?.({name,args});
           const employeeFlow=employee?.activepieces_flow_id||flowId||draftEmployee?.activepieces_flow_id;
           if(employee&&['ap_get_run','ap_retry_run'].includes(name)){
             if(!/^[A-Za-z0-9]{21}$/.test(String(args.flowRunId||'')))throw new TenantProjectError('employee_run_scope','معرّف تشغيل الموظف غير صالح.',403);
@@ -514,7 +523,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           }
           const versionBeforeTest=name==='ap_test_flow'&&args.flowId===employeeFlow?flowTestSnapshot((await (await tenantProjects()).ownedFlow(companyId,args.flowId)).flow.version):null;
           checkDeadline();
-          if(!readOnly(name)){effectAttempted=true;effectFlowId=args.flowId||null;onEffectStart?.();effects.push(name);}
+          if(!readOnly(name)){await onEffectStart?.();effectAttempted=true;effectFlowId=args.flowId||null;effects.push(name);}
           if(name===flowToolName){flowToolAttempted=true;effectFlowId=employee.activepieces_flow_id;}
           if(name==='ap_lock_and_publish'||name==='ap_change_flow_status')statusChanged=true;
           if(['ap_build_flow','ap_create_flow'].includes(name)){
@@ -606,7 +615,15 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
 }
 async function publicChat(req,res){
   let sessionHeaders={};
-  let activeRequest=null,waiting=null;
+  let activeRequest=null,waiting=null,effectLock=null;
+  const lockEffects=async companyId=>{
+    effectLock=effectLock||createCompanyEffectLock({database:effectDatabase,companyId});
+    await effectLock.acquire();
+  };
+  const beginEffects=async companyId=>{
+    await lockEffects(companyId);
+    activeRequest.effectStarted=true;activeRequest.executionAttempt=true;
+  };
   try{
     const input=await body(req),resolved=await tenantSession(req);sessionHeaders=resolved.headers;
     if(Object.hasOwn(input,'companyId')||Object.hasOwn(input,'tenantId')||Object.hasOwn(input,'projectId'))throw new TenantProjectError('client_scope_forbidden','نطاق الشركة يحدده الخادم فقط.',400);
@@ -634,9 +651,11 @@ async function publicChat(req,res){
     }
     async function changeEmployeeState(saved,status){
       const profiles=await companyProfiles();
-      const lock=await (await database()).connect();
-      let locked=false;
+      const companyLock=createCompanyEffectLock({database:effectDatabase,companyId});
+      await companyLock.acquire();
+      let lock,locked=false;
       try{
+      lock=await (await database()).connect();
       locked=(await lock.query('SELECT pg_try_advisory_lock(hashtext($1),hashtext($2)) AS locked',[companyId,`employee:${saved.id}`])).rows?.[0]?.locked===true;
       if(!locked)throw new CompanyProfileError('employee_busy','الموظف قيد التحقق الآن.',409);
       if(!saved.activepieces_flow_id){
@@ -689,7 +708,7 @@ async function publicChat(req,res){
       const updated=await profiles.setEmployeeState({companyId,employeeId:saved.id,status});
       if(status==='active')await profiles.clearEmployeeActivationIntent({companyId,employeeId:saved.id,flowId:saved.activepieces_flow_id});
       return updated;
-      }finally{try{if(locked)await lock.query('SELECT pg_advisory_unlock(hashtext($1),hashtext($2))',[companyId,`employee:${saved.id}`]);}finally{lock.release();}}
+      }finally{try{if(locked)await lock.query('SELECT pg_advisory_unlock(hashtext($1),hashtext($2))',[companyId,`employee:${saved.id}`]);}finally{lock?.release();await companyLock.release();}}
     }
     if(input.op==='employee_state'){
       const profiles=await companyProfiles(),saved=await profiles.findEmployee(companyId,input.employee_id);
@@ -775,9 +794,9 @@ async function publicChat(req,res){
       }
       let result,built,updated;
       if(['ap_build_flow','ap_create_flow'].includes(pending.toolName)){
-        ({result,built,updated}=await buildOwnedDraftFlow({mcp,companyId,args:pending.args,draftEmployee:buildingDraft?employee:null,onEffectStart:()=>{activeRequest.effectStarted=true;},toolName:pending.toolName}));
+        ({result,built,updated}=await buildOwnedDraftFlow({mcp,companyId,args:pending.args,draftEmployee:buildingDraft?employee:null,onEffectStart:()=>beginEffects(companyId),toolName:pending.toolName}));
       }else{
-        activeRequest.effectStarted=true;
+        if(tool.annotations?.readOnlyHint!==true)await beginEffects(companyId);
         result=await mcp.call(companyId,'tools/call',{name:pending.toolName,arguments:pending.args});
       }
       if(employee&&pending.toolName==='ap_delete_flow'&&result?.isError!==true){
@@ -869,22 +888,22 @@ async function publicChat(req,res){
         const answer=await deepseekReply({company:{name:resolved.account.company_name,researchedWebsiteName:profile?.company_name||null,profile:profile?.profile_json||{}},settings,knowledge,team,history,message:input.message,employee:saved,mcp:employeeMcp,companyId,conversationId,deadlineMs:chatExecutionBudget(acceptedAt),onNativeExecution:async native=>{
           const identity=await recovery.capture({companyId,requestId,conversationId,claimToken:claim.claimToken,...native});
           return identity?recovery.reconcile({companyId,requestId,conversationId}):null;
-        },onEffectStart:()=>{activeRequest.effectStarted=true;activeRequest.executionAttempt=true;}});
+        },beforeEffect:()=>lockEffects(companyId),onEffectStart:()=>beginEffects(companyId)});
         await profiles.recordConversation({companyId,conversationId,employeeId:saved.id,requestId,userMessage:input.message,assistantMessage:answer.reply});
-        if(answer.flowToolAttempted||answer.effects?.length)return finish(200,{ok:true,conversation_id:conversationId,...completedToolActions(answer),work_id:`request_${requestId}`,reply:answer.reply,tool_receipts:answer.toolReceipts,...(answer.employee?{employee:answer.employee}:{}),experience:{employee_conversation:true,employee_id:saved.id,instruction_version:Number(saved.prompt_version||1),external_execution:true}});
-        return finish(200,{...completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply:answer.reply,experience:{employee_conversation:true,employee_id:saved.id,instruction_version:Number(saved.prompt_version||1),external_execution:false}}),...(answer.toolReceipts.length?{tool_receipts:answer.toolReceipts}:{}),...(answer.employee?{employee:answer.employee}:{}),...(answer.approval?{approval:answer.approval,work_status:'awaiting_input'}:{})});
+        if(answer.flowToolAttempted||answer.effects?.length)return await finish(200,{ok:true,conversation_id:conversationId,...completedToolActions(answer),work_id:`request_${requestId}`,reply:answer.reply,tool_receipts:answer.toolReceipts,...(answer.employee?{employee:answer.employee}:{}),experience:{employee_conversation:true,employee_id:saved.id,instruction_version:Number(saved.prompt_version||1),external_execution:true}});
+        return await finish(200,{...completedWithoutExecution('conversation_reply',{ok:true,conversation_id:conversationId,reply:answer.reply,experience:{employee_conversation:true,employee_id:saved.id,instruction_version:Number(saved.prompt_version||1),external_execution:false}}),...(answer.toolReceipts.length?{tool_receipts:answer.toolReceipts}:{}),...(answer.employee?{employee:answer.employee}:{}),...(answer.approval?{approval:answer.approval,work_status:'awaiting_input'}:{})});
       }
       const profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId),history=await profiles.conversationHistory({companyId,conversationId,requestId});
       const existing=await profiles.findConversationDraft(companyId,conversationId);
       const draft=existing?.status==='draft'?existing:null;
       let answer;
-      answer=await deepseekReply({company:{name:resolved.account.company_name,researchedWebsiteName:profile?.company_name||null,profile:profile?.profile_json||{}},settings,knowledge,team,history,message:input.message,draftEmployee:draft,mcp:await activepiecesMcp(),companyId,conversationId,deadlineMs:chatExecutionBudget(acceptedAt),onEffectStart:()=>{activeRequest.effectStarted=true;activeRequest.executionAttempt=true;},createDraft:async name=>profiles.findEmployee(companyId,(await profiles.createManualEmployeeDraft({companyId,name:flowName(String(name||input.message)),requestId})).recordId)});
+      answer=await deepseekReply({company:{name:resolved.account.company_name,researchedWebsiteName:profile?.company_name||null,profile:profile?.profile_json||{}},settings,knowledge,team,history,message:input.message,draftEmployee:draft,mcp:await activepiecesMcp(),companyId,conversationId,deadlineMs:chatExecutionBudget(acceptedAt),beforeEffect:()=>lockEffects(companyId),onEffectStart:()=>beginEffects(companyId),createDraft:async name=>profiles.findEmployee(companyId,(await profiles.createManualEmployeeDraft({companyId,name:flowName(String(name||input.message)),requestId})).recordId)});
       const draftOnly=draftOnlyIntent(input.message);
       const activationIntent=!draftOnly&&answer.flowId&&answer.employee?.flowId===answer.flowId&&answer.employee.status==='disabled'?{auto_activate_after_connection:true,auto_activate_employee_id:answer.employee.recordId,auto_activate_flow_id:answer.flowId}:{};
       const reply=answer.employee&&!answer.flowId&&!answer.readinessReceipt?`حُفظ سجل ${answer.employee.name}، وحالة بناء طريقة عمله غير مؤكدة؛ تحقّق من مشروع الشركة قبل إعادة البناء. ${answer.reply}`:answer.reply;
       await profiles.recordConversation({companyId,conversationId,employeeId:null,requestId,userMessage:input.message,assistantMessage:reply});
-      if(answer.effects?.some(name=>name!=='ap_build_flow')||(answer.effects?.includes('ap_build_flow')&&!answer.flowId))return finish(200,{ok:true,conversation_id:conversationId,...completedToolActions(answer),work_id:`request_${requestId}`,reply,tool_receipts:answer.toolReceipts,...activationIntent,...(answer.flowId?{flow_id:answer.flowId}:{}),...(answer.employee?{employee:answer.employee}:{})});
-      return finish(200,{...completedWithoutExecution(answer.employee?.status==='disabled'?'employee_draft':'conversation_reply',{ok:true,conversation_id:conversationId,reply,...activationIntent,...(answer.flowId?{flow_id:answer.flowId,draft:answer.employee?.status!=='active'}:{}),...(answer.employee?{employee:answer.employee}:{experience:{understood_company:true,knowledge_version:Number(knowledge?.knowledgeVersion||0),catalog_reviewed:true}})}),...(answer.toolReceipts?.length?{tool_receipts:answer.toolReceipts}:{}),...(answer.approval?{approval:answer.approval,work_status:'awaiting_input'}:{})});
+      if(answer.effects?.some(name=>name!=='ap_build_flow')||(answer.effects?.includes('ap_build_flow')&&!answer.flowId))return await finish(200,{ok:true,conversation_id:conversationId,...completedToolActions(answer),work_id:`request_${requestId}`,reply,tool_receipts:answer.toolReceipts,...activationIntent,...(answer.flowId?{flow_id:answer.flowId}:{}),...(answer.employee?{employee:answer.employee}:{})});
+      return await finish(200,{...completedWithoutExecution(answer.employee?.status==='disabled'?'employee_draft':'conversation_reply',{ok:true,conversation_id:conversationId,reply,...activationIntent,...(answer.flowId?{flow_id:answer.flowId,draft:answer.employee?.status!=='active'}:{}),...(answer.employee?{employee:answer.employee}:{experience:{understood_company:true,knowledge_version:Number(knowledge?.knowledgeVersion||0),catalog_reviewed:true}})}),...(answer.toolReceipts?.length?{tool_receipts:answer.toolReceipts}:{}),...(answer.approval?{approval:answer.approval,work_status:'awaiting_input'}:{})});
     }
     return json(res,400,{ok:false,error:'unsupported_operation'},sessionHeaders);
   }catch(error){
@@ -901,7 +920,7 @@ async function publicChat(req,res){
     }
     if(error instanceof TenantProjectError||error instanceof CompanyProfileError)return json(res,error.status,{ok:false,error:error.code,message:error.message},sessionHeaders);
     console.error('public tenant chat failed',error?.message||error);return json(res,500,{ok:false,error:'internal_error'},sessionHeaders);
-  }
+  }finally{try{await effectLock?.release();}catch(error){console.error('company effect lock release failed',error?.code||error?.name);}}
 }
 function staticFile(req,res){
   const url=new URL(req.url,'http://localhost');

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
+import {createCompanyEffectLock} from '../lib/company-effect-lock.mjs';
 
 const source=readFileSync(new URL('../server.mjs',import.meta.url),'utf8');
 const createSource=source.slice(source.indexOf('async function createTenantFlow('),source.indexOf('async function provisionTenant('));
@@ -18,12 +19,13 @@ test('closed internal create route never initializes a provider',async()=>{
 });
 
 const stateSource=source.slice(source.indexOf('async function changeEmployeeState('),source.indexOf("    if(input.op==='employee_state')"));
-function stateHarness({confirmed=true,foreign=false,transportError=false,isError=false}={}){
+function stateHarness({confirmed=true,foreign=false,transportError=false,isError=false,busy=false}={}){
   const calls=[],stateWrites=[],flowId='F'.repeat(21);let nativeCalled=false;
   class CompanyProfileError extends Error{constructor(code,message,status){super(message);this.code=code;this.status=status;}}
+  const database=async()=>({connect:async()=>({query:async()=>({rows:[{locked:!busy,unlocked:true}]}),release(){}})});
   const handler=runInNewContext(`${stateSource}; changeEmployeeState`,{
-    companyId:'company-a',CompanyProfileError,console:{error:()=>{}},
-    database:async()=>({connect:async()=>({query:async()=>({rows:[{locked:true}]}),release(){}})}),
+    companyId:'company-a',CompanyProfileError,createCompanyEffectLock,console:{error:()=>{}},
+    database,effectDatabase:database,
     companyProfiles:async()=>({clearEmployeeActivationIntent:async()=>{},setEmployeeState:async input=>{stateWrites.push(input);return input;}}),
     tenantProjects:async()=>({ownedFlow:async(company,id)=>{calls.push(['read',company,id]);if(foreign)throw Error('foreign flow');return {flow:{status:nativeCalled&&confirmed?'DISABLED':'ENABLED'}};}}),
     activepiecesMcp:async()=>({call:async(company,method,params)=>{nativeCalled=true;calls.push(['mcp',company,method,params]);if(transportError)throw Error('transport failure');return {isError};}}),
@@ -47,4 +49,9 @@ test('unconfirmed native status never saves local state or falls back to REST',a
 test('foreign Flow is rejected before native status mutation',async()=>{
   const h=stateHarness({foreign:true});await assert.rejects(h.run,/foreign flow/);
   assert.deepEqual(h.calls.map(x=>x[0]),['read']);assert.equal(h.stateWrites.length,0);
+});
+
+test('company effect contention blocks manual employee state mutation before MCP',async()=>{
+  const h=stateHarness({busy:true});await assert.rejects(h.run,{code:'company_effect_busy'});
+  assert.deepEqual(h.calls,[]);assert.deepEqual(h.stateWrites,[]);
 });

@@ -6,6 +6,7 @@ import {builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent} from 
 import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext} from '../lib/mcp-flow-scope.mjs';
 import {TenantProjectError} from '../lib/tenant-projects.mjs';
 import {nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget,failedChatExecution} from '../lib/chat-outcome.mjs';
+import {createCompanyEffectLock} from '../lib/company-effect-lock.mjs';
 import {CompanyProfileError} from '../lib/company-profile.mjs';
 
 // Runs the real chat loop and Flow lifecycle against a scripted model and Activepieces MCP.
@@ -81,7 +82,7 @@ function setup({script,clock=Date,flowInputSchema=null,toolResults={},flowStatus
   };
   const deepseekReply=runInNewContext(`${helpers}\n${source.slice(start,end)}; deepseekReply`,ctx);
   const run=(extra={})=>deepseekReply({company:{name:'شركة'},settings:{},knowledge:{},team:[],history:[],message:'جهّز الموظف',mcp,companyId:'company-1',conversationId:'c1',deadlineMs:600_000,onEffectStart:()=>{log.effects++;},...extra});
-  return {run,log};
+  return {run,log,setVersion:id=>{draftVersionId=id;}};
 }
 const toolMessages=request=>request.messages.filter(item=>item.role==='tool').map(item=>item.content);
 
@@ -869,4 +870,60 @@ test('completed effect stays visible but cannot be dispatched again in a continu
   assert.ok(log.model[0].tools.some(x=>x.function.name==='ap_list_tables'));
   assert.deepEqual(log.tools,[]);
   assert.match(toolMessages(log.model[1])[0],/mcp_effect_already_completed/);
+});
+
+test('an asynchronous effect gate resolves before any MCP mutation is dispatched',async()=>{
+  let enter,unlock;const entered=new Promise(resolve=>{enter=resolve;});
+  const h=setup({script:[use(['ap_run_action',{pieceName:'gmail',actionName:'send_email'}]),say('انتهى.')]});
+  const pending=h.run({onEffectStart:async()=>{enter();await new Promise(resolve=>{unlock=resolve;});}});
+  await entered;
+  assert.deepEqual(h.log.tools,[]);
+  unlock();await pending;
+  assert.deepEqual(h.log.tools.map(t=>t[0]),['ap_run_action']);
+});
+test('a busy company effect gate returns to the model without executing and still allows reads',async()=>{
+  const h=setup({script:[use(['ap_run_action',{pieceName:'gmail',actionName:'send_email'}]),use(['ap_list_connections',{}]),say('الإجراء الآخر يعمل؛ قرأت الاتصالات.')]});
+  await h.run({onEffectStart:async()=>{throw new TenantProjectError('company_effect_busy','إجراء آخر يعمل',409);}});
+  assert.deepEqual(h.log.tools.map(t=>t[0]),['ap_list_connections']);
+  assert.match(toolMessages(h.log.model[1])[0],/company_effect_busy/);
+});
+
+test('different server contexts block overlapping company effects while direct replies continue and release permits retry',async()=>{
+  const held=new Set(),events=[];let finishFirst,entered,finishSettlement;
+  const firstEntered=new Promise(resolve=>{entered=resolve;});
+  const database=async()=>({connect:async()=>({
+    query:async(sql,keys)=>{const key=JSON.stringify(keys);if(sql.includes('pg_try_advisory_lock')){const locked=!held.has(key);if(locked)held.add(key);return {rows:[{locked}]};}return {rows:[{unlocked:held.delete(key)}]};},release:()=>{}
+  })});
+  const profiles={claimChatRequest:async()=>({claimed:true,claimToken:'t'}),earlierPendingChatRequest:async()=>null,
+    recordConversation:async()=>{},settleChatRequest:async entry=>{if(entry.requestId==='first')await new Promise(resolve=>{finishSettlement=resolve;});return {httpStatus:entry.httpStatus,response:entry.response};},
+    read:async()=>({}),readSettings:async()=>({}),ownedKnowledge:async()=>({}),listEmployees:async()=>[],conversationHistory:async()=>[],findConversationDraft:async()=>null};
+  const chatStart=source.indexOf('async function publicChat('),chatEnd=source.indexOf('function staticFile(req,res)',chatStart);
+  const jsonStart=source.indexOf('function json(res,status,body,headers={})'),jsonEnd=source.indexOf('\n',jsonStart);
+  function instance(){
+    const ctx={console:{error:()=>{}},JSON,String,Object,Number,Array,Boolean,Date,setTimeout,clearTimeout,
+      randomUUID:()=> 'unused',createHash:()=>({update(){return this;},digest:()=> 'hash'}),
+      TenantProjectError,CompanyProfileError,chatExecutionBudget,draftOnlyIntent,createCompanyEffectLock,database,effectDatabase:database,
+      body:async req=>({op:'message',message:req.id,conversation_id:req.id,request_id:req.id}),
+      tenantSession:async()=>({session:{companyId:'company-a'},account:{company_name:'شركة'},headers:{}}),
+      companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),failedChatExecution,
+      completedWithoutExecution:(_kind,response)=>({...response,request_status:'succeeded'}),
+      deepseekReply:async args=>{if(args.message!=='read'){await args.onEffectStart();events.push(args.message);if(args.message==='first'){entered();await new Promise(resolve=>{finishFirst=resolve;});}}return {reply:'رد '+args.message};}
+    };
+    const handler=runInNewContext(`${source.slice(jsonStart,jsonEnd)}\n${source.slice(chatStart,chatEnd)};publicChat`,ctx);
+    return async id=>{let result;const res={headersSent:false,writeHead(){this.headersSent=true;},end(text){result=JSON.parse(text);}};await handler({id,headers:{}},res);return result;};
+  }
+  const a=instance(),b=instance(),first=a('first');await firstEntered;
+  const blocked=await b('second');assert.equal(blocked.request_status,'failed');assert.deepEqual(events,['first']);
+  assert.equal((await b('read')).reply,'رد read');assert.equal(held.size,1);
+  finishFirst();while(!finishSettlement)await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(held.size,1,'effect lock must remain held while settlement is pending');
+  finishSettlement();await first;assert.equal(held.size,0);
+  assert.equal((await b('retry')).reply,'رد retry');assert.deepEqual(events,['first','retry']);assert.equal(held.size,0);
+});
+
+test('publish checks the tested version after acquiring the shared effect lock',async()=>{
+  const h=setup({script:[use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),say('تغيرت النسخة.')]});
+  await h.run({draftEmployee:{id:'employee-1',name:'موظف',activepieces_flow_id:flowId},beforeEffect:async({name})=>{if(name==='ap_lock_and_publish')h.setVersion('v2');}});
+  assert.equal(h.log.tools.some(([name])=>name==='ap_lock_and_publish'),false);
+  assert.match(toolMessages(h.log.model.at(-1)).at(-1),/employee_test_required/);
 });
