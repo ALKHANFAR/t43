@@ -6,6 +6,7 @@ import {builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent} from 
 import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext} from '../lib/mcp-flow-scope.mjs';
 import {TenantProjectError} from '../lib/tenant-projects.mjs';
 import {nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget,failedChatExecution} from '../lib/chat-outcome.mjs';
+import {selectKnowledgeContext} from '../lib/knowledge-context.mjs';
 import {createCumulativeMemory,MEMORY_TABLE,MEMORY_FIELDS,MEMORY_LIMITS} from '../lib/cumulative-memory.mjs';
 import {createCompanyEffectLock} from '../lib/company-effect-lock.mjs';
 import {CompanyProfileError} from '../lib/company-profile.mjs';
@@ -72,7 +73,7 @@ function setup({script,clock=Date,flowInputSchema=null,toolResults={},flowStatus
   const ctx={
     console:{error:()=>{},info:()=>{},warn:()=>{}},process:{env:{DEEPSEEK_API_KEY:'test-key'}},
     AbortController,setTimeout,clearTimeout,Date:clock,JSON,String,Array,Object,Math,
-    TenantProjectError,CompanyProfileError,createCumulativeMemory,MEMORY_TABLE,MEMORY_FIELDS,MEMORY_LIMITS,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext,
+    TenantProjectError,CompanyProfileError,selectKnowledgeContext,createCumulativeMemory,MEMORY_TABLE,MEMORY_FIELDS,MEMORY_LIMITS,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext,
     fetch:async(url,options)=>{
       const request=JSON.parse(options.body);log.model.push(request);
       const message=script[Math.min(step++,script.length-1)];
@@ -971,4 +972,23 @@ test('saving employee memory after a verified run does not repeat the run or inv
   const answer=await h.run({employee:runningEmployee,memoryRequestId:'current',message:'شغّل المهمة وتذكر: سعرنا 100'});
   assert.equal(h.savedMemories.length,1);assert.equal(h.log.tools.filter(t=>t[0]===flowToolName).length,1);
   assert.equal(completedToolActions(answer).outcome_kind,'tool_result');assert.equal(completedToolActions(answer).memory_updates.length,1);
+});
+
+test('both chats retrieve older relevant company facts beyond the first forty with their source',async()=>{
+  const facts=Array.from({length:75},(_,i)=>({topic:'unrelated',key:'note '+i,value:'routine note '+i}));
+  facts.push({topic:'pricing',key:'سعر الخدمة',value:'سعر الخدمة 199',sourceUrl:'https://example.com/pricing',evidenceQuote:'سعر الخدمة 199',certainty:'user_confirmed',observedAt:'2020-01-01T00:00:00Z'});
+  for(const employee of [null,{id:'employee-1',status:'draft',name:'نور',knowledge_topics_json:['support']}]){
+    const h=setup({script:[say('سعر الخدمة 199.')]});await h.run({employee,knowledge:{facts},message:'ما سعر الخدمة؟'});
+    const context=JSON.parse(h.log.model[0].messages[0].content.split('سياق العمل الحالي بصيغة JSON:\n')[1].split('\n')[0]);
+    assert.equal(context.knowledge.facts[0].value,'سعر الخدمة 199');assert.equal(context.knowledge.facts[0].source,'https://example.com/pricing');
+    assert.equal(h.log.effects,0);
+  }
+});
+test('both chats bound the company knowledge context without truncating individual evidence',async()=>{
+  const facts=Array.from({length:40},(_,i)=>({topic:'support',key:'answer '+i,value:'x'.repeat(1500),sourceUrl:'https://example.com/'+i,certainty:'observed'}));
+  for(const employee of [null,{id:'employee-1',status:'draft',name:'نور'}]){
+    const h=setup({script:[say('رد مباشر.')]});await h.run({employee,knowledge:{facts}});
+    const context=JSON.parse(h.log.model[0].messages[0].content.split('سياق العمل الحالي بصيغة JSON:\n')[1].split('\n')[0]);
+    assert.ok(JSON.stringify(context.knowledge.facts).length<=6000);assert.equal(context.knowledge.facts[0].value.length,1500);assert.equal(h.log.effects,0);
+  }
 });

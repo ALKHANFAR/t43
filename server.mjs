@@ -5,6 +5,7 @@ import {createHash,randomUUID,timingSafeEqual} from 'node:crypto';
 import pg from 'pg';
 import {createTenantProjectService,TenantProjectError} from './lib/tenant-projects.mjs';
 import {provisionVerifiedTenant} from './lib/tenant-provisioning.mjs';
+import {selectKnowledgeContext} from './lib/knowledge-context.mjs';
 import {createCumulativeMemory,MEMORY_TABLE,MEMORY_FIELDS,MEMORY_LIMITS} from './lib/cumulative-memory.mjs';
 import {createCompanyEffectLock} from './lib/company-effect-lock.mjs';
 import {createChatFlowLifecycle} from './lib/chat-flow-lifecycle.mjs';
@@ -393,7 +394,7 @@ async function deepseekReply({company,settings,knowledge,team,history,message,em
   const deadline=deadlineMs?Date.now()+deadlineMs:null;
   const replyReserve=deadlineMs?Math.min(75_000,deadlineMs*.2):0;
   const checkDeadline=()=>{if(deadline&&Date.now()>=deadline)throw new TenantProjectError('assistant_timeout','لم يكتمل تجهيز المسودة ضمن وقت المحادثة.',504);};
-  const facts=(knowledge?.facts||[]).slice(0,40).map(item=>({topic:item.topic,value:item.value,source:item.sourceUrl,certainty:item.certainty}));
+  const facts=selectKnowledgeContext((knowledge?.facts||[]).map(item=>({topic:item.topic,key:item.key,value:item.value,source:item.sourceUrl,certainty:item.certainty,observedAt:item.observedAt})),{message,topics:employee?.knowledge_topics_json||draftEmployee?.knowledge_topics_json||[]});
   const selectedEmployee=employee?{id:employee.id,flowId:employee.activepieces_flow_id,name:employee.name,role:employee.role_title,status:employee.status,instructions:employee.prompt,instructionSource:employee.prompt_source,instructionVersion:Number(employee.prompt_version||1),knowledgeTopics:employee.knowledge_topics_json||[],tools:employee.tools_json||[]}:null;
   const context={company,selectedEmployee,currentDraft:draftEmployee?{id:draftEmployee.id,name:draftEmployee.name,flowId:draftEmployee.activepieces_flow_id,instructions:draftEmployee.prompt,instructionSource:draftEmployee.prompt_source,instructionVersion:Number(draftEmployee.prompt_version||1)}:null,settings,knowledge:{coverage:knowledge?.coverageScore||0,facts,missing:knowledge?.missingCritical||[]},team:(team||[]).map(item=>({id:item.recordId,name:item.name,role:item.role,status:item.status,tools:item.tools||[]}))};
   const memory=conversationMemory(history);

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {selectKnowledgeContext} from '../lib/knowledge-context.mjs';
 import {createCumulativeMemory,MEMORY_TABLE,MEMORY_FIELDS,MEMORY_LIMITS} from '../lib/cumulative-memory.mjs';
 const TABLE='T'.repeat(21),OTHER='O'.repeat(21);
 const tools=['ap_list_tables','ap_find_records','ap_insert_records','ap_update_record','ap_delete_records','ap_create_table'].map(name=>({name}));
@@ -91,4 +92,13 @@ test('provider ignoring scope filters fails closed',async()=>{
 test('older relevant facts rank before recent unrelated facts within the context budget',async()=>{
   const rows=Array.from({length:128},(_,i)=>row(String(i).padStart(21,'0'),{key:i===0?'سعرنا':'unrelated '+i,value:i===0?'100':'x'.repeat(512),updated_at:i===0?'2020-01-01T00:00:00Z':base.updated_at}));
   const facts=(await harness({rows}).service.load()).facts;assert.equal(facts[0].key,'سعرنا');
+});
+
+test('text retrieval normalizes Arabic marks, keeps evidence whole and uses employee topics only for ties',()=>{
+  const facts=[{key:'عام',topic:'support',value:'سياسة الدعم',source:'support-source'},{key:'السعر',topic:'pricing',value:'السِّعْر 199',source:'pricing-source'}];
+  assert.equal(selectKnowledgeContext(facts,{message:'السعر',topics:['support']})[0].source,'pricing-source');
+  assert.equal(selectKnowledgeContext(facts,{message:'',topics:['support']})[0].source,'support-source');
+  const large={key:'السعر',value:'x'.repeat(6001)},small={key:'السعر',value:'199',source:'whole-source'};
+  assert.deepEqual(selectKnowledgeContext([large,small],{message:'السعر',maxChars:100}),[small]);
+  assert.deepEqual(selectKnowledgeContext(facts,{maxFacts:0}),[]);
 });
