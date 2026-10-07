@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {reviewReadiness} from './google-review-readiness.mjs';
+const commit='a'.repeat(40),now=new Date('2026-10-07T17:00:00Z');
+function packet(){return {schemaVersion:1,repository:'ALKHANFAR/t43',deployment:{commit},providers:[{id:'api',plan:'API',planEvidence:'account evidence',endpoints:[{url:'https://api.example.com/chat/completions',models:['model']}],googleDataExposure:'no_training',controlEvidence:'reviewed API contract'}],gates:['provider_inventory','provider_plans','no_training_controls','gateway_routing','google_scopes','limited_use_publication','current_demo'].map(id=>({id,status:'verified',evidence:'reviewed artifact',reviewer:'reviewer',verifiedAt:'2026-10-07T16:00:00Z',validUntil:'2026-10-08T16:00:00Z',commit}))};}
+test('complete current evidence can pass without claiming Google approval',()=>{const r=reviewReadiness(packet(),{now});assert.equal(r.ready,true);assert.match(r.meaning,/not Google approval/);});
+test('missing plans and unknown Google exposure cannot pass on endpoint presence',()=>{const p=packet();p.providers[0].plan=null;p.providers[0].googleDataExposure='unknown';const r=reviewReadiness(p,{now});assert.equal(r.ready,false);assert.ok(r.failures.includes('api:plan_unverified'));assert.ok(r.failures.includes('api:google_data_exposure_unverified'));});
+test('an N/A gate cannot substitute for audited isolation',()=>{const p=packet();p.gates[3].status='not_applicable';assert.equal(reviewReadiness(p,{now}).ready,false);});
+test('stale release, future review and expired evidence all fail',()=>{for(const change of [{commit:'b'.repeat(40)},{verifiedAt:'2026-10-08T16:00:00Z'},{validUntil:'2026-10-07T16:30:00Z'}]){const p=packet();Object.assign(p.gates[0],change);assert.equal(reviewReadiness(p,{now}).ready,false);}});
+test('duplicate gate and omitted provider fail closed',()=>{const p=packet();p.gates.push({...p.gates[0]});p.providers=[];assert.equal(reviewReadiness(p,{now}).ready,false);});
