@@ -554,6 +554,25 @@ const executionResult=(overrides={})=>({content:[{type:'text',text:'native reply
 const productionRun=(overrides={})=>({structuredContent:{id:runId,flowId,environment:'PRODUCTION',status:'SUCCEEDED',steps:[{name:'trigger',output:{}},{name:'reply',output:{status:200,body:{result:'QA'}}}],...overrides}});
 const runningEmployee={id:'employee-9',status:'active',activepieces_flow_id:flowId,tools_json:['mcp']};
 
+test('a newly prepared employee executes a subsequent work request through its published native tool',async()=>{
+  const preparation=setup({nativeTestMetadata:true,script:[use(['ap_build_flow',{flowName:'نور'}]),use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),say('الموظف جاهز.')]});
+  const ready=await preparation.run({message:'ابن الموظف واختبره وانشره وفعّله',draftEmployee:{id:'employee-1',name:'نور',activepieces_flow_id:null}});
+  assert.equal(completedToolActions(ready).outcome_kind,'employee_ready');
+  assert.equal(ready.employee.status,'active');
+  assert.equal(ready.employee.flowId,ready.readinessReceipt.flow_id);
+  const employee={id:ready.employee.recordId,status:ready.employee.status,activepieces_flow_id:ready.employee.flowId,tools_json:['mcp']};
+  const work=setup({published:true,flowStatus:'ENABLED',toolResults:{[flowToolName]:executionResult(),ap_get_run:productionRun()},script:[use([flowToolName,{task:'أرجع نتيجة العمل'}]),say('native reply')]});
+  const result=await work.run({message:'نفّذ العمل الآن',employee});
+  assert.deepEqual(JSON.parse(JSON.stringify(work.log.tools)),[[flowToolName,{task:'أرجع نتيجة العمل'}],['ap_get_run',{flowRunId:runId}]]);
+  assert.equal(work.log.runs[0].employeeId,employee.id);
+  assert.equal(work.log.runs[0].flowId,ready.readinessReceipt.flow_id);
+  assert.equal(result.toolReceipts[0].run_id,runId);
+  assert.equal(result.toolReceipts[0].outcome,'flow_completed');
+  assert.equal(completedToolActions(result).outcome_kind,'tool_result');
+  assert.equal(completedToolActions(result).work_status,'succeeded');
+  assert.equal(result.reply,'native reply');
+});
+
 test('earlier Flow edits including failed writes block native dispatch in the same batch or next turn',async()=>{
   for(const sameBatch of [true,false])for(const failedWrite of [true,false]){
     let nativeReconciliations=0;

@@ -384,6 +384,7 @@
         {"role": "recovery_contract", "path": "CHAT_CONTRACT.md", "anchor": "## Durable native employee receipt recovery"},
         {"role": "recovery_pg_test", "path": "scripts/employee-run-recovery-runtime.test.mjs", "anchor": "durable native receipts survive restart, expiry and concurrent reconciliation in PostgreSQL"},
         {"role": "native_run_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "native employee execution receipt reads its exact production run and saves proof before the next model call"},
+        {"role": "prepared_employee_work_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "a newly prepared employee executes a subsequent work request through its published native tool"},
         {"role": "flow_tool", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function employeeFlowMcpToolName("},
         {"role": "mcp_transport", "path": "lib/activepieces-mcp.mjs", "anchor": "async function rpc(token,method,params)"},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "For a provider result from a Flow"},
