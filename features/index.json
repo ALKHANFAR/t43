@@ -3,6 +3,45 @@
   "repository": "ALKHANFAR/t43",
   "features": [
     {
+      "id": "chat_structured_result_and_proof_scope",
+      "name": "عرض نتيجة الموظف ودليل الطلب الصحيح",
+      "aliases": ["رد JSON للموظف", "بطاقة دليل التشغيل القديم"],
+      "state": "draft_pr",
+      "meaning": "يعرض صفوف JSON البسيطة كجدول مقروء، ويعرض معرّف التشغيل المؤكد العائد من تسوية الطلب نفسه. لا يربط طلبًا جديدًا بدليل سابق إلا عند تطابق معرّفي الطلب والمحادثة. التعديل محلي وغير منشور.",
+      "linear": "ABO-69",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/64",
+      "locations": [
+        {"role": "render", "path": "app/chat.js", "anchor": "function siyReplyHtml(text)"},
+        {"role": "verified_run", "path": "app/chat.js", "anchor": "var verifiedRun=kind==='tool_result'"},
+        {"role": "proof_scope", "path": "app/chat.js", "anchor": "r.work_id===data.work_id"},
+        {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "older proof in the same conversation is not presented as the latest request result"}
+      ]
+    },
+    {
+      "id": "short_chat_execution_resume",
+      "name": "استكمال التنفيذ بعد تجهيز الجدول",
+      "aliases": [
+        "أكمل بعد الجدول",
+        "مهلة استكمال المحادثة"
+      ],
+      "state": "draft_pr",
+      "meaning": "يحجز وقت الرد بحسب مهلة الطلب، حتى تستخدم متابعة الـ25 ثانية أدوات MCP بدل التوقف قبل أول استدعاء. تعديل محلي غير منشور.",
+      "linear": "ABO-69",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/64",
+      "locations": [
+        {
+          "role": "execution",
+          "path": "server.mjs",
+          "anchor": "deadline-Date.now()<=Math.min(75_000,Math.max(5_000,deadlineMs/5))"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "short continuation budget still dispatches native MCP discovery"
+        }
+      ]
+    },
+    {
       "id": "mixed_native_action_receipts",
       "name": "توضيح نجاح إجراء مع نتيجة طلب غير مؤكدة",
       "aliases": ["النتيجة غير مؤكدة", "نجحت القراءة بعد تعذر محاولة"],

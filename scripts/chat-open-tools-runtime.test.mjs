@@ -219,11 +219,11 @@ test('the step limit ends with a written account instead of a fixed sentence',as
 
 test('a request that runs out of time still ends with an account of what ran',async()=>{
   const near=setup({script:[request=>request.tools?use(['ap_add_step',{flowId}]):say('أضفت خطوة واحدة وبقي النشر.')]});
-  const written=await near.run({deadlineMs:60_000});
+  const written=await near.run({deadlineMs:5_000});
   assert.equal(written.reply,'أضفت خطوة واحدة وبقي النشر.');
   assert.equal(near.log.tools.length,0);
   const late=setup({script:[use(['ap_add_step',{flowId}])],toolResults:{ap_add_step:async()=>{await new Promise(resolve=>setTimeout(resolve,30));return {content:[{type:'text',text:'ok'}]};}}});
-  const fallback=await late.run({deadlineMs:75_020});
+  const fallback=await late.run({deadlineMs:5_020});
   assert.match(fallback.reply,/ap_add_step/);
   assert.match(fallback.reply,/أكمل/);
 });
@@ -629,4 +629,11 @@ test('completed effect stays visible but cannot be dispatched again in a continu
   assert.ok(log.model[0].tools.some(x=>x.function.name==='ap_list_tables'));
   assert.deepEqual(log.tools,[]);
   assert.match(toolMessages(log.model[1])[0],/mcp_effect_already_completed/);
+});
+
+test('short continuation budget still dispatches native MCP discovery before replying',async()=>{
+  const {run,log}=setup({script:[use(['ap_list_connections',{}]),say('قرأت الاتصالات وأكملت من الجدول المحفوظ.')]});
+  const answer=await run({deadlineMs:25_000,excludedTools:['ap_create_table']});
+  assert.deepEqual(log.tools.map(item=>item[0]),['ap_list_connections']);
+  assert.equal(answer.reply,'قرأت الاتصالات وأكملت من الجدول المحفوظ.');
 });

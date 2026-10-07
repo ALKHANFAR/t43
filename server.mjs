@@ -495,8 +495,8 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   };
   try{
     for(let turn=0;turn<40;turn++){
-      // Keep the last minute for the written account; a request never ends without one.
-      if(deadline&&deadline-Date.now()<75_000)break;
+      // Reserve response time proportionally so short continuation budgets still allow tools.
+      if(deadline&&deadline-Date.now()<=Math.min(75_000,Math.max(5_000,deadlineMs/5)))break;
       const answer=await ask(true);
       const calls=Array.isArray(answer?.tool_calls)?answer.tool_calls:[];
       if(!calls.length){
