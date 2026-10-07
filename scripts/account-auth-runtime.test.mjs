@@ -31,3 +31,12 @@ test('password recovery ignores accounts whose email is not verified',async()=>{
   assert.equal(await service.createPasswordReset('pending@example.com'),null);
   assert.match(insert,/email_verified_at IS NOT NULL/);
 });
+
+test('native access identity uses exactly one verified email scoped by server company',async()=>{
+  let rows=[{email:'Owner@Example.com'}];const calls=[];
+  const service=createAccountAuthService({query:async(sql,values)=>{calls.push({sql,values});return {rows};}});
+  assert.equal(await service.verifiedEmail('company_alpha'),'owner@example.com');
+  assert.match(calls[0].sql,/company_id=\$1 AND email_verified_at IS NOT NULL/);
+  assert.deepEqual(calls[0].values,['company_alpha']);
+  for(const value of [[],[{email:'one@example.com'},{email:'two@example.com'}]]){rows=value;await assert.rejects(()=>service.verifiedEmail('company_alpha'),e=>e.code==='verified_identity_required');}
+});

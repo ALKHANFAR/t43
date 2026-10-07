@@ -172,3 +172,12 @@ test('two companies keep distinct projects and cannot receive each other flows',
   assert.deepEqual((await service.listFlows('company_beta')).map(flow=>flow.projectId),[projects.company_beta]);
   assert.equal(providerCalls.some(call=>call.url.includes('/api/v1/flows')&&(call.options.method||'GET')!=='GET'),false);
 });
+
+test('customer membership uses the stored project and native Editor invitation only',async()=>{
+  const calls=[];let reply={projectId,type:'PROJECT',status:'ACCEPTED',email:'owner@example.com'};
+  const service=createTenantProjectService({query:async(_sql,values)=>({rows:values[0]==='company_alpha'?[{activepieces_project_id:projectId,provision_status:'ready'}]:[]}),activepiecesUrl:'https://ap.example',apiKey:'platform-secret',fetchImpl:async(url,options)=>{calls.push({url,body:JSON.parse(options.body)});return {ok:true,json:async()=>reply};}});
+  assert.deepEqual(await service.ensureMember({tenantId:'company_alpha',email:'Owner@Example.com'}),{projectId});
+  assert.deepEqual(calls[0],{url:'https://ap.example/api/v1/user-invitations',body:{type:'PROJECT',email:'owner@example.com',projectId,projectRole:'Editor'}});
+  for(const altered of [{projectId:'Z'.repeat(21)},{email:'foreign@example.com'},{type:'PLATFORM'},{status:'PENDING'}]){reply={projectId,type:'PROJECT',status:'ACCEPTED',email:'owner@example.com',...altered};await assert.rejects(()=>service.ensureMember({tenantId:'company_alpha',email:'owner@example.com'}),e=>e.code==='customer_membership_unverified');}
+  const before=calls.length;await assert.rejects(()=>service.ensureMember({tenantId:'company_foreign',email:'owner@example.com'}),e=>e.code==='project_not_ready');assert.equal(calls.length,before);
+});
