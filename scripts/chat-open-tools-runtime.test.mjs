@@ -84,6 +84,38 @@ function setup({script,clock=Date,toolResults={},flowStatus='DISABLED',published
 }
 const toolMessages=request=>request.messages.filter(item=>item.role==='tool').map(item=>item.content);
 
+test('direct replies retain company and employee context without a configured MCP connection',async()=>{
+  for(const code of ['mcp_not_connected','project_not_ready','mcp_not_configured']){
+    const calls=[];
+    const {run,log}=setup({script:[say('هذه توصية مبنية على معرفة الشركة.')]});
+    const answer=await run({
+      message:'اقترح تحسينًا لخدمة العملاء.',
+      company:{name:'شركة الاختبار'},settings:{language:'ar'},
+      knowledge:{facts:[{topic:'خدمة العملاء',value:'الرد خلال دقيقة',certainty:'confirmed'}]},
+      employee:{id:'employee-1',name:'نور',status:'draft',role_title:'خدمة العملاء',prompt:'ابدأ بتوصية عملية.',prompt_version:3},
+      history:[{role:'user',content:'نركز على سرعة الرد.'}],
+      mcp:{call:async(_company,method)=>{calls.push(method);throw new TenantProjectError(code,'غير مهيأ',409);}},
+    });
+    assert.equal(answer.reply,'هذه توصية مبنية على معرفة الشركة.');
+    assert.equal(log.model.length,1);
+    const request=log.model[0],system=request.messages[0].content;
+    const context=JSON.parse(system.split('سياق العمل الحالي بصيغة JSON:\n')[1].split('\n')[0]);
+    assert.equal(context.company.name,'شركة الاختبار');
+    assert.equal(context.settings.language,'ar');
+    assert.equal(context.knowledge.facts[0].value,'الرد خلال دقيقة');
+    assert.equal(context.selectedEmployee.instructions,'ابدأ بتوصية عملية.');
+    assert.equal(context.selectedEmployee.instructionVersion,3);
+    assert.equal(request.messages[1].content,'نركز على سرعة الرد.');
+    assert.equal(request.tools,undefined);
+    assert.deepEqual(calls,['tools/list']);
+    assert.equal(answer.effects.length,0);
+    assert.equal(answer.toolReceipts.length,0);
+    assert.equal(log.effects,0);
+    assert.deepEqual(log.states,[]);
+    assert.deepEqual(log.runs,[]);
+  }
+});
+
 test('a previous task restriction in memory does not block the current explicit publish request',async()=>{
   const prior='أريد مسودة فقط للمهمة السابقة، بدون تشغيل أو تفعيل.';
   const current='اختبر النسخة الحالية ثم انشرها وفعّل الموظف الآن.';
