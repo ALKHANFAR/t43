@@ -3,6 +3,40 @@
   "repository": "ALKHANFAR/t43",
   "features": [
     {
+      "id": "google_ai_review_evidence",
+      "name": "أدلة مراجعة Google ومنع تدريب بياناته",
+      "aliases": [
+        "Google Limited Use",
+        "منع تدريب بيانات Google",
+        "اكتمال مراجعة قوقل"
+      ],
+      "state": "draft_pr",
+      "meaning": "حزمة تدقيق مرتبطة بالـ commit المنشور وبوابة اكتمال أدلة ترفض الخطط المجهولة والإثباتات القديمة أو غير المرتبطة بالإصدار. ليست ضبطًا لمنع التدريب في الإنتاج أو نشر سياسة أو موافقة Google. إعدادات المزوّدين والسياسات الحية والفيديو ما زالت قيد الإثبات.",
+      "linear": "ABO-62",
+      "locations": [
+        {
+          "role": "inventory",
+          "path": "docs/google-review/ai-evidence.json",
+          "anchor": "\"providers\""
+        },
+        {
+          "role": "readiness_gate",
+          "path": "scripts/google-review-readiness.mjs",
+          "anchor": "export function reviewReadiness"
+        },
+        {
+          "role": "remediation",
+          "path": "docs/google-review/ai-remediation-20261007.md",
+          "anchor": "## Required work in order"
+        },
+        {
+          "role": "test",
+          "path": "scripts/google-review-readiness-runtime.test.mjs",
+          "anchor": "stale release, future review and expired evidence all fail"
+        }
+      ]
+    },
+    {
       "id": "mixed_native_action_receipts",
       "name": "توضيح نجاح إجراء مع نتيجة طلب غير مؤكدة",
       "aliases": ["النتيجة غير مؤكدة", "نجحت القراءة بعد تعذر محاولة"],

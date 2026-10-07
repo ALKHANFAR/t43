@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "repository": "ALKHANFAR/t43",
+  "deployment": {
+    "commit": "a130a599765a3c02c311c62b5ec11ff6cfd9d14d",
+    "branch": "codex/abo-38-isolation-gate-20261001",
+    "railwayDeploymentId": "30bc5fc3-3d15-4583-ad8e-8c9da5eba243",
+    "observedAt": "2026-10-07",
+    "evidence": "Railway list-deployments and GitHub files fetched at the exact deployed SHA"
+  },
+  "providers": [
+    {
+      "id": "deepseek-direct",
+      "name": "DeepSeek Open Platform",
+      "presence": "direct API request in deployed server code; API key variable name present",
+      "plan": null,
+      "planEvidence": null,
+      "endpoints": [{"url": "https://api.deepseek.com/chat/completions", "models": ["deepseek-v4-pro", "deepseek-chat"]}],
+      "googleDataExposure": "unknown",
+      "controlEvidence": null,
+      "sourceAnchors": ["server.mjs:464", "server.mjs:622", "server.mjs:939", "server.mjs:941"],
+      "caveat": "Tool outputs can enter subsequent model context. A customer Google transfer has not been observed; no account no-training contract has been verified."
+    }
+  ],
+  "additionalInventoryRequired": ["Activepieces project flows and AI steps", "Other gateways and upstream hosting providers", "Developer-lab API uses", "Firecrawl enrichment downstream AI and plan"],
+  "gates": [
+    {"id": "provider_inventory", "status": "pending", "evidence": null},
+    {"id": "provider_plans", "status": "pending", "evidence": null},
+    {"id": "no_training_controls", "status": "pending", "evidence": null},
+    {"id": "gateway_routing", "status": "pending", "evidence": null},
+    {"id": "google_scopes", "status": "pending", "evidence": null},
+    {"id": "limited_use_publication", "status": "pending", "evidence": null},
+    {"id": "current_demo", "status": "pending", "evidence": null}
+  ],
+  "limitations": ["Railway OAuth returns variable names only", "The account Chrome session is not authenticated", "Public root and accounts policies differ", "The historical pilot and video do not establish the current release", "No provider plan, ZDR, routing control, or self-hosted model is certified"]
+}
