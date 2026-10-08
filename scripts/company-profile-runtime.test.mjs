@@ -253,3 +253,9 @@ test('reloaded main chat finds its saved draft without becoming an employee chat
   assert.ok(calls.filter(call=>call.sql.includes('siyadah_conversation_messages m')).every(call=>call.sql.includes('m.company_id=e.company_id')&&call.sql.includes('m.request_id=e.creation_request_id')));
   assert.ok(calls.every(call=>call.values[0]==='company_alpha'||call.values[0]==='company_beta'));
 });
+
+test('pending decisions are read from tenant-owned unexpired approvals without consuming them',async()=>{
+ const calls=[];const service=createCompanyProfileService({query:async(sql,values)=>{calls.push({sql,values});return {rows:[{request_id:'saved',conversation_id:'conversation',status:'succeeded',response_json:{work_status:'awaiting_input',reply:'راجع العرض',approval:{required:true,approval_id:'id'},internal_token:'do-not-expose'}}]};}});
+ const rows=await service.pendingChatWork('company-a');assert.equal(rows[0].work_status,'awaiting_input');assert.equal(rows[0].approval.approval_id,'id');assert.equal(JSON.stringify(rows).includes('do-not-expose'),false);
+ assert.deepEqual(calls[0].values,['company-a']);assert.match(calls[0].sql,/a\.tenant_id=r\.company_id/);assert.match(calls[0].sql,/a\.conversation_id=r\.conversation_id/);assert.match(calls[0].sql,/a\.expires_at>now\(\)/);assert.doesNotMatch(calls[0].sql,/DELETE|UPDATE|INSERT/);
+});

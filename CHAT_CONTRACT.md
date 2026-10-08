@@ -141,3 +141,9 @@ Customer MCP start first provisions the verified company project, reads exactly 
 A provider HTTP402 before native execution produces a durable failed request explaining that the assistant service is unavailable due to its balance. Provider payloads and credentials are not exposed. Existing attempted-execution/unknown-result/transport-receipt precedence stays intact; no automatic redispatch occurs. ABO-69 / ABO-37.
 
 A bounded instruction such as «لا تنفذ أكثر من مرة» limits repetition and is not a blanket do-not-run instruction. Independent explicit prohibitions remain enforced. This clarification fixes a witnessed pre-dispatch refusal; it does not itself add retry or deduplication behavior. ABO-69.
+
+## Restoring a pending decision
+
+`hydrate.pending_work` may include a saved `awaiting_input` response only when its native approval row still exists, belongs to the same company and conversation, and has not expired. It includes the existing customer-facing reply, approval and optional flow plan; no encrypted action arguments or unrelated response fields. The browser renders this decision without polling, dispatching or consuming it. The existing `approve` route remains the authority and rechecks expiry and ownership at action time. Restoring a decision does not grant MCP access or prove execution.
+
+Restored decisions include `approval_expires_at` from the matched approval row. The browser rejects missing/expired timestamps and replaces the restored action controls when that deadline passes, without executing an API operation. The server expiry check still governs any submitted decision.

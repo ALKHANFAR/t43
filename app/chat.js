@@ -1505,9 +1505,13 @@ var I = {
       if(c.employee_id&&emp(c.employee_id)&&!restoredEmployees[c.employee_id]){eth[c.employee_id]=messages;restoredEmployees[c.employee_id]=true;}
     });
     if(restore&&Array.isArray(data.pending_work)) data.pending_work.forEach(function(work){
-      if(typeof work.work_id!=="string"||!work.work_id||!["queued","running"].includes(work.work_status)) return;
+      if(typeof work.work_id!=="string"||!work.work_id||!["queued","running","awaiting_input"].includes(work.work_status)) return;
       var convo=CHATS[work.conversation_id]; if(!convo) return;
-      var row=siyResultRow(work); convo.msgs.push(row); siyPoll(work.work_id,convo.msgs,row,0);
+      var expires=work.work_status==='awaiting_input'?Date.parse(work.approval_expires_at):null;
+      if(work.work_status==='awaiting_input'&&(!Number.isFinite(expires)||expires<=Date.now()))return;
+      var row=siyResultRow(work); convo.msgs.push(row);
+      if(work.work_status==='awaiting_input'){var generation=siyGeneration;setTimeout(function(){if(generation!==siyGeneration||!row.builderApproval)return;row.builderApproval=null;row.requestState='unknown';row.t=siyReplyHtml(ui('انتهت مهلة القرار. اطلب تجهيز الإجراء من جديد.','This decision expired. Ask to prepare the action again.'));siyDraw();},Math.min(expires-Date.now(),2147483647));}
+      else siyPoll(work.work_id,convo.msgs,row,0);
     });
     if(isEmp()&&!emp(who)) {who="siyadah";chatId=null;}
     refreshLiveLabels();

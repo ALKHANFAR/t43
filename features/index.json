@@ -3,6 +3,20 @@
   "repository": "ALKHANFAR/t43",
   "features": [
     {
+      "id": "restored_pending_decision",
+      "name": "القرار الذي ينتظرني بعد العودة",
+      "aliases": ["بانتظارك", "موافقة محفوظة", "رجعت للمحادثة"],
+      "state": "draft_pr",
+      "meaning": "تستعيد المحادثة موافقة محفوظة غير مستهلكة وغير منتهية فقط عند مطابقة الشركة والمحادثة. تعرضها دون إرسال الإجراء أو فحصه بالتنفيذ؛ مسار الموافقة يعيد التحقق عند القرار. لا تُنشئ هذه الميزة موافقات جديدة ولا تفويض MCP. محلي غير منشور.",
+      "linear": "ABO-37",
+      "locations": [
+        {"role":"ownership","path":"lib/company-profile.mjs","anchor":"AND a.tenant_id=r.company_id AND a.conversation_id=r.conversation_id AND a.expires_at>now()"},
+        {"role":"restore","path":"app/chat.js","anchor":"else siyPoll(work.work_id,convo.msgs,row,0)"},
+        {"role":"test","path":"scripts/chat-runtime.test.mjs","anchor":"reload restores a live pending decision without dispatching or polling its action"},
+        {"role":"contract","path":"CHAT_CONTRACT.md","anchor":"## Restoring a pending decision"}
+      ]
+    },
+    {
       "id": "chat_saved_company_context",
       "name": "سيادة تتذكر معلومات شركتي وحساباتي",
       "aliases": ["لا تسألني عن شيء محفوظ", "لغة عربية طبيعية", "سياق الشركة"],
