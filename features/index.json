@@ -825,50 +825,35 @@
     },
 {
       "id": "interactive_chat_experience_v2_preview",
-      "name": "معاينة تجربة المحادثة والأدوات والنتائج",
+      "name": "مثال تصميم لمساحة موظف سيادة",
       "aliases": [
-        "معاينة تفاعلية",
-        "اختيار أدوات الطلب",
-        "تجربة جديدة لسيادة"
+        "موظف متابعة العملاء",
+        "تكليف الموظف",
+        "معاينة مساحة الموظف"
       ],
       "state": "illustrative",
-      "meaning": "معاينة محلية مستقلة ببيانات توضيحية: طلب وأدوات سياق مقترحة وسؤال أولوية للطلب الناقص. خطوة حالية مختصرة، نتيجة أولًا وطلب واحد، جدول وتفاصيل عند الطلب وإلغاء. لا ربط حسابات ولا نموذج ولا تشغيل مزود. لا تعدل الإنتاج.",
+      "meaning": "مثال تصميم مستقل لموظف متابعة العملاء؛ يحفظ نص التكليف والتوجيهات محليًا فقط ويدعم التعديل والتنقل. النتائج فارغة. لا مؤقتات تنفيذ ولا مخرجات مزود ولا إنشاء موظف فعلي. الأدوات أسماء توضيحية داخل تفاصيل طريقة العمل فقط. لا يعدل الإنتاج.",
       "linear": "ABO-54",
       "locations": [
         {
-          "role": "entry",
+          "role": "employee_workspace",
           "path": "design/siyadah-chat-experience-v2.html",
-          "anchor": "id=\"requestInput\""
+          "anchor": "id=\"employeeMethod\""
         },
         {
-          "role": "tool_picker",
+          "role": "local_assignment",
           "path": "design/siyadah-chat-experience-v2.js",
-          "anchor": "function openPicker("
+          "anchor": "function save()"
         },
         {
-          "role": "state",
-          "path": "design/siyadah-chat-experience-v2.js",
-          "anchor": "function run("
-        },
-        {
-          "role": "test",
+          "role": "no_execution_test",
           "path": "scripts/chat-experience-preview-runtime.test.mjs",
-          "anchor": "preview cancel prevents late fixture progress and preserves editable request context"
+          "anchor": "employee example saves a local assignment without execution or provider results"
         },
         {
-          "role": "context_question",
-          "path": "design/siyadah-chat-experience-v2.js",
-          "anchor": "function answerQuestion(value)"
-        },
-        {
-          "role": "compact_result",
-          "path": "design/siyadah-chat-experience-v2.js",
-          "anchor": "function resultHtml(r,archive=false)"
-        },
-        {
-          "role": "focus_regression",
+          "role": "secondary_tools_test",
           "path": "scripts/chat-experience-preview-runtime.test.mjs",
-          "anchor": "opening question edit during progress keeps typed answer and focus through a tick"
+          "anchor": "tools are secondary unopened detail and instructions save locally"
         }
       ]
     }
