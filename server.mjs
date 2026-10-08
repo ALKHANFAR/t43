@@ -603,7 +603,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           }
           if(name==='ap_test_flow'&&args.flowId===employeeFlow){
             testedFlowId=null;testedVersion=null;testedRun=null;
-            const verifiedRun=await successfulFlowTest(mcp,companyId,args.flowId,result);
+            const verifiedRun=await successfulFlowTest(mcp,companyId,args.flowId,result,JSON.parse(versionBeforeTest).id);
             if(verifiedRun){
               const versionAfterTest=flowTestSnapshot((await (await tenantProjects()).ownedFlow(companyId,args.flowId)).flow.version);
               if(versionBeforeTest===versionAfterTest){testedFlowId=args.flowId;testedVersion=versionAfterTest;testedRun=verifiedRun;}
@@ -708,7 +708,7 @@ async function publicChat(req,res){
           if(validation.isError===true||validation.structuredContent?.valid!==true)throw new CompanyProfileError('employee_not_ready','طريقة عمل الموظف تحتاج إكمالًا والتحقق من خطواتها قبل التفعيل.',409);
         }
         const test=await mcp.call(companyId,'tools/call',{name:'ap_test_flow',arguments:{flowId:saved.activepieces_flow_id}});
-        if(!await successfulFlowTest(mcp,companyId,saved.activepieces_flow_id,test))throw new CompanyProfileError('employee_test_required','لم تنجح تجربة طريقة عمل الموظف أو لم نتأكد من نتيجتها؛ بقي غير مفعّل.',409);
+        if(!await successfulFlowTest(mcp,companyId,saved.activepieces_flow_id,test,flow.version.id))throw new CompanyProfileError('employee_test_required','لم تنجح تجربة طريقة عمل الموظف أو لم نتأكد من نتيجتها؛ بقي غير مفعّل.',409);
         const tested=(await projects.ownedFlow(companyId,saved.activepieces_flow_id)).flow;
         if(flowTestSnapshot(tested.version)!==flowTestSnapshot(latest.version))throw new CompanyProfileError('employee_test_required','تغيرت طريقة العمل أثناء التجربة؛ أعد اختبار نسختها الحالية.',409);
       }
