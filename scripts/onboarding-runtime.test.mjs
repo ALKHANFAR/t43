@@ -14,7 +14,7 @@ test('onboarding uses live company enrichment and prepares one employee safely',
   assert.ok(!html.includes('وافق وشغّل'));
   assert.match(html,/مسودة موظفك جاهزة/);
   assert.match(html,/أدواته غير متصلة/);
-  assert.match(html,/هذه شركتك كما فهمناها/);
+  assert.match(html,/معلومات شركتك المحفوظة الآن/);
   assert.match(html,/حالة الموظف/);
   assert.match(html,/circle cx="12" cy="12" r="8"\/\><path d="M12 8v4"/);
   assert.match(js,/chat\.html'\+\(CREATED&&CREATED\.recordId\?'#e='\+encodeURIComponent\(CREATED\.recordId\)/);
@@ -267,5 +267,18 @@ test('typing company details does not scroll the page',async()=>{
     w.eval(js);await new Promise(resolve=>setImmediate(resolve));w.document.querySelector('#noSite').click();const before=scrolls;
     for(let i=0;i<3;i++){w.document.querySelector('#co').value+='a';w.document.querySelector('#co').dispatchEvent(new w.Event('input'));}
     assert.equal(scrolls,before);
+  }finally{w.close();}
+});
+
+
+test('onboarding asks for a natural request and states empty sourced knowledge without claiming understanding',async()=>{
+  const [html,js]=await Promise.all([readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),readFile(new URL('../app/onboard.js',import.meta.url),'utf8')]);
+  const w=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html',runScripts:'outside-only'}).window;w.scrollTo=()=>{};
+  w.fetch=async()=>({ok:true,json:async()=>({ok:true,status:'ready',profile:{companyName:'مثال',pagesRead:2,factCount:0,knowledgeVersion:1}})});
+  try{
+    w.eval(js);await new Promise(resolve=>setImmediate(resolve));
+    assert.match(w.document.querySelector('[data-step="2"]').textContent,/وش تحتاج ننجز/);assert.match(w.document.querySelector('#companyRead').textContent,/لم نحفظ معلومات موثقة/);
+    assert.match(w.document.querySelector('#brief').placeholder,/أراجعه قبل النشر/);assert.doesNotMatch(w.document.querySelector('[data-step="2"]').textContent,/مهمة مرة واحدة|موظف دائم|كما فهمناها/);
+    assert.match(w.document.querySelector('#next').textContent,/اقتراحاتي/);
   }finally{w.close();}
 });

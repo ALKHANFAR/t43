@@ -223,6 +223,8 @@
         {"role": "task_examples", "path": "app/onboard.html", "anchor": "data-task-ar=\"جهّز مسودة منشور"},
         {"role": "empty_suggestions", "path": "app/onboard.js", "anchor": "throw new Error(t('noSuggestions'))"},
         {"role": "correction_test", "path": "scripts/onboarding-runtime.test.mjs", "anchor": "first task examples fill an editable goal"},
+        {"role": "natural_request", "path": "app/onboard.html", "anchor": "وش تحتاج ننجز؟"},
+        {"role": "natural_request_test", "path": "scripts/onboarding-runtime.test.mjs", "anchor": "onboarding asks for a natural request"},
         {"role": "test", "path": "scripts/local-employee-draft-runtime.test.mjs", "anchor": "createEmployeeDraft(input)"}
       ]
     },
