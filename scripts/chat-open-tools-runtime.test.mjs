@@ -765,28 +765,37 @@ test('a newly prepared employee executes a subsequent work request through its p
   assert.equal(result.reply,'native reply');
 });
 
-test('earlier Flow edits including failed writes block native dispatch in the same batch or next turn',async()=>{
+test('Flow edits and native dispatch can share a request even after an uncertain edit without claiming the edit succeeded',async()=>{
   for(const sameBatch of [true,false])for(const failedWrite of [true,false]){
-    let nativeReconciliations=0;
     const edit=['ap_add_step',{flowId}],native=[flowToolName,{}];
-    const {run,log}=setup({published:true,flowStatus:'ENABLED',toolResults:failedWrite?{ap_add_step:()=>{throw new Error('ambiguous write failure');}}:{},script:sameBatch?[use(edit,native),say('اطلب تشغيل الموظف بصورة مستقلة.')]:[use(edit),use(native),say('اطلب تشغيل الموظف بصورة مستقلة.')]});
-    const answer=await run({employee:runningEmployee,onNativeExecution:async()=>{nativeReconciliations++;}});
-    assert.deepEqual(log.tools.map(x=>x[0]),['ap_add_step']);
-    assert.equal(nativeReconciliations,0);assert.equal(answer.flowToolAttempted,false);
+    const {run,log}=setup({published:true,flowStatus:'ENABLED',toolResults:{...(failedWrite?{ap_add_step:()=>{throw new Error('ambiguous write failure');}}:{}),[flowToolName]:executionResult(),ap_get_run:productionRun()},script:sameBatch?[use(edit,native),say('قرأت تشغيل النسخة المنشورة.')]:[use(edit),use(native),say('قرأت تشغيل النسخة المنشورة.')]});
+    const answer=await run({employee:runningEmployee});
+    assert.deepEqual(log.tools.map(x=>x[0]),['ap_add_step',flowToolName,'ap_get_run']);
+    assert.equal(log.runs.length,1);assert.equal(answer.flowToolAttempted,true);
+    assert.equal(answer.toolReceipts.find(r=>r.name===flowToolName).outcome,'flow_completed');
     assert.equal(completedToolActions(answer).work_status,'unknown');
   }
 });
 
-test('native dispatch blocks later effects in the same batch or next turn while readonly remains allowed',async()=>{
-  for(const sameBatch of [true,false])for(const name of ['ap_add_step','ap_test_flow','ap_lock_and_publish']){
+test('native dispatch permits subsequent Flow edits and tests within the same batch or next turn',async()=>{
+  for(const sameBatch of [true,false])for(const name of ['ap_add_step','ap_test_flow']){
     const native=[flowToolName,{}],effect=[name,{flowId}];
-    const script=[use(['ap_validate_flow',{flowId}]),...(sameBatch?[use(native,effect)]:[use(native),use(effect)]),use(['ap_validate_flow',{flowId}]),say('اكتملت المهمة؛ التعديل يحتاج طلبًا آخر.')];
+    const script=[...(sameBatch?[use(native,effect)]:[use(native),use(effect)]),say('قرأت نتيجة التشغيل وتابعت العمل.')];
     const {run,log}=setup({published:true,flowStatus:'ENABLED',toolResults:{[flowToolName]:executionResult(),ap_get_run:productionRun()},script});
     const answer=await run({employee:runningEmployee});
-    assert.deepEqual(log.tools.map(x=>x[0]),['ap_validate_flow',flowToolName,'ap_get_run','ap_validate_flow']);
-    assert.deepEqual(Array.from(answer.effects),[flowToolName]);assert.equal(log.runs.length,1);
-    assert.equal(completedToolActions(answer).work_status,'succeeded');
+    assert.deepEqual(log.tools.map(x=>x[0]),[flowToolName,'ap_get_run',name,...name==='ap_test_flow'?['ap_get_run']:[]]);
+    assert.deepEqual(Array.from(answer.effects),[flowToolName,name]);assert.equal(log.runs.length,1);
+    assert.equal(completedToolActions(answer).work_status,'unknown');
   }
+});
+
+test('edit test publish and execute uses the newly published version in one employee request',async()=>{
+  const testRunId='S'.repeat(21);let h;
+  h=setup({published:true,flowStatus:'ENABLED',publishDifferentVersion:true,toolResults:{ap_test_flow:{structuredContent:{runId:testRunId,status:'SUCCEEDED',flowVersionId:'v2'}},[flowToolName]:executionResult({flowVersionId:'v2'}),ap_get_run:args=>args.flowRunId===testRunId?{structuredContent:{id:testRunId,flowId,flowVersionId:'v2',environment:'TESTING',status:'SUCCEEDED',steps:[{name:'trigger',status:'SUCCEEDED'}]}}:productionRun()},script:[()=>{h.setVersion('v2');return use(['ap_add_step',{flowId}]);},use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),use([flowToolName,{}]),say('اختبرت النسخة الجديدة وقرأت تشغيلها.')]});
+  const answer=await h.run({message:'عدّل واختبر وانشر ونفذ الموظف الآن.',employee:runningEmployee});
+  assert.deepEqual(h.log.tools.filter(([name])=>name!=='ap_get_run').map(([name])=>name),['ap_add_step','ap_test_flow','ap_lock_and_publish',flowToolName]);
+  assert.equal(answer.toolReceipts.find(r=>r.name===flowToolName).outcome,'flow_completed');
+  assert.equal(h.log.runs.length,1);
 });
 
 test('employee can combine a project action and its native flow in either order within one request',async()=>{

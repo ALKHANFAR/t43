@@ -516,10 +516,14 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           if(['ap_build_flow','ap_create_flow'].includes(name)&&flowId)throw new TenantProjectError('employee_flow_conflict','بُني Flow في هذا الطلب. اقرأه وعدّل خطواته بدل إنشاء نسخة ثانية.',409);
           if(name===flowToolName&&flowToolAttempted)throw new TenantProjectError('employee_run_already_dispatched','أُرسل تشغيل الموظف لهذا الطلب. تحقّق من نتيجته دون إعادة تشغيله.',409);
           args=scopeMcpTool(available.find(tool=>tool.name===name),args,employee,flowToolName);
-          // Project actions can surround a Flow run; keep changes/tests of that Flow separate.
-          if(name===flowToolName&&toolReceipts.some(receipt=>receipt.effect_attempted&&receipt.flow_id===employee.activepieces_flow_id)||flowToolAttempted&&!readOnly(name)&&args.flowId===employee?.activepieces_flow_id&&employee?.activepieces_flow_id)throw new TenantProjectError('employee_run_mixed_effects','تعديل طريقة عمل الموظف وتشغيلها يحتاجان طلبين منفصلين. يمكنك إكمال إجراءات المشروع وقراءة نتيجة التشغيل الحالي.',409);
           if(name===flowToolName)args=bindEmployeeFlowContext(available.find(tool=>tool.name===name),args,{request:String(message||''),context:{company:context.company,selectedEmployee:context.selectedEmployee,settings:context.settings,knowledge:context.knowledge,cumulativeMemory:context.cumulativeMemory},memory,history:executionHistory});
           if(!readOnly(name))await beforeEffect?.({name,args});
+          if(name===flowToolName){
+            const projects=await tenantProjects(),{flow}=await projects.ownedFlow(companyId,employee.activepieces_flow_id);
+            const published=flow.publishedVersionId?(await projects.ownedFlow(companyId,flow.id,flow.publishedVersionId)).flow:null;
+            if(employeeFlowMcpToolName(published)!==name)throw new TenantProjectError('employee_flow_not_ready','لم تُتحقق أداة طريقة العمل المنشورة الحالية.',409);
+            publishedEmployeeVersion=published.publishedVersionId;
+          }
           const employeeFlow=employee?.activepieces_flow_id||flowId||draftEmployee?.activepieces_flow_id;
           if(employee&&['ap_get_run','ap_retry_run'].includes(name)){
             if(!/^[A-Za-z0-9]{21}$/.test(String(args.flowRunId||'')))throw new TenantProjectError('employee_run_scope','معرّف تشغيل الموظف غير صالح.',403);
