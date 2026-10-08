@@ -1309,3 +1309,15 @@ test('published workflow structure displays branches and escapes labels without 
   p.d.querySelector('#instrTgl').click();await flush();await flush();const panel=p.d.querySelector('.published-work');assert.equal(panel.querySelector('img'),null);assert.match(panel.textContent,/<img src=x>/);assert.match(panel.textContent,/فرع 2.*داخل تكرار/);assert.match(panel.textContent,/متخطاة.*إعداد غير صالح/);assert.match(panel.textContent,/القراءة جزئية/);assert.match(panel.textContent,/لا يثبت تنفيذها/);assert.equal(p.requests.filter(r=>r.body?.op==='message').length,0);
  }finally{p.close();}
 });
+
+test('workspace pages focus their heading and offer a non-dispatching empty-state return',async()=>{
+ const p=await page({hydrate:empty});try{
+  p.d.querySelector('#openSide').click();p.d.querySelector('[data-workspace-view="team"]').click();assert.equal(p.d.activeElement,p.d.querySelector('#thread h1'));assert.equal(p.d.querySelector('#app').classList.contains('open'),false);
+  p.d.querySelector('#thread [data-workspace-view="siyadah"]').click();assert.equal(p.d.activeElement,p.d.querySelector('#input'));assert.equal(p.requests.filter(r=>r.body?.op==='message').length,0);
+ }finally{p.close();}
+});
+test('unavailable company data is never shown as an empty team or results record',async()=>{
+ const p=await page({hydrate:Error('offline')});try{
+  for(const view of ['team','results']){p.d.querySelector('[data-workspace-view="'+view+'"]').click();assert.match(thread(p),/تعذّر تحميل بيانات حسابك/);assert.doesNotMatch(thread(p),/لا يوجد موظفون محفوظون|ما فيه عمل مسجّل/);assert.equal(p.d.querySelector('#thread [data-workspace-view="siyadah"]'),null);}
+ }finally{p.close();}
+});

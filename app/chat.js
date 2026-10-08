@@ -363,9 +363,11 @@ var I = {
   function workspacePageHtml(view){
     var heading=view==='team'?ui('الموظفون','Employees'):ui('العمل والنتائج','Work and results');
     var body;
-    if(view==='results')body=window.__SIY_REAL__?siyWorkHtml(null,ui('آخر سجلات العمل المحفوظة — الحالة والدليل لكل مهمة','Latest saved work records — status and evidence for each task')):'<p>'+ui('هذه معاينة؛ لا توجد نتائج تشغيل حقيقية هنا.','This is a preview; no real execution results are available here.')+'</p>';
+    if(window.__SIY_REAL__&&(!window.__SIY_DASH__||window.__SIY_LOAD_ERROR__))body='<p role="status">'+(window.__SIY_LOAD_ERROR__?loadErrorCopy():ui('جارٍ تحميل بيانات شركتك…','Loading your company data…'))+'</p>';
+    else if(view==='results')body=window.__SIY_REAL__?siyWorkHtml(null,ui('آخر سجلات العمل المحفوظة — الحالة والدليل لكل مهمة','Latest saved work records — status and evidence for each task')):'<p>'+ui('هذه معاينة؛ لا توجد نتائج تشغيل حقيقية هنا.','This is a preview; no real execution results are available here.')+'</p>';
     else body=EMPS.length?EMPS.map(function(e){return '<button type="button" class="workspace-employee" data-open-employee="'+esc(e.id)+'"><span class="av">'+esc(e.ini)+'</span><span><b>'+esc(e.n)+'</b><small>'+esc(e.r)+'</small><small>'+esc(customerText(e.since))+'</small></span></button>';}).join(''):'<p>'+ui('لا يوجد موظفون محفوظون بعد. ابدأ بطلبك في شات سيادة.','No employees saved yet. Start with your request in Siyadah chat.')+'</p>';
-    return '<div class="col workspace-page"><h1>'+heading+'</h1><p>'+ (view==='team'?ui('افتح الموظف لمحادثته ومراجعة تعليماته وطريقة عمله.','Open an employee to chat and review its instructions and workflow.'):ui('السجل المحفوظ يوضح ما حدث؛ نجاح التشغيل لا يعني وحده إنجاز هدف تجاري.','Saved records show what happened; a successful run alone does not prove a business outcome.'))+'</p>'+body+'</div>';
+    if(window.__SIY_DASH__&&!window.__SIY_LOAD_ERROR__&&((view==='team'&&!EMPS.length)||(view==='results'&&!(window.__SIY_DASH__.recent_work||[]).length)))body+='<button type="button" class="bts" data-workspace-view="siyadah">'+ui('ابدأ بطلبك في شات سيادة','Start your request in Siyadah chat')+'</button>';
+    return '<div class="col workspace-page"><h1 tabindex="-1">'+heading+'</h1><p>'+ (view==='team'?ui('افتح الموظف لمحادثته ومراجعة تعليماته وطريقة عمله.','Open an employee to chat and review its instructions and workflow.'):ui('السجل المحفوظ يوضح ما حدث؛ نجاح التشغيل لا يعني وحده إنجاز هدف تجاري.','Saved records show what happened; a successful run alone does not prove a business outcome.'))+'</p>'+body+'</div>';
   }
   function renderThread(){
     var t=$("#thread"), scroll=t.scrollTop, nearEnd=t.scrollHeight-t.clientHeight-scroll<80; t.classList.toggle("thread--emp",isEmp());
@@ -820,19 +822,19 @@ var I = {
   $("#input").addEventListener("keydown",function(e){ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(this.value);} });
   $("#input").addEventListener("input",function(){ this.style.height="auto"; this.style.height=Math.min(this.scrollHeight,160)+"px"; });
 
-  function go(w,c){ who=w; chatId=c||null; kpiOpen=null; renderSide(); renderBar(); renderThread();refreshLiveLabels(); if(window.__SIY_REAL__&&emp(w))siyResumePendingActivation(w); }
+  function go(w,c){ if(mobile())setDrawer(false); who=w; chatId=c||null; kpiOpen=null; renderSide(); renderBar(); renderThread();refreshLiveLabels(); if(window.__SIY_REAL__&&emp(w))siyResumePendingActivation(w); }
   document.addEventListener('click',function(event){
     var view=event.target.closest('[data-workspace-view]'),employee=event.target.closest('[data-open-employee]');
     if(!view&&!employee)return;
     var next=employee?employee.dataset.openEmployee:view.dataset.workspaceView;
     if(employee&&!emp(next))return;
-    go(next);if(mobile())setDrawer(false);if(employee||next==='siyadah')$('#input').focus();
+    go(next);if(employee||next==='siyadah')$('#input').focus();else {var heading=$('#thread h1');if(heading)heading.focus();}
   });
   function newChat(){ live={}; go("siyadah"); $("#input").focus(); }
   $("#emps").addEventListener("click",function(e){ var b=e.target.closest(".emp"); if(!b) return; go(b.dataset.emp); $("#input").focus(); });
   $(".side__scroll").addEventListener("click",function(e){ var b=e.target.closest(".hist"); if(!b||!b.dataset.chat) return;
     var c=CHATS[b.dataset.chat]; if(c&&c.emp){ go(c.emp,window.__SIY_REAL__?b.dataset.chat:null); $("#input").focus(); return; } /* مبادرة موظف: سجلّها يفتح محادثته */
-    go("siyadah",b.dataset.chat); });
+    go("siyadah",b.dataset.chat); $("#input").focus(); });
   $("#newChat").addEventListener("click",newChat);
   $("#hq").addEventListener("input",function(){ filterHist(); if(palOpen) renderPal(); });
 
@@ -960,7 +962,7 @@ var I = {
   function tgrid(a,e){ return a.length?'<div class="tgrid">'+a.map(tcard).join("")+'</div>':'<div class="tempty">'+e+'</div>'; }
   function toolsHtml(){
     var f=TOOLS.filter(function(t){return !tq||(t.n+" "+t.d+" "+t.en+" "+t.s+" "+t.c).toLowerCase().indexOf(tq)>-1});
-    var h='<div class="tools"><h1>'+ui('الأدوات','Tools')+'</h1><p class="sub">'+TOOLS.length+ui(' أداة. اربط اللي تستخدمه، وموظفوك يشتغلون فيه — ولا يوصل موظف لأداة ما ربطتها أنت.',' tools. Connect the ones you use. Employees only access tools you connect.')+'</p>'+
+    var h='<div class="tools"><h1 tabindex="-1">'+ui('الأدوات','Tools')+'</h1><p class="sub">'+TOOLS.length+ui(' أداة. اربط اللي تستخدمه، وموظفوك يشتغلون فيه — ولا يوصل موظف لأداة ما ربطتها أنت.',' tools. Connect the ones you use. Employees only access tools you connect.')+'</p>'+
       '<div class="tsearch"><span class="drop"></span><input id="tq" placeholder="'+ui('ابحث… واتساب، قيود، HubSpot','Search… WhatsApp, Wafeq, HubSpot')+'" aria-label="'+ui('ابحث في الأدوات','Search tools')+'" value="'+esc(tq)+'"><kbd>/</kbd></div>';
     if(window.__SIY_TOOLS_ERROR__)h+='<p class="mf__e" role="alert">'+ui('تعذّر تحميل حالة الاتصالات.','Could not load connection status.')+' <button type="button" class="lnk" data-retry-tools="1">'+ui('أعد المحاولة','Try again')+'</button></p>';
     if(!tq){
@@ -1122,7 +1124,7 @@ var I = {
     var test=event.target.closest("[data-revalidate]"),disconnect=event.target.closest("[data-disconnect]");if(!picked||!picked.connection||(!test&&!disconnect))return;event.target.disabled=true;rcMsg("");try{if(test){var data=await integration({op:"revalidate",connection_id:picked.connection.id});picked.connection=data.connection;picked.on=data.connection.status==='ACTIVE';$("#mD").textContent=(data.connection.status==='ERROR'?ui("الاتصال فيه خطأ","Connection needs attention"):ui("تم التحقق من بيانات الربط؛ نتيجة الاستخدام تحتاج مهمة فعلية","Connection details verified. A real task is needed to verify the outcome"))+ui(" · يستخدمها: "," · Used by: ")+usersOf(picked.s);event.target.disabled=false;}else{await integration({op:"disconnect",connection_id:picked.connection.id});picked.connection=null;picked.on=false;closeModal();toolsCount();renderThread();}}catch(error){event.target.disabled=false;rcMsg(error.message||ui("لم يتم تأكيد العملية.","The action could not be confirmed."));}
   });
   $("#mF").addEventListener("submit",function(event){event.preventDefault();var method=rc&&rc.methods[rc.index],values=method&&rcValues(method);if(!method||values===null)return;if(method.type==="OAUTH2")rcOAuth(values);else rcPost({op:"connect",piece:rc.tool.s,type:method.type,methodId:method.id,methodFingerprint:method.fingerprint,values:values});});
-  function openTools(){ allOpen=false; tshown=24; go("tools"); }
+  function openTools(){ allOpen=false; tshown=24; go("tools"); var heading=$("#thread h1");if(heading)heading.focus(); }
   $("#toolsLink").addEventListener("click",openTools);
 
   /* ---------- قائمة الحساب ---------- */
