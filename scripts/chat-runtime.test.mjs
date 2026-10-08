@@ -1422,3 +1422,14 @@ test('live activity ignores malformed events limits snapshots and never exposes 
  const p=await page({message:{ok:true,conversation_id:'activity',work_id:'w',work_status:'failed',activity}});try{send(p,'راجع');await flush();const block=p.d.querySelector('.siy-activity');assert.ok(block);assert.ok(block.querySelectorAll('li').length<=80);assert.equal(block.querySelector('img'),null);assert.doesNotMatch(block.textContent,/secret|onerror|<img|succeeded|Object|__proto__/);assert.equal(block.querySelectorAll('[data-activity-id="100"]').length,1);assert.match(block.textContent,/أداة العمل/);}finally{p.close();}
  const absent=await page({message:{ok:true,conversation_id:'plain',reply:'رد عادي'}});try{send(absent,'سؤال');await flush();assert.equal(absent.d.querySelector('.siy-activity'),null);}finally{absent.close();}
 });
+
+test('activity timeline keeps its open state and keyboard focus during same-request polling',async()=>{
+ const p=await page({message:{ok:true,conversation_id:'timeline',work_id:'timeline-work',work_status:'running',activity:[{id:1,name:'ap_get_flow',state:'started'}]},work:{ok:true,conversation_id:'timeline',work_id:'timeline-work',work_status:'running',activity:[{id:1,name:'ap_get_flow',state:'returned'},{id:2,name:'ap_test_flow',state:'started'}]}});try{
+  send(p,'راجع');await flush();let block=p.d.querySelector('.siy-activity');block.open=true;block.querySelector('summary').focus();await p.polls.shift()();await flush();block=p.d.querySelector('.siy-activity');assert.equal(block.open,true);assert.equal(p.d.activeElement,block.querySelector('summary'));assert.equal(block.querySelectorAll('li').length,2);assert.equal(block.querySelectorAll('.activity-node svg').length,2);assert.match(block.querySelector('summary').textContent,/اختبار طريقة العمل.*جارٍ العمل/);assert.equal(block.querySelectorAll('svg:not([aria-hidden="true"])').length,0);assert.doesNotMatch(block.textContent,/✓|نجح|نتيجة مثبتة/);
+ }finally{p.close();}
+});
+for(const locale of ['ar','en'])test('activity UI direction follows the interface rather than the provider reply '+locale,async()=>{
+ const p=await page({locale,message:{ok:true,conversation_id:'direction',work_id:'direction-work',work_status:'failed',reply:locale==='en'?'رد عربي من الأداة':'An English provider response',activity:[{id:1,name:'ap_test_flow',state:'error'}]}});try{
+  send(p,'راجع');await flush();const block=p.d.querySelector('.siy-activity');assert.equal(block.getAttribute('dir'),locale==='en'?'ltr':'rtl');assert.match(block.textContent,locale==='en'?/Test workflow.*Call failed/:/اختبار طريقة العمل.*تعثّرت الخطوة/);assert.equal(block.querySelector('svg').getAttribute('aria-hidden'),'true');
+ }finally{p.close();}
+});

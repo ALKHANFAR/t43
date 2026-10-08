@@ -537,6 +537,23 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 .published-work li:last-child{border-color:transparent}
 @media(max-width:640px){.thread{padding:18px 16px 0}.col{gap:24px}.comp{padding:10px 12px 14px}.workspace-employee,.work-record,.tl{padding:15px}.workspace-page h1{font-size:1.5rem}.bar{min-height:56px}.box{padding-inline-start:14px}.m--me .m__b{max-width:94%}}
 
+/* Actual tool-call snapshots; collapsible timeline reference, no invented provider steps. */
+.siy-activity{max-width:34rem;margin-block:10px 4px;color:var(--ash);font-size:.8rem;line-height:1.8}
+.siy-activity summary{display:flex;align-items:center;gap:9px;list-style:none;cursor:pointer;min-height:42px;padding:7px 10px;border-radius:12px;background:var(--wash);transition:background .18s var(--ease)}
+.siy-activity summary::-webkit-details-marker{display:none}
+.siy-activity summary:hover{background:var(--hair)}
+.activity-current{flex:1;min-width:0;overflow-wrap:anywhere}
+.activity-icon{width:18px;height:18px;flex:none}
+.activity-chevron{width:15px;height:15px;flex:none;transition:transform .18s var(--ease)}
+.siy-activity[open] .activity-chevron{transform:rotate(180deg)}
+.activity-timeline{list-style:none;margin:8px 0 0;padding:0 10px}
+.activity-timeline li{display:grid;grid-template-columns:22px minmax(0,1fr);align-items:start;gap:10px;position:relative;padding-block:8px;overflow-wrap:anywhere}
+.activity-timeline li:not(:last-child)::after{content:"";position:absolute;inset-inline-start:10px;top:31px;bottom:-5px;border-inline-start:1px solid var(--hair)}
+.activity-node{width:22px;height:22px;display:grid;place-items:center;background:var(--paper);position:relative;z-index:1}
+.activity-timeline [data-activity-state="started"] .activity-node{color:var(--accent)}
+.activity-timeline [data-activity-state="error"] .activity-node{color:var(--bad)}
+@media(max-width:640px){.siy-activity{width:100%;max-width:100%}.activity-timeline{padding-inline:8px}}
+
 @media (prefers-reduced-motion:reduce){ *{animation:none !important;transition:none !important} }
 
 /* ==========================  المرحلة الثانية: طبقة الحياة  ==========================
