@@ -689,6 +689,40 @@
           "anchor": "saving a non-active connection retains its form values and focus without activation"
         }
       ]
+    },
+    {
+      "id": "onboarding_request_handoff",
+      "name": "بدء الطلب من التهيئة إلى الشات",
+      "aliases": [
+        "تابع في الشات",
+        "طلب بدون اختيار موظف",
+        "onboarding request handoff"
+      ],
+      "state": "draft_pr",
+      "meaning": "زر التهيئة الأساسي يحفظ نص الطلب في sessionStorage مع زمنه ثم يفتح الشات دون URL أو إرسال تلقائي. اقتراح الموظفين خيار ثانوي. فشل التخزين يبقي النص في مكانه ويمنع الانتقال. مستهلك الشات في مسار التكامل؛ غير منشور ولا يثبت تنفيذ طلب أو إنشاء موظف.",
+      "linear": "ABO-69",
+      "locations": [
+        {
+          "role": "producer",
+          "path": "app/onboard.js",
+          "anchor": "sessionStorage.setItem('siyadah_request_draft_v1',draft)"
+        },
+        {
+          "role": "secondary",
+          "path": "app/onboard.html",
+          "anchor": "id=\"exploreEmployees\""
+        },
+        {
+          "role": "test",
+          "path": "scripts/onboarding-runtime.test.mjs",
+          "anchor": "primary onboarding continues with a private editable request"
+        },
+        {
+          "role": "recovery_test",
+          "path": "scripts/onboarding-runtime.test.mjs",
+          "anchor": "blocked or silently failed session storage keeps the request"
+        }
+      ]
     }
   ]
 }
