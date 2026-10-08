@@ -261,6 +261,10 @@ var I = {
         '<span class="emp__n">'+esc(e.n)+'<small>'+esc(e.r)+'</small></span>'+
         '<span style="display:flex;align-items:center;gap:6px">'+(e.wait?'<span class="badge'+(PULSE[e.id]?' badge--new':'')+'">'+e.wait+'</span>':'')+st+'</span></button>';
     }).join("");
+    var awaiting='';
+    Object.keys(CHATS).forEach(function(id){var c=CHATS[id],pending=c.msgs.some(function(m){return m.builderApproval||m.requestState==='awaiting_input';});if(pending)awaiting+='<button type="button" class="hist" data-chat="'+esc(id)+'">'+esc(c.t)+'</button>';});
+    $('#awaitingChats').innerHTML=awaiting;$('#awaitingSection').hidden=!awaiting;
+    $('#teamSection').hidden=window.__SIY_REAL__&&!EMPS.length;
     var g={today:"",yesterday:"",week:""};
     Object.keys(CHATS).forEach(function(id){ var c=CHATS[id];
       g[c.when]+='<button type="button" class="hist" data-chat="'+esc(id)+'" aria-current="'+(chatId===id)+'">'+esc(c.t)+'</button>';
@@ -275,6 +279,7 @@ var I = {
     var q=($("#hq").value||"").trim().toLowerCase(), any=false;
     $$(".hist[data-chat]").forEach(function(b){ var hit=!q||b.textContent.toLowerCase().indexOf(q)>-1; b.hidden=!hit; if(hit) any=true; });
     [["#hgToday","#histToday"],["#hgYest","#histYest"],["#hgWeek","#histWeek"]].forEach(function(p){ $(p[0]).hidden=!$$(".hist:not([hidden])",$(p[1])).length; });
+    $("#awaitingSection").hidden=!$$("#awaitingChats .hist:not([hidden])").length;
     $("#hqNone").hidden=any||!q||palOpen;
   }
 

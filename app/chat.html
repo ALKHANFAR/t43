@@ -591,24 +591,22 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
       <span class="logo"></span>
       <button class="ico" id="closeSide" type="button" aria-label="إخفاء القائمة" data-en-aria-label="Hide menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M9 4v16"/></svg></button>
     </div>
-    <button type="button" class="newc" id="newChat"><span class="plus">+</span> <span data-en="New chat">محادثة جديدة</span></button>
+    <button type="button" class="newc" id="newChat" data-workspace-view="siyadah"><span class="plus">+</span> <span data-en="New request">طلب جديد</span></button>
 
     <div class="side__scroll">
-      <nav class="workspace-nav" aria-label="مساحة العمل" data-en-aria-label="Workspace">
-        <button type="button" class="hist" data-workspace-view="siyadah"><span data-en="Siyadah chat">شات سيادة</span></button>
-        <button type="button" class="hist" data-workspace-view="results"><span data-en="Work and results">العمل والنتائج</span></button>
-        <button type="button" class="hist" data-workspace-view="team"><span data-en="Employees">الموظفون</span></button>
-      </nav>
-      <div class="lbl"><span data-en="Your team">فريقك</span></div>
-      <div id="emps"></div>
-      <button type="button" class="hist" id="toolsLink" style="color:var(--ash);font-size:.82rem;margin-block-start:4px"><span data-en="Tools">الأدوات</span> <small id="toolsCnt">4 مربوطة</small></button>
-
-      <input class="hq" id="hq" type="search" placeholder="ابحث أو اكتب أمرًا" data-en-placeholder="Search or enter a command" aria-label="ابحث في المحادثات أو اكتب أمرًا" data-en-aria-label="Search chats or enter a command" autocomplete="off" aria-controls="pal">
+      <input class="hq" id="hq" type="search" placeholder="ابحث عن محادثة أو موظف" data-en-placeholder="Find a chat or employee" aria-label="ابحث في المحادثات أو اكتب أمرًا" data-en-aria-label="Search chats or enter a command" autocomplete="off" aria-controls="pal">
       <div class="pal" id="pal" hidden></div>
-      <div id="hgToday"><div class="lbl"><span data-en="Today">اليوم</span></div><div id="histToday"></div></div>
+      <section id="awaitingSection" hidden aria-label="بانتظارك" data-en-aria-label="Needs your input"><div class="lbl"><span data-en="Needs your input">بانتظارك</span></div><div id="awaitingChats"></div></section>
+      <div id="hgToday"><div class="lbl"><span data-en="Your chats">محادثاتك</span></div><div id="histToday"></div></div>
       <div id="hgYest"><div class="lbl"><span data-en="Yesterday">أمس</span></div><div id="histYest"></div></div>
       <div id="hgWeek"><div class="lbl"><span data-en="Last week">الأسبوع الماضي</span></div><div id="histWeek"></div></div>
       <div class="hq__none" id="hqNone" data-en="No chats match that name." hidden>ما فيه محادثة بهذا الاسم.</div>
+      <section id="teamSection"><div class="lbl"><span data-en="Your employees">موظفوك</span></div><div id="emps"></div></section>
+      <nav class="workspace-nav" aria-label="إدارة العمل" data-en-aria-label="Manage work">
+        <button type="button" class="hist" data-workspace-view="results"><span data-en="Results">النتائج</span></button>
+        <button type="button" class="hist" data-workspace-view="team"><span data-en="All employees">كل الموظفين</span></button>
+        <button type="button" class="hist" id="toolsLink"><span data-en="Tools">الأدوات</span><small id="toolsCnt"></small></button>
+      </nav>
     </div>
 
     <div class="side__foot">

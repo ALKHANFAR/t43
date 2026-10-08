@@ -145,7 +145,7 @@ test('interface language follows the account choice without changing company dat
   const saved={id:'saved-locale',title:'خطة النمو',messages:[{role:'user',content:'Build a sales assistant',at:'09:00'},{role:'assistant',content:'هذه خطتك',at:'09:01'}]};
   const p=await page({locale:'en',hydrate:{...empty,company:'شركة مدار',team:[employee],conversations:[saved]},hash:''});try{
     assert.equal(p.d.documentElement.lang,'en');assert.equal(p.d.documentElement.dir,'ltr');
-    assert.match(p.d.querySelector('#newChat').textContent,/New chat/);
+    assert.match(p.d.querySelector('#newChat').textContent,/New request/);
     assert.match(p.d.querySelector('#meBtn').textContent,/شركة مدار/);
     assert.equal(p.d.querySelector('#companyNameField').value,'شركة مدار');
     assert.equal(p.d.querySelector('#companyNameField').getAttribute('aria-label'),'Company name');
@@ -1343,5 +1343,17 @@ test('revalidation only describes an ACTIVE saved connection as verified',async(
 test('results card puts technical provider proof in details and avoids repeated employee and status labels',async()=>{
  const p=await page({hydrate:{...empty,team:[employee],recent_work:[{...proof,subject:'آخر مهمة لـ '+employee.name,proof:'نتيجة الخدمة 200'}]}});try{
   p.d.querySelector('[data-workspace-view="results"]').click();const card=p.d.querySelector('.work-record');assert.equal(card.querySelectorAll('.work-record__status').length,1);assert.equal(card.querySelector('small.msrc'),null);assert.match(card.querySelector('details').textContent,/200/);assert.doesNotMatch([...card.children].filter(el=>el.tagName!=='DETAILS').map(el=>el.textContent).join(' '),/200/);
+ }finally{p.close();}
+});
+
+test('right column orders real return contexts before employee management and hides empty team',async()=>{
+ const fresh=await page({hydrate:empty});try{assert.equal(fresh.d.querySelector('#teamSection').hidden,true);assert.equal(fresh.d.querySelector('#awaitingSection').hidden,true);assert.match(fresh.d.querySelector('#newChat').textContent,/طلب جديد/);assert.doesNotMatch(fresh.d.querySelector('.side').textContent,/مهمة واحدة|موظف دائم|4 مربوطة/);}finally{fresh.close();}
+ const p=await page({hydrate:{...empty,team:[employee],conversations:[{id:'newest',title:'العقد الجديد',messages:[]},{id:'older',title:'عرض سعر',messages:[]}]}});try{
+  const order=[...p.d.querySelector('.side__scroll').children].map(el=>el.id||el.className);assert.ok(order.indexOf('hgToday')<order.indexOf('teamSection'));assert.equal(p.d.querySelector('#teamSection').hidden,false);assert.deepEqual([...p.d.querySelectorAll('#histToday [data-chat]')].map(el=>el.dataset.chat),['newest','older']);assert.match(p.d.querySelector('#hgToday .lbl').textContent,/محادثاتك/);
+ }finally{p.close();}
+});
+test('right column highlights a real waiting request and opens it without resubmitting',async()=>{
+ const p=await page({message:{ok:true,conversation_id:'waiting',work_id:'w',work_status:'awaiting_input',reply:'أحتاج عدد النسخ'}});try{
+  send(p,'جهز العقد');await flush();assert.equal(p.d.querySelector('#awaitingSection').hidden,false);const pending=p.d.querySelector('#awaitingChats [data-chat="waiting"]');assert.ok(pending);p.d.querySelector('#newChat').click();p.d.querySelector('#awaitingChats [data-chat="waiting"]').click();assert.match(thread(p),/أحتاج عدد النسخ/);assert.equal(p.requests.filter(r=>r.body?.op==='message').length,1);
  }finally{p.close();}
 });
