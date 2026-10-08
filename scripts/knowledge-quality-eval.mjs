@@ -23,7 +23,7 @@ const source=readFileSync(new URL('../server.mjs',import.meta.url),'utf8');
 const start=source.indexOf('async function deepseekReply('),end=source.indexOf('async function publicChat(',start);
 if(start<0||end<=start)throw new Error('production chat loop was not found');
 const TABLE='T'.repeat(21),toolNames=['ap_list_tables','ap_find_records','ap_insert_records','ap_update_record','ap_delete_records'];
-const outputFormat='للقراءة فقط. أجب JSON فقط بالشكل {"status":"answered|unknown|conflict","answer":"قيمة مختصرة أو فارغة عند عدم الجزم","evidence_keys":["مفاتيح المعلومات الداعمة من السياق"]}. لا تختلق معلومة أو مصدرًا.';
+const outputFormat='للقراءة فقط. أجب JSON فقط بالشكل {"status":"answered|unknown|conflict","answer":"قيمة مختصرة أو فارغة عند عدم الجزم","evidence_keys":["مفاتيح المعلومات الداعمة من السياق"]}. لا تختلق معلومة أو مصدرًا. evidence_keys هي القيم الحرفية للحقل key أو evidence_key في السياق أو نتيجة الأداة؛ لا تضف topic أو scope أو أي بادئة.';
 const normalized=value=>String(value??'').normalize('NFKC').trim().replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
 export function scoreQualityAnswer(reply,testCase,chat){
   const expected={status:'answered',...testCase,...testCase[chat]};let answer;

@@ -17,6 +17,8 @@ test('quality scorer rejects outdated answers, fabricated citations, false abste
   assert.equal(score({status:'answered',answer:'120',evidence_keys:['current_price']}).passed,true);
   assert.equal(score({status:'answered',answer:'100',evidence_keys:['current_price']}).passed,false);
   assert.equal(score({status:'answered',answer:'120',evidence_keys:['fabricated']}).passed,false);
+  assert.equal(score({status:'answered',answer:'120',evidence_keys:['pricing:current_price']}).passed,false);
+  assert.equal(scoreQualityAnswer(JSON.stringify({status:'answered',answer:'20',evidence_keys:['riyadh']}),QUALITY_CASES.find(c=>c.id==='multi_session'),'employee').passed,false);
   assert.equal(score({status:'unknown',answer:'120',evidence_keys:[]},missing).passed,false);
   assert.equal(score({status:'unknown',answer:'',evidence_keys:[]},missing).passed,true);
   assert.equal(scoreQualityAnswer('not JSON',price,'main').passed,false);

@@ -16,7 +16,7 @@
       "usage": [
         {
           "model": "deepseek-v4-pro",
-          "tokens": 760
+          "tokens": 688
         }
       ]
     },
@@ -34,7 +34,7 @@
       "usage": [
         {
           "model": "deepseek-v4-pro",
-          "tokens": 837
+          "tokens": 877
         }
       ]
     },
@@ -52,7 +52,7 @@
       "usage": [
         {
           "model": "deepseek-v4-pro",
-          "tokens": 2399
+          "tokens": 2395
         }
       ]
     },
@@ -70,7 +70,7 @@
       "usage": [
         {
           "model": "deepseek-v4-pro",
-          "tokens": 2547
+          "tokens": 2626
         }
       ]
     },
@@ -88,7 +88,7 @@
       "usage": [
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1087
+          "tokens": 645
         }
       ]
     },
@@ -98,17 +98,15 @@
       "mode": "live_model_synthetic_AP",
       "context_passed": true,
       "answer_quality": {
-        "passed": false,
-        "reasons": [
-          "unsupported_or_missing_evidence"
-        ]
+        "passed": true,
+        "reasons": []
       },
       "effects": 0,
       "modelCalls": 1,
       "usage": [
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1147
+          "tokens": 848
         }
       ]
     },
@@ -126,12 +124,264 @@
       "usage": [
         {
           "model": "deepseek-v4-pro",
-          "tokens": 703
+          "tokens": 757
         }
       ]
     },
     {
       "id": "historical_price",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 836
+        }
+      ]
+    },
+    {
+      "id": "missing_fact",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 620
+        }
+      ]
+    },
+    {
+      "id": "missing_fact",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 936
+        }
+      ]
+    },
+    {
+      "id": "conflicting_sources",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 773
+        }
+      ]
+    },
+    {
+      "id": "conflicting_sources",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1093
+        }
+      ]
+    },
+    {
+      "id": "employee_scope",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1420
+        }
+      ]
+    },
+    {
+      "id": "employee_scope",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1654
+        }
+      ]
+    },
+    {
+      "id": "long_context_injection",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 2403
+        }
+      ]
+    },
+    {
+      "id": "long_context_injection",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 2888
+        }
+      ]
+    },
+    {
+      "id": "negation_and_currency",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 691
+        }
+      ]
+    },
+    {
+      "id": "negation_and_currency",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 898
+        }
+      ]
+    },
+    {
+      "id": "scoped_task_history",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 852
+        }
+      ]
+    },
+    {
+      "id": "scoped_task_history",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1095
+        }
+      ]
+    },
+    {
+      "id": "evidence_not_success",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 684
+        }
+      ]
+    },
+    {
+      "id": "evidence_not_success",
       "chat": "employee",
       "mode": "live_model_synthetic_AP",
       "context_passed": true,
@@ -146,259 +396,7 @@
       "usage": [
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1020
-        }
-      ]
-    },
-    {
-      "id": "missing_fact",
-      "chat": "main",
-      "mode": "live_model_synthetic_AP",
-      "context_passed": true,
-      "answer_quality": {
-        "passed": true,
-        "reasons": []
-      },
-      "effects": 0,
-      "modelCalls": 1,
-      "usage": [
-        {
-          "model": "deepseek-v4-pro",
-          "tokens": 491
-        }
-      ]
-    },
-    {
-      "id": "missing_fact",
-      "chat": "employee",
-      "mode": "live_model_synthetic_AP",
-      "context_passed": true,
-      "answer_quality": {
-        "passed": true,
-        "reasons": []
-      },
-      "effects": 0,
-      "modelCalls": 1,
-      "usage": [
-        {
-          "model": "deepseek-v4-pro",
-          "tokens": 685
-        }
-      ]
-    },
-    {
-      "id": "conflicting_sources",
-      "chat": "main",
-      "mode": "live_model_synthetic_AP",
-      "context_passed": true,
-      "answer_quality": {
-        "passed": true,
-        "reasons": []
-      },
-      "effects": 0,
-      "modelCalls": 1,
-      "usage": [
-        {
-          "model": "deepseek-v4-pro",
-          "tokens": 1153
-        }
-      ]
-    },
-    {
-      "id": "conflicting_sources",
-      "chat": "employee",
-      "mode": "live_model_synthetic_AP",
-      "context_passed": true,
-      "answer_quality": {
-        "passed": true,
-        "reasons": []
-      },
-      "effects": 0,
-      "modelCalls": 1,
-      "usage": [
-        {
-          "model": "deepseek-v4-pro",
-          "tokens": 1360
-        }
-      ]
-    },
-    {
-      "id": "employee_scope",
-      "chat": "main",
-      "mode": "live_model_synthetic_AP",
-      "context_passed": true,
-      "answer_quality": {
-        "passed": true,
-        "reasons": []
-      },
-      "effects": 0,
-      "modelCalls": 1,
-      "usage": [
-        {
-          "model": "deepseek-v4-pro",
-          "tokens": 1429
-        }
-      ]
-    },
-    {
-      "id": "employee_scope",
-      "chat": "employee",
-      "mode": "live_model_synthetic_AP",
-      "context_passed": true,
-      "answer_quality": {
-        "passed": true,
-        "reasons": []
-      },
-      "effects": 0,
-      "modelCalls": 1,
-      "usage": [
-        {
-          "model": "deepseek-v4-pro",
-          "tokens": 1599
-        }
-      ]
-    },
-    {
-      "id": "long_context_injection",
-      "chat": "main",
-      "mode": "live_model_synthetic_AP",
-      "context_passed": true,
-      "answer_quality": {
-        "passed": true,
-        "reasons": []
-      },
-      "effects": 0,
-      "modelCalls": 1,
-      "usage": [
-        {
-          "model": "deepseek-v4-pro",
-          "tokens": 2602
-        }
-      ]
-    },
-    {
-      "id": "long_context_injection",
-      "chat": "employee",
-      "mode": "live_model_synthetic_AP",
-      "context_passed": true,
-      "answer_quality": {
-        "passed": true,
-        "reasons": []
-      },
-      "effects": 0,
-      "modelCalls": 1,
-      "usage": [
-        {
-          "model": "deepseek-v4-pro",
-          "tokens": 2579
-        }
-      ]
-    },
-    {
-      "id": "negation_and_currency",
-      "chat": "main",
-      "mode": "live_model_synthetic_AP",
-      "context_passed": true,
-      "answer_quality": {
-        "passed": true,
-        "reasons": []
-      },
-      "effects": 0,
-      "modelCalls": 1,
-      "usage": [
-        {
-          "model": "deepseek-v4-pro",
-          "tokens": 727
-        }
-      ]
-    },
-    {
-      "id": "negation_and_currency",
-      "chat": "employee",
-      "mode": "live_model_synthetic_AP",
-      "context_passed": true,
-      "answer_quality": {
-        "passed": true,
-        "reasons": []
-      },
-      "effects": 0,
-      "modelCalls": 1,
-      "usage": [
-        {
-          "model": "deepseek-v4-pro",
-          "tokens": 941
-        }
-      ]
-    },
-    {
-      "id": "scoped_task_history",
-      "chat": "main",
-      "mode": "live_model_synthetic_AP",
-      "context_passed": true,
-      "answer_quality": {
-        "passed": true,
-        "reasons": []
-      },
-      "effects": 0,
-      "modelCalls": 1,
-      "usage": [
-        {
-          "model": "deepseek-v4-pro",
-          "tokens": 926
-        }
-      ]
-    },
-    {
-      "id": "scoped_task_history",
-      "chat": "employee",
-      "mode": "live_model_synthetic_AP",
-      "context_passed": true,
-      "answer_quality": {
-        "passed": true,
-        "reasons": []
-      },
-      "effects": 0,
-      "modelCalls": 1,
-      "usage": [
-        {
-          "model": "deepseek-v4-pro",
-          "tokens": 941
-        }
-      ]
-    },
-    {
-      "id": "evidence_not_success",
-      "chat": "main",
-      "mode": "live_model_synthetic_AP",
-      "context_passed": true,
-      "answer_quality": {
-        "passed": true,
-        "reasons": []
-      },
-      "effects": 0,
-      "modelCalls": 1,
-      "usage": [
-        {
-          "model": "deepseek-v4-pro",
-          "tokens": 669
-        }
-      ]
-    },
-    {
-      "id": "evidence_not_success",
-      "chat": "employee",
-      "mode": "live_model_synthetic_AP",
-      "context_passed": true,
-      "answer_quality": {
-        "passed": true,
-        "reasons": []
-      },
-      "effects": 0,
-      "modelCalls": 1,
-      "usage": [
-        {
-          "model": "deepseek-v4-pro",
-          "tokens": 930
+          "tokens": 1734
         }
       ]
     },
@@ -466,15 +464,15 @@
       "usage": [
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1034
+          "tokens": 1097
         },
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1179
+          "tokens": 1270
         },
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1309
+          "tokens": 1413
         }
       ]
     },
@@ -542,15 +540,15 @@
       "usage": [
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1268
+          "tokens": 1355
         },
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1444
+          "tokens": 1521
         },
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1591
+          "tokens": 1653
         }
       ]
     },
@@ -601,21 +599,6 @@
         {
           "name": "ap_find_records",
           "args": {
-            "tableId": "XXXXXXXXXXXXXXXXXXXXX"
-          },
-          "result": {
-            "isError": true,
-            "content": [
-              {
-                "type": "text",
-                "text": "wrong_table; read the current table catalog"
-              }
-            ]
-          }
-        },
-        {
-          "name": "ap_find_records",
-          "args": {
             "tableId": "QQQQQQQQQQQQQQQQQQQQQ"
           },
           "result": {
@@ -648,19 +631,19 @@
       "usage": [
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1060
+          "tokens": 1107
         },
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1293
+          "tokens": 1285
         },
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1478
+          "tokens": 1390
         },
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1607
+          "tokens": 1507
         }
       ]
     },
@@ -758,19 +741,19 @@
       "usage": [
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1281
+          "tokens": 1400
         },
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1516
+          "tokens": 1636
         },
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1697
+          "tokens": 1816
         },
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1856
+          "tokens": 1966
         }
       ]
     },
@@ -786,24 +769,6 @@
       "effects": 1,
       "tool_trace": [
         {
-          "name": "invoice_report_ffff_92xsoq_mcp",
-          "args": {},
-          "result": {
-            "structuredContent": {
-              "accepted": true,
-              "runId": "RRRRRRRRRRRRRRRRRRRRR",
-              "evidence_key": "acceptance_only",
-              "execution": {
-                "runId": "RRRRRRRRRRRRRRRRRRRRR",
-                "flowId": "FFFFFFFFFFFFFFFFFFFFF",
-                "projectId": "quality-project",
-                "flowVersionId": "VVVVVVVVVVVVVVVVVVVVV",
-                "environment": "PRODUCTION"
-              }
-            }
-          }
-        },
-        {
           "name": "ap_list_tables",
           "args": {},
           "result": {
@@ -818,6 +783,24 @@
                   "name": "Old invoices"
                 }
               ]
+            }
+          }
+        },
+        {
+          "name": "invoice_report_ffff_92xsoq_mcp",
+          "args": {},
+          "result": {
+            "structuredContent": {
+              "accepted": true,
+              "runId": "RRRRRRRRRRRRRRRRRRRRR",
+              "evidence_key": "acceptance_only",
+              "execution": {
+                "runId": "RRRRRRRRRRRRRRRRRRRRR",
+                "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+                "projectId": "quality-project",
+                "flowVersionId": "VVVVVVVVVVVVVVVVVVVVV",
+                "environment": "PRODUCTION"
+              }
             }
           }
         },
@@ -867,19 +850,19 @@
       "usage": [
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1257
+          "tokens": 1337
         },
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1492
+          "tokens": 1578
         },
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1672
+          "tokens": 1754
         },
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1887
+          "tokens": 1901
         }
       ]
     },
@@ -997,43 +980,231 @@
       "usage": [
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1489
+          "tokens": 1674
         },
         {
           "model": "deepseek-v4-pro",
-          "tokens": 1850
+          "tokens": 2011
         },
         {
           "model": "deepseek-v4-pro",
-          "tokens": 2067
+          "tokens": 2252
         },
         {
           "model": "deepseek-v4-pro",
-          "tokens": 2254
+          "tokens": 2518
         }
       ]
     }
   ],
   "summary": {
     "total": 28,
-    "passed": 26,
+    "passed": 27,
     "workflowCases": 6,
     "syntheticEffects": 2
   },
   "contract": "Live DeepSeek, actual production chat loop, synthetic AP tools only. Every answer, evidence key, scope and required workflow must pass. Diagnostic retries never erase failures. No real provider effects or deployment proof.",
   "date": "2026-10-08",
+  "previous_run": {
+    "commit": "936d1289a3b8d0d3124fc54d900a8b0168823b4d",
+    "passed": 26,
+    "total": 28,
+    "path": "developer-lab/employee-stress-live-20261008.json"
+  },
   "source_blobs": {
     "server.mjs": "e4818d1d358d96b7b9ec4d9df363eb821782cceb",
-    "scripts/knowledge-quality-eval.mjs": "bda8e153ea145658b9b2c9b04cb8aca3f9bd33bb",
+    "scripts/knowledge-quality-eval.mjs": "7430d1b12d2535b1afeaadde43e941e0850efe2c",
     "scripts/employee-stress-eval.mjs": "30eba27e6c90f24397336a7e3bef890cdafe8002"
   },
-  "validation": {
-    "runtime_passed": 472,
-    "runtime_skipped": 1,
-    "runtime_failed": 0,
-    "context_passed": 28,
-    "workflow_passed": 6,
-    "workflow_total": 6
-  },
-  "note": "Two exact citation-set failures retained. Synthetic AP effects: two; live AP/provider effects: zero. Production code unchanged."
+  "diagnostics_before_contract_clarification": [
+    {
+      "id": "multi_session",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 953
+        }
+      ],
+      "attempt": 1,
+      "observed": "{\"status\":\"answered\",\"answer\":\"20\",\"evidence_keys\":[\"jeddah\",\"riyadh\"]}"
+    },
+    {
+      "id": "multi_session",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": false,
+        "reasons": [
+          "unsupported_or_missing_evidence"
+        ]
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1029
+        }
+      ],
+      "attempt": 2,
+      "observed": "{\"status\":\"answered\",\"answer\":\"20\",\"evidence_keys\":[\"offices:jeddah\",\"offices:riyadh\"]}"
+    },
+    {
+      "id": "multi_session",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": false,
+        "reasons": [
+          "unsupported_or_missing_evidence"
+        ]
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1127
+        }
+      ],
+      "attempt": 3,
+      "observed": "{\"status\":\"answered\",\"answer\":\"20\",\"evidence_keys\":[\"offices:jeddah\",\"offices:riyadh\"]}"
+    },
+    {
+      "id": "historical_price",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": false,
+        "reasons": [
+          "unsupported_or_missing_evidence"
+        ]
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 911
+        }
+      ],
+      "attempt": 1,
+      "observed": "{\"status\":\"answered\",\"answer\":\"100\",\"evidence_keys\":[\"pricing:old_price\"]}"
+    },
+    {
+      "id": "historical_price",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 847
+        }
+      ],
+      "attempt": 2,
+      "observed": "{\"status\":\"answered\",\"answer\":\"100\",\"evidence_keys\":[\"old_price\"]}"
+    },
+    {
+      "id": "historical_price",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 796
+        }
+      ],
+      "attempt": 3,
+      "observed": "{\"status\":\"answered\",\"answer\":\"100\",\"evidence_keys\":[\"old_price\"]}"
+    }
+  ],
+  "diagnostics_after_contract_clarification": [
+    {
+      "id": "evidence_not_success",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1778
+        }
+      ],
+      "attempt": 1,
+      "observed": "{\"status\":\"unknown\",\"answer\":\"\",\"evidence_keys\":[]}"
+    },
+    {
+      "id": "evidence_not_success",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 976
+        }
+      ],
+      "attempt": 2,
+      "observed": "{\"status\":\"unknown\",\"answer\":\"\",\"evidence_keys\":[]}"
+    },
+    {
+      "id": "evidence_not_success",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 950
+        }
+      ],
+      "attempt": 3,
+      "observed": "{\"status\":\"unknown\",\"answer\":\"\",\"evidence_keys\":[]}"
+    }
+  ],
+  "note": "Only the synthetic evaluation request was clarified: literal evidence keys without topic/scope prefixes. Production code and strict scoring unchanged. Primary run remains 27/28; three later diagnostic passes do not erase its failure. Real model, synthetic services and effects only."
 }
