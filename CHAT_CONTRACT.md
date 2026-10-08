@@ -154,6 +154,8 @@ A `recent_work` item may include `result: {schemaVersion: 1, source: 'flow_reply
 
 ## Tool activity while a request runs
 
+Company knowledge supplied to both chat contexts uses the existing text-ranking helper from the consolidation branch before applying the knowledge-facts budget (40 whole facts, 6,000 JSON characters). The current request words and the selected employee's configured knowledge topics affect ranking. Fact keys, sources, source kinds, certainty and observed dates remain projected. A large fact may be omitted rather than truncated. This limits only the knowledge-facts array, not the entire prompt, and does not implement cumulative memory or establish that the model understood the facts.
+
 `activity` is a bounded snapshot of up to 80 `{id, name, state}` records. An id identifies one native tool invocation; `started` is recorded immediately before the call, `returned` after its response, and `error` after a thrown error or `isError` response. No tool inputs, outputs or error details are included. Returned does not establish business success or delivery. The ledger writer requires the exact company/request/conversation/claim token and pending state. Failure to store activity does not retry or prevent the tool invocation.
 
 Long chat requests return their existing queued work identity after 1.5 seconds instead of waiting 20 seconds. The browser reads that identity; these reads never dispatch another action. Pending `work` and hydration can carry stored activity, and the final reply retains the snapshot. This covers native calls made by the main and employee message loops; it is not a stream of each internal Activepieces flow step or model reasoning.

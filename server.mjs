@@ -5,6 +5,7 @@ import {createHash,randomUUID,timingSafeEqual} from 'node:crypto';
 import pg from 'pg';
 import {createTenantProjectService,TenantProjectError} from './lib/tenant-projects.mjs';
 import {provisionVerifiedTenant} from './lib/tenant-provisioning.mjs';
+import {selectKnowledgeContext} from './lib/knowledge-context.mjs';
 import {createEmployeeRunRecovery} from './lib/employee-run-recovery.mjs';
 import {createToolConnectionService} from './lib/tool-connections.mjs';
 import {createGoogleOAuthAttemptStore} from './lib/google-oauth-attempts.mjs';
@@ -426,7 +427,7 @@ async function deepseekReply({company,settings,knowledge,team,history,message,em
   if(!key)throw new TenantProjectError('assistant_not_configured','مساعد سيادة غير مهيأ الآن.',503);
   const deadline=deadlineMs?Date.now()+deadlineMs:null;
   const checkDeadline=()=>{if(deadline&&Date.now()>=deadline)throw new TenantProjectError('assistant_timeout','لم يكتمل تجهيز المسودة ضمن وقت المحادثة.',504);};
-  const facts=(knowledge?.facts||[]).slice(0,40).map(item=>({key:item.key,topic:item.topic,value:item.value,source:item.sourceUrl,sourceKind:item.sourceKind,certainty:item.certainty,observedAt:item.observedAt}));
+  const facts=selectKnowledgeContext((knowledge?.facts||[]).map(item=>({key:item.key,topic:item.topic,value:item.value,source:item.sourceUrl,sourceKind:item.sourceKind,certainty:item.certainty,observedAt:item.observedAt})),{message,topics:employee?.knowledge_topics_json||draftEmployee?.knowledge_topics_json||[]});
   let connections={state:'unknown',items:[]};
   try{const saved=await (await toolConnections()).list(companyId);connections={state:'read',items:saved.map(item=>({id:item.id,tool:item.slug,name:item.displayName,status:item.status}))};}catch{}
   const selectedEmployee=employee?{id:employee.id,flowId:employee.activepieces_flow_id,name:employee.name,role:employee.role_title,status:employee.status,instructions:employee.prompt,instructionSource:employee.prompt_source,instructionVersion:Number(employee.prompt_version||1),knowledgeTopics:employee.knowledge_topics_json||[],tools:employee.tools_json||[]}:null;

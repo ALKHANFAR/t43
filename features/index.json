@@ -39,9 +39,12 @@
       "name": "سيادة تتذكر معلومات شركتي وحساباتي",
       "aliases": ["لا تسألني عن شيء محفوظ", "لغة عربية طبيعية", "سياق الشركة"],
       "state": "draft_pr",
-      "meaning": "يحفظ سياق النموذج مصدر المعلومة وتاريخها والنواقص المحفوظة، ويقرأ جرد الاتصالات المقيد بالشركة دون أسرار. فشل الجرد يبقى مجهولا ولا يصبح قائمة فارغة. الاتصال المحفوظ ليس إثبات نتيجة مزود. لا يفرض تصنيف المهمة أو الموظف في البداية. غير منشور.",
+      "meaning": "يحفظ سياق النموذج مصدر المعلومة وتاريخها والنواقص المحفوظة، ويقرأ جرد الاتصالات المقيد بالشركة دون أسرار. فشل الجرد يبقى مجهولا ولا يصبح قائمة فارغة. الاتصال المحفوظ ليس إثبات نتيجة مزود. لا يفرض تصنيف المهمة أو الموظف في البداية. غير منشور. يعاد استخدام ترتيب المعرفة من فرع consolidation لاختيار المعلومات المرتبطة بالطلب وموضوعات الموظف قبل حد40معلومة/6000حرف، مع إبقاء المعلومة كاملة ومصدرها. هذا استرجاع نصي محلي وليس إثبات فهم النموذج أو ذاكرة تراكمية.",
       "linear": "ABO-54",
       "locations": [
+        {"role": "knowledge_selection", "path": "lib/knowledge-context.mjs", "anchor": "export function selectKnowledgeContext("},
+        {"role": "knowledge_selection_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "both chats retrieve older relevant company facts beyond the first forty with their source"},
+        {"role": "knowledge_budget_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "both chats bound the company knowledge context without truncating individual evidence"},
         {"role": "context", "path": "server.mjs", "anchor": "let connections={state:'unknown',items:[]};"},
         {"role": "knowledge", "path": "lib/company-profile.mjs", "anchor": "missingCritical:(Array.isArray(profile.profile_json?.missingCritical)"},
         {"role": "test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "saved company context preserves fact provenance and projects connections without credentials"},
