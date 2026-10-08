@@ -137,3 +137,5 @@ Customer MCP start first provisions the verified company project, reads exactly 
 ### Model billing refusal
 
 A provider HTTP402 before native execution produces a durable failed request explaining that the assistant service is unavailable due to its balance. Provider payloads and credentials are not exposed. Existing attempted-execution/unknown-result/transport-receipt precedence stays intact; no automatic redispatch occurs. ABO-69 / ABO-37.
+
+A bounded instruction such as «لا تنفذ أكثر من مرة» limits repetition and is not a blanket do-not-run instruction. Independent explicit prohibitions remain enforced. This clarification fixes a witnessed pre-dispatch refusal; it does not itself add retry or deduplication behavior. ABO-69.
