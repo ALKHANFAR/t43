@@ -587,6 +587,31 @@
           "anchor": "model billing failure is explicit only before execution starts"
         }
       ]
+    },
+    {
+      "id": "employee_native_workflow_context",
+      "name": "طريقة عمل الموظف من الفلو الكامل",
+      "aliases": [
+        "خطوات الموظف",
+        "تفرعات الموظف",
+        "كيف يعمل الموظف",
+        "employee workflow context"
+      ],
+      "state": "draft_pr",
+      "meaning": "إسقاط بنية طريقة العمل من نسخة Activepieces المنشورة المملوكة: مشغل وأفعال وقرارات وحلقات ومسارات نجاح وفشل. لا ينسخ مدخلات أو شروط أو أسرار أو كودا، ولا يثبت نتيجة تشغيل أو جاهزية. الربط والعرض في فرع التكامل؛ التغيير غير منشور.",
+      "linear": "ABO-65",
+      "locations": [
+        {
+          "role": "projection",
+          "path": "lib/chat-intelligence.mjs",
+          "anchor": "export function publishedFlowWorkSteps(version)"
+        },
+        {
+          "role": "test",
+          "path": "scripts/employee-workflow-context-runtime.test.mjs",
+          "anchor": "native complete Flow without AI projects trigger, actions and response without credentials"
+        }
+      ]
     }
   ]
 }
