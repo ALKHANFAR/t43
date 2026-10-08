@@ -390,9 +390,11 @@ var I = {
     var activityOpen=$$('.siy-activity[open]',t).map(function(el){return el.dataset.activityRequest;}),activityFocused=document.activeElement.closest&&document.activeElement.closest('.siy-activity');
     var activityFocusKey=activityFocused&&activityFocused.dataset.activityRequest;
     var savedPanel=window.__SIY_REAL__&&t.siyEmployee===who&&t.siyEmployeeGeneration===siyGeneration?$("#instrWrap"):null, savedFocus=savedPanel&&savedPanel.contains(document.activeElement)?document.activeElement:null, savedSelection=savedFocus&&savedFocus.id==='instr'?[savedFocus.selectionStart,savedFocus.selectionEnd,savedFocus.selectionDirection]:null;
+    var historyPanel=$('.employee-saved-results',t),historyFocus=historyPanel&&historyPanel.contains(document.activeElement)?document.activeElement:null,historyFocusChat=historyFocus&&historyFocus.dataset.resultChat,historySummaryFocused=historyFocus&&historyFocus===historyPanel.querySelector('summary');
+    if(historyPanel)siyEmployeeHistoryOpen[historyPanel.dataset.context]=historyPanel.open;
     var list, w;
     if(isEmp()){ var e=emp(who); list=empThread(who); w=who;
-      t.innerHTML='<div class="col'+(window.__SIY_REAL__&&e.draft&&!list.length?' col--draft':'')+'">'+pinHtml(e)+'<div id="instrWrap" hidden>'+instrHtml(e)+'</div>'+list.map(function(m,i){return msgHtml(m,who,i)}).join("")+(window.__SIY_REAL__&&e.draft&&!list.length?'<div class="emp-start"><span class="drop" aria-hidden="true"></span><button type="button" id="reviewStart" aria-expanded="false" aria-controls="instrWrap">'+ui('راجع التعليمات','Review instructions')+'</button></div>':'')+siyEmployeeProofHtml(e,list)+'</div>';
+      t.innerHTML='<div class="col'+(window.__SIY_REAL__&&e.draft&&!list.length?' col--draft':'')+'">'+pinHtml(e)+'<div id="instrWrap" hidden>'+instrHtml(e)+'</div>'+siyEmployeeHistoryHtml(e)+list.map(function(m,i){return msgHtml(m,who,i)}).join("")+(window.__SIY_REAL__&&e.draft&&!list.length?'<div class="emp-start"><span class="drop" aria-hidden="true"></span><button type="button" id="reviewStart" aria-expanded="false" aria-controls="instrWrap">'+ui('راجع التعليمات','Review instructions')+'</button></div>':'')+'</div>';
     } else {
       list = chatId ? CHATS[chatId].msgs : (live.siyadah||[]); w = chatId? CHATS[chatId].with : who;
       if(!list.length){ /* افتتاحية «اليوم»: سيادة تبدأ الكلام — كل أرقامها محسوبة من البيانات لحظتها */
@@ -403,6 +405,7 @@ var I = {
     }
     if(savedPanel&&isEmp()){var freshPanel=$("#instrWrap"),freshApply=freshPanel.querySelector('#instrApply'),savedApply=savedPanel.querySelector('#instrApply');if(freshApply&&!savedApply)savedPanel.querySelector('#instrF').appendChild(freshApply);else if(!freshApply&&savedApply)savedApply.remove();freshPanel.replaceWith(savedPanel);var toggle=$("#instrTgl")||$("#reviewStart");if(toggle)toggle.setAttribute('aria-expanded',String(!savedPanel.hidden));if(savedFocus){savedFocus.focus({preventScroll:true});if(savedSelection)savedFocus.setSelectionRange(savedSelection[0],savedSelection[1],savedSelection[2]);}}
     $$('.siy-activity',t).forEach(function(el){if(el.dataset.activityRequest&&activityOpen.includes(el.dataset.activityRequest))el.open=true;if(el.dataset.activityRequest&&el.dataset.activityRequest===activityFocusKey)el.querySelector('summary').focus({preventScroll:true});});
+    var freshHistory=$('.employee-saved-results',t);if(freshHistory){if(historySummaryFocused)freshHistory.querySelector('summary').focus({preventScroll:true});else if(historyFocusChat){var focusButton=$$('[data-result-chat]',freshHistory).find(function(b){return b.dataset.resultChat===historyFocusChat;});if(focusButton)focusButton.focus({preventScroll:true});}}
     t.siyEmployee=isEmp()?who:null;t.siyEmployeeGeneration=siyGeneration;
     var follow=t.siyList!==list||nearEnd||(list.length>t.siyCount&&list[list.length-1].me);
     t.siyList=list; t.siyCount=list.length; t.scrollTop=follow?t.scrollHeight:scroll;
@@ -844,7 +847,7 @@ var I = {
   function composerContextKey(){if(['tools','team','results'].includes(who))return null;var list=curList(),id=chatId||(list&&list.siyConversationId);var key=(isEmp()?'employee:'+who:'siyadah')+':'+(id||(isEmp()?'default':'new:'+composerNewContext));if(list)list.siyComposerDraftKey=key;return key;}
   function composerRemember(){var key=composerContextKey(),input=$('#input');if(!key||!input)return;if(!input.value){delete composerDrafts[key];return;}composerDrafts[key]={text:input.value,start:input.selectionStart,end:input.selectionEnd,direction:input.selectionDirection};}
   function composerRestore(){var input=$('#input'),draft=composerDrafts[composerContextKey()];input.value=draft?draft.text:'';input.style.height='auto';input.style.height=Math.min(input.scrollHeight,160)+'px';if(draft)input.setSelectionRange(draft.start,draft.end,draft.direction);}
-  function composerClear(){composerDrafts=Object.create(null);composerCompany=null;var input=$('#input');if(input){input.value='';input.style.height='auto';}}
+  function composerClear(){composerDrafts=Object.create(null);siyEmployeeHistoryOpen=Object.create(null);composerCompany=null;var input=$('#input');if(input){input.value='';input.style.height='auto';}}
   function go(w,c){ composerRemember();if(mobile())setDrawer(false); who=w; chatId=c||null; kpiOpen=null; renderSide(); renderBar(); renderThread();composerRestore();refreshLiveLabels(); if(window.__SIY_REAL__&&emp(w))siyResumePendingActivation(w); }
   document.addEventListener('click',function(event){
     var resultChat=event.target.closest('[data-result-chat]');
@@ -1530,7 +1533,7 @@ var I = {
   }
   function siyRememberConversation(data,list,employeeId,text){
     if(typeof data.conversation_id!=="string"||!data.conversation_id) return;
-    var id=data.conversation_id,oldDraftKey=list.siyComposerDraftKey,newDraftKey=(employeeId?'employee:'+employeeId:'siyadah')+':'+id;if(oldDraftKey&&oldDraftKey!==newDraftKey&&composerDrafts[oldDraftKey]){composerDrafts[newDraftKey]=composerDrafts[oldDraftKey];delete composerDrafts[oldDraftKey];}list.siyComposerDraftKey=newDraftKey;list.siyConversationId=id;
+    var id=data.conversation_id,oldDraftKey=list.siyComposerDraftKey,newDraftKey=(employeeId?'employee:'+employeeId:'siyadah')+':'+id;if(oldDraftKey&&oldDraftKey!==newDraftKey&&composerDrafts[oldDraftKey]){composerDrafts[newDraftKey]=composerDrafts[oldDraftKey];delete composerDrafts[oldDraftKey];}if(oldDraftKey&&oldDraftKey!==newDraftKey&&Object.prototype.hasOwnProperty.call(siyEmployeeHistoryOpen,oldDraftKey)){siyEmployeeHistoryOpen[newDraftKey]=siyEmployeeHistoryOpen[oldDraftKey];delete siyEmployeeHistoryOpen[oldDraftKey];}list.siyComposerDraftKey=newDraftKey;list.siyConversationId=id;
     if(!CHATS[id]) CHATS=Object.assign({[id]:{with:employeeId||"siyadah",emp:employeeId||null,t:String(text||""),when:"today",msgs:list}},CHATS);
     if(!employeeId&&curList()===list){chatId=id;live.siyadah=null;}
   }
@@ -1710,29 +1713,23 @@ var I = {
              {v:String(s.replies||0),l:"ردود",t:"—"}, {v:t,l:"آخر نشاط",t:"—"} ]; }
   function siyChatReal(e,text,list){ siyMessage(text,list,e.id); }
   /* سجل العمل الفعلي من جدول الإثبات (recent_work في رد الـDashboard) */
-  function siyEmployeeProofHtml(e,list){
-    if(!window.__SIY_REAL__) return "";
-    var proofs=((window.__SIY_DASH__&&window.__SIY_DASH__.recent_work)||[]).filter(function(r){
-      return r.employeeId===e.id&&r.flowId===e.flowId&&r.recordId&&r.runId&&
-        (!r.conversation_id||r.conversation_id===list.siyConversationId)&&
-        !list.some(function(m){return Array.isArray(m.proofIds)&&m.proofIds.includes(r.recordId);});
-    });
-    return proofs.length?'<div class="m m--ai"><span class="m__av">'+avHtml(e.id)+'</span><div class="m__b"><div class="m__c">'+(proofs.some(function(r){return r.conversation_id;})?siyWorkHtml(proofs.filter(function(r){return r.conversation_id;}),ui('سجل تشغيل في هذه المحادثة — غير مربوط برسالة محددة','Run history in this conversation — not linked to a specific message')):'')+siyLegacyProofHtml(proofs)+'</div></div></div>':"";
-  }
   function siyLegacyProofHtml(records){
     var legacy=records.filter(function(r){return !r.conversation_id;});
     return legacy.length?siyWorkHtml(legacy,ui('نشاط سابق للموظف — غير مرتبط بهذه المحادثة','Earlier employee activity — unrelated to this conversation')):'';
   }
+  var siyEmployeeHistoryOpen=Object.create(null);
+  function siyEmployeeHistoryHtml(e){if(!window.__SIY_REAL__)return '';var records=((window.__SIY_DASH__&&window.__SIY_DASH__.recent_work)||[]).filter(function(r){return r&&r.employeeId===e.id;}),key=composerContextKey();return '<details class="employee-saved-results" data-context="'+esc(key)+'"'+(siyEmployeeHistoryOpen[key]?' open':'')+'><summary>'+ui('نتائجه المحفوظة','Saved employee results')+'</summary><p class="msrc">'+ui('سجل سابق لهذا الموظف، غير مربوط برسالة محددة؛ لا يثبت نتيجة طلبك الحالي.','Earlier records for this employee, not tied to a specific message; not proof of your current request.')+'</p>'+siyWorkHtml(records,ui('المتاح من سجل الموظف','Available employee records'),{historyEmployee:e})+'</details>';}
+  document.addEventListener('toggle',function(event){var el=event.target;if(el.classList&&el.classList.contains('employee-saved-results'))siyEmployeeHistoryOpen[el.dataset.context]=el.open;},true);
   function siyWorkStatus(value){ return (locale==='en'?{succeeded:'Completed',failed:'Failed',running:'In progress',queued:'Queued',awaiting_input:'Needs information',cancelled:'Cancelled'}:{succeeded:"مكتملة",failed:"تعذّرت",running:"قيد العمل",queued:"بانتظار البدء",awaiting_input:"تنتظر معلومات",cancelled:"ملغاة"})[value]||ui("غير مؤكدة","Unverified"); }
-  function siyWorkHtml(records,label){ var d=window.__SIY_DASH__, w=Array.isArray(records)?records:(d&&d.recent_work)||[];
+  function siyWorkHtml(records,label,options){ var history=options&&options.historyEmployee,showResults=who==='results'||!!history;var d=window.__SIY_DASH__, w=Array.isArray(records)?records:(d&&d.recent_work)||[];
     if(!w.length) return '<p>'+ui('ما فيه عمل مسجّل بعد — أول ما يشتغل فريقك، كل نتيجة تنكتب هنا بإثباتها.','No work recorded yet. Verified results will appear here when your team runs.')+'</p>';
     return '<p>'+esc(label||ui('آخر عمل فعلي للفريق','Latest verified team work'))+' (<span class="num">'+(Array.isArray(records)?w.length:(d.work_count||w.length))+'</span>):</p>'+w.map(function(x){
-      var owner=emp(x.employeeId);return '<div class="work-record"><div class="work-record__heading"><b>'+esc(x.subject||ui("مهمة","Task"))+'</b><span class="work-record__status" data-state="'+(['succeeded','failed','running','queued','awaiting_input','cancelled'].includes(x.status)?x.status:'unknown')+'">'+esc(siyWorkStatus(x.status))+'</span></div>'+(owner&&String(x.subject||'').indexOf(owner.n)===-1?'<small class="msrc">'+esc(owner.n)+'</small>':'')+
+      var owner=emp(x.employeeId),savedChat=x.conversation_id&&CHATS[x.conversation_id],canOpenChat=savedChat&&(!history||!savedChat.emp||savedChat.emp===history.id);return '<div class="work-record"><div class="work-record__heading"><b>'+esc(x.subject||ui("مهمة","Task"))+'</b><span class="work-record__status" data-state="'+(['succeeded','failed','running','queued','awaiting_input','cancelled'].includes(x.status)?x.status:'unknown')+'">'+esc(siyWorkStatus(x.status))+'</span></div>'+(owner&&String(x.subject||'').indexOf(owner.n)===-1?'<small class="msrc">'+esc(owner.n)+'</small>':'')+
         (x.priority?' <span class="msrc">· '+esc(x.priority)+'</span>':'')+
         (x.message?'<div>'+esc(x.message)+'</div>':'')+
-        (who==='results'&&x.status==='succeeded'&&x.runId&&x.flowId&&x.result?.schemaVersion===1&&x.result.source==='flow_reply'&&typeof x.result.content==='string'?'<div class="work-record__result">'+siyReplyHtml(x.result.content)+'</div>':'')+
-        (who==='results'&&x.conversation_id&&CHATS[x.conversation_id]?'<button type="button" class="bts" data-result-chat="'+esc(x.conversation_id)+'">'+ui('شوف المحادثة','View conversation')+'</button>':'')+
-        (who==='results'?'':'<div class="msrc">'+(x.status==='succeeded'&&x.recordId&&x.runId&&x.flowId?'✓ ':'')+esc(siyWorkStatus(x.status))+(x.proof?' · '+esc(customerText(x.proof)):'')+'</div>')+siyRefsHtml([['الطلب',x.work_id||x.workId],['التشغيل',x.runId],['النتيجة',x.recordId],['طريقة العمل',x.flowId]],who==='results'&&x.proof?customerText(x.proof):'')+'</div>';
+        (showResults&&x.status==='succeeded'&&x.runId&&x.flowId&&x.result?.schemaVersion===1&&x.result.source==='flow_reply'&&typeof x.result.content==='string'&&x.result.content.trim()&&x.result.content.length<=12000?'<div class="work-record__result">'+siyReplyHtml(x.result.content)+'</div>':'')+
+        (showResults&&canOpenChat?'<button type="button" class="bts" data-result-chat="'+esc(x.conversation_id)+'">'+ui('شوف المحادثة','View conversation')+'</button>':'')+
+        (history&&x.flowId&&x.flowId!==history.flowId?'<small class="msrc">'+ui('طريقة عمل سابقة','Earlier workflow')+'</small>':'')+(showResults?'':'<div class="msrc">'+(x.status==='succeeded'&&x.recordId&&x.runId&&x.flowId?'✓ ':'')+esc(siyWorkStatus(x.status))+(x.proof?' · '+esc(customerText(x.proof)):'')+'</div>')+siyRefsHtml([['الطلب',x.work_id||x.workId],['التشغيل',x.runId],['النتيجة',x.recordId],['طريقة العمل',x.flowId]],showResults&&x.proof?customerText(x.proof):'')+'</div>';
     }).join("");
   }
   var TOOL_SLUG={ "واتساب بزنس":"whatsapp","واتساب":"whatsapp","التقويم":"google-calendar","Wafeq":"wafeq","قيود/Wafeq":"wafeq","HTTP":"http","اتصال ويب":"http",

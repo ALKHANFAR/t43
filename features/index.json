@@ -71,20 +71,76 @@
     {
       "id": "chat_structured_result_and_proof_scope",
       "name": "عرض نتيجة الموظف ودليل الطلب الصحيح",
-      "aliases": ["رد JSON للموظف", "بطاقة دليل التشغيل القديم"],
+      "aliases": [
+        "رد JSON للموظف",
+        "بطاقة دليل التشغيل القديم",
+        "نتائج الموظف المحفوظة داخل مساحته"
+      ],
       "state": "draft_pr",
-      "meaning": "يعرض صفوف JSON البسيطة كجدول مقروء، ويعرض معرّف التشغيل المؤكد العائد من تسوية الطلب نفسه. لا يربط طلبًا جديدًا بدليل سابق إلا عند تطابق معرّفي الطلب والمحادثة. التعديل محلي وغير منشور.",
+      "meaning": "يعرض صفوف JSON البسيطة كجدول مقروء، ويعرض معرّف التشغيل المؤكد العائد من تسوية الطلب نفسه. لا يربط طلبًا جديدًا بدليل سابق إلا عند تطابق معرّفي الطلب والمحادثة. التعديل محلي وغير منشور. داخل مساحة الموظف إفصاح قابل للطي يستخدم recent_work بهوية الموظف الدقيقة عبر الحالات المحفوظة، ويسم طريقة العمل السابقة دون اعتباره دليل الطلب الحالي. جسم flow_reply محفوظ ومهروب وبحد12000حرف، ومرجع المحادثة لا يفتح سياق موظف آخر. حفظ الفتح والتركيز لكل سياق بلا تشغيل جديد. بياناتChrome الحالية تثبت بيانات السجل فقط؛ جسم النتيجة في الاختبارات محلي.",
       "linear": "ABO-69",
       "pr": "https://github.com/ALKHANFAR/t43/pull/64",
       "locations": [
-        {"role":"saved_reply","path":"lib/company-profile.mjs","anchor":"source:'flow_reply',content"},
-        {"role":"card","path":"app/chat.js","anchor":"x.result.source==='flow_reply'"},
-        {"role":"saved_reply_test","path":"scripts/company-profile-runtime.test.mjs","anchor":"saved work exposes only the successful flow reply body"},
-        {"role": "render", "path": "app/chat.js", "anchor": "function siyReplyHtml(text)"},
-        {"role": "verified_run", "path": "app/chat.js", "anchor": "var verifiedRun=kind==='tool_result'"},
-        {"role": "proof_scope", "path": "app/chat.js", "anchor": "r.work_id===data.work_id"},
-        {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "older proof in the same conversation is not presented as the latest request result"},
-        {"role": "ledger_test", "path": "scripts/chat-request-ledger-runtime.test.mjs", "anchor": "a final model reply cannot replace a run already reconciled for the request"}
+        {
+          "role": "saved_reply",
+          "path": "lib/company-profile.mjs",
+          "anchor": "source:'flow_reply',content"
+        },
+        {
+          "role": "card",
+          "path": "app/chat.js",
+          "anchor": "x.result.source==='flow_reply'"
+        },
+        {
+          "role": "saved_reply_test",
+          "path": "scripts/company-profile-runtime.test.mjs",
+          "anchor": "saved work exposes only the successful flow reply body"
+        },
+        {
+          "role": "render",
+          "path": "app/chat.js",
+          "anchor": "function siyReplyHtml(text)"
+        },
+        {
+          "role": "verified_run",
+          "path": "app/chat.js",
+          "anchor": "var verifiedRun=kind==='tool_result'"
+        },
+        {
+          "role": "proof_scope",
+          "path": "app/chat.js",
+          "anchor": "r.work_id===data.work_id"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "older proof in the same conversation is not presented as the latest request result"
+        },
+        {
+          "role": "ledger_test",
+          "path": "scripts/chat-request-ledger-runtime.test.mjs",
+          "anchor": "a final model reply cannot replace a run already reconciled for the request"
+        },
+        {
+          "role": "employee_history",
+          "path": "app/chat.js",
+          "anchor": "function siyEmployeeHistoryHtml(e)"
+        },
+        {
+          "role": "history_style",
+          "path": "app/chat.html",
+          "anchor": ".employee-saved-results{margin:"
+        },
+        {
+          "role": "history_isolation_test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "employee saved results contain only its own records and bounded escaped historical reply"
+        },
+        {
+          "role": "history_focus_test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "employee result disclosure keeps per-context open state and focus during an update"
+        }
       ]
     },
     {
