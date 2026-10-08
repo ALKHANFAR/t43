@@ -133,7 +133,8 @@ test('suggestion and employee preparation failures remain visible and retryable'
   assert.equal(w.document.querySelector('#next').disabled,false);
   w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
   assert.equal(w.document.querySelector('#stepLbl').textContent,'3 من 4');
-  w.document.querySelector('[data-suggestion="marketing"]').click();
+  w.document.querySelector('[data-suggestion="marketing"]').focus();w.document.querySelector('[data-suggestion="marketing"]').click();
+  assert.equal(w.document.activeElement.dataset.suggestion,'marketing');
   assert.match(w.document.querySelector('#next').textContent,/احفظ مسودة ريم/);
   w.document.querySelector('#next').click();assert.match(w.document.querySelector('#live').textContent,/نحفظ المسودة/);await new Promise(resolve=>setImmediate(resolve));
   assert.equal(w.document.querySelector('#stepLbl').textContent,'3 من 4');
@@ -228,5 +229,43 @@ test('suggestions omit uncalibrated scores and show the supplied reason safely',
     const panel=w.document.querySelector('#plan');assert.equal(panel.querySelector('.fit,.rank'),null);assert.doesNotMatch(panel.textContent,/95%|أفضل بداية/);
     w.document.querySelector('[data-suggestion="sales"]').click();assert.ok(panel.textContent.includes(suggestion.reason));assert.equal(panel.querySelector('script'),null);
     assert.match(w.document.querySelector('#next').textContent,/احفظ مسودة سعد/);
+  }finally{w.close();}
+});
+
+test('first task examples fill an editable goal without executing or losing input on an empty recommendation',async()=>{
+  const [html,js]=await Promise.all([readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),readFile(new URL('../app/onboard.js',import.meta.url),'utf8')]);
+  for(const locale of ['ar','en']){
+    const w=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html?lang='+locale,runScripts:'outside-only'}).window,calls=[];w.scrollTo=()=>{};
+    w.fetch=async(_url,options)=>{const input=JSON.parse(options.body);calls.push(input);return {ok:true,json:async()=>input.op==='check_company_enrichment'?{ok:true,status:'ready',profile:{companyName:'Example'}}:{ok:true,suggestions:[]}};};
+    try{
+      w.eval(js);await new Promise(resolve=>setImmediate(resolve));const before=calls.length;
+      w.document.querySelector('[data-task-ar]').click();const goal=w.document.querySelector('#brief').value;
+      assert.ok(goal.length>20);assert.equal(calls.length,before);assert.equal(w.document.activeElement.id,'brief');
+      w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+      assert.equal(w.document.querySelector('#stepLbl').textContent,locale==='en'?'2 of 4':'2 من 4');assert.equal(w.document.querySelector('#brief').value,goal);
+      assert.equal(w.document.querySelector('#stepError').hidden,false);assert.equal(w.document.querySelector('#next').disabled,false);assert.equal(calls.at(-1).goal,goal);
+    }finally{w.close();}
+  }
+});
+
+test('recommendation waits preserve goal and announce busy without permitting contradictory edits',async()=>{
+  const [html,js]=await Promise.all([readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),readFile(new URL('../app/onboard.js',import.meta.url),'utf8')]);
+  const w=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html',runScripts:'outside-only'}).window;w.scrollTo=()=>{};let finish;
+  w.fetch=async(_url,options)=>JSON.parse(options.body).op==='check_company_enrichment'?{ok:true,json:async()=>({ok:true,status:'ready',profile:{companyName:'Example'}})}:new Promise(resolve=>{finish=resolve;});
+  try{
+    w.eval(js);await new Promise(resolve=>setImmediate(resolve));w.document.querySelector('#brief').value='احتفظ بهذه المهمة';w.document.querySelector('#next').click();
+    assert.equal(w.document.querySelector('#brief').disabled,true);assert.equal(w.document.querySelector('#back').disabled,true);assert.equal(w.document.querySelector('#next').getAttribute('aria-busy'),'true');assert.ok([...w.document.querySelectorAll('[data-task-ar]')].every(button=>button.disabled));
+    finish({ok:false,json:async()=>({ok:false,message:'حاول مجددا'})});await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(w.document.querySelector('#brief').disabled,false);assert.equal(w.document.querySelector('#brief').value,'احتفظ بهذه المهمة');assert.equal(w.document.querySelector('#next').getAttribute('aria-busy'),'false');assert.equal(w.document.querySelector('#back').disabled,false);
+  }finally{w.close();}
+});
+
+test('typing company details does not scroll the page',async()=>{
+  const [html,js]=await Promise.all([readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),readFile(new URL('../app/onboard.js',import.meta.url),'utf8')]);
+  const w=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html',runScripts:'outside-only'}).window;let scrolls=0;w.scrollTo=()=>{scrolls++;};w.fetch=async()=>{throw new Error('no profile');};
+  try{
+    w.eval(js);await new Promise(resolve=>setImmediate(resolve));w.document.querySelector('#noSite').click();const before=scrolls;
+    for(let i=0;i<3;i++){w.document.querySelector('#co').value+='a';w.document.querySelector('#co').dispatchEvent(new w.Event('input'));}
+    assert.equal(scrolls,before);
   }finally{w.close();}
 });
