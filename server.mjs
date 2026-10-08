@@ -13,7 +13,7 @@ import {createFirecrawlClient,FirecrawlError} from './lib/firecrawl.mjs';
 import {createCompanyProfileService,CompanyProfileError} from './lib/company-profile.mjs';
 import {createAccountAuthService,AccountAuthError} from './lib/account-auth.mjs';
 import {createMailer,MailerError} from './lib/mailer.mjs';
-import {builtFlowResult,conversationMemory,createdTableReadback,draftOnlyIntent,doNotRunIntent,flowName,hasActiveFlowConnections,publishedAIInstructionSteps} from './lib/chat-intelligence.mjs';
+import {builtFlowResult,conversationMemory,createdTableReadback,draftOnlyIntent,doNotRunIntent,flowName,hasActiveFlowConnections,publishedAIInstructionSteps,publishedFlowWorkSteps} from './lib/chat-intelligence.mjs';
 import {completedWithoutExecution,failedChatExecution,nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget} from './lib/chat-outcome.mjs';
 import {assertSchemaReady} from './lib/schema-ready.mjs';
 import {toolIcon} from './lib/tool-icons.mjs';
@@ -762,16 +762,17 @@ async function publicChat(req,res){
       if(input.read_published===true){
         const profiles=await companyProfiles(),saved=await profiles.findEmployee(companyId,input.employee_id);
         if(!saved)throw new CompanyProfileError('employee_not_found','الموظف غير موجود في شركتك.',404);
-        const published={flow_id:saved.activepieces_flow_id||null,published_version_id:null,flow_status:null,read_status:'not_published',steps:[]};
+        const published={flow_id:saved.activepieces_flow_id||null,published_version_id:null,flow_status:null,read_status:'not_published',steps:[],work_steps:[],work_structure_complete:false};
         if(saved.activepieces_flow_id)try{
           const projects=await tenantProjects(),current=(await projects.ownedFlow(companyId,saved.activepieces_flow_id)).flow;
           published.flow_status=current.status;published.published_version_id=current.publishedVersionId||null;
           if(current.publishedVersionId){
             const snapshot=(await projects.ownedFlow(companyId,saved.activepieces_flow_id,current.publishedVersionId)).flow;
             if(snapshot.publishedVersionId!==current.publishedVersionId)throw new TenantProjectError('flow_version_mismatch','تغيّرت نسخة طريقة العمل المنشورة أثناء القراءة.',409);
-            published.flow_status=snapshot.status;published.steps=publishedAIInstructionSteps(snapshot.version);published.read_status='verified';
+            const structure=publishedFlowWorkSteps(snapshot.version);
+            published.flow_status=snapshot.status;published.steps=publishedAIInstructionSteps(snapshot.version);published.work_steps=structure.steps;published.work_structure_complete=structure.complete;published.read_status='verified';
           }
-        }catch(error){published.read_status='unavailable';console.warn('published employee instructions unavailable',error?.code||error?.name||'unknown_error');}
+        }catch(error){published.read_status='unavailable';published.steps=[];published.work_steps=[];published.work_structure_complete=false;console.warn('published employee instructions unavailable',error?.code||error?.name||'unknown_error');}
         return json(res,200,{ok:true,published_instructions:published},sessionHeaders);
       }
       const instructions=typeof input.instructions==='string'?input.instructions.trim():'';

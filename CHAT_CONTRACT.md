@@ -82,6 +82,8 @@ To apply saved instructions to ongoing work, use the existing message route with
 
 The editable saved-context panel is conversation context. Opening instructions requests `employee_instructions` with `read_published:true`; the separate read-only `published_instructions` section reads the owned exact published Flow version. The two reads must agree on the published pointer; a publish race, wrong ownership or provider failure returns `read_status:unavailable` without prompts. No published version returns `not_published`. `verified` means version readback only, not activation, execution or synchronization.
 
+The same verified published response adds `work_steps` and `work_structure_complete`. These describe the native Flow graph, including non-AI actions, branches and loops. Step metadata is allowlisted; inputs, auth, conditions, code and sample data are not returned. Missing or unavailable publication returns an empty structure with completeness false. Unknown nodes or traversal limits make completeness false. A graph read does not prove that its steps ran or that an external result occurred.
+
 The projection preserves literal AI `askAi` and `run_agent` prompt inputs, including variable references, without returning full settings/auth. A saved Agent task input is marked separately and `agent_instructions_unverified:true` prevents claiming its saved Agent instructions were read. Unknown AI actions have no projected prompt. UI reads lazily on each opening, preserves editable conversation text and discards stale employee/panel responses. Read mode writes no instructions, Flow or Agent and never tests/publishes.
 
 
