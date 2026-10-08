@@ -515,9 +515,9 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           if(doNotRun&&(['ap_test_flow','ap_test_step','ap_retry_run','ap_run_action'].includes(name)||name.endsWith('_mcp')))throw new TenantProjectError('flow_run_forbidden','طلب المستخدم عدم تشغيل الفلو أو اختبار تنفيذه.',403);
           if(['ap_build_flow','ap_create_flow'].includes(name)&&flowId)throw new TenantProjectError('employee_flow_conflict','بُني Flow في هذا الطلب. اقرأه وعدّل خطواته بدل إنشاء نسخة ثانية.',409);
           if(name===flowToolName&&flowToolAttempted)throw new TenantProjectError('employee_run_already_dispatched','أُرسل تشغيل الموظف لهذا الطلب. تحقّق من نتيجته دون إعادة تشغيله.',409);
-          const memoryEffect=!readOnly(name)&&cumulativeMemory.handles(name,args);
-          if(name===flowToolName&&toolReceipts.some(receipt=>receipt.effect_attempted&&receipt.outcome!=='memory_saved')||flowToolAttempted&&!readOnly(name)&&!memoryEffect)throw new TenantProjectError('employee_run_mixed_effects','تشغيل الموظف يحتاج طلبًا مستقلًا عن تعديل طريقة عمله. يمكنك قراءة نتيجة التشغيل الحالي.',409);
           args=scopeMcpTool(available.find(tool=>tool.name===name),args,employee,flowToolName);
+          // Project actions can surround a Flow run; keep changes/tests of that Flow separate.
+          if(name===flowToolName&&toolReceipts.some(receipt=>receipt.effect_attempted&&receipt.flow_id===employee.activepieces_flow_id)||flowToolAttempted&&!readOnly(name)&&args.flowId===employee?.activepieces_flow_id&&employee?.activepieces_flow_id)throw new TenantProjectError('employee_run_mixed_effects','تعديل طريقة عمل الموظف وتشغيلها يحتاجان طلبين منفصلين. يمكنك إكمال إجراءات المشروع وقراءة نتيجة التشغيل الحالي.',409);
           if(name===flowToolName)args=bindEmployeeFlowContext(available.find(tool=>tool.name===name),args,{request:String(message||''),context:{company:context.company,selectedEmployee:context.selectedEmployee,settings:context.settings,knowledge:context.knowledge,cumulativeMemory:context.cumulativeMemory},memory,history:executionHistory});
           if(!readOnly(name))await beforeEffect?.({name,args});
           const employeeFlow=employee?.activepieces_flow_id||flowId||draftEmployee?.activepieces_flow_id;

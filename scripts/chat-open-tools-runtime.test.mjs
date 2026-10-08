@@ -789,6 +789,20 @@ test('native dispatch blocks later effects in the same batch or next turn while 
   }
 });
 
+test('employee can combine a project action and its native flow in either order within one request',async()=>{
+  for(const actionFirst of [true,false])for(const sameBatch of [true,false]){
+    const action=['ap_run_action',{pieceName:'gmail',actionName:'read_email'}],native=[flowToolName,{}];
+    const ordered=actionFirst?[action,native]:[native,action];
+    const {run,log}=setup({published:true,flowStatus:'ENABLED',toolResults:{ap_run_action:{content:[{type:'text',text:`✅ Read email completed (run ${'A'.repeat(21)})\n\n{"lead_id":"lead-1"}`}]},[flowToolName]:executionResult(),ap_get_run:productionRun()},script:[...(sameBatch?[use(...ordered)]:ordered.map(call=>use(call))),say('تابعت رحلة العمل.')]});
+    const answer=await run({message:'اقرأ بيانات العميل ونفذ طريقة العمل وأكمل المطلوب.',employee:runningEmployee});
+    assert.deepEqual(log.tools.filter(([name])=>name!=='ap_get_run').map(([name])=>name),ordered.map(([name])=>name));
+    assert.equal(log.runs.length,1);
+    assert.equal(answer.toolReceipts.find(r=>r.name==='ap_run_action').outcome,'action_completed');
+    assert.equal(answer.toolReceipts.find(r=>r.name===flowToolName).outcome,'flow_completed');
+    assert.equal(completedToolActions(answer).work_status,'succeeded');
+  }
+});
+
 test('native employee execution receipt reads its exact production run and saves proof before the next model call',async()=>{
   const {run,log}=setup({published:true,flowStatus:'ENABLED',toolResults:{[flowToolName]:executionResult(),ap_get_run:productionRun()},script:[use([flowToolName,{}]),request=>{
     const result=JSON.parse(toolMessages(request).at(-1));

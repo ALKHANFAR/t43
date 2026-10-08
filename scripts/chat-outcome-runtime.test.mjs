@@ -3,6 +3,13 @@ import assert from 'node:assert/strict';
 import {completedWithoutExecution,failedChatExecution,nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget} from '../lib/chat-outcome.mjs';
 
 const native=(output,note='')=>({content:[{type:'text',text:`✅ Gmail completed (run R12345678901234567890)${note}.\n\n${JSON.stringify(output)}`}]});
+test('mixed action and flow results succeed only when every dispatch has its own confirmed receipt',()=>{
+  const action={name:'ap_run_action',status:'returned',outcome:'action_completed',run_id:'A'.repeat(21),effect_attempted:true};
+  const flow={name:'employee_mcp',status:'returned',outcome:'flow_completed',run_id:'R'.repeat(21),effect_attempted:true};
+  const assess=receipts=>completedToolActions({flowToolAttempted:true,effects:['ap_run_action','employee_mcp'],toolReceipts:receipts}).work_status;
+  assert.equal(assess([action,flow]),'succeeded');
+  for(const receipts of [[action],[action,{...flow,outcome:'unverified'}],[{...action,status:'error'},flow],[{...action,run_id:''},flow],[flow,action]])assert.equal(assess(receipts),'unknown');
+});
 test('native ActionRun completion is distinct from provider or FlowRun proof',()=>{
   const receipt=nativeActionReceipt('ap_run_action',native({messages:[{subject:'private subject'}]}));
   assert.deepEqual(receipt,{name:'ap_run_action',status:'returned',run_id:'R12345678901234567890',outcome:'action_completed'});
