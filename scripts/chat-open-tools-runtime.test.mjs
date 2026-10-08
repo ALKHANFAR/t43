@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent} from '../lib/chat-intelligence.mjs';
-import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool} from '../lib/mcp-flow-scope.mjs';
+import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext} from '../lib/mcp-flow-scope.mjs';
 import {TenantProjectError} from '../lib/tenant-projects.mjs';
 import {nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget,failedChatExecution} from '../lib/chat-outcome.mjs';
 import {CompanyProfileError} from '../lib/company-profile.mjs';
@@ -42,11 +42,11 @@ const catalog=[
 const say=content=>({content});
 const use=(...calls)=>({content:'',tool_calls:calls.map(([name,args],index)=>({id:`call_${name}_${index}`,function:{name,arguments:typeof args==='string'?args:JSON.stringify(['ap_build_flow','ap_create_flow'].includes(name)?{_siyadah_work_mode:'standing',...(args||{})}:args||{})}}))});
 
-function setup({script,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false,connections=[],flowReadOverride=null}={}){
+function setup({script,flowInputSchema=null,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false,connections=[],flowReadOverride=null}={}){
   const log={model:[],tools:[],effects:0,states:[],owned:[],runs:[]};
   let stateAttempts=0,step=0,status=flowStatus,publishedVersionId=published?'v1':null,draftVersionId='v1',versionState=published?'LOCKED':'DRAFT',sampleData,updated='before',updatedBy,taskInput='{{trigger.task}}';
   const mcp={call:async(_company,method,params)=>{
-    if(method==='tools/list')return {tools:catalog};
+    if(method==='tools/list')return {tools:catalog.map(tool=>tool.name===flowToolName&&flowInputSchema?{...tool,inputSchema:flowInputSchema}:tool)};
     if(method==='initialize')return {instructions:'## Activepieces MCP Server\n1. Discover 2. Schema 3. Build 4. Validate 5. Publish'};
     log.tools.push([params.name,params.arguments]);
     if(Object.hasOwn(toolResults,params.name)){const value=toolResults[params.name];return typeof value==='function'?value(params.arguments):value;}
@@ -60,7 +60,7 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false,edit
   const ctx={
     console:{error:()=>{},info:()=>{},warn:()=>{}},process:{env:{DEEPSEEK_API_KEY:'test-key'}},
     AbortController,setTimeout,clearTimeout,Date,JSON,String,Array,Object,Math,
-    TenantProjectError,CompanyProfileError,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,selectKnowledgeContext,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,
+    TenantProjectError,CompanyProfileError,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,selectKnowledgeContext,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext,
     fetch:async(url,options)=>{
       const request=JSON.parse(options.body);log.model.push(request);
       const message=script[Math.min(step++,script.length-1)];
@@ -741,5 +741,38 @@ test('both chats bound the company knowledge context without truncating individu
     const h=setup({script:[say('رد مباشر.')]});await h.run({employee,knowledge:{facts}});
     const context=JSON.parse(h.log.model[0].messages[0].content.split('سياق العمل الحالي بصيغة JSON:\n')[1].split('\n')[0]);
     assert.ok(JSON.stringify(context.knowledge.facts).length<=6000);assert.equal(context.knowledge.facts[0].value.length,1500);assert.equal(h.log.effects,0);
+  }
+});
+
+test('a declared native context field receives saved knowledge and instructions without assuming a task field',async()=>{
+  for(const [field,type,omit] of [['company_context','object',false],['بيانات_سيادة','string',false],['other_context','object',true],['request_context','string',true]]){
+  const saved={...runningEmployee,prompt:'راجع أسعار الشركة قبل تقديم عرض.',prompt_version:8};
+  const flowInputSchema={type:'object',properties:{customer:{type:'string'},[field]:{type,description:'Server supplied [siyadah:context]'}},required:['customer',field]};
+  const {run,log}=setup({flowInputSchema,published:true,flowStatus:'ENABLED',toolResults:{[flowToolName]:executionResult(),ap_get_run:productionRun()},script:[use([flowToolName,{customer:'خالد',...(omit?{}:{[field]:type==='string'?'forged':{company:'foreign'}})}]),say('وصلت النتيجة.')]});
+  await run({employee:saved,message:'جهز عرض الخدمة الحالية.',company:{name:'شركة الاختبار'},settings:{language:'ar'},knowledge:{facts:[{topic:'الأسعار',value:'الخدمة بـ١٢٠٠ ريال',certainty:'confirmed'}]},history:[{role:'user',content:'أريد العرض بالعربية.'}]});
+  const args=log.tools.find(([name])=>name===flowToolName)[1],sent=type==='string'?JSON.parse(args[field]):args[field];
+  assert.equal(args.customer,'خالد');assert.equal(Object.hasOwn(args,'task'),false);
+  assert.equal(sent.request,'جهز عرض الخدمة الحالية.');
+  assert.equal(sent.context.company.name,'شركة الاختبار');
+  assert.equal(sent.context.selectedEmployee.id,saved.id);
+  assert.equal(sent.context.selectedEmployee.instructions,saved.prompt);
+  assert.equal(sent.context.selectedEmployee.instructionVersion,8);
+  assert.equal(sent.context.knowledge.facts[0].value,'الخدمة بـ١٢٠٠ ريال');
+  assert.equal(sent.context.settings.language,'ar');
+  assert.equal(sent.history[0].content,'أريد العرض بالعربية.');
+  assert.match(sent.memory,/أريد العرض بالعربية/);
+  assert.equal(JSON.stringify(sent).includes('test-key'),false);
+  assert.equal(log.tools.filter(([name])=>name===flowToolName).length,1);
+  }
+});
+
+test('undeclared context leaves native inputs unchanged and invalid context types never dispatch',async()=>{
+  for(const marked of [false,true]){
+    const flowInputSchema={type:'object',properties:{amount:{type:'number',description:marked?'[siyadah:context]':'Business amount'}}};
+    const {run,log}=setup({flowInputSchema,published:true,flowStatus:'ENABLED',script:[use([flowToolName,{amount:1200}]),say('انتهى الطلب.')]});
+    const answer=await run({employee:runningEmployee});
+    if(marked){assert.deepEqual(log.tools,[]);assert.equal(log.effects,0);assert.match(toolMessages(log.model.at(-1))[0],/employee_context_schema/);}
+    else assert.deepEqual(log.tools,[[flowToolName,{amount:1200}]]);
+    assert.equal(answer.toolReceipts.length,1);
   }
 });
