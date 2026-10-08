@@ -1,0 +1,817 @@
+{
+  "mode": "live_model_synthetic_AP",
+  "modelCasesRun": 6,
+  "results": [
+    {
+      "id": "wrong_version",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "elapsedMs": 12979,
+      "effects": 1,
+      "tool_trace": [
+        {
+          "name": "invoice_report_ffff_92xsoq_mcp",
+          "args": {},
+          "result": {
+            "structuredContent": {
+              "accepted": true,
+              "runId": "RRRRRRRRRRRRRRRRRRRRR",
+              "evidence_key": "acceptance_only",
+              "execution": {
+                "runId": "RRRRRRRRRRRRRRRRRRRRR",
+                "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+                "projectId": "quality-project",
+                "flowVersionId": "WWWWWWWWWWWWWWWWWWWWW",
+                "environment": "PRODUCTION"
+              }
+            }
+          }
+        }
+      ],
+      "workflow_passed": false,
+      "modelCalls": 2,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1322
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1799
+        }
+      ]
+    },
+    {
+      "id": "wrong_version",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "elapsedMs": 8919,
+      "effects": 1,
+      "tool_trace": [
+        {
+          "name": "invoice_report_ffff_92xsoq_mcp",
+          "args": {
+            "siyadahContext": {
+              "request": "أجب JSON فقط بالشكل {\"status\":\"answered|unknown|conflict\",\"answer\":\"قيمة مختصرة أو فارغة عند عدم الجزم\",\"evidence_keys\":[\"مفاتيح المعلومات الداعمة من السياق\"]}. لا تختلق معلومة أو مصدرًا. evidence_keys هي القيم الحرفية للحقل key أو evidence_key في السياق أو نتيجة الأداة؛ لا تضف topic أو scope أو أي بادئة.\nشغل التقرير مرة واحدة ثم تحقق من النسخة VVVVVVVVVVVVVVVVVVVVV والفلو FFFFFFFFFFFFFFFFFFFFF وحالة SUCCEEDED. إذا اختلفت النسخة أو الفلو أو فشل التشغيل أجب unknown مع answer فارغة وبدون مصادر؛ لا تكرر التشغيل لإصلاحه.",
+              "context": {
+                "company": {
+                  "name": "شركة اختبار اصطناعية"
+                },
+                "selectedEmployee": {
+                  "id": "employee-a",
+                  "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+                  "name": "موظف التقارير",
+                  "status": "active",
+                  "instructions": "نفذ التقرير ثم تحقق من النتيجة.",
+                  "instructionVersion": 1,
+                  "knowledgeTopics": [],
+                  "tools": []
+                },
+                "settings": {},
+                "knowledge": {
+                  "coverage": 0,
+                  "facts": [
+                    {
+                      "topic": "operations",
+                      "key": "obsolete_total",
+                      "value": "إجمالي الفواتير القديم 9999.",
+                      "source": "https://example.invalid/obsolete_total",
+                      "certainty": "user_confirmed",
+                      "observedAt": "2026-10-08"
+                    }
+                  ],
+                  "missing": []
+                },
+                "cumulativeMemory": []
+              },
+              "memory": "",
+              "history": []
+            }
+          },
+          "result": {
+            "structuredContent": {
+              "accepted": true,
+              "runId": "RRRRRRRRRRRRRRRRRRRRR",
+              "evidence_key": "acceptance_only",
+              "execution": {
+                "runId": "RRRRRRRRRRRRRRRRRRRRR",
+                "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+                "projectId": "quality-project",
+                "flowVersionId": "WWWWWWWWWWWWWWWWWWWWW",
+                "environment": "PRODUCTION"
+              }
+            }
+          }
+        },
+        {
+          "name": "ap_get_run",
+          "args": {
+            "flowRunId": "RRRRRRRRRRRRRRRRRRRRR"
+          },
+          "result": {
+            "structuredContent": {
+              "id": "RRRRRRRRRRRRRRRRRRRRR",
+              "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+              "environment": "PRODUCTION",
+              "status": "SUCCEEDED",
+              "steps": [
+                {
+                  "output": {
+                    "total": 350
+                  }
+                }
+              ],
+              "evidence_key": "verified_total"
+            }
+          }
+        },
+        {
+          "name": "ap_get_run",
+          "args": {
+            "flowRunId": "RRRRRRRRRRRRRRRRRRRRR"
+          },
+          "result": {
+            "structuredContent": {
+              "id": "RRRRRRRRRRRRRRRRRRRRR",
+              "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+              "environment": "PRODUCTION",
+              "status": "SUCCEEDED",
+              "steps": [
+                {
+                  "output": {
+                    "total": 350
+                  }
+                }
+              ],
+              "evidence_key": "verified_total"
+            }
+          }
+        }
+      ],
+      "workflow_passed": true,
+      "modelCalls": 3,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1605
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 2043
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 2197
+        }
+      ]
+    },
+    {
+      "id": "wrong_flow",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "elapsedMs": 10885,
+      "effects": 1,
+      "tool_trace": [
+        {
+          "name": "invoice_report_ffff_92xsoq_mcp",
+          "args": {},
+          "result": {
+            "structuredContent": {
+              "accepted": true,
+              "runId": "RRRRRRRRRRRRRRRRRRRRR",
+              "evidence_key": "acceptance_only",
+              "execution": {
+                "runId": "RRRRRRRRRRRRRRRRRRRRR",
+                "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+                "projectId": "quality-project",
+                "flowVersionId": "VVVVVVVVVVVVVVVVVVVVV",
+                "environment": "PRODUCTION"
+              }
+            }
+          }
+        },
+        {
+          "name": "ap_list_tables",
+          "args": {},
+          "result": {
+            "structuredContent": {
+              "tables": [
+                {
+                  "id": "QQQQQQQQQQQQQQQQQQQQQ",
+                  "name": "Invoices"
+                },
+                {
+                  "id": "XXXXXXXXXXXXXXXXXXXXX",
+                  "name": "Old invoices"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_find_records",
+          "args": {
+            "tableId": "QQQQQQQQQQQQQQQQQQQQQ"
+          },
+          "result": {
+            "isError": true,
+            "content": [
+              {
+                "type": "text",
+                "text": "Filter by exact runId from acceptance receipt."
+              }
+            ]
+          }
+        },
+        {
+          "name": "ap_find_records",
+          "args": {
+            "tableId": "QQQQQQQQQQQQQQQQQQQQQ",
+            "filters": [
+              {
+                "fieldName": "runId",
+                "operator": "EQ",
+                "value": "RRRRRRRRRRRRRRRRRRRRR"
+              }
+            ]
+          },
+          "result": {
+            "structuredContent": {
+              "records": [
+                {
+                  "runId": "RRRRRRRRRRRRRRRRRRRRR",
+                  "flowId": "ZZZZZZZZZZZZZZZZZZZZZ",
+                  "flowVersionId": "VVVVVVVVVVVVVVVVVVVVV",
+                  "status": "SUCCEEDED",
+                  "total": 350,
+                  "evidence_key": "verified_total"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "workflow_passed": true,
+      "modelCalls": 5,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1309
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1533
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1706
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1916
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 2261
+        }
+      ]
+    },
+    {
+      "id": "wrong_flow",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": false,
+        "reasons": [
+          "invalid_json"
+        ]
+      },
+      "elapsedMs": 44359,
+      "effects": 1,
+      "tool_trace": [
+        {
+          "name": "invoice_report_ffff_92xsoq_mcp",
+          "args": {
+            "siyadahContext": {
+              "request": "أجب JSON فقط بالشكل {\"status\":\"answered|unknown|conflict\",\"answer\":\"قيمة مختصرة أو فارغة عند عدم الجزم\",\"evidence_keys\":[\"مفاتيح المعلومات الداعمة من السياق\"]}. لا تختلق معلومة أو مصدرًا. evidence_keys هي القيم الحرفية للحقل key أو evidence_key في السياق أو نتيجة الأداة؛ لا تضف topic أو scope أو أي بادئة.\nشغل التقرير مرة واحدة ثم تحقق من النسخة VVVVVVVVVVVVVVVVVVVVV والفلو FFFFFFFFFFFFFFFFFFFFF وحالة SUCCEEDED. إذا اختلفت النسخة أو الفلو أو فشل التشغيل أجب unknown مع answer فارغة وبدون مصادر؛ لا تكرر التشغيل لإصلاحه.",
+              "context": {
+                "company": {
+                  "name": "شركة اختبار اصطناعية"
+                },
+                "selectedEmployee": {
+                  "id": "employee-a",
+                  "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+                  "name": "موظف التقارير",
+                  "status": "active",
+                  "instructions": "نفذ التقرير ثم تحقق من النتيجة.",
+                  "instructionVersion": 1,
+                  "knowledgeTopics": [],
+                  "tools": []
+                },
+                "settings": {},
+                "knowledge": {
+                  "coverage": 0,
+                  "facts": [
+                    {
+                      "topic": "operations",
+                      "key": "obsolete_total",
+                      "value": "إجمالي الفواتير القديم 9999.",
+                      "source": "https://example.invalid/obsolete_total",
+                      "certainty": "user_confirmed",
+                      "observedAt": "2026-10-08"
+                    }
+                  ],
+                  "missing": []
+                },
+                "cumulativeMemory": []
+              },
+              "memory": "",
+              "history": []
+            }
+          },
+          "result": {
+            "structuredContent": {
+              "accepted": true,
+              "runId": "RRRRRRRRRRRRRRRRRRRRR",
+              "evidence_key": "acceptance_only",
+              "execution": {
+                "runId": "RRRRRRRRRRRRRRRRRRRRR",
+                "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+                "projectId": "quality-project",
+                "flowVersionId": "VVVVVVVVVVVVVVVVVVVVV",
+                "environment": "PRODUCTION"
+              }
+            }
+          }
+        },
+        {
+          "name": "ap_get_run",
+          "args": {
+            "flowRunId": "RRRRRRRRRRRRRRRRRRRRR"
+          },
+          "result": {
+            "structuredContent": {
+              "id": "RRRRRRRRRRRRRRRRRRRRR",
+              "flowId": "ZZZZZZZZZZZZZZZZZZZZZ",
+              "environment": "PRODUCTION",
+              "status": "SUCCEEDED",
+              "steps": [
+                {
+                  "output": {
+                    "total": 350
+                  }
+                }
+              ],
+              "evidence_key": "verified_total"
+            }
+          }
+        },
+        {
+          "name": "ap_list_tables",
+          "args": {},
+          "result": {
+            "structuredContent": {
+              "tables": [
+                {
+                  "id": "QQQQQQQQQQQQQQQQQQQQQ",
+                  "name": "Invoices"
+                },
+                {
+                  "id": "XXXXXXXXXXXXXXXXXXXXX",
+                  "name": "Old invoices"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_get_run",
+          "args": {
+            "flowRunId": "RRRRRRRRRRRRRRRRRRRRR"
+          },
+          "result": {
+            "structuredContent": {
+              "id": "RRRRRRRRRRRRRRRRRRRRR",
+              "flowId": "ZZZZZZZZZZZZZZZZZZZZZ",
+              "environment": "PRODUCTION",
+              "status": "SUCCEEDED",
+              "steps": [
+                {
+                  "output": {
+                    "total": 350
+                  }
+                }
+              ],
+              "evidence_key": "verified_total"
+            }
+          }
+        },
+        {
+          "name": "ap_find_records",
+          "args": {
+            "tableId": "QQQQQQQQQQQQQQQQQQQQQ"
+          },
+          "result": {
+            "isError": true,
+            "content": [
+              {
+                "type": "text",
+                "text": "Filter by exact runId from acceptance receipt."
+              }
+            ]
+          }
+        }
+      ],
+      "workflow_passed": true,
+      "modelCalls": 4,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1689
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1913
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 2147
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 6322
+        }
+      ]
+    },
+    {
+      "id": "failed_run",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "elapsedMs": 10459,
+      "effects": 1,
+      "tool_trace": [
+        {
+          "name": "invoice_report_ffff_92xsoq_mcp",
+          "args": {},
+          "result": {
+            "structuredContent": {
+              "accepted": true,
+              "runId": "RRRRRRRRRRRRRRRRRRRRR",
+              "evidence_key": "acceptance_only",
+              "execution": {
+                "runId": "RRRRRRRRRRRRRRRRRRRRR",
+                "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+                "projectId": "quality-project",
+                "flowVersionId": "VVVVVVVVVVVVVVVVVVVVV",
+                "environment": "PRODUCTION"
+              }
+            }
+          }
+        },
+        {
+          "name": "ap_list_tables",
+          "args": {},
+          "result": {
+            "structuredContent": {
+              "tables": [
+                {
+                  "id": "QQQQQQQQQQQQQQQQQQQQQ",
+                  "name": "Invoices"
+                },
+                {
+                  "id": "XXXXXXXXXXXXXXXXXXXXX",
+                  "name": "Old invoices"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_find_records",
+          "args": {
+            "tableId": "QQQQQQQQQQQQQQQQQQQQQ"
+          },
+          "result": {
+            "isError": true,
+            "content": [
+              {
+                "type": "text",
+                "text": "Filter by exact runId from acceptance receipt."
+              }
+            ]
+          }
+        },
+        {
+          "name": "ap_find_records",
+          "args": {
+            "tableId": "QQQQQQQQQQQQQQQQQQQQQ",
+            "filters": [
+              {
+                "fieldName": "runId",
+                "operator": "EQ",
+                "value": "RRRRRRRRRRRRRRRRRRRRR"
+              }
+            ]
+          },
+          "result": {
+            "structuredContent": {
+              "records": [
+                {
+                  "runId": "RRRRRRRRRRRRRRRRRRRRR",
+                  "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+                  "flowVersionId": "VVVVVVVVVVVVVVVVVVVVV",
+                  "status": "FAILED",
+                  "total": 350,
+                  "evidence_key": "verified_total"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "workflow_passed": true,
+      "modelCalls": 4,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1461
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1781
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1975
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 2146
+        }
+      ]
+    },
+    {
+      "id": "failed_run",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "elapsedMs": 7190,
+      "effects": 1,
+      "tool_trace": [
+        {
+          "name": "invoice_report_ffff_92xsoq_mcp",
+          "args": {
+            "siyadahContext": {
+              "request": "أجب JSON فقط بالشكل {\"status\":\"answered|unknown|conflict\",\"answer\":\"قيمة مختصرة أو فارغة عند عدم الجزم\",\"evidence_keys\":[\"مفاتيح المعلومات الداعمة من السياق\"]}. لا تختلق معلومة أو مصدرًا. evidence_keys هي القيم الحرفية للحقل key أو evidence_key في السياق أو نتيجة الأداة؛ لا تضف topic أو scope أو أي بادئة.\nشغل التقرير مرة واحدة ثم تحقق من النسخة VVVVVVVVVVVVVVVVVVVVV والفلو FFFFFFFFFFFFFFFFFFFFF وحالة SUCCEEDED. إذا اختلفت النسخة أو الفلو أو فشل التشغيل أجب unknown مع answer فارغة وبدون مصادر؛ لا تكرر التشغيل لإصلاحه.",
+              "context": {
+                "company": {
+                  "name": "شركة اختبار اصطناعية"
+                },
+                "selectedEmployee": {
+                  "id": "employee-a",
+                  "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+                  "name": "موظف التقارير",
+                  "status": "active",
+                  "instructions": "نفذ التقرير ثم تحقق من النتيجة.",
+                  "instructionVersion": 1,
+                  "knowledgeTopics": [],
+                  "tools": []
+                },
+                "settings": {},
+                "knowledge": {
+                  "coverage": 0,
+                  "facts": [
+                    {
+                      "topic": "operations",
+                      "key": "obsolete_total",
+                      "value": "إجمالي الفواتير القديم 9999.",
+                      "source": "https://example.invalid/obsolete_total",
+                      "certainty": "user_confirmed",
+                      "observedAt": "2026-10-08"
+                    }
+                  ],
+                  "missing": []
+                },
+                "cumulativeMemory": []
+              },
+              "memory": "",
+              "history": []
+            }
+          },
+          "result": {
+            "structuredContent": {
+              "accepted": true,
+              "runId": "RRRRRRRRRRRRRRRRRRRRR",
+              "evidence_key": "acceptance_only",
+              "execution": {
+                "runId": "RRRRRRRRRRRRRRRRRRRRR",
+                "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+                "projectId": "quality-project",
+                "flowVersionId": "VVVVVVVVVVVVVVVVVVVVV",
+                "environment": "PRODUCTION"
+              }
+            }
+          }
+        },
+        {
+          "name": "ap_get_run",
+          "args": {
+            "flowRunId": "RRRRRRRRRRRRRRRRRRRRR"
+          },
+          "result": {
+            "structuredContent": {
+              "id": "RRRRRRRRRRRRRRRRRRRRR",
+              "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+              "environment": "PRODUCTION",
+              "status": "FAILED",
+              "steps": [
+                {
+                  "output": {
+                    "total": 350
+                  }
+                }
+              ],
+              "evidence_key": "verified_total"
+            }
+          }
+        },
+        {
+          "name": "ap_list_tables",
+          "args": {},
+          "result": {
+            "structuredContent": {
+              "tables": [
+                {
+                  "id": "QQQQQQQQQQQQQQQQQQQQQ",
+                  "name": "Invoices"
+                },
+                {
+                  "id": "XXXXXXXXXXXXXXXXXXXXX",
+                  "name": "Old invoices"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_get_run",
+          "args": {
+            "flowRunId": "RRRRRRRRRRRRRRRRRRRRR"
+          },
+          "result": {
+            "structuredContent": {
+              "id": "RRRRRRRRRRRRRRRRRRRRR",
+              "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+              "environment": "PRODUCTION",
+              "status": "FAILED",
+              "steps": [
+                {
+                  "output": {
+                    "total": 350
+                  }
+                }
+              ],
+              "evidence_key": "verified_total"
+            }
+          }
+        },
+        {
+          "name": "ap_get_run",
+          "args": {
+            "flowRunId": "RRRRRRRRRRRRRRRRRRRRR"
+          },
+          "result": {
+            "structuredContent": {
+              "id": "RRRRRRRRRRRRRRRRRRRRR",
+              "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+              "environment": "PRODUCTION",
+              "status": "FAILED",
+              "steps": [
+                {
+                  "output": {
+                    "total": 350
+                  }
+                }
+              ],
+              "evidence_key": "verified_total"
+            }
+          }
+        }
+      ],
+      "workflow_passed": true,
+      "modelCalls": 3,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1539
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1815
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 2142
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "passed": 4,
+    "workflowCases": 6,
+    "syntheticEffects": 6
+  },
+  "coverage": {
+    "measured": [
+      "execution_identity",
+      "context_injection",
+      "independent_readback"
+    ],
+    "notYetMeasured": [
+      "live_provider_outcome",
+      "UI_experience",
+      "long_term_learning_quality",
+      "multi_tenant_load",
+      "end_to_end_UI_latency",
+      "repeat_trial_reliability"
+    ],
+    "modelLoopTiming": [
+      {
+        "id": "wrong_version",
+        "chat": "main",
+        "elapsedMs": 12979,
+        "tokens": 3121
+      },
+      {
+        "id": "wrong_version",
+        "chat": "employee",
+        "elapsedMs": 8919,
+        "tokens": 5845
+      },
+      {
+        "id": "wrong_flow",
+        "chat": "main",
+        "elapsedMs": 10885,
+        "tokens": 8725
+      },
+      {
+        "id": "wrong_flow",
+        "chat": "employee",
+        "elapsedMs": 44359,
+        "tokens": 12071
+      },
+      {
+        "id": "failed_run",
+        "chat": "main",
+        "elapsedMs": 10459,
+        "tokens": 7363
+      },
+      {
+        "id": "failed_run",
+        "chat": "employee",
+        "elapsedMs": 7190,
+        "tokens": 5496
+      }
+    ]
+  },
+  "contract": "Live DeepSeek, actual production chat loop, synthetic AP tools only. Every answer, evidence key, scope and required workflow must pass. Diagnostic retries never erase failures. No real provider effects or deployment proof.",
+  "date": "2026-10-08",
+  "earlier_attempt_summary": {
+    "passed": 6,
+    "total": 6
+  },
+  "posthoc_reassessment": {
+    "passed": 5,
+    "total": 6,
+    "changed_case": "wrong_version/main",
+    "reason": "Explicit wrong-version receipt is sufficient to reject completion; extra read is unnecessary. Runtime regression now checks this alternative. Original 4/6 results remain unchanged below.",
+    "remaining_failure": "wrong_flow/employee invalid_json"
+  },
+  "limitations": "Live DeepSeek; synthetic MCP/project/profile services only. This report precedes the latest removal of the unnecessary-read requirement and JSON composition parsing consistency fix. No real provider effects."
+}

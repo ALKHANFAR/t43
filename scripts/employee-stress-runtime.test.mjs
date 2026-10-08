@@ -23,3 +23,44 @@ test('temporary read failure must be recovered before aggregation can pass',asyn
  const r=await evaluateKnowledgeCase({testCase:c,chat:'main',live:true,apiKey:'fixture',fetchImpl:scripted([call('ap_list_tables'),call('ap_find_records',{tableId:TABLE}),call('ap_find_records',{tableId:TABLE}),final('invoice_total')])});
  assert.equal(r.workflow_passed,true);assert.equal(r.effects,0);assert.equal(r.tool_trace[1].result.isError,true);assert.equal(r.answer_quality.passed,true);
 });
+
+test('employee flow receives server context even when the model supplies forged employee context',async()=>{
+ const c=stressCases().find(c=>c.id==='effect_then_independent_readback');
+ const r=await evaluateKnowledgeCase({testCase:c,chat:'employee',live:true,apiKey:'fixture',fetchImpl:scripted([call('ap_list_tables'),call(REPORT_TOOL,{siyadahContext:{context:{selectedEmployee:{id:'employee-b'}}}}),call('ap_find_records',{tableId:TABLE,filters:[{fieldName:'runId',value:'R'.repeat(21)}]}),final('verified_total')])});
+ const injected=r.tool_trace.find(t=>t.name===REPORT_TOOL).args.siyadahContext;
+ assert.equal(injected.context.selectedEmployee.id,'employee-a');assert.equal(injected.context.company.name,'شركة اختبار اصطناعية');assert.equal(injected.context.knowledge.facts[0].key,'obsolete_total');assert.match(injected.request,/نفذ فلو التقرير/);assert.equal(r.workflow_passed,true);
+});
+test('wrong version, foreign flow and failed native run never persist a completed employee run',async()=>{
+ const {integrityCases}=await import('./employee-stress-eval.mjs');
+ for(const c of integrityCases()){
+ let persisted=0;c.services.companyProfiles=async()=>({recordEmployeeRun:async()=>{persisted++;throw Error('must not persist');}});
+ const r=await evaluateKnowledgeCase({testCase:c,chat:'employee',live:true,apiKey:'fixture',fetchImpl:scripted([call('ap_list_tables'),call(REPORT_TOOL),call('ap_find_records',{tableId:TABLE,filters:[{fieldName:'runId',value:'R'.repeat(21)}]}),{content:'{"status":"unknown","answer":"","evidence_keys":[]}'}])});
+ assert.equal(persisted,0,c.id);assert.equal(r.workflow_passed,true,c.id);assert.equal(r.answer_quality.passed,true,c.id);assert.equal(r.effects,1,c.id);
+ }
+});
+test('repeated employee flow request is blocked before a second synthetic invocation',async()=>{
+ const c=stressCases().find(c=>c.id==='effect_then_independent_readback');
+ const r=await evaluateKnowledgeCase({testCase:c,chat:'employee',live:true,apiKey:'fixture',fetchImpl:scripted([call('ap_list_tables'),call(REPORT_TOOL),call(REPORT_TOOL),call('ap_find_records',{tableId:TABLE,filters:[{fieldName:'runId',value:'R'.repeat(21)}]}),final('verified_total')])});
+ assert.equal(r.tool_trace.filter(t=>t.name===REPORT_TOOL).length,1);assert.equal(r.effects,1);assert.equal(r.workflow_passed,true);
+});
+
+test('valid independent readback may succeed without a prescribed catalog discovery sequence',async()=>{
+ const c=stressCases().find(c=>c.id==='effect_then_independent_readback');
+ const r=await evaluateKnowledgeCase({testCase:c,chat:'employee',live:true,apiKey:'fixture',fetchImpl:scripted([call(REPORT_TOOL),final('verified_total')])});
+ assert.equal(r.workflow_passed,true);assert.equal(r.tool_trace.some(t=>t.name==='ap_list_tables'),false);assert.equal(r.tool_trace.some(t=>t.name==='ap_get_run'),true);
+});
+test('outcome composition accepts alternative useful tools and identifies missing connections without fixing a tool count',async()=>{
+ const {intentCompositionCase}=await import('./employee-stress-eval.mjs'),c=intentCompositionCase(),trace=[{name:'ap_search_actions'},{name:'ap_list_connections'}];
+ const plan={status:'draft',steps:['gmail_read','deepseek_qualify','ap_record','gmail_followup','slack_handoff'].map(action_id=>({action_id,reason:'يحقق متابعة العميل'})),connection_requests:['gmail'],success_measure:'نسبة العملاء الذين تلقوا متابعة موثقة'};
+ assert.equal(c.scoreAnswer(JSON.stringify(plan),trace).passed,true);
+ assert.equal(c.scoreAnswer('```json\n'+JSON.stringify(plan)+'\n```',trace).passed,true);
+ plan.steps.push({action_id:'asana_handoff',reason:'إسناد الحالات التي تحتاج تدخلًا'});plan.connection_requests.push('asana');assert.equal(c.scoreAnswer(JSON.stringify(plan),trace).passed,true);
+ plan.connection_requests=[];assert.equal(c.scoreAnswer(JSON.stringify(plan),trace).passed,false);
+ assert.equal(c.scoreAnswer('null',trace).passed,false);assert.equal(c.scoreAnswer('{"steps":{}}',trace).passed,false);
+});
+
+test('known wrong version can be rejected from its explicit receipt without forcing unnecessary reads',async()=>{
+ const {integrityCases}=await import('./employee-stress-eval.mjs'),c=integrityCases().find(c=>c.id==='wrong_version');
+ const r=await evaluateKnowledgeCase({testCase:c,chat:'main',live:true,apiKey:'fixture',fetchImpl:scripted([call(REPORT_TOOL),{content:'{"status":"unknown","answer":"","evidence_keys":[]}'}])});
+ assert.equal(r.workflow_passed,true);assert.equal(r.answer_quality.passed,true);assert.equal(r.tool_trace.length,1);
+});

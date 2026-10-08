@@ -39,7 +39,7 @@ export function scoreQualityAnswer(reply,testCase,chat){
 
 // Reuse the real production chat loop. AP is a synthetic read-only fixture, never a live endpoint.
 export async function evaluateKnowledgeCase({testCase,chat,live=false,apiKey='',fetchImpl=fetch}){
-  testCase.resetFixture?.();
+  const startedAt=Date.now();testCase.resetFixture?.();
   if(!['main','employee'].includes(chat))throw new TypeError('invalid chat');
   if(live&&!apiKey)throw new Error('missing_model_key');
   const companyId='quality-company',rows=(testCase.memories||[]).map((cells,i)=>({id:String(i).padStart(21,'0'),cells:{...cells,source_quote:cells.value,source_request:'synthetic-source',updated_at:'2026-10-07T10:00:00Z'}}));
@@ -71,12 +71,12 @@ export async function evaluateKnowledgeCase({testCase,chat,live=false,apiKey='',
     selectKnowledgeContext,createCumulativeMemory,MEMORY_TABLE,MEMORY_FIELDS,MEMORY_LIMITS,TenantProjectError,CompanyProfileError,conversationMemory,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,bindEmployeeFlowContext,scopeMcpTool,nativeActionReceipt,flowTestSnapshot};
   Object.assign(context,testCase.services||{});
   const run=runInNewContext(source.slice(start,end)+';deepseekReply',context);
-  const answer=await run({company:{name:'شركة اختبار اصطناعية'},settings:{},knowledge:{facts:testCase.facts},team:[],history:testCase.history||[],message:(testCase.allowSyntheticEffects?outputFormat.replace('للقراءة فقط. ',''):outputFormat)+'\n'+testCase.question,employee:chat==='employee'?testCase.employeeFixture||{id:'employee-a',name:'موظف الاختبار',status:'draft',prompt:'أجب بدقة من المصادر المتاحة.'}:null,mcp,companyId,conversationId:'quality-'+testCase.id,memoryRequestId:'quality-'+testCase.id,deadlineMs:testCase.deadlineMs||60_000,onEffectStart:()=>{if(!testCase.allowSyntheticEffects)throw new Error('quality_effect_rejected');}});
+  const answer=await run({company:{name:'شركة اختبار اصطناعية'},settings:{},knowledge:{facts:testCase.facts},team:[],history:testCase.history||[],message:(testCase.answerFormat||(testCase.allowSyntheticEffects?outputFormat.replace('للقراءة فقط. ',''):outputFormat))+'\n'+testCase.question,employee:chat==='employee'?testCase.employeeFixture||{id:'employee-a',name:'موظف الاختبار',status:'draft',prompt:'أجب بدقة من المصادر المتاحة.'}:null,mcp,companyId,conversationId:'quality-'+testCase.id,memoryRequestId:'quality-'+testCase.id,deadlineMs:testCase.deadlineMs||60_000,onEffectStart:()=>{if(!testCase.allowSyntheticEffects)throw new Error('quality_effect_rejected');}});
   const system=captured.messages[0].content,knowledge=JSON.parse(system.split('سياق العمل الحالي بصيغة JSON:\n')[1].split('\n')[0]).knowledge;
   const memoryLine=system.split('\n').find(line=>line.startsWith('ذاكرة تراكمية موثقة'));
   const memories=memoryLine?JSON.parse(memoryLine.slice(memoryLine.indexOf(': ')+2)):[];
   const expected={...testCase,...testCase[chat]},keys=new Set([...knowledge.facts,...memories].map(f=>f.key));
-  return {id:testCase.id,chat,mode:live?'live_model_synthetic_AP':'retrieval_only',context_passed:(expected.contextEvidence||expected.evidence).every(key=>keys.has(key))&&!(expected.forbiddenEvidence||[]).some(key=>keys.has(key)),...(live?{answer_quality:scoreQualityAnswer(answer.reply,testCase,chat)}:{}),effects:answer.effects.length,...(testCase.toolFixture?{tool_trace:toolTrace,workflow_passed:live?testCase.verifyTrace(toolTrace,answer):null}:{}),modelCalls:live?modelCalls:0,usage};
+  return {id:testCase.id,chat,mode:live?'live_model_synthetic_AP':'retrieval_only',context_passed:(expected.contextEvidence||expected.evidence).every(key=>keys.has(key))&&!(expected.forbiddenEvidence||[]).some(key=>keys.has(key)),...(live?{answer_quality:testCase.scoreAnswer?testCase.scoreAnswer(answer.reply,toolTrace):scoreQualityAnswer(answer.reply,testCase,chat)}:{}),elapsedMs:Date.now()-startedAt,effects:answer.effects.length,...(testCase.toolFixture?{tool_trace:toolTrace,workflow_passed:live?testCase.verifyTrace(toolTrace,answer,chat):null}:{}),modelCalls:live?modelCalls:0,usage};
 }
 export async function runQualitySuite({live=false,apiKey=process.env.DEEPSEEK_API_KEY||'',fetchImpl=fetch,cases=QUALITY_CASES}={}){
   if(live&&!apiKey)return {mode:'live_unavailable',reason:'missing_model_key',modelCasesRun:0,results:[]};
