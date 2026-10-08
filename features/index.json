@@ -723,6 +723,35 @@
           "anchor": "blocked or silently failed session storage keeps the request"
         }
       ]
+    },
+    {
+      "id": "chat_history_title_and_reachability",
+      "name": "عناوين المحادثات والوصول إلى السجل",
+      "aliases": [
+        "اسم المحادثة طويل",
+        "كل المحادثات",
+        "ابحث في الطلب الكامل"
+      ],
+      "state": "draft_pr",
+      "meaning": "يعرض عنوان المحادثة الصالح أو أول طلب للمستخدم عند غيابه، ويختصره بصريا فقط مع النص الكامل في title وaria-label والبحث. تعرض آخر ثماني محادثات محملة مع بقاء المختارة؛ البقية متاحة بالبحث أو فتح كل المحادثات دون اختلاق ملخص أو وقت. لا يدعي تحميل سجلات تتجاوز hydrate الحالي. غير منشور.",
+      "linear": "ABO-54",
+      "locations": [
+        {
+          "role": "title",
+          "path": "app/chat.js",
+          "anchor": "function sideChatTitle(c)"
+        },
+        {
+          "role": "history",
+          "path": "app/chat.js",
+          "anchor": "var historyExpanded=false;"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "compact chat history keeps all saved chats reachable by search and expansion"
+        }
+      ]
     }
   ]
 }

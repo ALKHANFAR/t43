@@ -252,6 +252,9 @@ var I = {
   /* عنوان المحادثة: قصّ عند حدود الكلمة */
   function title(t){ if(t.length<=32) return t; var c=t.slice(0,32), i=c.lastIndexOf(" "); return (i>12?c.slice(0,i):c).replace(/[،,.؟?!:]+$/,"")+"…"; }
 
+  var historyExpanded=false;
+  function sideChatTitle(c){var value=String(c.t||'').trim();if(!value||value==='محادثة سيادة'){var first=c.msgs.find(function(m){return m.me&&typeof m.t==='string'&&m.t.trim();});if(first)value=first.t.trim();}return value||ui('محادثة','Chat');}
+  function sideChatButton(id,c){var full=sideChatTitle(c);return '<button type="button" class="hist" data-chat="'+esc(id)+'" title="'+esc(full)+'" aria-label="'+esc(full)+'" aria-current="'+(chatId===id)+'">'+esc(title(full))+'</button>';}
   /* --- الجانب --- */
   function renderSide(){
     /* حالة الصف: يشتغل الآن → نقطة نابضة · فيه شارة → الشارة فقط · شغّال → نقطة · متوقف → لا شيء والاسم باهت */
@@ -262,22 +265,28 @@ var I = {
         '<span style="display:flex;align-items:center;gap:6px">'+(e.wait?'<span class="badge'+(PULSE[e.id]?' badge--new':'')+'">'+e.wait+'</span>':'')+st+'</span></button>';
     }).join("");
     var awaiting='';
-    Object.keys(CHATS).forEach(function(id){var c=CHATS[id],pending=c.msgs.some(function(m){return m.builderApproval||m.requestState==='awaiting_input';});if(pending)awaiting+='<button type="button" class="hist" data-chat="'+esc(id)+'">'+esc(c.t)+'</button>';});
+    Object.keys(CHATS).forEach(function(id){var c=CHATS[id],pending=c.msgs.some(function(m){return m.builderApproval||m.requestState==='awaiting_input';});if(pending)awaiting+=sideChatButton(id,c);});
     $('#awaitingChats').innerHTML=awaiting;$('#awaitingSection').hidden=!awaiting;
     $('#teamSection').hidden=window.__SIY_REAL__&&!EMPS.length;
     var g={today:"",yesterday:"",week:""};
     Object.keys(CHATS).forEach(function(id){ var c=CHATS[id];
-      g[c.when]+='<button type="button" class="hist" data-chat="'+esc(id)+'" aria-current="'+(chatId===id)+'">'+esc(c.t)+'</button>';
+      g[c.when]+=sideChatButton(id,c);
     });
     $("#histToday").innerHTML=g.today; $("#histYest").innerHTML=g.yesterday; $("#histWeek").innerHTML=g.week;
     $$("[data-workspace-view]").forEach(function(b){if(b.dataset.workspaceView===who&&!chatId)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
     $("#toolsLink").setAttribute('aria-current',who==='tools'?'page':'false');
+    if(!$('#historyMore')){var more=document.createElement('button');more.type='button';more.id='historyMore';more.className='hist';$('#hgWeek').after(more);more.addEventListener('click',function(){historyExpanded=!historyExpanded;filterHist();});}
     filterHist();
   }
   /* بحث السجل: يخفي المحادثات اللي ما تطابق، ويخفي عنوان المجموعة الفاضية */
   function filterHist(){
     var q=($("#hq").value||"").trim().toLowerCase(), any=false;
-    $$(".hist[data-chat]").forEach(function(b){ var hit=!q||b.textContent.toLowerCase().indexOf(q)>-1; b.hidden=!hit; if(hit) any=true; });
+    var visible=0;
+    $$(".hist[data-chat]").forEach(function(b){var c=CHATS[b.dataset.chat],full=c?sideChatTitle(c):b.textContent,hit=!q||full.toLowerCase().indexOf(q)>-1;
+      if(!q&&!b.closest('#awaitingChats')){visible++;hit=historyExpanded||visible<=8||b.dataset.chat===chatId;}
+      b.hidden=!hit;if(hit)any=true;
+    });
+    var more=$('#historyMore');if(more){more.hidden=!!q||Object.keys(CHATS).length<=8;more.textContent=historyExpanded?ui('اختصر القائمة','Show less'):ui('كل المحادثات','All chats');more.setAttribute('aria-expanded',String(historyExpanded));}
     [["#hgToday","#histToday"],["#hgYest","#histYest"],["#hgWeek","#histWeek"]].forEach(function(p){ $(p[0]).hidden=!$$(".hist:not([hidden])",$(p[1])).length; });
     $("#awaitingSection").hidden=!$$("#awaitingChats .hist:not([hidden])").length;
     $("#hqNone").hidden=any||!q||palOpen;
@@ -1492,7 +1501,7 @@ var I = {
       if(typeof c.id!=="string"||!c.id||!Array.isArray(c.messages)) return;
       var messages=c.messages.filter(function(m){return ["user","assistant"].includes(m.role)&&typeof m.content==="string";}).map(function(m){return {me:m.role==="user",t:m.role==="user"?m.content:siyReplyHtml(m.content),at:siyMessageTime(m.at)};});
       messages.siyConversationId=c.id;
-      CHATS[c.id]={with:c.employee_id||"siyadah",emp:c.employee_id||null,t:String(c.title||"محادثة سيادة"),when:"today",msgs:messages};
+      CHATS[c.id]={with:c.employee_id||"siyadah",emp:c.employee_id||null,t:typeof c.title==='string'?c.title:"محادثة سيادة",when:"today",msgs:messages};
       if(c.employee_id&&emp(c.employee_id)&&!restoredEmployees[c.employee_id]){eth[c.employee_id]=messages;restoredEmployees[c.employee_id]=true;}
     });
     if(restore&&Array.isArray(data.pending_work)) data.pending_work.forEach(function(work){
@@ -1506,7 +1515,7 @@ var I = {
   function siyRememberConversation(data,list,employeeId,text){
     if(typeof data.conversation_id!=="string"||!data.conversation_id) return;
     var id=data.conversation_id; list.siyConversationId=id;
-    if(!CHATS[id]) CHATS[id]={with:employeeId||"siyadah",emp:employeeId||null,t:title(text),when:"today",msgs:list};
+    if(!CHATS[id]) CHATS=Object.assign({[id]:{with:employeeId||"siyadah",emp:employeeId||null,t:String(text||""),when:"today",msgs:list}},CHATS);
     if(!employeeId&&curList()===list){chatId=id;live.siyadah=null;}
   }
   function siyDraw(){ renderSide(); renderBar(); renderThread(); renderPlan();refreshLiveLabels(); }

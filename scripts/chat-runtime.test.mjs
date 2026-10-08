@@ -1372,3 +1372,16 @@ test('onboarding request survives failed account load and expired drafts do not 
  const failed=await page({hash:'',hydrate:Error('offline'),session:{[key]:raw}});try{assert.equal(failed.w.sessionStorage.getItem(key),raw);assert.equal(failed.d.querySelector('#input').value,'');assert.equal(failed.requests.filter(r=>r.body&&r.body.op==='message').length,0);}finally{failed.close();}
  const old=await page({hash:'',session:{[key]:JSON.stringify({text:'طلب قديم',createdAt:Date.now()-31*60*1000})}});try{assert.equal(old.d.querySelector('#input').value,'');assert.equal(old.w.sessionStorage.getItem(key),null);assert.equal(old.requests.filter(r=>r.body&&r.body.op==='message').length,0);}finally{old.close();}
 });
+
+test('chat titles shorten only visually and search the complete source including fallback user request',async()=>{
+ const full='جهّز عقد العميل بحسب الشروط التي كتبتها بالكامل مع إضافة الملحق الخاص بالمواعيد النهائية';const fallback='طلب مختلف طويل فيه عبارة للبحث في نهاية النص مثل بند الضمان';
+ const p=await page({hydrate:{...empty,conversations:[{id:'valid',title:full,messages:[]},{id:'fallback',title:' ',messages:[{role:'user',content:fallback}]}]}});try{
+  const button=p.d.querySelector('[data-chat="valid"]');assert.equal(button.title,full);assert.equal(button.getAttribute('aria-label'),full);assert.ok(button.textContent.length<full.length);assert.match(button.textContent,/…$/);const other=p.d.querySelector('[data-chat="fallback"]');assert.equal(other.title,fallback);
+  const search=p.d.querySelector('#hq');search.value='بند الضمان';search.dispatchEvent(new p.w.Event('input',{bubbles:true}));assert.equal(other.hidden,false);assert.equal(button.hidden,true);other.click();assert.match(thread(p),/بند الضمان/);
+ }finally{p.close();}
+});
+test('compact chat history keeps all saved chats reachable by search and expansion',async()=>{
+ const conversations=Array.from({length:12},(_,i)=>({id:'history-'+i,title:'طلب '+i,messages:[{role:'user',content:'طلب '+i}]}));const p=await page({hydrate:{...empty,conversations}});try{
+  assert.equal(p.d.querySelectorAll('#histToday .hist:not([hidden])').length,8);const search=p.d.querySelector('#hq');search.value='طلب 11';search.dispatchEvent(new p.w.Event('input',{bubbles:true}));assert.equal(p.d.querySelector('[data-chat="history-11"]').hidden,false);search.value='';search.dispatchEvent(new p.w.Event('input',{bubbles:true}));p.d.querySelector('#historyMore').click();assert.equal(p.d.querySelectorAll('#histToday .hist:not([hidden])').length,12);p.d.querySelector('[data-chat="history-11"]').click();p.d.querySelector('#historyMore').click();assert.equal(p.d.querySelector('[data-chat="history-11"]').hidden,false);assert.equal(p.requests.filter(r=>r.body?.op==='message').length,0);
+ }finally{p.close();}
+});
