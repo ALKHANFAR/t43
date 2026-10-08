@@ -771,6 +771,30 @@
           "anchor": "compact chat history keeps all saved chats reachable by search and expansion"
         }
       ]
+    },
+    {
+      "id": "chat_live_backend_activity",
+      "name": "العمل الذي يحدث أثناء الطلب",
+      "aliases": [
+        "نشاط الأدوات المباشر",
+        "التفكير الظاهر",
+        "بدأ الاستدعاء"
+      ],
+      "state": "draft_pr",
+      "meaning": "يعرض snapshots نشاط backend المحدد بالطلب: بدأت الأداة أو وصل ردها أو تعثرت. آخر80، هوية ثابتة للاستدعاء وحالات محدثة بلا مضاعفة. أسماء native المعروفة بلغة العميل، المجهولة أداة العمل. returned ليس نجاح مزود؛ لا inputs/outputs أو أحداث محاكاة. لا يغير request/work_status. غير منشور.",
+      "linear": "ABO-54",
+      "locations": [
+        {
+          "role": "render",
+          "path": "app/chat.js",
+          "anchor": "function siyActivityHtml(data)"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "live activity renders backend calls and returned responses without claiming provider success"
+        }
+      ]
     }
   ]
 }

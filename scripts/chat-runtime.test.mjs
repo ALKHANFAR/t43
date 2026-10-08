@@ -1410,3 +1410,15 @@ test('results show the saved flow reply body safely instead of a status-only car
 test('structured results keep fields beyond the twelfth column',async()=>{
  const data=Object.fromEntries(Array.from({length:13},(_,i)=>['field'+i,'value'+i]));const p=await page({hydrate:{...empty,recent_work:[{...proof,result:{schemaVersion:1,source:'flow_reply',content:JSON.stringify([data])}}]}});try{p.d.querySelector('[data-workspace-view="results"]').click();assert.equal(p.d.querySelectorAll('.work-record__result th').length,13);assert.match(thread(p),/value12/);}finally{p.close();}
 });
+
+test('live activity renders backend calls and returned responses without claiming provider success',async()=>{
+ const p=await page({message:{ok:true,conversation_id:'activity',work_id:'w',work_status:'running',activity:[{id:1,name:'ap_search_actions',state:'returned'},{id:2,name:'ap_get_flow',state:'started'}]},work:{ok:true,conversation_id:'activity',work_id:'w',work_status:'running',activity:[{id:1,name:'ap_search_actions',state:'returned'},{id:2,name:'ap_get_flow',state:'returned'}]}});try{
+  send(p,'راجع طريقة العمل');await flush();const block=p.d.querySelector('.siy-activity');assert.match(block.querySelector('summary').textContent,/قراءة طريقة العمل.*بدأ الاستدعاء/);assert.match(block.textContent,/البحث في الأدوات.*وصل رد الأداة/);assert.doesNotMatch(block.textContent,/اكتمل|مُثبت|✓/);assert.equal(block.querySelectorAll('li').length,2);
+  await p.polls.shift()();await flush();assert.equal(p.d.querySelectorAll('[data-activity-id="2"]').length,1);assert.equal(p.d.querySelector('[data-activity-id="2"]').dataset.activityState,'returned');assert.doesNotMatch(p.d.querySelector('.siy-activity').textContent,/بدأ الاستدعاء|نجح/);
+ }finally{p.close();}
+});
+test('live activity ignores malformed events limits snapshots and never exposes unknown raw tool names',async()=>{
+ const activity=Array.from({length:85},(_,i)=>({id:i,name:'<img src=x onerror=alert(1)>',state:'returned'}));activity.push({id:99,name:'secret',state:'succeeded'},{id:-1,name:'secret',state:'started'},{id:100,name:'__proto__',state:'started'},{id:100,name:'__proto__',state:'returned'});
+ const p=await page({message:{ok:true,conversation_id:'activity',work_id:'w',work_status:'failed',activity}});try{send(p,'راجع');await flush();const block=p.d.querySelector('.siy-activity');assert.ok(block);assert.ok(block.querySelectorAll('li').length<=80);assert.equal(block.querySelector('img'),null);assert.doesNotMatch(block.textContent,/secret|onerror|<img|succeeded|Object|__proto__/);assert.equal(block.querySelectorAll('[data-activity-id="100"]').length,1);assert.match(block.textContent,/أداة العمل/);}finally{p.close();}
+ const absent=await page({message:{ok:true,conversation_id:'plain',reply:'رد عادي'}});try{send(absent,'سؤال');await flush();assert.equal(absent.d.querySelector('.siy-activity'),null);}finally{absent.close();}
+});
