@@ -138,15 +138,6 @@ var CHATS = {
   ]}
 };
 
-var SUGG = {
-  siyadah: [
-    ["build","ابنِ", "أبي أحد يتابع الليدات ويطارد الفواتير"],
-    ["ask","اسأل", "وش صار اليوم؟"],
-    ["edit","عدّل", "خلّ الردود أكثر رسمية"],
-    ["link","اربط", "اربط واتساب"]
-  ]
-};
-
 /* ==========================================================================
    العرض
    ========================================================================== */
@@ -1626,10 +1617,6 @@ var I = {
     var nn=(window.prompt("الاسم الجديد للموظف:",e.n)||"").trim(); if(!nn||nn===e.n) return;
     e.n=nn; e.ini=nn.slice(0,1)||e.ini; renderSide(); renderBar(); renderThread();
   }
-  /* بطاقات أداء فعلية من جدول المحادثات — أرقام حقيقية لكل موظف بدل "—" */
-  function kpiFrom(s){ var t=(s.last_at||"").slice(11,16)||"—";
-    return [ {v:String(s.messages||0),l:"رسائل",t:"—"}, {v:String(s.client_msgs||0),l:"من العملاء",t:"—"},
-             {v:String(s.replies||0),l:"ردود",t:"—"}, {v:t,l:"آخر نشاط",t:"—"} ]; }
   /* سجل العمل الفعلي من جدول الإثبات (recent_work في رد الـDashboard) */
   function siyEmployeeProofHtml(e,list){
     if(!window.__SIY_REAL__) return "";
