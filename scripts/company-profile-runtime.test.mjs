@@ -264,3 +264,18 @@ test('saved work exposes only the successful flow reply body, never response hea
  const query=async(sql,values)=>{assert.deepEqual(values,['company-a']);assert.match(sql,/company_id=\$1/);return {rows:[{id:'e1',activepieces_flow_id:'f1',name:'التقرير',last_run_id:'r1',last_result_json:{status:200,body:{report:'تقرير اليوم'},headers:{Authorization:'secret'}}},{id:'e2',name:'قديم',last_run_id:'r2',last_result_json:{status:200}},{id:'e3',name:'خطأ',last_run_id:'r3',last_result_json:{status:500,body:'خطأ'}},{id:'e4',name:'كبير',last_run_id:'r4',last_result_json:{status:200,body:'x'.repeat(12001)}}]};};
  const rows=await createCompanyProfileService({query}).recentWork('company-a');assert.deepEqual(rows[0].result,{schemaVersion:1,source:'flow_reply',content:'{"report":"تقرير اليوم"}'});assert.equal(JSON.stringify(rows).includes('secret'),false);assert.equal(rows.slice(1).every(row=>!row.result),true);
 });
+
+test('chat activity writes bounded public fields only for the exact pending claim',async()=>{
+ const calls=[];let write=true;const service=createCompanyProfileService({query:async(sql,values)=>{calls.push({sql,values});return {rows:write?[{request_id:'request-a'}]:[]};}});
+ const scope={companyId:'company-a',requestId:'request-a',conversationId:'conversation-a',claimToken:'claim-a'};
+ assert.equal(await service.recordChatActivity({...scope,activity:[{id:1,name:'ap_search_actions',state:'started',args:{token:'secret'},output:'private',error:'sensitive'}]}),true);
+ assert.deepEqual(calls[0].values.slice(0,4),Object.values(scope));assert.deepEqual(JSON.parse(calls[0].values[4]),[{id:1,name:'ap_search_actions',state:'started'}]);
+ assert.match(calls[0].sql,/company_id=\$1 AND request_id=\$2 AND conversation_id=\$3 AND claim_token=\$4 AND status='pending'/);assert.match(calls[0].sql,/jsonb_set\(COALESCE\(response_json/);assert.doesNotMatch(calls[0].sql,/SET status/);assert.equal(JSON.stringify(calls).includes('secret'),false);
+ write=false;assert.equal(await service.recordChatActivity({...scope,activity:[]}),false);
+});
+
+test('chat activity rejects malformed or oversized entries before SQL',async()=>{
+ const service=createCompanyProfileService({query:async()=>{throw Error('must not query');}}),scope={companyId:'c',requestId:'r',conversationId:'v',claimToken:'t'};
+ for(const activity of [null,{},Array(81).fill({id:1,name:'tool',state:'started'}),[{id:0,name:'tool',state:'started'}],[{id:1.5,name:'tool',state:'started'}],[{id:1,name:'x'.repeat(121),state:'started'}],[{id:1,name:'tool secret',state:'started'}],[{id:1,name:'tool',state:'succeeded'}]])await assert.rejects(()=>service.recordChatActivity({...scope,activity}),{code:'invalid_chat_activity'});
+ await assert.rejects(()=>service.recordChatActivity({...scope,claimToken:'',activity:[]}),{code:'invalid_chat_activity_scope'});
+});
