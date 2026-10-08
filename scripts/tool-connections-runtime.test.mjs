@@ -249,3 +249,22 @@ test('existing OAuth attempts remain single-use under concurrent completion',asy
     assert.equal(h.calls.length,1);assert.equal(h.pending.size,0);
   }
 });
+
+test('unsupported native auth controls cannot be presented or bypassed as plain text',async()=>{
+  const piece={...whatsapp,auth:{type:'CUSTOM_AUTH',props:{account:{type:'DROPDOWN',required:true}}}};
+  const {service,calls}=harness({mcp:{call:async()=>({structuredContent:{schemaVersion:1,piece}})}});
+  const method=(await service.methods({tenantId:'company-a',piece:'whatsapp'})).methods[0];
+  assert.equal(method.available,false);
+  await assert.rejects(()=>service.connect({tenantId:'company-a',piece:'whatsapp',type:'CUSTOM_AUTH',values:{account:'invented'}}),{code:'unsupported_auth_fields'});
+  assert.equal(calls.length,0);
+});
+
+test('supported native auth controls validate values before writing a project connection',async()=>{
+  const piece={...whatsapp,auth:{type:'CUSTOM_AUTH',props:{enabled:{type:'CHECKBOX'},count:{type:'NUMBER'},region:{type:'STATIC_DROPDOWN',options:{options:[{label:'Saudi Arabia',value:'SA'}]}},token:{type:'SECRET_TEXT',required:true}}}};
+  const {service,calls}=harness({mcp:{call:async()=>({structuredContent:{schemaVersion:1,piece}})}});
+  assert.equal((await service.methods({tenantId:'company-a',piece:'whatsapp'})).methods[0].available,true);
+  for(const values of [{enabled:'false',token:'t'},{count:'Infinity',token:'t'},{region:'XX',token:'t'},{token:{secret:'t'}}])await assert.rejects(()=>service.connect({tenantId:'company-a',piece:'whatsapp',type:'CUSTOM_AUTH',values}),{code:'invalid_connection_field'});
+  assert.equal(calls.length,0);
+  await service.connect({tenantId:'company-a',piece:'whatsapp',type:'CUSTOM_AUTH',values:{enabled:false,count:'5',region:'SA',token:'t'}});
+  assert.deepEqual(calls[0].body.value.props,{enabled:false,count:5,region:'SA',token:'t'});
+});
