@@ -64,3 +64,24 @@ test('known wrong version can be rejected from its explicit receipt without forc
  const r=await evaluateKnowledgeCase({testCase:c,chat:'main',live:true,apiKey:'fixture',fetchImpl:scripted([call(REPORT_TOOL),{content:'{"status":"unknown","answer":"","evidence_keys":[]}'}])});
  assert.equal(r.workflow_passed,true);assert.equal(r.answer_quality.passed,true);assert.equal(r.tool_trace.length,1);
 });
+
+function builtPlan(){return {status:'draft',steps:['gmail_read','deepseek_qualify','ap_record','gmail_followup','slack_handoff'].map(action_id=>({action_id,reason:'متابعة العميل وتوثيق نتيجته'})),connection_requests:['gmail'],success_measure:'نسبة العملاء الذين تلقوا متابعة موثقة'};}
+function buildScript(plan,{brokenDependency=false,omitRead=false,omitBusinessGuard=false}={}){
+ const steps=plan.steps.map((s,i)=>({...s,input_from:i?plan.steps[i-1].action_id:null}));if(brokenDependency)steps[2].input_from='missing_action';
+ if(!omitBusinessGuard)for(const s of steps.filter(s=>['gmail_followup','slack_handoff'].includes(s.action_id))){s.guard={source:'deepseek_qualify',field:'qualified',equals:true};s.bindings={lead_id:'gmail_read.lead_id'};}
+ return [call('ap_search_actions',{query:'lead recovery'}),call('ap_list_connections'),call('ap_build_flow',{flowName:'استرجاع العملاء',steps}),...omitRead?[]:[call('ap_get_flow',{flowId:'F'.repeat(21)})],{content:JSON.stringify(plan)}];
+}
+test('both chats build through the real lifecycle and independently read the connected stored draft',async()=>{
+ const {draftBuildCase}=await import('./employee-stress-eval.mjs');
+ for(const chat of ['main','employee']){
+ const r=await evaluateKnowledgeCase({testCase:draftBuildCase(),chat,live:true,apiKey:'fixture',fetchImpl:scripted(buildScript(builtPlan()))});
+ assert.equal(r.answer_quality.passed,true,chat);assert.equal(r.workflow_passed,true,chat);assert.equal(r.effects,1,chat);
+ }
+});
+test('a good final plan cannot hide omitted readback, a missing dependency, a verbal-only condition, or a lost stored step',async()=>{
+ const {draftBuildCase}=await import('./employee-stress-eval.mjs');
+ for(const [fixture,script] of [[{}, {omitRead:true}],[{}, {brokenDependency:true}],[{}, {omitBusinessGuard:true}],[{corruptReadback:true}, {}]]){
+ const r=await evaluateKnowledgeCase({testCase:draftBuildCase(fixture),chat:'employee',live:true,apiKey:'fixture',fetchImpl:scripted(buildScript(builtPlan(),script))});
+ assert.equal(r.answer_quality.passed,true);assert.equal(r.workflow_passed,false);
+ }
+});

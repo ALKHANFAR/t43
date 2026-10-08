@@ -57,15 +57,41 @@ export function intentCompositionCase(){return {id:'unknown_unconnected_tools_co
  const missing=[...new Set(selected.map(a=>a?.connection).filter(c=>c&&!['slack','hubspot'].includes(c)))].sort();if(!Array.isArray(p.connection_requests)||JSON.stringify([...new Set(p.connection_requests)].sort())!==JSON.stringify(missing))reasons.push('incorrect_connection_requests');
  if(steps.some(step=>typeof step?.reason!=='string'||!step.reason.trim())||typeof p.success_measure!=='string'||!p.success_measure.trim())reasons.push('missing_impact_explanation');
  return {passed:reasons.length===0,reasons,plan:{steps:p.steps,connection_requests:p.connection_requests,success_measure:p.success_measure}};},verifyTrace:(_trace,answer)=>answer.effects.length===0};}
+// These build arguments are a synthetic catalog contract, not a claimed live AP schema.
+export function draftBuildCase({corruptReadback=false}={}){
+ const c=intentCompositionCase();let stored=null,ownedReads=0,links=0;
+ const shape=steps=>steps.map((step,i)=>({...step,input_from:i?steps[i-1].action_id:null}));
+ return {...c,id:'compose_build_readback',allowSyntheticEffects:true,useFlowLifecycle:true,createDraft:async()=>({id:'employee-a',status:'draft',activepieces_flow_id:null}),
+ question:c.question+' احفظ طريقة العمل مسودة متوقفة بدون نشر أو تفعيل أو تشغيل، ثم اقرأ بنيتها وتحقق من ترابطها. مدخل كل خطوة input_from يشير إلى action_id للخطوة السابقة؛ الأولى null. في خطوات متابعة العميل والتسليم للفريق أضف guard بالشكل {source:"deepseek_qualify",field:"qualified",equals:true} وbindings بالشكل {lead_id:"gmail_read.lead_id"}؛ النص الوصفي وحده ليس شرط تنفيذ.',
+ answerFormat:c.answerFormat.replace('مسودة فقط، للقراءة فقط. ','')+' لا تؤكد حفظ الخطة قبل بناء الفلو وقراءة بنيته.',
+ resetFixture:()=>{stored=null;ownedReads=0;links=0;},
+ services:{database:async()=>({connect:async()=>({query:async()=>({rows:[{locked:true}]}),release:()=>{}})}),companyProfiles:async()=>({findEmployee:async()=>({id:'employee-a',status:'draft',activepieces_flow_id:null}),linkEmployeeFlow:async({flowId})=>{links++;return {recordId:'employee-a',flowId,status:'disabled'};}}),tenantProjects:async()=>({ownedFlow:async(_company,id)=>{ownedReads++;if(id!==FLOW||!stored)throw Error('missing_owned_flow');return {flow:{id:FLOW,status:'DISABLED',version:stored}};}})},
+ tools:[...c.tools,tool('ap_build_flow','Synthetic build contract: persist a DISABLED flow; steps must carry action_id, reason and input_from.',{flowName:{type:'string'},steps:{type:'array',items:{type:'object',properties:{action_id:{type:'string'},reason:{type:'string'},input_from:{type:['string','null']},guard:{type:'object'},bindings:{type:'object'}},required:['action_id','reason','input_from']}}},['flowName','steps'],false),tool('ap_get_flow','Read the stored flow and its ordered dependency graph.',{flowId:{type:'string'}},['flowId'])],
+ toolFixture:async(params,trace)=>{
+ if(params.name==='ap_build_flow'){stored={id:VERSION,steps:structuredClone(params.arguments.steps||[])};return {structuredContent:{flowId:FLOW,invalidSteps:[],skippedSteps:[],unknownProps:[]}};}
+ if(params.name==='ap_get_flow'){if(params.arguments.flowId!==FLOW||!stored)return {isError:true};const version=structuredClone(stored);if(corruptReadback)version.steps.pop();return {structuredContent:{id:FLOW,status:'DISABLED',version}};}
+ return c.toolFixture(params,trace);
+ },verifyTrace:(trace,answer,chat)=>{
+ const builds=trace.filter(t=>t.name==='ap_build_flow'),read=trace.find(t=>t.name==='ap_get_flow')?.result?.structuredContent;
+ if(builds.length!==1||answer.effects.length!==1||!ownedReads||links!==1||read?.status!=='DISABLED')return false;
+ const steps=read.version?.steps;if(!Array.isArray(steps)||!steps.length||JSON.stringify(steps)!==JSON.stringify(builds[0].args.steps))return false;
+ if(JSON.stringify(steps.map(s=>s.input_from))!==JSON.stringify(shape(steps).map(s=>s.input_from)))return false;
+ for(const step of steps.filter(s=>['gmail_followup','slack_handoff','asana_handoff'].includes(s.action_id))){
+ if(step.guard?.source!=='deepseek_qualify'||step.guard?.field!=='qualified'||step.guard?.equals!==true||step.bindings?.lead_id!=='gmail_read.lead_id')return false;
+ }
+ let plan;try{plan=JSON.parse(answer.reply.replace(/^```(?:json)?\s*([\s\S]*?)\s*```$/,'$1'));}catch{return false;}
+ return JSON.stringify(steps.map(s=>s.action_id))===JSON.stringify(plan.steps?.map(s=>s.action_id));
+ }};
+}
 export function integrityCases(){return ['wrong_version','wrong_flow','failed_run'].map(corruption=>workflow({id:corruption,effect:true,corruption}));}
 export async function runStressSuite(options={}){
- const report=await runQualitySuite({...options,cases:options.composition?[intentCompositionCase()]:options.integrity?integrityCases():stressCases()});
+ const report=await runQualitySuite({...options,cases:options.build?[draftBuildCase()]:options.composition?[intentCompositionCase()]:options.integrity?integrityCases():stressCases()});
  report.summary={total:report.results.length,passed:report.results.filter(r=>r.context_passed&&r.answer_quality?.passed&&r.workflow_passed!==false).length,workflowCases:report.results.filter(r=>r.workflow_passed!==undefined).length,syntheticEffects:report.results.reduce((n,r)=>n+r.effects,0)};
- report.coverage={measured:options.composition?['intent_to_outcome_composition','tool_discovery','connection_discovery','impact_measure_definition']:options.integrity?['execution_identity','context_injection','independent_readback']:['answer_grounding','knowledge_selection','memory_scope','historical_updates','task_scope','tool_use','error_recovery','independent_readback'],notYetMeasured:['business_uplift','plan_efficiency','live_provider_outcome','UI_experience','long_term_learning_quality','multi_tenant_load','end_to_end_UI_latency','repeat_trial_reliability'],modelLoopTiming:report.results.map(r=>({id:r.id,chat:r.chat,elapsedMs:r.elapsedMs,tokens:r.usage.reduce((n,u)=>n+(u.tokens||0),0)}))};
+ report.coverage={measured:options.build?['draft_construction','stored_graph_readback','step_dependencies','employee_flow_link']:options.composition?['intent_to_outcome_composition','tool_discovery','connection_discovery','impact_measure_definition']:options.integrity?['execution_identity','context_injection','independent_readback']:['answer_grounding','knowledge_selection','memory_scope','historical_updates','task_scope','tool_use','error_recovery','independent_readback'],notYetMeasured:['business_uplift','plan_efficiency','live_provider_outcome','UI_experience','long_term_learning_quality','multi_tenant_load','end_to_end_UI_latency','repeat_trial_reliability'],modelLoopTiming:report.results.map(r=>({id:r.id,chat:r.chat,elapsedMs:r.elapsedMs,tokens:r.usage.reduce((n,u)=>n+(u.tokens||0),0)}))};
  report.contract='Live DeepSeek, actual production chat loop, synthetic AP tools only. Every answer, evidence key, scope and required workflow must pass. Diagnostic retries never erase failures. No real provider effects or deployment proof.';
  return report;
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
- if(process.argv.slice(2).some(arg=>!['--live','--integrity','--composition'].includes(arg))||process.argv.length>4||new Set(process.argv.slice(2)).size!==process.argv.slice(2).length){console.log(JSON.stringify({reason:'arguments_not_supported'}));process.exitCode=2;}
- else{const r=await runStressSuite({live:process.argv.includes('--live'),integrity:process.argv.includes('--integrity'),composition:process.argv.includes('--composition')});console.log(JSON.stringify(r,null,2));process.exitCode=r.mode.endsWith('incomplete')||r.mode==='live_unavailable'?2:r.results.some(x=>!x.context_passed||x.answer_quality?.passed===false||x.workflow_passed===false)?1:0;}
+ if(process.argv.slice(2).some(arg=>!['--live','--integrity','--composition','--build'].includes(arg))||process.argv.length>4||new Set(process.argv.slice(2)).size!==process.argv.slice(2).length){console.log(JSON.stringify({reason:'arguments_not_supported'}));process.exitCode=2;}
+ else{const r=await runStressSuite({live:process.argv.includes('--live'),integrity:process.argv.includes('--integrity'),composition:process.argv.includes('--composition'),build:process.argv.includes('--build')});console.log(JSON.stringify(r,null,2));process.exitCode=r.mode.endsWith('incomplete')||r.mode==='live_unavailable'?2:r.results.some(x=>!x.context_passed||x.answer_quality?.passed===false||x.workflow_passed===false)?1:0;}
 }

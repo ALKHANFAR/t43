@@ -7,6 +7,7 @@ import {TenantProjectError} from '../lib/tenant-projects.mjs';
 import {CompanyProfileError} from '../lib/company-profile.mjs';
 import {conversationMemory,draftOnlyIntent,doNotRunIntent} from '../lib/chat-intelligence.mjs';
 import {employeeFlowMcpToolName,bindEmployeeFlowContext,scopeMcpTool} from '../lib/mcp-flow-scope.mjs';
+import {createChatFlowLifecycle} from '../lib/chat-flow-lifecycle.mjs';
 import {nativeActionReceipt,flowTestSnapshot} from '../lib/chat-outcome.mjs';
 
 const fact=(key,value,date='2026-10-07',topic='pricing')=>({key,value,topic,sourceUrl:`https://example.invalid/evidence/${key}`,certainty:'user_confirmed',observedAt:date});
@@ -70,8 +71,9 @@ export async function evaluateKnowledgeCase({testCase,chat,live=false,apiKey='',
   const context={console:{info:()=>{},warn:()=>{},error:()=>{}},process:{env:{DEEPSEEK_API_KEY:apiKey||'offline-fixture'}},AbortController,setTimeout,clearTimeout,fetch:modelFetch,
     selectKnowledgeContext,createCumulativeMemory,MEMORY_TABLE,MEMORY_FIELDS,MEMORY_LIMITS,TenantProjectError,CompanyProfileError,conversationMemory,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,bindEmployeeFlowContext,scopeMcpTool,nativeActionReceipt,flowTestSnapshot};
   Object.assign(context,testCase.services||{});
+  if(testCase.useFlowLifecycle)Object.assign(context,createChatFlowLifecycle({...testCase.services,logger:context.console}));
   const run=runInNewContext(source.slice(start,end)+';deepseekReply',context);
-  const answer=await run({company:{name:'شركة اختبار اصطناعية'},settings:{},knowledge:{facts:testCase.facts},team:[],history:testCase.history||[],message:(testCase.answerFormat||(testCase.allowSyntheticEffects?outputFormat.replace('للقراءة فقط. ',''):outputFormat))+'\n'+testCase.question,employee:chat==='employee'?testCase.employeeFixture||{id:'employee-a',name:'موظف الاختبار',status:'draft',prompt:'أجب بدقة من المصادر المتاحة.'}:null,mcp,companyId,conversationId:'quality-'+testCase.id,memoryRequestId:'quality-'+testCase.id,deadlineMs:testCase.deadlineMs||60_000,onEffectStart:()=>{if(!testCase.allowSyntheticEffects)throw new Error('quality_effect_rejected');}});
+  const answer=await run({company:{name:'شركة اختبار اصطناعية'},settings:{},knowledge:{facts:testCase.facts},team:[],history:testCase.history||[],createDraft:testCase.createDraft,message:(testCase.answerFormat||(testCase.allowSyntheticEffects?outputFormat.replace('للقراءة فقط. ',''):outputFormat))+'\n'+testCase.question,employee:chat==='employee'?testCase.employeeFixture||{id:'employee-a',name:'موظف الاختبار',status:'draft',prompt:'أجب بدقة من المصادر المتاحة.'}:null,mcp,companyId,conversationId:'quality-'+testCase.id,memoryRequestId:'quality-'+testCase.id,deadlineMs:testCase.deadlineMs||60_000,onEffectStart:()=>{if(!testCase.allowSyntheticEffects)throw new Error('quality_effect_rejected');}});
   const system=captured.messages[0].content,knowledge=JSON.parse(system.split('سياق العمل الحالي بصيغة JSON:\n')[1].split('\n')[0]).knowledge;
   const memoryLine=system.split('\n').find(line=>line.startsWith('ذاكرة تراكمية موثقة'));
   const memories=memoryLine?JSON.parse(memoryLine.slice(memoryLine.indexOf(': ')+2)):[];

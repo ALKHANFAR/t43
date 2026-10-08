@@ -1,0 +1,1057 @@
+{
+  "mode": "live_model_synthetic_AP",
+  "modelCasesRun": 2,
+  "results": [
+    {
+      "id": "compose_build_readback",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": [],
+        "plan": {
+          "steps": [
+            {
+              "action_id": "gmail_read",
+              "reason": "قراءة رسائل البريد الوارد لالتقاط العملاء المحتملين فور وصولهم بدل ضياعهم"
+            },
+            {
+              "action_id": "deepseek_qualify",
+              "reason": "تحليل محتوى الرسالة وتحديد درجة الجدية لتمييز الجاد من غير الجاد"
+            },
+            {
+              "action_id": "hubspot_record",
+              "reason": "حفظ العميل ودرجة تأهيله في CRM لتتبع الحالة ومتابعتها"
+            },
+            {
+              "action_id": "gmail_followup",
+              "reason": "إرسال متابعة تلقائية للجادين فقط عبر شرط على نتيجة التأهيل"
+            },
+            {
+              "action_id": "slack_handoff",
+              "reason": "تنبيه الفريق للتدخل اليدوي عندما تكون الصفقة جادة وتحتاج توقيتًا بشريًا"
+            }
+          ],
+          "connection_requests": [
+            "gmail"
+          ],
+          "success_measure": "عدد العملاء المحتملين المسترجعين من البريد والمؤهلين كجادين خلال 7 أيام، ونسبة من انتقلوا إلى متابعة تلقائية أو تدخل الفريق."
+        }
+      },
+      "elapsedMs": 64137,
+      "effects": 1,
+      "tool_trace": [
+        {
+          "name": "ap_search_actions",
+          "args": {
+            "query": "retrieve incoming email leads from inbox"
+          },
+          "result": {
+            "structuredContent": {
+              "actions": [
+                {
+                  "id": "gmail_read",
+                  "piece": "gmail",
+                  "action": "read_messages",
+                  "capabilities": [
+                    "source"
+                  ],
+                  "connection": "gmail"
+                },
+                {
+                  "id": "deepseek_qualify",
+                  "piece": "ai",
+                  "action": "run_agent",
+                  "capabilities": [
+                    "qualify"
+                  ],
+                  "connection": null,
+                  "model": "deepseek-v4-pro"
+                },
+                {
+                  "id": "ap_record",
+                  "piece": "tables",
+                  "action": "upsert_record",
+                  "capabilities": [
+                    "record"
+                  ],
+                  "connection": null
+                },
+                {
+                  "id": "hubspot_record",
+                  "piece": "hubspot",
+                  "action": "upsert_contact",
+                  "capabilities": [
+                    "record"
+                  ],
+                  "connection": "hubspot"
+                },
+                {
+                  "id": "gmail_followup",
+                  "piece": "gmail",
+                  "action": "send_email",
+                  "capabilities": [
+                    "followup"
+                  ],
+                  "connection": "gmail"
+                },
+                {
+                  "id": "slack_handoff",
+                  "piece": "slack",
+                  "action": "send_message",
+                  "capabilities": [
+                    "handoff"
+                  ],
+                  "connection": "slack"
+                },
+                {
+                  "id": "asana_handoff",
+                  "piece": "asana",
+                  "action": "create_task",
+                  "capabilities": [
+                    "handoff"
+                  ],
+                  "connection": "asana"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_search_actions",
+          "args": {
+            "query": "qualify and score leads automatically"
+          },
+          "result": {
+            "structuredContent": {
+              "actions": [
+                {
+                  "id": "gmail_read",
+                  "piece": "gmail",
+                  "action": "read_messages",
+                  "capabilities": [
+                    "source"
+                  ],
+                  "connection": "gmail"
+                },
+                {
+                  "id": "deepseek_qualify",
+                  "piece": "ai",
+                  "action": "run_agent",
+                  "capabilities": [
+                    "qualify"
+                  ],
+                  "connection": null,
+                  "model": "deepseek-v4-pro"
+                },
+                {
+                  "id": "ap_record",
+                  "piece": "tables",
+                  "action": "upsert_record",
+                  "capabilities": [
+                    "record"
+                  ],
+                  "connection": null
+                },
+                {
+                  "id": "hubspot_record",
+                  "piece": "hubspot",
+                  "action": "upsert_contact",
+                  "capabilities": [
+                    "record"
+                  ],
+                  "connection": "hubspot"
+                },
+                {
+                  "id": "gmail_followup",
+                  "piece": "gmail",
+                  "action": "send_email",
+                  "capabilities": [
+                    "followup"
+                  ],
+                  "connection": "gmail"
+                },
+                {
+                  "id": "slack_handoff",
+                  "piece": "slack",
+                  "action": "send_message",
+                  "capabilities": [
+                    "handoff"
+                  ],
+                  "connection": "slack"
+                },
+                {
+                  "id": "asana_handoff",
+                  "piece": "asana",
+                  "action": "create_task",
+                  "capabilities": [
+                    "handoff"
+                  ],
+                  "connection": "asana"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_search_actions",
+          "args": {
+            "query": "send follow up email to lead"
+          },
+          "result": {
+            "structuredContent": {
+              "actions": [
+                {
+                  "id": "gmail_read",
+                  "piece": "gmail",
+                  "action": "read_messages",
+                  "capabilities": [
+                    "source"
+                  ],
+                  "connection": "gmail"
+                },
+                {
+                  "id": "deepseek_qualify",
+                  "piece": "ai",
+                  "action": "run_agent",
+                  "capabilities": [
+                    "qualify"
+                  ],
+                  "connection": null,
+                  "model": "deepseek-v4-pro"
+                },
+                {
+                  "id": "ap_record",
+                  "piece": "tables",
+                  "action": "upsert_record",
+                  "capabilities": [
+                    "record"
+                  ],
+                  "connection": null
+                },
+                {
+                  "id": "hubspot_record",
+                  "piece": "hubspot",
+                  "action": "upsert_contact",
+                  "capabilities": [
+                    "record"
+                  ],
+                  "connection": "hubspot"
+                },
+                {
+                  "id": "gmail_followup",
+                  "piece": "gmail",
+                  "action": "send_email",
+                  "capabilities": [
+                    "followup"
+                  ],
+                  "connection": "gmail"
+                },
+                {
+                  "id": "slack_handoff",
+                  "piece": "slack",
+                  "action": "send_message",
+                  "capabilities": [
+                    "handoff"
+                  ],
+                  "connection": "slack"
+                },
+                {
+                  "id": "asana_handoff",
+                  "piece": "asana",
+                  "action": "create_task",
+                  "capabilities": [
+                    "handoff"
+                  ],
+                  "connection": "asana"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_search_actions",
+          "args": {
+            "query": "notify team when lead needs intervention"
+          },
+          "result": {
+            "structuredContent": {
+              "actions": [
+                {
+                  "id": "gmail_read",
+                  "piece": "gmail",
+                  "action": "read_messages",
+                  "capabilities": [
+                    "source"
+                  ],
+                  "connection": "gmail"
+                },
+                {
+                  "id": "deepseek_qualify",
+                  "piece": "ai",
+                  "action": "run_agent",
+                  "capabilities": [
+                    "qualify"
+                  ],
+                  "connection": null,
+                  "model": "deepseek-v4-pro"
+                },
+                {
+                  "id": "ap_record",
+                  "piece": "tables",
+                  "action": "upsert_record",
+                  "capabilities": [
+                    "record"
+                  ],
+                  "connection": null
+                },
+                {
+                  "id": "hubspot_record",
+                  "piece": "hubspot",
+                  "action": "upsert_contact",
+                  "capabilities": [
+                    "record"
+                  ],
+                  "connection": "hubspot"
+                },
+                {
+                  "id": "gmail_followup",
+                  "piece": "gmail",
+                  "action": "send_email",
+                  "capabilities": [
+                    "followup"
+                  ],
+                  "connection": "gmail"
+                },
+                {
+                  "id": "slack_handoff",
+                  "piece": "slack",
+                  "action": "send_message",
+                  "capabilities": [
+                    "handoff"
+                  ],
+                  "connection": "slack"
+                },
+                {
+                  "id": "asana_handoff",
+                  "piece": "asana",
+                  "action": "create_task",
+                  "capabilities": [
+                    "handoff"
+                  ],
+                  "connection": "asana"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_list_connections",
+          "args": {},
+          "result": {
+            "structuredContent": {
+              "connections": [
+                {
+                  "name": "slack",
+                  "status": "ACTIVE"
+                },
+                {
+                  "name": "hubspot",
+                  "status": "ACTIVE"
+                }
+              ],
+              "aiProviders": [
+                {
+                  "name": "deepseek",
+                  "model": "deepseek-v4-pro"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_build_flow",
+          "args": {
+            "flowName": "استرجاع وتأهيل ومتابعة العملاء المحتملين",
+            "steps": [
+              {
+                "action_id": "gmail_read",
+                "reason": "قراءة رسائل البريد الوارد لالتقاط العملاء المحتملين فور وصولهم بدل ضياعهم",
+                "input_from": null
+              },
+              {
+                "action_id": "deepseek_qualify",
+                "reason": "تحليل محتوى الرسالة وتحديد درجة الجدية لتمييز الجاد من غير الجاد",
+                "input_from": "gmail_read"
+              },
+              {
+                "action_id": "hubspot_record",
+                "reason": "حفظ العميل ودرجة تأهيله في CRM لتتبع الحالة ومتابعتها",
+                "input_from": "deepseek_qualify"
+              },
+              {
+                "action_id": "gmail_followup",
+                "reason": "إرسال متابعة تلقائية للجادين فقط عبر شرط على نتيجة التأهيل",
+                "input_from": "hubspot_record"
+              },
+              {
+                "action_id": "slack_handoff",
+                "reason": "تنبيه الفريق للتدخل اليدوي عندما تكون الصفقة جادة وتحتاج توقيتًا بشريًا",
+                "input_from": "gmail_followup"
+              }
+            ]
+          },
+          "result": {
+            "structuredContent": {
+              "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+              "invalidSteps": [],
+              "skippedSteps": [],
+              "unknownProps": []
+            }
+          }
+        },
+        {
+          "name": "ap_get_flow",
+          "args": {
+            "flowId": "FFFFFFFFFFFFFFFFFFFFF"
+          },
+          "result": {
+            "structuredContent": {
+              "id": "FFFFFFFFFFFFFFFFFFFFF",
+              "status": "DISABLED",
+              "version": {
+                "id": "VVVVVVVVVVVVVVVVVVVVV",
+                "steps": [
+                  {
+                    "action_id": "gmail_read",
+                    "reason": "قراءة رسائل البريد الوارد لالتقاط العملاء المحتملين فور وصولهم بدل ضياعهم",
+                    "input_from": null
+                  },
+                  {
+                    "action_id": "deepseek_qualify",
+                    "reason": "تحليل محتوى الرسالة وتحديد درجة الجدية لتمييز الجاد من غير الجاد",
+                    "input_from": "gmail_read"
+                  },
+                  {
+                    "action_id": "hubspot_record",
+                    "reason": "حفظ العميل ودرجة تأهيله في CRM لتتبع الحالة ومتابعتها",
+                    "input_from": "deepseek_qualify"
+                  },
+                  {
+                    "action_id": "gmail_followup",
+                    "reason": "إرسال متابعة تلقائية للجادين فقط عبر شرط على نتيجة التأهيل",
+                    "input_from": "hubspot_record"
+                  },
+                  {
+                    "action_id": "slack_handoff",
+                    "reason": "تنبيه الفريق للتدخل اليدوي عندما تكون الصفقة جادة وتحتاج توقيتًا بشريًا",
+                    "input_from": "gmail_followup"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "workflow_passed": true,
+      "modelCalls": 4,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1843
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 4787
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 4918
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 5676
+        }
+      ]
+    },
+    {
+      "id": "compose_build_readback",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": false,
+        "reasons": [
+          "invalid_json"
+        ]
+      },
+      "elapsedMs": 40657,
+      "effects": 1,
+      "tool_trace": [
+        {
+          "name": "ap_search_actions",
+          "args": {
+            "query": "retrieve inbound email leads from Gmail inbox"
+          },
+          "result": {
+            "structuredContent": {
+              "actions": [
+                {
+                  "id": "gmail_read",
+                  "piece": "gmail",
+                  "action": "read_messages",
+                  "capabilities": [
+                    "source"
+                  ],
+                  "connection": "gmail"
+                },
+                {
+                  "id": "deepseek_qualify",
+                  "piece": "ai",
+                  "action": "run_agent",
+                  "capabilities": [
+                    "qualify"
+                  ],
+                  "connection": null,
+                  "model": "deepseek-v4-pro"
+                },
+                {
+                  "id": "ap_record",
+                  "piece": "tables",
+                  "action": "upsert_record",
+                  "capabilities": [
+                    "record"
+                  ],
+                  "connection": null
+                },
+                {
+                  "id": "hubspot_record",
+                  "piece": "hubspot",
+                  "action": "upsert_contact",
+                  "capabilities": [
+                    "record"
+                  ],
+                  "connection": "hubspot"
+                },
+                {
+                  "id": "gmail_followup",
+                  "piece": "gmail",
+                  "action": "send_email",
+                  "capabilities": [
+                    "followup"
+                  ],
+                  "connection": "gmail"
+                },
+                {
+                  "id": "slack_handoff",
+                  "piece": "slack",
+                  "action": "send_message",
+                  "capabilities": [
+                    "handoff"
+                  ],
+                  "connection": "slack"
+                },
+                {
+                  "id": "asana_handoff",
+                  "piece": "asana",
+                  "action": "create_task",
+                  "capabilities": [
+                    "handoff"
+                  ],
+                  "connection": "asana"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_search_actions",
+          "args": {
+            "query": "AI classify lead seriousness with DeepSeek"
+          },
+          "result": {
+            "structuredContent": {
+              "actions": [
+                {
+                  "id": "gmail_read",
+                  "piece": "gmail",
+                  "action": "read_messages",
+                  "capabilities": [
+                    "source"
+                  ],
+                  "connection": "gmail"
+                },
+                {
+                  "id": "deepseek_qualify",
+                  "piece": "ai",
+                  "action": "run_agent",
+                  "capabilities": [
+                    "qualify"
+                  ],
+                  "connection": null,
+                  "model": "deepseek-v4-pro"
+                },
+                {
+                  "id": "ap_record",
+                  "piece": "tables",
+                  "action": "upsert_record",
+                  "capabilities": [
+                    "record"
+                  ],
+                  "connection": null
+                },
+                {
+                  "id": "hubspot_record",
+                  "piece": "hubspot",
+                  "action": "upsert_contact",
+                  "capabilities": [
+                    "record"
+                  ],
+                  "connection": "hubspot"
+                },
+                {
+                  "id": "gmail_followup",
+                  "piece": "gmail",
+                  "action": "send_email",
+                  "capabilities": [
+                    "followup"
+                  ],
+                  "connection": "gmail"
+                },
+                {
+                  "id": "slack_handoff",
+                  "piece": "slack",
+                  "action": "send_message",
+                  "capabilities": [
+                    "handoff"
+                  ],
+                  "connection": "slack"
+                },
+                {
+                  "id": "asana_handoff",
+                  "piece": "asana",
+                  "action": "create_task",
+                  "capabilities": [
+                    "handoff"
+                  ],
+                  "connection": "asana"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_search_actions",
+          "args": {
+            "query": "store and update lead in CRM or Google Sheets"
+          },
+          "result": {
+            "structuredContent": {
+              "actions": [
+                {
+                  "id": "gmail_read",
+                  "piece": "gmail",
+                  "action": "read_messages",
+                  "capabilities": [
+                    "source"
+                  ],
+                  "connection": "gmail"
+                },
+                {
+                  "id": "deepseek_qualify",
+                  "piece": "ai",
+                  "action": "run_agent",
+                  "capabilities": [
+                    "qualify"
+                  ],
+                  "connection": null,
+                  "model": "deepseek-v4-pro"
+                },
+                {
+                  "id": "ap_record",
+                  "piece": "tables",
+                  "action": "upsert_record",
+                  "capabilities": [
+                    "record"
+                  ],
+                  "connection": null
+                },
+                {
+                  "id": "hubspot_record",
+                  "piece": "hubspot",
+                  "action": "upsert_contact",
+                  "capabilities": [
+                    "record"
+                  ],
+                  "connection": "hubspot"
+                },
+                {
+                  "id": "gmail_followup",
+                  "piece": "gmail",
+                  "action": "send_email",
+                  "capabilities": [
+                    "followup"
+                  ],
+                  "connection": "gmail"
+                },
+                {
+                  "id": "slack_handoff",
+                  "piece": "slack",
+                  "action": "send_message",
+                  "capabilities": [
+                    "handoff"
+                  ],
+                  "connection": "slack"
+                },
+                {
+                  "id": "asana_handoff",
+                  "piece": "asana",
+                  "action": "create_task",
+                  "capabilities": [
+                    "handoff"
+                  ],
+                  "connection": "asana"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_search_actions",
+          "args": {
+            "query": "send follow-up email reply to lead"
+          },
+          "result": {
+            "structuredContent": {
+              "actions": [
+                {
+                  "id": "gmail_read",
+                  "piece": "gmail",
+                  "action": "read_messages",
+                  "capabilities": [
+                    "source"
+                  ],
+                  "connection": "gmail"
+                },
+                {
+                  "id": "deepseek_qualify",
+                  "piece": "ai",
+                  "action": "run_agent",
+                  "capabilities": [
+                    "qualify"
+                  ],
+                  "connection": null,
+                  "model": "deepseek-v4-pro"
+                },
+                {
+                  "id": "ap_record",
+                  "piece": "tables",
+                  "action": "upsert_record",
+                  "capabilities": [
+                    "record"
+                  ],
+                  "connection": null
+                },
+                {
+                  "id": "hubspot_record",
+                  "piece": "hubspot",
+                  "action": "upsert_contact",
+                  "capabilities": [
+                    "record"
+                  ],
+                  "connection": "hubspot"
+                },
+                {
+                  "id": "gmail_followup",
+                  "piece": "gmail",
+                  "action": "send_email",
+                  "capabilities": [
+                    "followup"
+                  ],
+                  "connection": "gmail"
+                },
+                {
+                  "id": "slack_handoff",
+                  "piece": "slack",
+                  "action": "send_message",
+                  "capabilities": [
+                    "handoff"
+                  ],
+                  "connection": "slack"
+                },
+                {
+                  "id": "asana_handoff",
+                  "piece": "asana",
+                  "action": "create_task",
+                  "capabilities": [
+                    "handoff"
+                  ],
+                  "connection": "asana"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_search_actions",
+          "args": {
+            "query": "notify team on Slack when serious lead needs intervention"
+          },
+          "result": {
+            "structuredContent": {
+              "actions": [
+                {
+                  "id": "gmail_read",
+                  "piece": "gmail",
+                  "action": "read_messages",
+                  "capabilities": [
+                    "source"
+                  ],
+                  "connection": "gmail"
+                },
+                {
+                  "id": "deepseek_qualify",
+                  "piece": "ai",
+                  "action": "run_agent",
+                  "capabilities": [
+                    "qualify"
+                  ],
+                  "connection": null,
+                  "model": "deepseek-v4-pro"
+                },
+                {
+                  "id": "ap_record",
+                  "piece": "tables",
+                  "action": "upsert_record",
+                  "capabilities": [
+                    "record"
+                  ],
+                  "connection": null
+                },
+                {
+                  "id": "hubspot_record",
+                  "piece": "hubspot",
+                  "action": "upsert_contact",
+                  "capabilities": [
+                    "record"
+                  ],
+                  "connection": "hubspot"
+                },
+                {
+                  "id": "gmail_followup",
+                  "piece": "gmail",
+                  "action": "send_email",
+                  "capabilities": [
+                    "followup"
+                  ],
+                  "connection": "gmail"
+                },
+                {
+                  "id": "slack_handoff",
+                  "piece": "slack",
+                  "action": "send_message",
+                  "capabilities": [
+                    "handoff"
+                  ],
+                  "connection": "slack"
+                },
+                {
+                  "id": "asana_handoff",
+                  "piece": "asana",
+                  "action": "create_task",
+                  "capabilities": [
+                    "handoff"
+                  ],
+                  "connection": "asana"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_list_connections",
+          "args": {},
+          "result": {
+            "structuredContent": {
+              "connections": [
+                {
+                  "name": "slack",
+                  "status": "ACTIVE"
+                },
+                {
+                  "name": "hubspot",
+                  "status": "ACTIVE"
+                }
+              ],
+              "aiProviders": [
+                {
+                  "name": "deepseek",
+                  "model": "deepseek-v4-pro"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_build_flow",
+          "args": {
+            "flowName": "موظف استرجاع وتأهيل العملاء المحتملين",
+            "steps": [
+              {
+                "action_id": "gmail_read",
+                "reason": "مصدر البيانات: يجلب رسائل العملاء المحتملين الواردة حتى لا يضيعوا",
+                "input_from": null
+              },
+              {
+                "action_id": "deepseek_qualify",
+                "reason": "يقيّم جدية كل عميل محتمل بنموذج DeepSeek المهيأ ليحدد من يستحق المتابعة",
+                "input_from": "gmail_read"
+              },
+              {
+                "action_id": "hubspot_record",
+                "reason": "يسجل العميل المحتمل ودرجة جديته في HubSpot المتصل ليكون مرجعًا واحدًا للفريق",
+                "input_from": "deepseek_qualify"
+              },
+              {
+                "action_id": "gmail_followup",
+                "reason": "يرسل رد متابعة تلقائي للعملاء الجادين في التوقيت المناسب",
+                "input_from": "hubspot_record"
+              },
+              {
+                "action_id": "slack_handoff",
+                "reason": "يخطر الفريق على Slack المتصل للتدخل اليدوي مع العملاء ذوي الأولوية العالية في الوقت الصحيح",
+                "input_from": "gmail_followup"
+              }
+            ]
+          },
+          "result": {
+            "structuredContent": {
+              "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+              "invalidSteps": [],
+              "skippedSteps": [],
+              "unknownProps": []
+            }
+          }
+        },
+        {
+          "name": "ap_get_flow",
+          "args": {
+            "flowId": "FFFFFFFFFFFFFFFFFFFFF"
+          },
+          "result": {
+            "structuredContent": {
+              "id": "FFFFFFFFFFFFFFFFFFFFF",
+              "status": "DISABLED",
+              "version": {
+                "id": "VVVVVVVVVVVVVVVVVVVVV",
+                "steps": [
+                  {
+                    "action_id": "gmail_read",
+                    "reason": "مصدر البيانات: يجلب رسائل العملاء المحتملين الواردة حتى لا يضيعوا",
+                    "input_from": null
+                  },
+                  {
+                    "action_id": "deepseek_qualify",
+                    "reason": "يقيّم جدية كل عميل محتمل بنموذج DeepSeek المهيأ ليحدد من يستحق المتابعة",
+                    "input_from": "gmail_read"
+                  },
+                  {
+                    "action_id": "hubspot_record",
+                    "reason": "يسجل العميل المحتمل ودرجة جديته في HubSpot المتصل ليكون مرجعًا واحدًا للفريق",
+                    "input_from": "deepseek_qualify"
+                  },
+                  {
+                    "action_id": "gmail_followup",
+                    "reason": "يرسل رد متابعة تلقائي للعملاء الجادين في التوقيت المناسب",
+                    "input_from": "hubspot_record"
+                  },
+                  {
+                    "action_id": "slack_handoff",
+                    "reason": "يخطر الفريق على Slack المتصل للتدخل اليدوي مع العملاء ذوي الأولوية العالية في الوقت الصحيح",
+                    "input_from": "gmail_followup"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "workflow_passed": false,
+      "modelCalls": 4,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 2071
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 4391
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 4525
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 5637
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total": 2,
+    "passed": 1,
+    "workflowCases": 2,
+    "syntheticEffects": 2
+  },
+  "coverage": {
+    "measured": [
+      "draft_construction",
+      "stored_graph_readback",
+      "step_dependencies",
+      "employee_flow_link"
+    ],
+    "notYetMeasured": [
+      "business_uplift",
+      "plan_efficiency",
+      "live_provider_outcome",
+      "UI_experience",
+      "long_term_learning_quality",
+      "multi_tenant_load",
+      "end_to_end_UI_latency",
+      "repeat_trial_reliability"
+    ],
+    "modelLoopTiming": [
+      {
+        "id": "compose_build_readback",
+        "chat": "main",
+        "elapsedMs": 64137,
+        "tokens": 17224
+      },
+      {
+        "id": "compose_build_readback",
+        "chat": "employee",
+        "elapsedMs": 40657,
+        "tokens": 16624
+      }
+    ]
+  },
+  "contract": "Live DeepSeek, actual production chat loop, synthetic AP tools only. Every answer, evidence key, scope and required workflow must pass. Diagnostic retries never erase failures. No real provider effects or deployment proof.",
+  "local_regression": {
+    "total": 481,
+    "passed": 480,
+    "skipped": 1,
+    "failed": 0
+  },
+  "limitations": [
+    "Synthetic AP build schema and provider services; no live flow or business result.",
+    "Main chat built and read back a linked disabled draft; employee chat built and read back but its final reply was invalid JSON. The 1/2 failure is retained.",
+    "A connected graph alone does not prove expert business planning or optimal tool selection."
+  ],
+  "posthoc_business_graph_assessment": {
+    "passed": 0,
+    "total": 2,
+    "reason": "Original primary 1/2 remains unchanged. The main graph promised qualified-only followup in reason text but encoded no guard or lead mapping. The stricter regression now rejects verbal-only conditions. Employee final JSON also failed. No fresh model rerun."
+  }
+}
