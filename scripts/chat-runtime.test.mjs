@@ -97,13 +97,14 @@ test('chat shows only safe tool receipt metadata while the request remains unver
   }finally{p.close();}
 });
 
-async function page({storage={},locale,hydrate=empty,message,work,approve,employee_state,employee_instructions,resume_employee_activation={ok:true,activation_status:'none'},add_knowledge,update_company_settings,export:exportResponse,integrations={list:{ok:true,connections:[]}},integrationStatus={ok:true,connected:false},integrationConnect,mcpStatus={ok:true,state:'authorization_stored',liveVerified:false},mcpConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد',{pieceName:'@activepieces/piece-gmail'}]]}={}){
+async function page({storage={},session={},locale,hydrate=empty,message,work,approve,employee_state,employee_instructions,resume_employee_activation={ok:true,activation_status:'none'},add_knowledge,update_company_settings,export:exportResponse,integrations={list:{ok:true,connections:[]}},integrationStatus={ok:true,connected:false},integrationConnect,mcpStatus={ok:true,state:'authorization_stored',liveVerified:false},mcpConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد',{pieceName:'@activepieces/piece-gmail'}]]}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
   const w=dom.window,requests=[],activationRequests=[],alerts=[],polls=[],navigations=[];let hydrateTimer;
   w.matchMedia=()=>({matches:true,addEventListener(){}});
   w.PIECES=pieces;
   w.SIYADAH_REAL_ACCOUNT=real;
   w.SIYADAH_CHAT_GATEWAY='https://gateway.test/sync';
+  Object.entries(session).forEach(([k,v])=>w.sessionStorage.setItem(k,v));
   if(locale)w.sessionStorage.setItem('siyadah_locale',locale);
   Object.entries(storage).forEach(([k,v])=>w.localStorage.setItem(k,v));
   const realTimeout=w.setTimeout.bind(w);
@@ -1356,4 +1357,18 @@ test('right column highlights a real waiting request and opens it without resubm
  const p=await page({message:{ok:true,conversation_id:'waiting',work_id:'w',work_status:'awaiting_input',reply:'أحتاج عدد النسخ'}});try{
   send(p,'جهز العقد');await flush();assert.equal(p.d.querySelector('#awaitingSection').hidden,false);const pending=p.d.querySelector('#awaitingChats [data-chat="waiting"]');assert.ok(pending);p.d.querySelector('#newChat').click();p.d.querySelector('#awaitingChats [data-chat="waiting"]').click();assert.match(thread(p),/أحتاج عدد النسخ/);assert.equal(p.requests.filter(r=>r.body?.op==='message').length,1);
  }finally{p.close();}
+});
+
+
+test('onboarding request arrives in the composer without creating an employee or sending',async()=>{
+ const text='راجع عقد اليوم وأعطني الملاحظات';
+ const p=await page({hash:'',session:{siyadah_request_draft_v1:JSON.stringify({text,createdAt:Date.now()})}});try{
+  assert.equal(p.d.querySelector('#input').value,text);assert.equal(p.w.sessionStorage.getItem('siyadah_request_draft_v1'),null);assert.equal(p.requests.filter(r=>r.body&&['message','approve','select_employee'].includes(r.body.op)).length,0);assert.equal(p.d.activeElement.id,'input');
+ }finally{p.close();}
+});
+
+test('onboarding request survives failed account load and expired drafts do not enter the composer',async()=>{
+ const key='siyadah_request_draft_v1',raw=JSON.stringify({text:'راجع العقد',createdAt:Date.now()});
+ const failed=await page({hash:'',hydrate:Error('offline'),session:{[key]:raw}});try{assert.equal(failed.w.sessionStorage.getItem(key),raw);assert.equal(failed.d.querySelector('#input').value,'');assert.equal(failed.requests.filter(r=>r.body&&r.body.op==='message').length,0);}finally{failed.close();}
+ const old=await page({hash:'',session:{[key]:JSON.stringify({text:'طلب قديم',createdAt:Date.now()-31*60*1000})}});try{assert.equal(old.d.querySelector('#input').value,'');assert.equal(old.w.sessionStorage.getItem(key),null);assert.equal(old.requests.filter(r=>r.body&&r.body.op==='message').length,0);}finally{old.close();}
 });
