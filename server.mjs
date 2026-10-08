@@ -570,6 +570,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           if(draftEmployee?.activepieces_flow_id&&['ap_build_flow','ap_create_flow'].includes(name))throw new TenantProjectError('employee_flow_conflict','طريقة عمل المسودة محفوظة؛ اقرأها وعدّلها دون إنشاء نسخة ثانية.',409);
           let args;try{args=JSON.parse(call.function.arguments||'{}');}catch{args=null;}
           if(!args||typeof args!=='object'||Array.isArray(args))throw new TenantProjectError('mcp_arguments_invalid','مدخلات الأداة يجب أن تكون كائن JSON واحدًا.',502);
+          console.info('chat_model_tool_choice',JSON.stringify({conversation_id:conversationId,tool_call_id:call.id,name,arguments_sha256:createHash('sha256').update(JSON.stringify(args)).digest('hex')}));
           if(!employee&&!oneOffFlow&&oneOffReference&&!['ap_build_flow','ap_create_flow'].includes(name)&&(args.flowId===oneOffReference.flowId||name===oneOffReference.name||['ap_get_run','ap_retry_run'].includes(name))){oneOffFlow={flowId:oneOffReference.flowId,status:'disabled'};workMode='one_off';await refreshOneOff();}
           if(draftOnly&&(name==='ap_lock_and_publish'||name==='ap_change_flow_status'&&String(args.status||'').toUpperCase()==='ENABLED'))throw new TenantProjectError('draft_only_publish_forbidden','طلب المستخدم إبقاء الفلو مسودة؛ لا تنشره أو تفعّله.',403);
           if(doNotRun&&(['ap_test_flow','ap_retry_run','ap_run_action'].includes(name)||name===flowToolName))throw new TenantProjectError('flow_run_forbidden','طلب المستخدم عدم تشغيل الفلو أو اختبار تنفيذه.',403);

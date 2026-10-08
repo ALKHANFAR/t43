@@ -183,3 +183,7 @@ The server supplies employee execution context only to native Flow tool paramete
 Chat uses the same discovery routine. `chat_mcp_catalog` records native discovery and `chat_model_usage.tool_names` records tools actually sent to the model. `catalog_reviewed` requires a successful capability discovery tool response; listing tool definitions alone is insufficient.
 
 Approval outcomes for native Flow builds and generic tool responses are explained through the same chat LLM without supplying execution tools again. Deterministic cancellation, validation, transport failure and recovery notices remain service status messages; they are not another conversational model or an Activepieces Saved Agent. The browser chat gateway is fixed to Siyadah's same-origin chat route.
+
+## Model-to-native dispatch correlation
+
+`chat_model_tool_choice` records the actual parsed `tool_calls` name, call id and SHA256 of arguments before scope guards. `native_mcp_dispatch` records `tools/call`, the configured native `/mcp` endpoint, name and SHA256 of the serialized dispatched arguments. Neither log records argument values or token/header values. Matching name and digest in a bounded request window proves unchanged inputs for that observed call. A mismatch may be an intentional scope binding or internal work-mode removal; it must not be called a transparent match. Dispatch logging precedes HTTP completion and is not a success receipt.

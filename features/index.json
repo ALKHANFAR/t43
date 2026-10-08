@@ -3,6 +3,29 @@
   "repository": "ALKHANFAR/t43",
   "features": [
     {
+      "id": "llm_native_mcp_dispatch_proof",
+      "name": "إثبات اختيار الموديل وإرساله إلى MCP الأصلي",
+      "aliases": [
+        "اسم الأداة من الموديل",
+        "بصمة مدخلات MCP"
+      ],
+      "state": "draft_pr",
+      "meaning": "سجل اختيار أداة من استجابة LLM وسجل إرسال tools/call إلى endpoint الأصلي مع اسم الأداة وبصمة المدخلات فقط؛ لا أجسام ولا توكنات. مطابقة البصمتين تثبت المدخلات غير المعدلة في الحالة المرصودة؛ قيود النطاق قد تعدل مدخلات أدوات أخرى. محلي غير منشور.",
+      "linear": "ABO-69",
+      "locations": [
+        {
+          "role": "model_choice",
+          "path": "server.mjs",
+          "anchor": "console.info('chat_model_tool_choice'"
+        },
+        {
+          "role": "native_dispatch",
+          "path": "lib/activepieces-mcp.mjs",
+          "anchor": "console.info('native_mcp_dispatch'"
+        }
+      ]
+    },
+    {
       "id": "native_mcp_catalog_proof",
       "name": "إثبات أدوات MCP الأصلية في الشات",
       "aliases": [
