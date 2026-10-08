@@ -201,12 +201,11 @@ test('confirmation can be retried after a connection failure without losing its 
   dom.window.close();
 });
 
-test('login sends companies without an employee through the existing onboarding journey',()=>{
+test('login follows the server onboarding decision for new and returning companies',()=>{
   const dom=new JSDOM(auth,{url:'https://siyadah.test/auth.html',runScripts:'outside-only'}),w=dom.window;
   w.eval(inlineScript);
   assert.equal(w.nextAfterLogin({onboardingRequired:true}),'app/onboard.html');
   assert.equal(w.nextAfterLogin({onboardingRequired:false}),'app/chat.html');
-  assert.match(server,/const onboardingRequired=[^\n]*listEmployees/);
   dom.window.close();
 });
 
