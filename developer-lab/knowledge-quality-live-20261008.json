@@ -1,0 +1,285 @@
+{
+  "mode": "live_model_synthetic_AP",
+  "modelCasesRun": 14,
+  "results": [
+    {
+      "id": "latest_price",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 615
+        }
+      ]
+    },
+    {
+      "id": "latest_price",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 954
+        }
+      ]
+    },
+    {
+      "id": "older_needle",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": false,
+        "reasons": [
+          "unsupported_or_missing_evidence"
+        ]
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 2449
+        }
+      ]
+    },
+    {
+      "id": "older_needle",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 2551
+        }
+      ]
+    },
+    {
+      "id": "multi_session",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 900
+        }
+      ]
+    },
+    {
+      "id": "multi_session",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 891
+        }
+      ]
+    },
+    {
+      "id": "historical_price",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 748
+        }
+      ]
+    },
+    {
+      "id": "historical_price",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1018
+        }
+      ]
+    },
+    {
+      "id": "missing_fact",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 510
+        }
+      ]
+    },
+    {
+      "id": "missing_fact",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 719
+        }
+      ]
+    },
+    {
+      "id": "conflicting_sources",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 984
+        }
+      ]
+    },
+    {
+      "id": "conflicting_sources",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1193
+        }
+      ]
+    },
+    {
+      "id": "employee_scope",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1363
+        }
+      ]
+    },
+    {
+      "id": "employee_scope",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1603
+        }
+      ]
+    }
+  ],
+  "tested_tree": "d103bb8a4f3028ba8e0d0fb196f8a6d6c2bb1b11",
+  "tested_remote_commit": "9ef394ab90a9f39d4813b13a62f28b856c8e3366",
+  "date": "2026-10-08",
+  "summary": {
+    "passed": 13,
+    "total": 14,
+    "context_passed": 14,
+    "effects": 0
+  },
+  "diagnostic_repeat": {
+    "id": "older_needle",
+    "chat": "main",
+    "answer": "199",
+    "evidence_keys": [
+      "subscription"
+    ],
+    "passed": true,
+    "model": "deepseek-v4-pro",
+    "tokens": 2370
+  },
+  "limitations": [
+    "First suite retains one evidence failure; diagnostic repeat does not replace it.",
+    "Synthetic company and AP fixture; live DeepSeek responses only.",
+    "No production deployment, live AP execution, database recovery, or broad accuracy guarantee."
+  ]
+}
