@@ -439,9 +439,11 @@
       "name": "قدرات أدوات مشروع الشركة في الشات",
       "aliases": ["ربط الشات بـMCP", "أدوات الشات", "شات الموظف والأدوات", "project scoped MCP chat"],
       "state": "live_needs_change",
-      "meaning": "وصلة MCP واحدة إلى مشروع الشركة؛ يعاد استخدام رمز الوصول الصالح داخل طلب الشات نفسه بعد فحص المشروع والمنحة عند كل استدعاء، ويُجدّد عند انتهاء عمره. لا يُحتفظ به بين طلبات الشات. مع اكتشاف ديناميكي للأدوات ودليل الاستخدام الذي يرسله خادم Activepieces نفسه. أدوات المشروع تُنفَّذ مباشرة من الشات، ونتيجتها تعود للنموذج. شات الموظف يعرض أداة فلوه المنشور عبر MCP وحدها بعد مطابقة الاسم الدقيق للفلو ونسخته المنشورة؛ الفلو القديم بلا مشغّل MCP لا يُشغّل. يبقى نطاق الشركة محددًا من الخادم. الطلب الطويل يرد queued ويكمل في الخادم. ثبتت قراءة Slack List Channels حية في مشروع عشر أبعاد وظهرت نتيجتها للعميل؛ سجل طلب سيادة بقي unverified، ولم يثبت تفعيل موظف حي.",
+      "meaning": "وصلة MCP واحدة إلى مشروع الشركة؛ يعاد استخدام رمز الوصول الصالح داخل طلب الشات نفسه بعد فحص المشروع والمنحة عند كل استدعاء، ويُجدّد عند انتهاء عمره. لا يُحتفظ به بين طلبات الشات. مع اكتشاف ديناميكي للأدوات ودليل الاستخدام الذي يرسله خادم Activepieces نفسه. أدوات المشروع تُنفَّذ مباشرة من الشات، ونتيجتها تعود للنموذج. شات الموظف يعرض أداة فلوه المنشور عبر MCP وحدها بعد مطابقة الاسم الدقيق للفلو ونسخته المنشورة؛ الفلو القديم بلا مشغّل MCP لا يُشغّل. يبقى نطاق الشركة محددًا من الخادم. الطلب الطويل يرد queued ويكمل في الخادم. ثبتت قراءة Slack List Channels حية في مشروع عشر أبعاد وظهرت نتيجتها للعميل؛ سجل طلب سيادة بقي unverified، ولم يثبت تفعيل موظف حي. نُقل إصلاح 6b1c64d من PR66: طلب التنفيذ مرة واحدة لا يفسر كمنع تنفيذ، مع الحفاظ على منع مستقل صريح.",
       "linear": "ABO-48",
       "locations": [
+        {"role": "single_run_intent", "path": "lib/chat-intelligence.mjs", "anchor": "export function doNotRunIntent(message)"},
+        {"role": "single_run_intent_test", "path": "scripts/chat-intelligence-runtime.test.mjs", "anchor": "a single execution limit does not forbid execution"},
         {"role": "chat_route", "path": "server.mjs", "anchor": "async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null"},
         {"role": "retired_public_proxy_test", "path": "scripts/server-runtime.test.mjs", "anchor": "assert.equal(retired.status,405)"},
         {"role": "tool_receipt", "path": "server.mjs", "anchor": "const effects=[],toolReceipts=[];"},
@@ -502,10 +504,13 @@
       "aliases": ["تفويض الشركة", "بدء موافقة MCP", "ربط مساحة التنفيذ"],
       "name": "موافقة أدوات الشركة من جلسة العميل",
       "state": "draft_pr",
-      "meaning": "تبدأ موافقة MCP الأصلية من جلسة الشركة المؤكدة، وتعود إلى نفس الجلسة والشركة؛ حالة المنحة المحفوظة ليست إثبات جاهزية حية. لا ينشئ هذا موافقة تلقائية نيابة عن العميل أو اتصال أداة.",
+      "meaning": "تبدأ موافقة MCP الأصلية من جلسة الشركة المؤكدة، وتعود إلى نفس الجلسة والشركة؛ حالة المنحة المحفوظة ليست إثبات جاهزية حية. لا ينشئ هذا موافقة تلقائية نيابة عن العميل أو اتصال أداة. نُقل إصلاح f12823e من PR65 إلى فرع التوحيد: يقرأ الخادم بريدًا واحدًا مؤكدًا ويدعو عضو PROJECT/Editor لمشروع الشركة ويتحقق من قبول الدعوة قبل تسجيل موافقة MCP؛ لا يختار المتصفح الهوية أو الدور أو المشروع. لم تُنفذ دعوة حية في هذه المهمة.",
       "linear": "ABO-69",
       "pr": "https://github.com/ALKHANFAR/t43/pull/60",
       "locations": [
+        {"role": "verified_native_identity", "path": "lib/account-auth.mjs", "anchor": "async function verifiedEmail(companyId)"},
+        {"role": "native_project_membership", "path": "lib/tenant-projects.mjs", "anchor": "async function ensureMember({tenantId,email})"},
+        {"role": "native_membership_test", "path": "scripts/tenant-projects-runtime.test.mjs", "anchor": "customer membership uses the stored project and native Editor invitation only"},
         {
           "role": "route",
           "path": "server.mjs",
@@ -761,6 +766,35 @@
           "role": "broken_graph_test",
           "path": "scripts/employee-stress-runtime.test.mjs",
           "anchor": "a good final plan cannot hide omitted readback"
+        }
+      ]
+    },
+    {
+      "id": "chat_model_billing_failure",
+      "name": "توقف المساعد بسبب الرصيد",
+      "aliases": [
+        "رصيد النموذج",
+        "نفاد الرصيد"
+      ],
+      "state": "draft_pr",
+      "meaning": "نُقل إصلاح 979a6a9 من PR66 إلى فرع التوحيد: يفسر رفض مزود النموذج 402 قبل التنفيذ برسالة محفوظة دون كشف تفاصيل المزود، ويحافظ على أولوية دليل تنفيذ بدأ بالفعل دون إعادة إرسال. اختبارات محلية وليست تجربة رفض رصيد حية.",
+      "linear": "ABO-69",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/62",
+      "locations": [
+        {
+          "role": "provider_error",
+          "path": "server.mjs",
+          "anchor": "if(response.status===402)throw new TenantProjectError('assistant_billing_unavailable'"
+        },
+        {
+          "role": "result",
+          "path": "lib/chat-outcome.mjs",
+          "anchor": "export function failedChatExecution"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-outcome-runtime.test.mjs",
+          "anchor": "model billing failure is explicit only before execution starts"
         }
       ]
     }

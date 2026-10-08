@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {builtFlowResult,conversationMemory,createdTableReadback,flowName,hasActiveFlowConnections} from '../lib/chat-intelligence.mjs';
+import {doNotRunIntent,builtFlowResult,conversationMemory,createdTableReadback,flowName,hasActiveFlowConnections} from '../lib/chat-intelligence.mjs';
 
 const server=await readFile(new URL('../server.mjs',import.meta.url),'utf8');
 const chat=await readFile(new URL('../app/chat.js',import.meta.url),'utf8');
@@ -155,4 +155,10 @@ test('confirmed table resumes planning without creating another table and keeps 
   assert.match(server,/excludedTools\.includes\(name\)/);
   assert.ok(continuation.indexOf('createdTableReadback(result,listed)')<continuation.indexOf('deepseekReply('));
   assert.match(server.slice(end,end+700),/outcome_kind:'unverified'/);
+});
+
+
+test('a single execution limit does not forbid execution while explicit prohibitions still do',()=>{
+  for(const message of ['نفذ الآن ولا تنفذ أكثر من مرة','شغله ولا تشغله اكثر من مرة واحدة','نفذ ولا تنفذها أكثر من مره'])assert.equal(doNotRunIntent(message),false,message);
+  for(const message of ['لا تنفذ','ولا تشغله','بدون تنفيذ','do not run','نفذ مرة واحدة ولا تنفذ أكثر من مرة، ولا تشغل قبل موافقتي'])assert.equal(doNotRunIntent(message),true,message);
 });

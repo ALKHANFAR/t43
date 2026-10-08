@@ -1042,7 +1042,7 @@ var I = {
       if(started.state!=="authorization_required"||! /^[a-f0-9]{64}$/.test(started.authorizationRevision||""))throw new Error(ui("لم تبدأ محاولة موافقة جديدة.","A new authorization attempt was not started."));
       var destination=new URL(started.authorizationUrl);if(destination.protocol!=="https:")throw new Error(ui('صفحة الموافقة غير صالحة.','The authorization page is invalid.'));
       popup.location.replace(destination.toString());
-      rcBox('<p class="mf__m" role="status">'+ui('أكمل الموافقة في النافذة المنبثقة. لم نتأكد من جاهزية الأدوات بعد.','Complete authorization in the pop-up. Tool readiness is not verified yet.')+'</p>');
+      rcBox('<p class="mf__m" role="status">'+ui('أكمل الموافقة في النافذة المنبثقة باستخدام بريد حسابك في سيادة، واختر مشروع شركتك. لم نتأكد من جاهزية الأدوات بعد.','Complete authorization in the pop-up using your Siyadah account email and select your company workspace. Tool readiness is not verified yet.')+'</p>');
       async function poll(){
         if(stopped)return;
         if(popup.closed){failed(ui('أُغلقت نافذة الموافقة؛ لم يتم تأكيد حفظ التفويض.','The pop-up closed; saved authorization was not confirmed.'));return;}

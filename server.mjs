@@ -165,6 +165,8 @@ async function customerMcpAccess(req,res,op){
       if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).length)throw new TenantProjectError('client_scope_forbidden','نطاق الشركة يحدده الخادم فقط.',400);
       const pool=await database();
       await provisionVerifiedTenant({tenantId,query:(sql,values)=>pool.query(sql,values),ensureProject:async value=>(await tenantProjects()).ensure(value)});
+      const email=await (await accountAuth()).verifiedEmail(tenantId);
+      await (await tenantProjects()).ensureMember({tenantId,email});
       const authorizationUrl=await (await activepiecesMcp()).begin(tenantId,{sessionBinding:oauthSessionBinding(req)});
       const clientId=new URL(authorizationUrl).searchParams.get('client_id');
       if(!clientId)throw new TenantProjectError('mcp_registration_invalid','تعذّر تهيئة الموافقة.',502);
@@ -175,7 +177,7 @@ async function customerMcpAccess(req,res,op){
     return json(res,200,{ok:true,state:result.grantPresent?'authorization_stored':'authorization_required',grantRevision:result.grantPresent?result.grantRevision:null,liveVerified:false});
   }catch(error){
     if(op==='status'&&error?.code==='project_not_ready')return json(res,200,{ok:true,state:'project_required',liveVerified:false});
-    if(error instanceof TenantProjectError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
+    if(error instanceof TenantProjectError||error instanceof AccountAuthError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
     console.warn('customer MCP access failed',error?.code||error?.name||'unknown_error');
     return json(res,502,{ok:false,error:'mcp_unavailable'});
   }
@@ -452,6 +454,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
       const data=await response.json().catch(()=>({}));
       const usage=data.usage||{};
       console.info('chat_model_usage',JSON.stringify({conversation_id:conversationId,elapsed_ms:Date.now()-modelStarted,status:response.status,prompt_tokens:usage.prompt_tokens,completion_tokens:usage.completion_tokens,total_tokens:usage.total_tokens,cache_hit_tokens:usage.prompt_cache_hit_tokens,cache_miss_tokens:usage.prompt_cache_miss_tokens,reasoning_tokens:usage.completion_tokens_details?.reasoning_tokens}));
+      if(response.status===402)throw new TenantProjectError('assistant_billing_unavailable','خدمة المساعد غير متاحة بسبب الرصيد.',503);
       if(!response.ok)throw new TenantProjectError('assistant_unavailable','تعذّر إكمال التفكير الآن.',502);
       return data?.choices?.[0]?.message;
     }finally{clearTimeout(timer);}
@@ -938,7 +941,7 @@ async function publicChat(req,res){
       console.error('chat request failed',error instanceof TenantProjectError||error instanceof CompanyProfileError?error.code:error?.name==='AbortError'?'AbortError':'unexpected_error');
       const {companyId,requestId,conversationId,profiles,effectStarted,executionAttempt,conversationSaved,userMessage,employeeId}=activeRequest;
       const status=effectStarted?'unknown':'failed',httpStatus=200;
-      const response=failedChatExecution({conversationId,requestId,effectStarted,executionAttempt,transportReceipt:error?.transportReceipt});
+      const response=failedChatExecution({conversationId,requestId,effectStarted,executionAttempt,transportReceipt:error?.transportReceipt,failureCode:error?.code});
       if(conversationSaved)try{await profiles.recordConversation({companyId,conversationId,employeeId,requestId,userMessage,assistantMessage:response.reply});}
       catch{console.error('chat failure transcript unavailable');}
       try{const settled=await profiles.settleChatRequest({companyId,requestId,status,httpStatus,response});return json(res,settled.httpStatus,settled.response,sessionHeaders);}

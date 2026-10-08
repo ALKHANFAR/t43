@@ -487,6 +487,13 @@ test('a long request answers queued once, keeps working, and settles the same re
   assert.equal(failedWrites[0].body.request_status,'failed');
   assert.equal(recorded.at(-1).assistantMessage,failedWrites[0].body.reply);
   assert.match(recorded.at(-1).assistantMessage,/تعذّر إكمال الطلب/);
+  failedRes.headersSent=false;
+  ctx.deepseekReply=async()=>{throw new TenantProjectError('assistant_billing_unavailable','provider private details',503);};
+  await publicChat({headers:{}},failedRes);
+  assert.match(failedWrites.at(-1).body.reply,/الرصيد/);
+  assert.equal(failedWrites.at(-1).body.work_status,'failed');
+  assert.equal(recorded.at(-1).assistantMessage,failedWrites.at(-1).body.reply);
+  assert.doesNotMatch(failedWrites.at(-1).body.reply,/provider private/);
 });
 
 test('a second message waits for the first result before reaching the model',async()=>{

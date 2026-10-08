@@ -145,3 +145,14 @@ test('verified memory persistence is distinct from a provider result and does no
   const failed=completedToolActions({effects:[action.name,memory.name],toolReceipts:[{...action,outcome:'unverified'},memory]});assert.equal(failed.outcome_kind,'unverified');
   assert.equal(completedToolActions({effects:[memory.name],toolReceipts:[{...memory,memory_table_id:'invalid'}]}).outcome_kind,'unverified');
 });
+
+
+test('model billing failure is explicit only before execution starts',()=>{
+  const args={conversationId:'c',requestId:'r',failureCode:'assistant_billing_unavailable'};
+  const failed=failedChatExecution(args);
+  assert.equal(failed.work_status,'failed');assert.match(failed.reply,/الرصيد/);
+  const uncertain=failedChatExecution({...args,effectStarted:true,executionAttempt:true});
+  assert.equal(uncertain.work_status,'unknown');assert.doesNotMatch(uncertain.reply,/الرصيد/);
+  const receipt=failedChatExecution({...args,effectStarted:true,transportReceipt:{runId:'R12345678901234567890',outcome:'unverified',httpStatus:200}});
+  assert.equal(receipt.transport_receipt.runId,'R12345678901234567890');assert.doesNotMatch(receipt.reply,/الرصيد/);
+});

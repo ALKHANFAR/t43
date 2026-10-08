@@ -161,3 +161,13 @@ Compatibility evidence: the pinned AP source `23e0c254979c73cfbfbde00242668ee873
 
 
 Quality evaluation is separate from runtime correctness: `scripts/knowledge-quality-eval.mjs` exercises the real chat loop over synthetic company knowledge/AP memory in 14 cases. Offline mode verifies context availability/isolation only, with no LLM quality pass. Optional live mode requires a securely injected DeepSeek key and scores exact answers/status/source keys while prohibiting AP effects. The key is present on the Railway Siyadah service as verified through the authorized read-only connection, but OAuth variable values are redacted; live answer quality has not been measured. Read access to the project was recovered on a different connected Railway account after the earlier viewer denials. No secret value, provider setup or deployment changed.
+
+## Native customer project membership
+
+Customer MCP start first provisions the verified company project, reads exactly one verified owner email from the server account, and upserts an Activepieces PROJECT invitation with Editor role through the platform service API. Its returned email, project, type and ACCEPTED status must match before OAuth client registration. The browser still sends an empty body and chooses no identity/project/role. The customer signs in or registers with the same email in the native consent window and approves the intended company project; the callback remains bound to the original company session. This is project membership, not provider OAuth consent or an embedded SSO claim. Existing native project entitlement/seat checks remain authoritative.
+
+A bounded instruction such as «لا تنفذ أكثر من مرة» limits repetition and is not a blanket do-not-run instruction. Independent explicit prohibitions remain enforced. This clarification fixes a witnessed pre-dispatch refusal; it does not itself add retry or deduplication behavior. ABO-69.
+
+### Model billing refusal
+
+A provider HTTP402 before native execution produces a durable failed request explaining that the assistant service is unavailable due to its balance. Provider payloads and credentials are not exposed. Existing attempted-execution/unknown-result/transport-receipt precedence stays intact; no automatic redispatch occurs. ABO-69 / ABO-37.
