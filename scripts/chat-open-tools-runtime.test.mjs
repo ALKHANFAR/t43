@@ -706,11 +706,13 @@ test('a declared native context field receives saved knowledge and instructions 
     assert.match(request.messages[0].content,/اربطه بخطوات/);
     return use([flowToolName,{customer:'خالد',...(omit?{}:{[field]:type==='string'?'forged':{company:'foreign'}})}]);
   },say('وصلت النتيجة.')]});
-  await run({employee:saved,message:'جهز عرض الخدمة الحالية.',company:{name:'شركة الاختبار'},settings:{language:'ar'},knowledge:{facts:[{topic:'الأسعار',value:'الخدمة بـ١٢٠٠ ريال',certainty:'confirmed'}]},history:[{role:'user',content:'أريد العرض بالعربية.'}]});
+  await run({employee:saved,message:'جهز عرض الخدمة الحالية.',company:{name:'شركة الاختبار',profile:{summary:'تعريف الشركة',facts:[{value:'old_profile_fact'}],suggestions:[{prompt:'old_profile_prompt'}]}},settings:{language:'ar'},knowledge:{facts:[{topic:'الأسعار',value:'الخدمة بـ١٢٠٠ ريال',certainty:'confirmed'}]},history:[{role:'user',content:'أريد العرض بالعربية.'}]});
   const args=log.tools.find(([name])=>name===flowToolName)[1],sent=type==='string'?JSON.parse(args[field]):args[field];
   assert.equal(args.customer,'خالد');assert.equal(Object.hasOwn(args,'task'),false);
   assert.equal(sent.request,'جهز عرض الخدمة الحالية.');
   assert.equal(sent.context.company.name,'شركة الاختبار');
+  assert.equal(sent.context.company.profile.summary,'تعريف الشركة');
+  assert.equal(JSON.stringify(sent).includes('old_profile_fact'),false);assert.equal(JSON.stringify(sent).includes('old_profile_prompt'),false);
   assert.equal(sent.context.selectedEmployee.id,saved.id);
   assert.equal(sent.context.selectedEmployee.instructions,saved.prompt);
   assert.equal(sent.context.selectedEmployee.instructionVersion,8);
@@ -998,4 +1000,19 @@ test('both chats bound the company knowledge context without truncating individu
     const context=JSON.parse(h.log.model[0].messages[0].content.split('سياق العمل الحالي بصيغة JSON:\n')[1].split('\n')[0]);
     assert.ok(JSON.stringify(context.knowledge.facts).length<=6000);assert.equal(context.knowledge.facts[0].value.length,1500);assert.equal(h.log.effects,0);
   }
+});
+
+
+test('both chats use ranked knowledge instead of stale profile facts and retain employee instructions',async()=>{
+ const company={name:'شركة اختبار',profile:{summary:'خدمة للشركات',about:'تعريف الشركة الكامل',facts:[{topic:'pricing',key:'price',value:'stale_profile_price_100'}],suggestions:[{prompt:'stale_employee_suggestion'}]}};
+ const facts=[{topic:'pricing',key:'price',value:'current_price_120',certainty:'user_confirmed',sourceUrl:'https://example.com/current'}];
+ for(const employee of [null,{id:'employee-1',status:'draft',name:'نور',prompt:'تعليمات الموظف المحفوظة',prompt_version:3}]){
+  const h=setup({script:[say('السعر الحالي 120.')]});await h.run({company,employee,knowledge:{facts},message:'ما السعر الحالي؟'});
+  const system=h.log.model[0].messages[0].content,context=JSON.parse(system.split('سياق العمل الحالي بصيغة JSON:\n')[1].split('\n')[0]);
+  assert.equal(system.includes('stale_profile_price_100'),false);assert.equal(system.includes('stale_employee_suggestion'),false);
+  assert.equal(context.company.profile.about,company.profile.about);assert.equal(context.company.profile.summary,company.profile.summary);
+  assert.equal(context.knowledge.facts[0].value,'current_price_120');assert.equal(context.knowledge.facts[0].source,'https://example.com/current');
+  if(employee){assert.equal(context.selectedEmployee.instructions,employee.prompt);assert.equal(context.selectedEmployee.instructionVersion,3);}
+  assert.equal(company.profile.facts[0].value,'stale_profile_price_100');assert.equal(h.log.effects,0);
+ }
 });
