@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {publishedFlowWorkSteps} from '../lib/chat-intelligence.mjs';
+import {publishedFlowWorkSteps,publishedAIInstructionSteps} from '../lib/chat-intelligence.mjs';
 const piece=(name,pieceName='@activepieces/piece-asana',actionName='getCurrentUser')=>({name,type:'PIECE',displayName:name,valid:true,settings:{pieceName,actionName,input:{auth:'PRIVATE_AUTH',nested:{name:'FAKE_STEP',type:'PIECE'}},sampleData:{private:'PRIVATE_SAMPLE'}}});
 
 test('native complete Flow without AI projects trigger, actions and response without credentials',()=>{
@@ -44,4 +44,18 @@ test('cycles and large graphs are bounded and explicitly incomplete without muta
   const cycle=piece('cycle');cycle.nextAction=cycle;assert.equal(publishedFlowWorkSteps({trigger:cycle}).complete,false);
   const trigger={name:'trigger',type:'EMPTY'};let cursor=trigger;for(let i=0;i<501;i++){cursor.nextAction=piece('step_'+i);cursor=cursor.nextAction;}
   const before=JSON.stringify(trigger),result=publishedFlowWorkSteps({trigger});assert.equal(result.steps.length,500);assert.equal(result.complete,false);assert.equal(JSON.stringify(trigger),before);
+});
+
+
+test('employee AI instruction readback includes nested success failure router and loop paths without settings disclosure',()=>{
+  const agent=name=>({...piece(name,'@activepieces/piece-ai','run_agent'),settings:{pieceName:'@activepieces/piece-ai',actionName:'run_agent',input:{prompt:`تعليمات ${name}`,agentId:'shared-agent',auth:'PRIVATE_AUTH'}}});
+  const success=agent('success'),failure=agent('failure'),nested=agent('nested'),loop=agent('loop'),tail=agent('tail');
+  success.nextAction={name:'router',type:'ROUTER',children:[nested]};
+  failure.nextAction={name:'repeat',type:'LOOP_ON_ITEMS',firstLoopAction:loop};
+  const root=piece('root');root.continueOnFailureBranches={onSuccess:success,onFailure:failure};root.nextAction=tail;
+  const rows=publishedAIInstructionSteps({trigger:root});
+  assert.deepEqual(rows.map(row=>row.name),['success','nested','failure','loop','tail']);
+  assert.ok(rows.every(row=>row.prompt===`تعليمات ${row.name}`&&row.prompt_scope==='task_input'&&row.agent_instructions_unverified));
+  assert.equal(JSON.stringify(rows).includes('PRIVATE_AUTH'),false);
+  tail.nextAction=root;assert.deepEqual(publishedAIInstructionSteps({trigger:root}),rows);
 });
