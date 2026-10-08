@@ -289,6 +289,7 @@
         {"role": "tenant_scope", "path": "lib/tool-connections.mjs", "anchor": "async function selected("},
         {"role": "method_schema", "path": "lib/tool-connections.mjs", "anchor": "function authFingerprint"},
         {"role": "native_auth_schema", "path": "lib/tool-connections.mjs", "anchor": "name:'ap_setup_guide'"},
+        {"role": "revalidate_identity_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "revalidation cannot report success for a different connection or piece in the same project"},
         {"role": "auth_control_support", "path": "lib/tool-connections.mjs", "anchor": "const AUTH_FIELD_TYPES="},
         {"role": "auth_control_validation_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "supported native auth controls validate values before writing a project connection"},
         {"role": "native_auth_schema_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "company MCP auth schema prepares a project-owned connection without REST piece discovery"},

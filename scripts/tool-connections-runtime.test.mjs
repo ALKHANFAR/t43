@@ -36,7 +36,7 @@ function harness(overrides={}){
       const name=new URL(url).searchParams.get('searchQuery');return response(200,[name==='stripe'?stripe:name==='whatsapp'?whatsapp:name==='slack'?slack:overrides.gmail||gmail]);
     }
     if(url.includes('/oauth2/authorization-url'))return response(200,{authorizationUrl:'https://accounts.google.com/o/oauth2/auth?client_id=google-client'});
-    if(url.includes('/revalidate'))return response(200,{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:projects('revalidate')});
+    if(url.includes('/revalidate'))return response(200,overrides.revalidateResponse||{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:projects('revalidate')});
     if(options.method==='DELETE')return response(204,{});
     if(url.includes(`/app-connections/${CONNECTION}`))return response(200,{id:CONNECTION,externalId:'company-a-stripe',pieceName:'@activepieces/piece-stripe',scope:'PROJECT',projectIds:projects('get'),flowIds:Object.hasOwn(overrides,'getFlowIds')?overrides.getFlowIds:[]});
     if(url.includes('/api/v1/flows?')){const query=new URL(url).searchParams,cursor=query.get('cursor'),state=query.get('versionState');return response(200,overrides.flowPages?.[state]?.[cursor||'first']??(state==='LOCKED'?overrides.publishedPages?.[cursor||'first']:undefined)??{data:[],next:null});}
@@ -267,4 +267,11 @@ test('supported native auth controls validate values before writing a project co
   assert.equal(calls.length,0);
   await service.connect({tenantId:'company-a',piece:'whatsapp',type:'CUSTOM_AUTH',values:{enabled:false,count:'5',region:'SA',token:'t'}});
   assert.deepEqual(calls[0].body.value.props,{enabled:false,count:5,region:'SA',token:'t'});
+});
+
+test('revalidation cannot report success for a different connection or piece in the same project',async()=>{
+  for(const override of [{id:'D'.repeat(21)},{pieceName:'@activepieces/piece-slack'}]){
+    const {service}=harness({revalidateResponse:{id:CONNECTION,pieceName:'@activepieces/piece-stripe',status:'ACTIVE',scope:'PROJECT',projectIds:[PROJECT],...override}});
+    await assert.rejects(()=>service.revalidate({tenantId:'company-a',id:CONNECTION}),{code:'connection_readback_mismatch'});
+  }
 });
