@@ -1321,7 +1321,7 @@ var I = {
   });
 
   /* نطاق الشركة يأتي من جلسة HttpOnly على الخادم فقط. */
-  var SIY_GATEWAY=window.SIYADAH_CHAT_GATEWAY||"/siyadah-api/v1/chat",SIY_ONBOARDING="/siyadah-api/v1/onboarding";
+  var SIY_GATEWAY="/siyadah-api/v1/chat",SIY_ONBOARDING="/siyadah-api/v1/onboarding";
   var siyPolls={}, siyGeneration=0, siyEmployeeStatePending={};
   function siyBuilderState(text,connected){ var node=$("#builderConnectState"); if(!node) return; node.textContent=text==='مساحة شركتك'?ui('مساحة شركتك','Your workspace'):text; node.classList.toggle("apstate--ok",connected===true); }
   function siyRefreshBuilderConnection(){

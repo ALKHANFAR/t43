@@ -1,3 +1,4 @@
+import {discoverMcpCatalog} from '../lib/activepieces-mcp.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -60,7 +61,7 @@ function setup({script,flowInputSchema=null,toolResults={},flowStatus='DISABLED'
   const ctx={
     console:{error:()=>{},info:()=>{},warn:()=>{}},process:{env:{DEEPSEEK_API_KEY:'test-key'}},
     AbortController,setTimeout,clearTimeout,Date,JSON,String,Array,Object,Math,
-    TenantProjectError,CompanyProfileError,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,selectKnowledgeContext,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext,
+    discoverMcpCatalog,TenantProjectError,CompanyProfileError,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,selectKnowledgeContext,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext,
     fetch:async(url,options)=>{
       const request=JSON.parse(options.body);log.model.push(request);
       const message=script[Math.min(step++,script.length-1)];
@@ -775,4 +776,11 @@ test('undeclared context leaves native inputs unchanged and invalid context type
     else assert.deepEqual(log.tools,[[flowToolName,{amount:1200}]]);
     assert.equal(answer.toolReceipts.length,1);
   }
+});
+
+test('observed approval result is explained by the same model without redispatching its native tool',async()=>{
+ const h=setup({script:[{content:'حُفظت المسودة، ولم يبدأ التشغيل.'}]});
+ const answer=await h.run({mcp:null,observedOutcome:{kind:'flow_draft',flowId,executed:false}});
+ assert.equal(answer.reply,'حُفظت المسودة، ولم يبدأ التشغيل.');assert.equal(h.log.model.length,1);
+ assert.match(h.log.model[0].messages[0].content,/flow_draft/);assert.equal(h.log.model[0].tools,undefined);
 });

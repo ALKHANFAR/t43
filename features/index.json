@@ -3,6 +3,40 @@
   "repository": "ALKHANFAR/t43",
   "features": [
     {
+      "id": "native_mcp_catalog_proof",
+      "name": "إثبات أدوات MCP الأصلية في الشات",
+      "aliases": [
+        "كل أدوات MCP",
+        "الشات مربوط بالموديل",
+        "كتالوج أدوات المشروع"
+      ],
+      "state": "draft_pr",
+      "meaning": "اكتشاف أصلي initialize ثم جميع صفحات tools/list مع ختم أسماء ومخططات الكتالوج ووقت القراءة؛ endpoint محمي بجلسة الشركة للقراءة فقط. الشات يسجل الكتالوج المرصود؛ مراجعة القدرات لا تعلن دون استدعاء اكتشاف ناجح. ردود نتائج الموافقات للبناء والأدوات تمر بنفس LLM دون إعادة التنفيذ. محلي غير منشور، لا يثبت الصلاحيات أو أثر المزود.",
+      "linear": "ABO-69",
+      "locations": [
+        {
+          "role": "catalog",
+          "path": "lib/activepieces-mcp.mjs",
+          "anchor": "export async function discoverMcpCatalog"
+        },
+        {
+          "role": "receipt_route",
+          "path": "server.mjs",
+          "anchor": "if(op==='catalog')"
+        },
+        {
+          "role": "approval_model",
+          "path": "server.mjs",
+          "anchor": "const explainOutcome=async observedOutcome=>"
+        },
+        {
+          "role": "test",
+          "path": "scripts/native-mcp-catalog-runtime.test.mjs",
+          "anchor": "test('native catalog initializes first"
+        }
+      ]
+    },
+    {
       "id":"one_off_flow_request",
       "name":"طلب ينتهي دون إنشاء موظف",
       "aliases":["نفذ هذا الطلب الآن","مهمة متعددة الخطوات","لا أريد موظفا جديدا"],

@@ -15,7 +15,8 @@ const proof={recordId:'proof-record-1',employeeId:employee.recordId,flowId:emplo
 
 test('chat UI never bypasses Siyadah with a direct Activepieces webhook',()=>{
   assert.ok(!source.includes('activepieces-p8l1-455.up.railway.app/api/v1/webhooks'));
-  assert.match(source,/SIYADAH_CHAT_GATEWAY\|\|"\/siyadah-api\/v1\/chat"/);
+  assert.ok(!source.includes("window.SIYADAH_CHAT_GATEWAY"));
+  assert.match(source,/SIY_GATEWAY="\/siyadah-api\/v1\/chat"/);
   assert.ok(!source.includes('localStorage.getItem("siyadah_token")'));
 });
 
