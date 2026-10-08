@@ -133,3 +133,7 @@ Main and employee chat pass every protocol-valid tool advertised by the company 
 ## Native customer project membership
 
 Customer MCP start first provisions the verified company project, reads exactly one verified owner email from the server account, and upserts an Activepieces PROJECT invitation with Editor role through the platform service API. Its returned email, project, type and ACCEPTED status must match before OAuth client registration. The browser still sends an empty body and chooses no identity/project/role. The customer signs in or registers with the same email in the native consent window and approves the intended company project; the callback remains bound to the original company session. This is project membership, not provider OAuth consent or an embedded SSO claim. Existing native project entitlement/seat checks remain authoritative.
+
+### Model billing refusal
+
+A provider HTTP402 before native execution produces a durable failed request explaining that the assistant service is unavailable due to its balance. Provider payloads and credentials are not exposed. Existing attempted-execution/unknown-result/transport-receipt precedence stays intact; no automatic redispatch occurs. ABO-69 / ABO-37.

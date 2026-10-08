@@ -136,3 +136,14 @@ test('verified native Flow runs complete only the exact recorded effects without
   assert.deepEqual(completedToolActions(answer),{request_status:'succeeded',work_status:'succeeded',outcome_kind:'tool_result'});
   for(const modified of [{effects:['qa_mcp','ap_add_step']},{effects:['other_mcp']},{toolReceipts:[{...receipt,status:'error'}]},{flowToolAttempted:false}])assert.equal(completedToolActions({...answer,...modified}).work_status,'unknown');
 });
+
+
+test('model billing failure is explicit only before execution starts',()=>{
+  const args={conversationId:'c',requestId:'r',failureCode:'assistant_billing_unavailable'};
+  const failed=failedChatExecution(args);
+  assert.equal(failed.work_status,'failed');assert.match(failed.reply,/الرصيد/);
+  const uncertain=failedChatExecution({...args,effectStarted:true,executionAttempt:true});
+  assert.equal(uncertain.work_status,'unknown');assert.doesNotMatch(uncertain.reply,/الرصيد/);
+  const receipt=failedChatExecution({...args,effectStarted:true,transportReceipt:{runId:'R12345678901234567890',outcome:'unverified',httpStatus:200}});
+  assert.equal(receipt.transport_receipt.runId,'R12345678901234567890');assert.doesNotMatch(receipt.reply,/الرصيد/);
+});

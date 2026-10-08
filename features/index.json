@@ -553,6 +553,36 @@
         {"role": "test", "path": "scripts/gmail-pilot-runner-runtime.test.mjs", "anchor": "Gmail pilot runner has no outbound webhook dispatch"},
         {"role": "test", "path": "scripts/chat-request-ledger-runtime.test.mjs", "anchor": "Gmail pilot shares one ledger key across two chat conversations"}
       ]
+    },
+    {
+      "id": "chat_model_billing_failure",
+      "name": "توقف المساعد بسبب الرصيد",
+      "aliases": [
+        "رصيد النموذج",
+        "نفاد الرصيد",
+        "model billing failure"
+      ],
+      "state": "draft_pr",
+      "meaning": "يفسر رفض مزود النموذج 402 قبل التنفيذ برسالة محفوظة في الطلب والمحادثة، دون كشف تفاصيل المزود أو تغيير دليل تنفيذ بدأ بالفعل.",
+      "linear": "ABO-69",
+      "pr": null,
+      "locations": [
+        {
+          "role": "provider_error",
+          "path": "server.mjs",
+          "anchor": "if(response.status===402)throw new TenantProjectError('assistant_billing_unavailable'"
+        },
+        {
+          "role": "result",
+          "path": "lib/chat-outcome.mjs",
+          "anchor": "export function failedChatExecution"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-outcome-runtime.test.mjs",
+          "anchor": "model billing failure is explicit only before execution starts"
+        }
+      ]
     }
   ]
 }
