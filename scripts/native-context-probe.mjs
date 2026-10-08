@@ -5,6 +5,7 @@ import {runInNewContext} from 'node:vm';
 import {pathToFileURL} from 'node:url';
 import {evaluateKnowledgeCase} from './knowledge-quality-eval.mjs';
 import {workflow,REPORT_TOOL} from './employee-stress-eval.mjs';
+import {bindEmployeeFlowContext} from '../lib/mcp-flow-scope.mjs';
 export const AP_CONTEXT_SOURCE='23e0c254979c73cfbfbde00242668ee873e79508';
 
 // Optional source-backed probe, never a second production engine or a live AP client.
@@ -50,6 +51,12 @@ export async function runNativeContextProbe({sourceRoot=process.env.ACTIVEPIECES
  results.push({id:'missing_binding_is_not_instruction_delivery',passed:missing.prompt===''});
  const literal=await resolveInput({prompt:'Use company context.'},sample);
  results.push({id:'describing_context_does_not_insert_it',passed:literal.prompt==='Use company context.'&&!literal.prompt.includes('saved')});
+ const textTool={inputSchema:{properties:{company_context:{type:'string',description:'[siyadah:context]'}}}};
+ const textTrigger=bindEmployeeFlowContext(textTool,{company_context:'forged'},sample.siyadahContext);
+ const textInput=await resolveInput({prompt:'Company context:\n{{trigger.company_context}}'},textTrigger);
+ results.push({id:'native_text_binding_delivers_serialized_context',passed:textInput.prompt==='Company context:\n'+JSON.stringify(sample.siyadahContext)});
+ const nestedText=await resolveInput({prompt:'{{trigger.company_context.context.selectedEmployee.instructions}}'},textTrigger);
+ results.push({id:'nested_path_into_text_is_not_context_delivery',passed:nestedText.prompt===''});
  const clone=await resolveInput({input:'{{trigger.siyadahContext}}'},sample);clone.input.context.selectedEmployee.instructions='changed';
  results.push({id:'resolved_object_does_not_mutate_trigger',passed:sample.siyadahContext.context.selectedEmployee.instructions==='saved'});
  return {mode:'source_backed_native_path_resolution',sourceCommit:AP_CONTEXT_SOURCE,sources,checksRun:results.length,passed:results.filter(r=>r.passed).length,results,limits:['Scripted LLM, actual Siyadah chat loop; synthetic trigger execution state and run/profile services.','Executes native property-path lookup, clone and token helpers; dotted-path parsing and interpolation are probe adapters. Full jsep, formulas, script evaluation and engine orchestration are not exercised.','No AI provider call, live Activepieces run, delivery, business outcome or added production gate.']};

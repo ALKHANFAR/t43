@@ -19,8 +19,8 @@
       "sha256": "74fb9f12bcf2a27a5204c729c3a95f5ceea72906d7651d6fc8f0731d31dc7d58"
     }
   ],
-  "checksRun": 6,
-  "passed": 6,
+  "checksRun": 8,
+  "passed": 8,
   "results": [
     {
       "id": "native_input_120",
@@ -52,6 +52,14 @@
     },
     {
       "id": "describing_context_does_not_insert_it",
+      "passed": true
+    },
+    {
+      "id": "native_text_binding_delivers_serialized_context",
+      "passed": true
+    },
+    {
+      "id": "nested_path_into_text_is_not_context_delivery",
       "passed": true
     },
     {
