@@ -298,7 +298,7 @@ test('a long request answers queued once, keeps working, and settles the same re
   const res={headersSent:false,writeHead(status){this.headersSent=true;writes.push({status});},end(text){writes.at(-1).body=JSON.parse(text);}};
   const running=publicChat({headers:{}},res);
   while(!release)await new Promise(resolve=>setImmediate(resolve));
-  const wait=timers.find(timer=>timer.ms===20_000&&!timer.cleared);
+  const wait=timers.find(timer=>timer.ms===1500&&!timer.cleared);
   assert.ok(wait);
   wait.fn();
   assert.equal(writes.length,1);
@@ -687,4 +687,13 @@ test('short continuation budget still dispatches native MCP discovery before rep
   const answer=await run({deadlineMs:25_000,excludedTools:['ap_create_table']});
   assert.deepEqual(log.tools.map(item=>item[0]),['ap_list_connections']);
   assert.equal(answer.reply,'قرأت الاتصالات وأكملت من الجدول المحفوظ.');
+});
+
+test('tool activity follows real invocation boundaries and contains no arguments or result payloads',async()=>{
+ const events=[];let release,started;const pending=new Promise(resolve=>{release=resolve;});const ready=new Promise(resolve=>{started=resolve;});const {run}=setup({script:[use(['ap_run_action',{secret:'private-input'}]),say('وصل الرد')],toolResults:{ap_run_action:async()=>{started();await pending;return {content:[{type:'text',text:'private-output'}]};}}});
+ const work=run({onActivity:async item=>events.push({...item})});await ready;assert.deepEqual(events,[{id:1,name:'ap_run_action',state:'started'}]);release();await work;assert.deepEqual(events.map(e=>e.state),['started','returned']);assert.equal(events[0].id,events[1].id);assert.equal(JSON.stringify(events).includes('private-'),false);
+});
+
+test('failed activity storage does not prevent a native tool call or invent a provider result',async()=>{
+ const {run,log}=setup({script:[use(['ap_run_action',{}]),say('رد')],toolResults:{ap_run_action:{isError:true,content:[{type:'text',text:'error'}]}}});const answer=await run({onActivity:async()=>{throw new Error('storage down');}});assert.equal(log.tools.filter(([name])=>name==='ap_run_action').length,1);assert.equal(answer.toolReceipts[0].status,'error');
 });

@@ -407,8 +407,19 @@ async function successfulFlowTest(mcp,companyId,flowId,test){
   const run=detail?.structuredContent;
   return detail?.isError!==true&&run?.id===runId&&run.flowId===flowId&&run.environment==='TESTING'&&run.status==='SUCCEEDED'&&Array.isArray(run.steps)&&run.steps.length>0?{...run,...(typeof test.structuredContent.usedMockTriggerData==='boolean'?{usedMockTriggerData:test.structuredContent.usedMockTriggerData}:{})}:null;
 }
-async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null,mcp=null,companyId=null,conversationId=null,deadlineMs=null,excludedTools=[],onEffectStart=null,onNativeExecution=null,createDraft=null}){
+async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null,mcp=null,companyId=null,conversationId=null,deadlineMs=null,excludedTools=[],onEffectStart=null,onNativeExecution=null,createDraft=null,onActivity=null}){
   mcp=mcp?.forRequest?.()||mcp;
+  if(mcp&&typeof onActivity==='function'){
+    const native=mcp;let activityId=0;
+    const report=async item=>{try{await onActivity(item);}catch{}};
+    mcp={call:async(company,method,params)=>{
+      if(method!=='tools/call'||!params?.name||!/^[A-Za-z0-9_-]{1,120}$/.test(params.name))return native.call(company,method,params);
+      const item={id:++activityId,name:params.name,state:'started'};await report(item);
+      try{const result=await native.call(company,method,params);await report({...item,state:result?.isError===true?'error':'returned'});return result;}
+      catch(error){await report({...item,state:'error'});throw error;}
+    }};
+  }
+
   const draftOnly=draftOnlyIntent(message);
   const doNotRun=doNotRunIntent(message);
   const key=process.env.DEEPSEEK_API_KEY;
@@ -681,7 +692,7 @@ async function publicChat(req,res){
       if(record.status!=='pending'){
         return json(res,record.httpStatus||200,record.response,sessionHeaders);
       }
-      return json(res,200,{ok:true,conversation_id:record.conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders);
+      return json(res,200,{ok:true,conversation_id:record.conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`,activity:record.response?.activity||[],...(record.response?.activity?.length?{work_status:'running'}:{})},sessionHeaders);
     }
     async function changeEmployeeState(saved,status){
       const profiles=await companyProfiles();
@@ -897,8 +908,11 @@ async function publicChat(req,res){
       if(input.employee_id&&!await profiles.findEmployee(companyId,input.employee_id))throw new CompanyProfileError('employee_not_found','الموظف غير موجود في شركتك.',404);
       await profiles.recordConversation({companyId,conversationId,employeeId:input.employee_id||null,requestId,userMessage:input.message});
       activeRequest.conversationSaved=true;
+      const activity=[];
+      const onActivity=async item=>{const index=activity.findIndex(row=>row.id===item.id);if(index>=0)activity[index]=item;else if(activity.length<80)activity.push(item);await profiles.recordChatActivity({companyId,requestId,conversationId,claimToken:claim.claimToken,activity});};
+
       // Building and publishing takes minutes. The browser gets `queued` and reads the same request ID; the work continues here.
-      waiting=setTimeout(()=>json(res,200,{ok:true,conversation_id:conversationId,request_status:'queued',work_status:'queued',work_id:`request_${requestId}`},sessionHeaders),20_000);
+      waiting=setTimeout(()=>json(res,200,{ok:true,conversation_id:conversationId,request_status:'queued',work_status:activity.length?'running':'queued',work_id:`request_${requestId}`,activity},sessionHeaders),1500);
       const queuedAt=acceptedAt;
       let prior;
       while((prior=await profiles.earlierPendingChatRequest({companyId,conversationId,requestId}))){
@@ -907,7 +921,7 @@ async function publicChat(req,res){
         await new Promise(resolve=>setTimeout(resolve,1000));
       }
       const finish=async(status,response)=>{
-        clearTimeout(waiting);
+        clearTimeout(waiting);if(activity.length)response={...response,activity};
         const settled=await profiles.settleChatRequest({companyId,requestId,status:response.request_status==='not_observed'?'unknown':'succeeded',httpStatus:status,response,claimToken:claim.claimToken});
         activeRequest=null;
         return json(res,settled.httpStatus,settled.response,sessionHeaders);
@@ -918,7 +932,7 @@ async function publicChat(req,res){
         if(saved.status==='active'&&!saved.activepieces_flow_id)throw new CompanyProfileError('employee_not_ready','الموظف بلا طريقة عمل مهيأة.',409);
         const profile=await profiles.read(companyId),settings=await profiles.readSettings(companyId),knowledge=await profiles.ownedKnowledge(companyId),team=await profiles.listEmployees(companyId),history=await profiles.conversationHistory({companyId,conversationId,requestId});
         const pool=await database(),employeeMcp=await activepiecesMcp(),recovery=createEmployeeRunRecovery({query:(sql,values)=>pool.query(sql,values),projects:await tenantProjects(),mcp:employeeMcp});
-        const answer=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history,message:input.message,employee:saved,mcp:employeeMcp,companyId,conversationId,deadlineMs:chatExecutionBudget(acceptedAt),onNativeExecution:async native=>{
+        const answer=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history,message:input.message,employee:saved,onActivity,mcp:employeeMcp,companyId,conversationId,deadlineMs:chatExecutionBudget(acceptedAt),onNativeExecution:async native=>{
           const identity=await recovery.capture({companyId,requestId,conversationId,claimToken:claim.claimToken,...native});
           return identity?recovery.reconcile({companyId,requestId,conversationId}):null;
         },onEffectStart:()=>{activeRequest.effectStarted=true;activeRequest.executionAttempt=true;}});
@@ -930,7 +944,7 @@ async function publicChat(req,res){
       const existing=await profiles.findConversationDraft(companyId,conversationId);
       const draft=existing?.status==='draft'?existing:null;
       let answer;
-      answer=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history,message:input.message,draftEmployee:draft,mcp:await activepiecesMcp(),companyId,conversationId,deadlineMs:chatExecutionBudget(acceptedAt),onEffectStart:()=>{activeRequest.effectStarted=true;activeRequest.executionAttempt=true;},createDraft:async name=>profiles.findEmployee(companyId,(await profiles.createManualEmployeeDraft({companyId,name:flowName(String(name||input.message)),requestId})).recordId)});
+      answer=await deepseekReply({company:{name:profile?.company_name||resolved.account.company_name,profile:profile?.profile_json||{}},settings,knowledge,team,history,message:input.message,draftEmployee:draft,onActivity,mcp:await activepiecesMcp(),companyId,conversationId,deadlineMs:chatExecutionBudget(acceptedAt),onEffectStart:()=>{activeRequest.effectStarted=true;activeRequest.executionAttempt=true;},createDraft:async name=>profiles.findEmployee(companyId,(await profiles.createManualEmployeeDraft({companyId,name:flowName(String(name||input.message)),requestId})).recordId)});
       const draftOnly=draftOnlyIntent(input.message);
       const activationIntent=!draftOnly&&answer.flowId&&answer.employee?.flowId===answer.flowId&&answer.employee.status==='disabled'?{auto_activate_after_connection:true,auto_activate_employee_id:answer.employee.recordId,auto_activate_flow_id:answer.flowId}:{};
       const reply=answer.employee&&!answer.flowId&&!answer.readinessReceipt?`حُفظ سجل ${answer.employee.name}، وحالة بناء طريقة عمله غير مؤكدة؛ تحقّق من مشروع الشركة قبل إعادة البناء. ${answer.reply}`:answer.reply;
