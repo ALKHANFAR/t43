@@ -475,7 +475,13 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
         const tested=JSON.parse(testedVersion),published=(await (await tenantProjects()).ownedFlow(companyId,flow,state.publishedVersionId)).flow;
         if(state.publishedVersionId===tested.id&&flowTestSnapshot({trigger:published.version.trigger,connectionIds:published.version.connectionIds})===flowTestSnapshot({trigger:tested.trigger,connectionIds:tested.connectionIds})){
           linked=await (await companyProfiles()).setEmployeeState({companyId,employeeId:id,status:'active'});
-          if(linked?.status==='active'&&linked.recordId===id&&linked.flowId===flow)readinessReceipt={employee_id:id,flow_id:flow,published_version_id:state.publishedVersionId,test_run_id:testedRun.id,test_environment:'TESTING',...(typeof testedRun.usedMockTriggerData==='boolean'?{used_mock_trigger_data:testedRun.usedMockTriggerData}:{})};
+          if(linked?.status==='active'&&linked.recordId===id&&linked.flowId===flow){
+            readinessReceipt={employee_id:id,flow_id:flow,published_version_id:state.publishedVersionId,test_run_id:testedRun.id,test_environment:'TESTING',...(typeof testedRun.usedMockTriggerData==='boolean'?{used_mock_trigger_data:testedRun.usedMockTriggerData}:{})};
+            employee={...(employee||draftEmployee),id,activepieces_flow_id:flow,status:'active'};
+            context.selectedEmployee={...(context.selectedEmployee||context.currentDraft),id,flowId:flow,status:'active'};
+            flowToolName=employeeFlowMcpToolName(published);publishedEmployeeVersion=state.publishedVersionId;
+            available=(await mcp.call(companyId,'tools/list',{})).tools||[];tools=modelTools();
+          }
         }
       }
       else if((linked||employee)?.status==='active')linked=await (await companyProfiles()).setEmployeeState({companyId,employeeId:id,status:'disabled'});

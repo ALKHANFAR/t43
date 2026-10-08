@@ -47,13 +47,13 @@ const catalog=[
 const say=content=>({content});
 const use=(...calls)=>({content:'',tool_calls:calls.map(([name,args],index)=>({id:`call_${name}_${index}`,function:{name,arguments:typeof args==='string'?args:JSON.stringify(args||{})}}))});
 
-function setup({script,clock=Date,flowInputSchema=null,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false,memoryRows=null}={}){
+function setup({script,clock=Date,flowInputSchema=null,hideFlowToolUntilPublished=false,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false,memoryRows=null}={}){
   const log={model:[],tools:[],effects:0,states:[],owned:[],runs:[]};
   const savedMemories=memoryRows===null?null:structuredClone(memoryRows);let memorySerial=1;
   const memoryTools=['ap_find_records','ap_insert_records','ap_update_record','ap_delete_records','ap_create_table'].map(name=>({name,...hint(name==='ap_find_records'),inputSchema:{type:'object',properties:{}}}));
   let stateAttempts=0,step=0,status=flowStatus,publishedVersionId=published?'v1':null,draftVersionId='v1',versionState=published?'LOCKED':'DRAFT',sampleData,updated='before',updatedBy,taskInput='{{trigger.task}}';
   const mcp={call:async(_company,method,params)=>{
-    if(method==='tools/list')return {tools:[...catalog,...(savedMemories?memoryTools:[])].map(tool=>tool.name===flowToolName&&flowInputSchema?{...tool,inputSchema:flowInputSchema}:tool)};
+    if(method==='tools/list')return {tools:[...catalog,...(savedMemories?memoryTools:[])].filter(tool=>!hideFlowToolUntilPublished||publishedVersionId||tool.name!==flowToolName).map(tool=>tool.name===flowToolName&&flowInputSchema?{...tool,inputSchema:flowInputSchema}:tool)};
     if(method==='initialize')return {instructions:'## Activepieces MCP Server\n1. Discover 2. Schema 3. Build 4. Validate 5. Publish'};
     log.tools.push([params.name,params.arguments]);
     if(savedMemories!==null){
@@ -706,6 +706,22 @@ test('a transient employee state readback failure remains retryable at finalizat
 const executionResult=(overrides={})=>({content:[{type:'text',text:'native reply'}],structuredContent:{execution:{runId,flowId,projectId:'P'.repeat(21),flowVersionId:'v1',environment:'PRODUCTION',...overrides}}});
 const productionRun=(overrides={})=>({structuredContent:{id:runId,flowId,environment:'PRODUCTION',status:'SUCCEEDED',steps:[{name:'trigger',output:{}},{name:'reply',output:{status:200,body:{result:'QA'}}}],...overrides}});
 const runningEmployee={id:'employee-9',status:'active',activepieces_flow_id:flowId,tools_json:['mcp']};
+
+test('both chats discover and execute a newly published employee flow with saved context in one request',async()=>{
+  for(const chat of ['main','employee']){
+    const saved={id:'employee-1',name:'نور',status:'draft',activepieces_flow_id:null,prompt:'راجع المعرفة وأكمل العمل.',prompt_version:4};
+    const testRunId='S'.repeat(21);
+    const {run,log}=setup({hideFlowToolUntilPublished:true,flowInputSchema:{type:'object',properties:{siyadahContext:{type:'object',description:'[siyadah:context]'}}},toolResults:{ap_test_flow:{structuredContent:{runId:testRunId,status:'SUCCEEDED'}},[flowToolName]:executionResult(),ap_get_run:args=>args.flowRunId===testRunId?{structuredContent:{id:testRunId,flowId,environment:'TESTING',status:'SUCCEEDED',steps:[{name:'trigger',status:'SUCCEEDED'}]}}:productionRun()},script:[request=>{assert.equal(request.tools.some(t=>t.function.name===flowToolName),false);return use(['ap_build_flow',{flowName:'نور'}]);},use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),request=>{assert.equal(request.tools.some(t=>t.function.name===flowToolName),true);return use([flowToolName,{}]);},say('قرأت نتيجة التشغيل.')]});
+    const answer=await run({message:'جهز الموظف واختبره وانشره ونفذ العمل الآن.',...(chat==='employee'?{employee:saved}:{draftEmployee:saved})});
+    const invocation=log.tools.find(([name])=>name===flowToolName);
+    assert.ok(invocation,'newly published tool was not dispatched');
+    assert.equal(invocation[1].siyadahContext.context.selectedEmployee.id,saved.id);
+    assert.equal(invocation[1].siyadahContext.context.selectedEmployee.instructions,saved.prompt);
+    assert.equal(invocation[1].siyadahContext.context.selectedEmployee.status,'active');
+    assert.equal(answer.toolReceipts.find(r=>r.name===flowToolName).outcome,'flow_completed');
+    assert.equal(log.runs.length,1);
+  }
+});
 
 test('a declared native context field receives saved knowledge and instructions without assuming a task field',async()=>{
   for(const [field,type,omit] of [['company_context','object',false],['بيانات_سيادة','string',false],['other_context','object',true],['request_context','string',true]]){
