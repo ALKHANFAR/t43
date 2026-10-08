@@ -266,6 +266,8 @@ var I = {
       g[c.when]+='<button type="button" class="hist" data-chat="'+esc(id)+'" aria-current="'+(chatId===id)+'">'+esc(c.t)+'</button>';
     });
     $("#histToday").innerHTML=g.today; $("#histYest").innerHTML=g.yesterday; $("#histWeek").innerHTML=g.week;
+    $$("[data-workspace-view]").forEach(function(b){if(b.dataset.workspaceView===who&&!chatId)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+    $("#toolsLink").setAttribute('aria-current',who==='tools'?'page':'false');
     filterHist();
   }
   /* بحث السجل: يخفي المحادثات اللي ما تطابق، ويخفي عنوان المجموعة الفاضية */
@@ -279,8 +281,8 @@ var I = {
   /* --- الشريط العلوي + المحرر --- */
   function renderBar(){
     $("#whoAv").innerHTML = who==="tools" ? '<svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 01-12 0V8zM12 17v4"/></svg>' : avHtml(who);
-    $("#whoN").textContent = who==="tools" ? ui("الأدوات","Tools") : (isEmp() ? name(who)+" · "+emp(who).r : name("siyadah"));
-    $(".comp").style.display = who==="tools" ? "none" : "";
+    $("#whoN").textContent = who==="team" ? ui("الموظفون","Employees") : who==="results" ? ui("العمل والنتائج","Work and results") : who==="tools" ? ui("الأدوات","Tools") : (isEmp() ? name(who)+" · "+emp(who).r : name("siyadah"));
+    $(".comp").style.display = ["tools","team","results"].includes(who) ? "none" : "";
     $("#input").placeholder = isEmp() ? ui("اكتب ل","Message ")+name(who)+"…" : ui("اكتب لسيادة…","Message Siyadah…");
     var lv=$("#whoLive"); if(lv){lv.hidden=!(isEmp()&&PRES[who]);lv.textContent=ui('يشتغل الآن…','Working now…');}
   }
@@ -358,9 +360,17 @@ var I = {
     return 'باختصار — <span class="num">'+tot+'</span> حركة مسجّلة من أمس لليوم، وآخر سطر من كل واحد:<br>'+
       EMPS.map(function(e){return '<b>'+esc(e.n)+':</b> '+e.log[0][1];}).join('<br>');
   }
+  function workspacePageHtml(view){
+    var heading=view==='team'?ui('الموظفون','Employees'):ui('العمل والنتائج','Work and results');
+    var body;
+    if(view==='results')body=window.__SIY_REAL__?siyWorkHtml(null,ui('آخر سجلات العمل المحفوظة — الحالة والدليل لكل مهمة','Latest saved work records — status and evidence for each task')):'<p>'+ui('هذه معاينة؛ لا توجد نتائج تشغيل حقيقية هنا.','This is a preview; no real execution results are available here.')+'</p>';
+    else body=EMPS.length?EMPS.map(function(e){return '<button type="button" class="workspace-employee" data-open-employee="'+esc(e.id)+'"><span class="av">'+esc(e.ini)+'</span><span><b>'+esc(e.n)+'</b><small>'+esc(e.r)+'</small><small>'+esc(customerText(e.since))+'</small></span></button>';}).join(''):'<p>'+ui('لا يوجد موظفون محفوظون بعد. ابدأ بطلبك في شات سيادة.','No employees saved yet. Start with your request in Siyadah chat.')+'</p>';
+    return '<div class="col workspace-page"><h1>'+heading+'</h1><p>'+ (view==='team'?ui('افتح الموظف لمحادثته ومراجعة تعليماته وطريقة عمله.','Open an employee to chat and review its instructions and workflow.'):ui('السجل المحفوظ يوضح ما حدث؛ نجاح التشغيل لا يعني وحده إنجاز هدف تجاري.','Saved records show what happened; a successful run alone does not prove a business outcome.'))+'</p>'+body+'</div>';
+  }
   function renderThread(){
     var t=$("#thread"), scroll=t.scrollTop, nearEnd=t.scrollHeight-t.clientHeight-scroll<80; t.classList.toggle("thread--emp",isEmp());
     if(who==="tools"){ t.innerHTML=toolsHtml(); bindTools(); return; }
+    if(who==='team'||who==='results'){t.innerHTML=workspacePageHtml(who);return;}
     var savedPanel=window.__SIY_REAL__&&t.siyEmployee===who&&t.siyEmployeeGeneration===siyGeneration?$("#instrWrap"):null, savedFocus=savedPanel&&savedPanel.contains(document.activeElement)?document.activeElement:null, savedSelection=savedFocus&&savedFocus.id==='instr'?[savedFocus.selectionStart,savedFocus.selectionEnd,savedFocus.selectionDirection]:null;
     var list, w;
     if(isEmp()){ var e=emp(who); list=empThread(who); w=who;
@@ -811,6 +821,13 @@ var I = {
   $("#input").addEventListener("input",function(){ this.style.height="auto"; this.style.height=Math.min(this.scrollHeight,160)+"px"; });
 
   function go(w,c){ who=w; chatId=c||null; kpiOpen=null; renderSide(); renderBar(); renderThread();refreshLiveLabels(); if(window.__SIY_REAL__&&emp(w))siyResumePendingActivation(w); }
+  document.addEventListener('click',function(event){
+    var view=event.target.closest('[data-workspace-view]'),employee=event.target.closest('[data-open-employee]');
+    if(!view&&!employee)return;
+    var next=employee?employee.dataset.openEmployee:view.dataset.workspaceView;
+    if(employee&&!emp(next))return;
+    go(next);if(mobile())setDrawer(false);if(employee||next==='siyadah')$('#input').focus();
+  });
   function newChat(){ live={}; go("siyadah"); $("#input").focus(); }
   $("#emps").addEventListener("click",function(e){ var b=e.target.closest(".emp"); if(!b) return; go(b.dataset.emp); $("#input").focus(); });
   $(".side__scroll").addEventListener("click",function(e){ var b=e.target.closest(".hist"); if(!b||!b.dataset.chat) return;
@@ -1337,6 +1354,15 @@ var I = {
       delete siyEmployeeStatePending[id]; if(generation===siyGeneration) siyDraw();
     }
   }
+  function siyPublishedWorkStepsHtml(p){
+    if(!Array.isArray(p.work_steps)||!p.work_steps.length)return '';
+    var labels=locale==='en'?{trigger:'Start',action:'Action',decision:'Branch',loop:'Repeat',code:'Code',unknown:'Step'}:{trigger:'البداية',action:'إجراء',decision:'تفرّع',loop:'تكرار',code:'كود',unknown:'خطوة'};
+    return '<section class="published-work"><h3>'+ui('طريقة العمل المنشورة','Published workflow')+'</h3><p>'+ui('ترتيب الخطوات من النسخة المنشورة؛ لا يثبت تنفيذها أو نتيجتها.','Steps from the published version; this does not prove execution or outcomes.')+(p.work_structure_complete===true?'':ui(' القراءة جزئية.',' This is a partial read.'))+'</p><ol>'+p.work_steps.filter(function(step){return step&&typeof step.name==='string';}).map(function(step){
+      var path=Array.isArray(step.path)?step.path:[];
+      var branch=path.map(function(edge){if(!edge)return '';return edge.kind==='branch'?ui('فرع ','Branch ')+(Number.isInteger(edge.index)?edge.index+1:''):edge.kind==='loop'?ui('داخل تكرار','Inside loop'):edge.kind==='failure'?ui('عند التعثر','On failure'):edge.kind==='success'?ui('عند النجاح','On success'):'';}).filter(Boolean).join(' · ');
+      return '<li><b>'+esc(customerText(step.display_name||step.name))+'</b><small>'+esc(labels[step.kind]||labels.unknown)+(branch?' · '+esc(branch):'')+(step.skipped===true?' · '+ui('متخطاة','Skipped'):'')+(step.valid===false?' · '+ui('إعداد غير صالح','Invalid configuration'):'')+'</small></li>';
+    }).join('')+'</ol></section>';
+  }
   async function siyReadPublishedInstructions(e){
     var target=$("#publishedInstr");if(!e||!target)return;var readId=target.siyReadId=(target.siyReadId||0)+1;
     target.textContent=ui('نقرأ تعليمات طريقة العمل المنشورة…','Reading published workflow instructions…');
@@ -1347,7 +1373,7 @@ var I = {
       if(p.read_status!=='verified'){target.textContent=p.read_status==='not_published'?ui('لا توجد نسخة منشورة لطريقة العمل.','The workflow has no published version.'):ui('تعذّرت قراءة تعليمات طريقة العمل المنشورة.','Published workflow instructions could not be read.');return;}
       if(!/^[A-Za-z0-9]{21}$/.test(p.flow_id)||!/^[A-Za-z0-9]{21}$/.test(p.published_version_id)||!['ENABLED','DISABLED'].includes(p.flow_status)||!Array.isArray(p.steps)||p.steps.some(function(step){return !step||typeof step.prompt!=='string';}))throw new Error();
       var steps=p.steps.filter(function(step){return step&&typeof step.prompt==='string';});
-      target.innerHTML='<b>'+ui('تعليمات طريقة العمل المنشورة','Published workflow instructions')+'</b><p>'+ui('هذه قراءة للنسخة المنشورة؛ ليست إثباتًا لنتيجة تنفيذ.','This reads the published version; it does not prove an execution result.')+(p.flow_status==='DISABLED'?ui(' طريقة العمل متوقفة.',' The workflow is disabled.'):'')+'</p>'+steps.map(function(step){return '<details class="adv"><summary>'+esc(step.display_name||step.name||step.step_name||ui('خطوة الذكاء الاصطناعي','AI step'))+'</summary><div class="prompt">'+esc(step.prompt)+'</div>'+(step.agent_instructions_unverified===true?'<p>'+ui('هذا مدخل مهمة للوكيل؛ تعليمات الوكيل المحفوظ نفسه لم تُتحقق هنا.','This is the agent’s task input; the saved agent’s own instructions are unverified here.')+'</p>':'')+'</details>';}).join('')+(steps.length?'':'<p>'+ui('لا توجد تعليمات خطوات ذكاء اصطناعي قابلة للعرض في هذه النسخة.','This version has no AI-step instructions available to display.')+'</p>')+siyRefsHtml([[ui('طريقة العمل','Workflow'),p.flow_id],[ui('النسخة المنشورة','Published version'),p.published_version_id]]);
+      target.innerHTML=siyPublishedWorkStepsHtml(p)+'<b>'+ui('تعليمات طريقة العمل المنشورة','Published workflow instructions')+'</b><p>'+ui('هذه قراءة للنسخة المنشورة؛ ليست إثباتًا لنتيجة تنفيذ.','This reads the published version; it does not prove an execution result.')+(p.flow_status==='DISABLED'?ui(' طريقة العمل متوقفة.',' The workflow is disabled.'):'')+'</p>'+steps.map(function(step){return '<details class="adv"><summary>'+esc(step.display_name||step.name||step.step_name||ui('خطوة الذكاء الاصطناعي','AI step'))+'</summary><div class="prompt">'+esc(step.prompt)+'</div>'+(step.agent_instructions_unverified===true?'<p>'+ui('هذا مدخل مهمة للوكيل؛ تعليمات الوكيل المحفوظ نفسه لم تُتحقق هنا.','This is the agent’s task input; the saved agent’s own instructions are unverified here.')+'</p>':'')+'</details>';}).join('')+(steps.length?'':'<p>'+ui('لا توجد تعليمات خطوات ذكاء اصطناعي قابلة للعرض في هذه النسخة.','This version has no AI-step instructions available to display.')+'</p>')+siyRefsHtml([[ui('طريقة العمل','Workflow'),p.flow_id],[ui('النسخة المنشورة','Published version'),p.published_version_id]]);
     }catch(error){if(target.isConnected&&who===e.id&&$("#publishedInstr")===target&&target.siyReadId===readId)target.textContent=ui('تعذّرت قراءة تعليمات طريقة العمل المنشورة. أعد فتح التعليمات للمحاولة.','Published workflow instructions could not be read. Reopen instructions to retry.');}
   }
   async function siySaveEmployeeInstructions(e,instructions){

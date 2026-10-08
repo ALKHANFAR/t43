@@ -613,6 +613,40 @@
           "anchor": "native complete Flow without AI projects trigger, actions and response without credentials"
         }
       ]
+    },
+    {
+      "id": "workspace_navigation_and_published_work",
+      "name": "ترتيب الصفحات وشات الموظف وطريقة عمله",
+      "aliases": [
+        "العمل والنتائج",
+        "صفحة الموظفين",
+        "طريقة العمل المنشورة"
+      ],
+      "state": "draft_pr",
+      "meaning": "تنقل داخل التطبيق القائم إلى شات سيادة والعمل والنتائج والموظفين؛ القوائم تستخدم بيانات الشركة المحفوظة دون تشغيل أو محاكاة. تعرض لوحة الموظف بنية النسخة المنشورة من work_steps منفصلة عن تعليمات المحادثة؛ لا تثبت نتيجة أو قابلية تشغيل. التغيير محلي غير منشور.",
+      "linear": "ABO-54",
+      "locations": [
+        {
+          "role": "navigation",
+          "path": "app/chat.html",
+          "anchor": "class=\"workspace-nav\""
+        },
+        {
+          "role": "pages",
+          "path": "app/chat.js",
+          "anchor": "function workspacePageHtml(view)"
+        },
+        {
+          "role": "workflow",
+          "path": "app/chat.js",
+          "anchor": "function siyPublishedWorkStepsHtml(p)"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "workspace navigation reads saved team and results without dispatching work"
+        }
+      ]
     }
   ]
 }

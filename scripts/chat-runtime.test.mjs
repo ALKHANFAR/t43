@@ -1290,3 +1290,22 @@ test('invalid or absent completed-action identity cannot change unknown request 
   const p=await page({message:{ok:true,conversation_id:'mixed',request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',reply:'رد المصدر',tool_receipts:[{name:'ap_run_action',status:'error',effect_attempted:true},{name:'ap_run_action',status:'returned',run_id:run,outcome:'action_completed',effect_attempted:true}]}});try{send(p,'اقرأ');await flush();assert.equal(p.d.querySelector('.request-state').textContent,'النتيجة غير مؤكدة');}finally{p.close();}
  }
 });
+
+test('workspace navigation reads saved team and results without dispatching work',async()=>{
+ const p=await page({hydrate:{...empty,team:[employee],recent_work:[proof]}});try{
+  p.d.querySelector('[data-workspace-view="results"]').click();assert.match(thread(p),/فرصة أ/);assert.match(thread(p),/run-1/);assert.equal(p.d.querySelector('.comp').style.display,'none');
+  p.d.querySelector('[data-workspace-view="team"]').click();assert.match(thread(p),/سارة/);p.d.querySelector('[data-open-employee]').click();assert.match(p.d.querySelector('#whoN').textContent,/سارة/);assert.equal(p.d.querySelector('.comp').style.display,'');
+  p.d.querySelector('[data-workspace-view="siyadah"]').click();assert.equal(p.d.querySelector('[data-workspace-view="siyadah"]').getAttribute('aria-current'),'page');
+  assert.equal(p.requests.filter(r=>['message','approve','employee_state'].includes(r.body?.op)).length,0);
+ }finally{p.close();}
+});
+test('results page empty state and failed records never fabricate provider success',async()=>{
+ for(const records of [[],[{...proof,status:'failed',runId:null}]]){const p=await page({hydrate:{...empty,recent_work:records}});try{
+  p.d.querySelector('[data-workspace-view="results"]').click();assert.doesNotMatch(thread(p),/✓/);assert.match(thread(p),records.length?/تعذّرت/:/ما فيه عمل مسجّل/);
+ }finally{p.close();}}
+});
+test('published workflow structure displays branches and escapes labels without promoting proof',async()=>{
+ const p=await page({hash:'#e='+publishedEmployee.recordId,hydrate:{...empty,team:[publishedEmployee]},employee_instructions:{ok:true,published_instructions:{...publishedProjection,work_structure_complete:false,work_steps:[{name:'trigger',display_name:'البداية',kind:'trigger',path:[]},{name:'send',display_name:'<img src=x>',kind:'action',path:[{kind:'branch',index:1},{kind:'loop'}],skipped:true,valid:false}]}}});try{
+  p.d.querySelector('#instrTgl').click();await flush();await flush();const panel=p.d.querySelector('.published-work');assert.equal(panel.querySelector('img'),null);assert.match(panel.textContent,/<img src=x>/);assert.match(panel.textContent,/فرع 2.*داخل تكرار/);assert.match(panel.textContent,/متخطاة.*إعداد غير صالح/);assert.match(panel.textContent,/القراءة جزئية/);assert.match(panel.textContent,/لا يثبت تنفيذها/);assert.equal(p.requests.filter(r=>r.body?.op==='message').length,0);
+ }finally{p.close();}
+});

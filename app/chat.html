@@ -395,6 +395,19 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 .mf input:focus,.mf select:focus,.mf textarea:focus{outline:none;border-color:var(--ink)}.mf small{display:block;color:var(--ash);font-size:.75rem;margin-block-start:4px}
 .mf .mf__c{display:flex;gap:8px;align-items:center}.mf__seg{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}.mbox .mf__e{color:var(--bad);margin:0 0 12px}
 
+.workspace-nav{padding-block-end:12px;border-block-end:1px solid var(--hair);margin-block-end:12px}
+.workspace-nav .hist[aria-current="page"]{background:var(--wash);color:var(--ink);font-weight:500}
+.published-work{border-block-end:1px solid var(--hair);margin-block-end:16px;padding-block-end:12px}
+.published-work h3{font-size:1rem;font-weight:500}
+.published-work li{padding-block:5px;overflow-wrap:anywhere}
+.published-work small{display:block;color:var(--ash)}
+.workspace-page h1{font-family:var(--f-display);font-size:1.5rem;font-weight:400;margin:0 0 8px}
+.workspace-page>p{color:var(--ash);margin:0 0 20px}
+.workspace-employee{width:100%;text-align:start;border:1px solid var(--hair);background:var(--paper);padding:16px;margin-block-end:10px;display:flex;align-items:center;gap:12px}
+.workspace-employee:hover{border-color:var(--ink)}
+.workspace-employee span:last-child{min-width:0;overflow-wrap:anywhere}
+.workspace-employee b,.workspace-employee small{display:block}
+.workspace-employee small{color:var(--ash);margin-block-start:4px}
 /* المحرر */
 .comp{padding:10px 20px 18px;background:linear-gradient(to top,var(--paper) 70%,transparent)}
 .comp__in{max-width:760px;margin:0 auto}
@@ -533,6 +546,11 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
     <button type="button" class="newc" id="newChat"><span class="plus">+</span> <span data-en="New chat">محادثة جديدة</span></button>
 
     <div class="side__scroll">
+      <nav class="workspace-nav" aria-label="مساحة العمل" data-en-aria-label="Workspace">
+        <button type="button" class="hist" data-workspace-view="siyadah"><span data-en="Siyadah chat">شات سيادة</span></button>
+        <button type="button" class="hist" data-workspace-view="results"><span data-en="Work and results">العمل والنتائج</span></button>
+        <button type="button" class="hist" data-workspace-view="team"><span data-en="Employees">الموظفون</span></button>
+      </nav>
       <div class="lbl"><span data-en="Your team">فريقك</span></div>
       <div id="emps"></div>
       <button type="button" class="hist" id="toolsLink" style="color:var(--ash);font-size:.82rem;margin-block-start:4px"><span data-en="Tools">الأدوات</span> <small id="toolsCnt">4 مربوطة</small></button>
