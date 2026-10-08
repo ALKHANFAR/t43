@@ -7,6 +7,7 @@ import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool
 import {TenantProjectError} from '../lib/tenant-projects.mjs';
 import {nativeActionReceipt,completedToolActions,flowTestSnapshot,chatExecutionBudget,failedChatExecution} from '../lib/chat-outcome.mjs';
 import {CompanyProfileError} from '../lib/company-profile.mjs';
+import {selectKnowledgeContext} from '../lib/knowledge-context.mjs';
 
 // Runs the real chat loop from server.mjs against a scripted model and a scripted Activepieces MCP.
 const source=readFileSync(new URL('../server.mjs',import.meta.url),'utf8');
@@ -39,9 +40,9 @@ const catalog=[
   {name:flowToolName,...hint(false),inputSchema:{type:'object',properties:{task:{type:'string'}}}},
 ];
 const say=content=>({content});
-const use=(...calls)=>({content:'',tool_calls:calls.map(([name,args],index)=>({id:`call_${name}_${index}`,function:{name,arguments:typeof args==='string'?args:JSON.stringify(args||{})}}))});
+const use=(...calls)=>({content:'',tool_calls:calls.map(([name,args],index)=>({id:`call_${name}_${index}`,function:{name,arguments:typeof args==='string'?args:JSON.stringify(['ap_build_flow','ap_create_flow'].includes(name)?{_siyadah_work_mode:'standing',...(args||{})}:args||{})}}))});
 
-function setup({script,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false}={}){
+function setup({script,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false,connections=[],flowReadOverride=null}={}){
   const log={model:[],tools:[],effects:0,states:[],owned:[],runs:[]};
   let stateAttempts=0,step=0,status=flowStatus,publishedVersionId=published?'v1':null,draftVersionId='v1',versionState=published?'LOCKED':'DRAFT',sampleData,updated='before',updatedBy,taskInput='{{trigger.task}}';
   const mcp={call:async(_company,method,params)=>{
@@ -59,7 +60,7 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false,edit
   const ctx={
     console:{error:()=>{},info:()=>{},warn:()=>{}},process:{env:{DEEPSEEK_API_KEY:'test-key'}},
     AbortController,setTimeout,clearTimeout,Date,JSON,String,Array,Object,Math,
-    TenantProjectError,CompanyProfileError,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,
+    TenantProjectError,CompanyProfileError,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,selectKnowledgeContext,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,
     fetch:async(url,options)=>{
       const request=JSON.parse(options.body);log.model.push(request);
       const message=script[Math.min(step++,script.length-1)];
@@ -73,14 +74,28 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false,edit
       recordEmployeeRun:async input=>{if(saveRunFailure)throw new Error('save failed');log.runs.push(input);return {recordId:input.employeeId,flowId:input.flowId,lastRunId:input.runId,status:'active'};},
       setEmployeeState:async({employeeId,status:next})=>{if(saveStateFailure===true||saveStateFailure==='once'&&stateAttempts++===0)throw new Error('save failed');log.states.push([employeeId,next]);return {recordId:employeeId,flowId,name:'أمين المحتوى',status:next};},
     }),
-    tenantProjects:async()=>({requireProject:async()=> 'P'.repeat(21),ownedFlow:async(_company,id)=>{log.owned.push(id);return {flow:{...publishedFlow,id,status,publishedVersionId,version:{...publishedFlow.version,id:draftVersionId,state:versionState,updated,...(updatedBy?{updatedBy}:{}),trigger:{...publishedFlow.version.trigger,settings:{...publishedFlow.version.trigger.settings,input:{...publishedFlow.version.trigger.settings.input,task:taskInput},...(sampleData?{sampleData}:{})}}}}};}}),
-    toolConnections:async()=>({assertOwnedExternal:async({externalId})=>{if(externalId==='foreign')throw new TenantProjectError('connection_not_owned','الاتصال لا يخص هذه الشركة.',403);}}),
+    tenantProjects:async()=>({requireProject:async()=> 'P'.repeat(21),ownedFlow:async(_company,id)=>{log.owned.push(id);const snapshot={flow:{...publishedFlow,id,status,publishedVersionId,version:{...publishedFlow.version,id:draftVersionId,state:versionState,updated,...(updatedBy?{updatedBy}:{}),trigger:{...publishedFlow.version.trigger,settings:{...publishedFlow.version.trigger.settings,input:{...publishedFlow.version.trigger.settings.input,task:taskInput},...(sampleData?{sampleData}:{})}}}}};return flowReadOverride?flowReadOverride(snapshot):snapshot;}}),
+    toolConnections:async()=>({list:async company=>{assert.equal(company,'company-1');if(connections instanceof Error)throw connections;return connections;},assertOwnedExternal:async({externalId})=>{if(externalId==='foreign')throw new TenantProjectError('connection_not_owned','الاتصال لا يخص هذه الشركة.',403);}}),
   };
   const deepseekReply=runInNewContext(`${source.slice(start,end)}; deepseekReply`,ctx);
   const run=(extra={})=>deepseekReply({company:{name:'شركة'},settings:{},knowledge:{},team:[],history:[],message:'جهّز الموظف',mcp,companyId:'company-1',conversationId:'c1',deadlineMs:600_000,onEffectStart:()=>{log.effects++;},...extra});
   return {run,log};
 }
 const toolMessages=request=>request.messages.filter(item=>item.role==='tool').map(item=>item.content);
+
+test('saved company context preserves fact provenance and projects connections without credentials',async()=>{
+  const {run,log}=setup({script:[say('ما تحتاج تعيد معلومات شركتك')],connections:[{id:'saved',slug:'asana',displayName:'حساب العمل',status:'ACTIVE',secret:'never-in-context',externalId:'private-external'}]});
+  await run({knowledge:{facts:[{key:'services',topic:'services',value:'استشارات',sourceUrl:'https://company.example',sourceKind:'company_website',certainty:'high',observedAt:'2026-10-01'}],missingCritical:['ساعات العمل']}});
+  const system=log.model[0].messages[0].content,context=JSON.parse(system.split('سياق العمل الحالي بصيغة JSON:\n')[1].split('\n\n## Activepieces')[0]);
+  assert.equal(context.knowledge.facts[0].observedAt,'2026-10-01');assert.equal(context.knowledge.facts[0].key,'services');
+  assert.equal(context.knowledge.missing[0],'ساعات العمل');assert.equal(context.connections.state,'read');assert.equal(context.connections.items[0].tool,'asana');
+  assert.equal(system.includes('never-in-context'),false);assert.equal(system.includes('private-external'),false);
+});
+
+test('unavailable connection inventory stays unknown rather than claiming no saved accounts',async()=>{
+  const {run,log}=setup({script:[say('سأتحقق من حسابك')],connections:new Error('unavailable')});await run();
+  assert.match(log.model[0].messages[0].content,/"connections":\{"state":"unknown","items":\[\]\}/);
+});
 
 test('the model builds, tests and publishes in one request and writes the reply itself',async()=>{
   const {run,log}=setup({script:[
@@ -264,7 +279,7 @@ test('a long request answers queued once, keeps working, and settles the same re
     earlierPendingChatRequest:async()=>null,
     settleChatRequest:async entry=>{settled.push(entry);return {status:entry.status,httpStatus:entry.httpStatus,response:entry.response};},
     read:async()=>({company_name:'شركة'}),readSettings:async()=>({}),ownedKnowledge:async()=>({}),listEmployees:async()=>[],listConversations:async()=>[],conversationHistory:async()=>[],
-    findConversationDraft:async()=>null,recordConversation:async entry=>{recorded.push(entry);},
+    recordChatActivity:async entry=>{assert.equal(entry.companyId,'company-1');assert.equal(entry.requestId,'r1');assert.equal(entry.conversationId,'c1');assert.equal(entry.claimToken,'t');},findConversationDraft:async()=>null,recordConversation:async entry=>{recorded.push(entry);},
   };
   const ctx={
     console:{error:()=>{},info:()=>{},warn:()=>{}},JSON,String,Object,Number,Array,Boolean,
@@ -277,17 +292,17 @@ test('a long request answers queued once, keeps working, and settles the same re
     employeeRequestMode:()=>'explore',explicitNewEmployee:()=>false,flowName:()=>'x',
     completedWithoutExecution:(kind,response)=>({...response,request_status:'succeeded',outcome_kind:kind,work_status:'not_started'}),
     failedChatExecution,
-    deepseekReply:()=>new Promise(resolve=>{release=resolve;}),
+    deepseekReply:async({onActivity})=>{await onActivity({id:1,name:'ap_build_flow',state:'started'});return new Promise(resolve=>{release=resolve;});},
   };
   const publicChat=runInNewContext(`${source.slice(jsonStart,jsonEnd)}\n${source.slice(chatStart,chatEnd)}; publicChat`,ctx);
   const writes=[];
   const res={headersSent:false,writeHead(status){this.headersSent=true;writes.push({status});},end(text){writes.at(-1).body=JSON.parse(text);}};
   const running=publicChat({headers:{}},res);
   while(!release)await new Promise(resolve=>setImmediate(resolve));
-  const wait=timers.find(timer=>timer.ms===20_000&&!timer.cleared);
+  const wait=timers.find(timer=>timer.ms===1500&&!timer.cleared);
   assert.ok(wait);
   wait.fn();
-  assert.equal(writes.length,1);
+  assert.equal(writes.length,1);assert.equal(writes[0].body.work_status,'running');assert.equal(writes[0].body.activity[0].state,'started');
   assert.deepEqual([writes[0].body.request_status,writes[0].body.work_id],['queued','request_r1']);
   release({reply:'بُنيت ونُشرت.',flowId});
   await running;
@@ -673,4 +688,58 @@ test('short continuation budget still dispatches native MCP discovery before rep
   const answer=await run({deadlineMs:25_000,excludedTools:['ap_create_table']});
   assert.deepEqual(log.tools.map(item=>item[0]),['ap_list_connections']);
   assert.equal(answer.reply,'قرأت الاتصالات وأكملت من الجدول المحفوظ.');
+});
+
+test('tool activity follows real invocation boundaries and contains no arguments or result payloads',async()=>{
+ const events=[];let release,started;const pending=new Promise(resolve=>{release=resolve;});const ready=new Promise(resolve=>{started=resolve;});const {run}=setup({script:[use(['ap_run_action',{secret:'private-input'}]),say('وصل الرد')],toolResults:{ap_run_action:async()=>{started();await pending;return {content:[{type:'text',text:'private-output'}]};}}});
+ const work=run({onActivity:async item=>events.push({...item})});await ready;assert.deepEqual(events,[{id:1,name:'ap_run_action',state:'started'}]);release();await work;assert.deepEqual(events.map(e=>e.state),['started','returned']);assert.equal(events[0].id,events[1].id);assert.equal(JSON.stringify(events).includes('private-'),false);
+});
+
+test('failed activity storage does not prevent a native tool call or invent a provider result',async()=>{
+ const {run,log}=setup({script:[use(['ap_run_action',{}]),say('رد')],toolResults:{ap_run_action:{isError:true,content:[{type:'text',text:'error'}]}}});const answer=await run({onActivity:async()=>{throw new Error('storage down');}});assert.equal(log.tools.filter(([name])=>name==='ap_run_action').length,1);assert.equal(answer.toolReceipts[0].status,'error');
+});
+
+
+test('one-off Flow is built without creating an employee and internal intent never reaches native MCP',async()=>{
+ let drafts=0;const {run,log}=setup({script:[use(['ap_build_flow',{flowName:'مراجعة العقد',_siyadah_work_mode:'one_off'}]),say('حفظت العمل') ]});const answer=await run({createDraft:async()=>{drafts++;throw new Error('must not create employee');}});assert.equal(drafts,0);assert.equal(answer.employee,undefined);assert.equal(answer.workMode,'one_off');assert.equal(answer.flowId,flowId);assert.equal(log.tools.find(([name])=>name==='ap_build_flow')[1]._siyadah_work_mode,undefined);
+});
+
+test('one-off Flow can test publish and invoke its exact native tool once without employee persistence',async()=>{
+ const execution={runId,projectId:'P'.repeat(21),flowId,flowVersionId:'v1',environment:'PRODUCTION'};let captures=0;const {run,log}=setup({script:[use(['ap_build_flow',{flowName:'تقرير الآن',_siyadah_work_mode:'one_off'}]),use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),use([flowToolName,{task:'نفذ الآن'}]),say('النتيجة')],toolResults:{[flowToolName]:{structuredContent:{execution}}}});const answer=await run({onNativeExecution:async native=>{captures++;assert.equal(native.employee,null);assert.equal(native.flowId,flowId);assert.equal(native.publishedVersion,'v1');return {ok:true};},createDraft:async()=>{throw new Error('must not create employee');}});assert.equal(captures,1);assert.equal(answer.flowToolAttempted,true);assert.equal(answer.employee,undefined);assert.equal(answer.toolReceipts.at(-1).outcome,'flow_completed');assert.equal(log.runs.length,0);assert.equal(log.states.length,0);assert.equal(log.tools.filter(([name])=>name===flowToolName).length,1);
+});
+
+test('missing internal work intention cannot create a Flow or employee',async()=>{
+ let drafts=0;const {run,log}=setup({script:[use(['ap_build_flow','{"flowName":"طلب"}']),say('أحتاج تحديد وقت المتابعة') ]});await run({createDraft:async()=>{drafts++;return {};}});assert.equal(drafts,0);assert.equal(log.tools.some(([name])=>name==='ap_build_flow'),false);assert.match(toolMessages(log.model[1])[0],/work_intention_required/);
+});
+
+test('one-off continuation rejects retrying another Flow run before any retry dispatch',async()=>{
+ const {run,log}=setup({published:true,flowStatus:'ENABLED',script:[use(['ap_retry_run',{flowRunId:runId,strategy:'FROM_FAILED_STEP'}]),say('التشغيل لا يخص الطلب')],toolResults:{ap_get_run:{structuredContent:{id:runId,flowId:'X'.repeat(21)}}}});await run({oneOffWork:{flowId}});assert.equal(log.tools.some(([name])=>name==='ap_retry_run'),false);assert.match(toolMessages(log.model[1])[0],/employee_run_scope/);
+});
+
+
+test('one-off invocation rejects a changed published version before the native action',async()=>{
+ let reads=0;const {run,log}=setup({flowReadOverride:snapshot=>++reads>=7?{flow:{...snapshot.flow,publishedVersionId:'v2'}}:snapshot,script:[use(['ap_build_flow',{flowName:'تقرير الآن',_siyadah_work_mode:'one_off'}]),use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),use([flowToolName,{}]),say('تغيرت النسخة')]});const answer=await run({onNativeExecution:async()=>{throw new Error('must not invoke');}});assert.equal(log.tools.some(([name])=>name===flowToolName),false);assert.equal(answer.toolReceipts.at(-1).status,'error');assert.match(toolMessages(log.model.at(-1)).at(-1),/one_off_version_changed/);
+});
+
+test('a new goal in a conversation with earlier one-off work can build a different task without an employee',async()=>{
+ const {run,log}=setup({published:true,flowStatus:'DISABLED',script:[use(['ap_build_flow',{flowName:'طلب جديد',_siyadah_work_mode:'one_off'}]),say('جهزت الطلب الجديد')]});let created=0;await run({oneOffWork:{flowId},createDraft:async()=>{created++;return {};}});assert.equal(created,0);assert.equal(log.tools.filter(([name])=>name==='ap_build_flow').length,1);
+});
+
+test('both chats retrieve older relevant company facts beyond the first forty with their source',async()=>{
+  const facts=Array.from({length:75},(_,i)=>({topic:'unrelated',key:'note '+i,value:'routine note '+i}));
+  facts.push({topic:'pricing',key:'سعر الخدمة',value:'سعر الخدمة 199',sourceUrl:'https://example.com/pricing',evidenceQuote:'سعر الخدمة 199',certainty:'user_confirmed',observedAt:'2020-01-01T00:00:00Z'});
+  for(const employee of [null,{id:'employee-1',status:'draft',name:'نور',knowledge_topics_json:['support']}]){
+    const h=setup({script:[say('سعر الخدمة 199.')]});await h.run({employee,knowledge:{facts},message:'ما سعر الخدمة؟'});
+    const context=JSON.parse(h.log.model[0].messages[0].content.split('سياق العمل الحالي بصيغة JSON:\n')[1].split('\n')[0]);
+    assert.equal(context.knowledge.facts[0].value,'سعر الخدمة 199');assert.equal(context.knowledge.facts[0].source,'https://example.com/pricing');
+    assert.equal(h.log.effects,0);
+  }
+});
+test('both chats bound the company knowledge context without truncating individual evidence',async()=>{
+  const facts=Array.from({length:40},(_,i)=>({topic:'support',key:'answer '+i,value:'x'.repeat(1500),sourceUrl:'https://example.com/'+i,certainty:'observed'}));
+  for(const employee of [null,{id:'employee-1',status:'draft',name:'نور'}]){
+    const h=setup({script:[say('رد مباشر.')]});await h.run({employee,knowledge:{facts}});
+    const context=JSON.parse(h.log.model[0].messages[0].content.split('سياق العمل الحالي بصيغة JSON:\n')[1].split('\n')[0]);
+    assert.ok(JSON.stringify(context.knowledge.facts).length<=6000);assert.equal(context.knowledge.facts[0].value.length,1500);assert.equal(h.log.effects,0);
+  }
 });

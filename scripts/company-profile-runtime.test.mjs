@@ -94,7 +94,7 @@ test('company voice settings are bounded, deduplicated and separate from knowled
 test('knowledge and employees are always read through the owning company id',async()=>{
   const seen=[];
   const profiles={
-    company_alpha:{company_id:'company_alpha',coverage_score:80,last_success_at:'2026-09-29T00:00:00Z',last_error:null},
+    company_alpha:{company_id:'company_alpha',coverage_score:80,last_success_at:'2026-09-29T00:00:00Z',last_error:null,profile_json:{missingCritical:['ساعات العمل']}},
     company_beta:{company_id:'company_beta',coverage_score:20,last_success_at:null,last_error:null},
   };
   const query=async(text,values=[])=>{
@@ -113,6 +113,8 @@ test('knowledge and employees are always read through the owning company id',asy
   assert.equal(betaKnowledge.companyId,'company_beta');
   assert.equal(alphaKnowledge.facts[0].key,'fact_company_alpha');
   assert.equal(betaKnowledge.facts[0].key,'fact_company_beta');
+  assert.deepEqual(alphaKnowledge.missingCritical,['ساعات العمل']);
+  assert.deepEqual(betaKnowledge.missingCritical,[]);
   assert.equal(alphaEmployees[0].recordId,'employee_company_alpha');
   assert.equal(betaEmployees[0].recordId,'employee_company_beta');
   assert.notEqual(alphaEmployees[0].flowId,betaEmployees[0].flowId);
@@ -250,4 +252,34 @@ test('reloaded main chat finds its saved draft without becoming an employee chat
   assert.equal((await service.listConversations('company_beta'))[0].employee_id,null);
   assert.ok(calls.filter(call=>call.sql.includes('siyadah_conversation_messages m')).every(call=>call.sql.includes('m.company_id=e.company_id')&&call.sql.includes('m.request_id=e.creation_request_id')));
   assert.ok(calls.every(call=>call.values[0]==='company_alpha'||call.values[0]==='company_beta'));
+});
+
+test('pending decisions are read from tenant-owned unexpired approvals without consuming them',async()=>{
+ const calls=[];const service=createCompanyProfileService({query:async(sql,values)=>{calls.push({sql,values});return {rows:[{request_id:'saved',conversation_id:'conversation',status:'succeeded',response_json:{work_status:'awaiting_input',reply:'راجع العرض',approval:{required:true,approval_id:'id'},internal_token:'do-not-expose'}}]};}});
+ const rows=await service.pendingChatWork('company-a');assert.equal(rows[0].work_status,'awaiting_input');assert.equal(rows[0].approval.approval_id,'id');assert.equal(JSON.stringify(rows).includes('do-not-expose'),false);
+ assert.deepEqual(calls[0].values,['company-a']);assert.match(calls[0].sql,/a\.tenant_id=r\.company_id/);assert.match(calls[0].sql,/a\.conversation_id=r\.conversation_id/);assert.match(calls[0].sql,/a\.expires_at>now\(\)/);assert.doesNotMatch(calls[0].sql,/DELETE|UPDATE|INSERT/);
+});
+
+test('saved work exposes only the successful flow reply body, never response headers or a guessed result',async()=>{
+ const query=async(sql,values)=>{assert.deepEqual(values,['company-a']);assert.match(sql,/company_id=\$1/);return {rows:[{id:'e1',activepieces_flow_id:'f1',name:'التقرير',last_run_id:'r1',last_result_json:{status:200,body:{report:'تقرير اليوم'},headers:{Authorization:'secret'}}},{id:'e2',name:'قديم',last_run_id:'r2',last_result_json:{status:200}},{id:'e3',name:'خطأ',last_run_id:'r3',last_result_json:{status:500,body:'خطأ'}},{id:'e4',name:'كبير',last_run_id:'r4',last_result_json:{status:200,body:'x'.repeat(12001)}}]};};
+ const rows=await createCompanyProfileService({query}).recentWork('company-a');assert.deepEqual(rows[0].result,{schemaVersion:1,source:'flow_reply',content:'{"report":"تقرير اليوم"}'});assert.equal(JSON.stringify(rows).includes('secret'),false);assert.equal(rows.slice(1).every(row=>!row.result),true);
+});
+
+test('chat activity writes bounded public fields only for the exact pending claim',async()=>{
+ const calls=[];let write=true;const service=createCompanyProfileService({query:async(sql,values)=>{calls.push({sql,values});return {rows:write?[{request_id:'request-a'}]:[]};}});
+ const scope={companyId:'company-a',requestId:'request-a',conversationId:'conversation-a',claimToken:'claim-a'};
+ assert.equal(await service.recordChatActivity({...scope,activity:[{id:1,name:'ap_search_actions',state:'started',args:{token:'secret'},output:'private',error:'sensitive'}]}),true);
+ assert.deepEqual(calls[0].values.slice(0,4),Object.values(scope));assert.deepEqual(JSON.parse(calls[0].values[4]),[{id:1,name:'ap_search_actions',state:'started'}]);
+ assert.match(calls[0].sql,/company_id=\$1 AND request_id=\$2 AND conversation_id=\$3 AND claim_token=\$4 AND status='pending'/);assert.match(calls[0].sql,/jsonb_set\(COALESCE\(response_json/);assert.doesNotMatch(calls[0].sql,/SET status/);assert.equal(JSON.stringify(calls).includes('secret'),false);
+ write=false;assert.equal(await service.recordChatActivity({...scope,activity:[]}),false);
+});
+
+test('chat activity rejects malformed or oversized entries before SQL',async()=>{
+ const service=createCompanyProfileService({query:async()=>{throw Error('must not query');}}),scope={companyId:'c',requestId:'r',conversationId:'v',claimToken:'t'};
+ for(const activity of [null,{},Array(81).fill({id:1,name:'tool',state:'started'}),[{id:0,name:'tool',state:'started'}],[{id:1.5,name:'tool',state:'started'}],[{id:1,name:'x'.repeat(121),state:'started'}],[{id:1,name:'tool secret',state:'started'}],[{id:1,name:'tool',state:'succeeded'}]])await assert.rejects(()=>service.recordChatActivity({...scope,activity}),{code:'invalid_chat_activity'});
+ await assert.rejects(()=>service.recordChatActivity({...scope,claimToken:'',activity:[]}),{code:'invalid_chat_activity_scope'});
+});
+
+test('one-off continuation reads a valid Flow only from its own company conversation',async()=>{
+ const flow='F'.repeat(21),calls=[];let value=flow;const service=createCompanyProfileService({query:async(sql,values)=>{calls.push({sql,values});return {rows:[{flow_id:value}]};}});assert.deepEqual(await service.findConversationWork('company-a','conversation-a'),{flowId:flow});assert.deepEqual(calls[0].values,['company-a','conversation-a']);assert.match(calls[0].sql,/company_id=\$1 AND conversation_id=\$2/);assert.match(calls[0].sql,/work_mode.*one_off/);value='../foreign';assert.equal(await service.findConversationWork('company-a','conversation-a'),null);
 });

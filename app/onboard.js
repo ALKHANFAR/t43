@@ -2,7 +2,7 @@
   "use strict";
   var $=function(s,c){return (c||document).querySelector(s)};
   var $$=function(s,c){return Array.prototype.slice.call((c||document).querySelectorAll(s))};
-  var step=1,TOTAL=4,PROFILE=null,SUGGESTIONS=[],SELECTED=null,CREATED=null,busy=false,selectionRequestId=null;
+  var step=1,TOTAL=4,PROFILE=null,SUGGESTIONS=[],SELECTED=null,CREATED=null,busy=false,selectionRequestId=null,renderedStep=null;
   var selectionAttemptKey='siyadah_employee_selection_attempt';
   function forgetSelectionAttempt(){selectionRequestId=null;try{sessionStorage.removeItem(selectionAttemptKey);}catch(error){/* Private browsing may block storage. */}}
   function employeeSelectionRequestId(){
@@ -23,8 +23,8 @@
     en:{company_profile:'Company profile',industry:'Industry',services:'Services',products:'Products',target_customers:'Customers',pricing:'Pricing',faq:'FAQs',policies:'Policies',contact:'Contact',locations:'Locations',hours:'Hours',brand:'Brand voice',case_studies:'Case studies',social:'Channels',delivery:'Delivery'}
   };
   var COPY={
-    ar:{startSite:'ابدأ من موقع شركتك.',startSiteSub:'نستخرج ما يحتاجه موظفك الأول، مع مصدر كل معلومة.',startNoSite:'عرّفنا بشركتك.',startNoSiteSub:'اسمها وما تقدمه يكفيان لنبدأ.',noSite:'ما عندي موقع',hasSite:'عندي موقع',next:'التالي',back:'رجوع',suggestions:'اعرض اقتراحاتي',choose:'اختر موظفًا',prepare:'احفظ مسودة ',workspace:'افتح مساحة العمل',version:'الإصدار ',stepOf:' من ',best:'أفضل بداية',why:'لماذا ',reads:'سيقرأ: ',note:'الموظف الذي تختاره سيظهر في فريقك، ولن يبدأ العمل حتى تختبره.',company:'شركتك',fromSite:'من موقعك · راجعها',siteEmpty:'لم نجد معلومات كافية · أضفها لاحقًا',fromDescription:'من وصفك · راجعه',siteNoFacts:'يمكنك إضافة معلومات الشركة وتصحيحها لاحقًا.',descriptionFooter:'هذه المعلومات من وصفك، ويمكنك تعديلها لاحقًا.',summaryFallback:'يمكنك إكمال معلومات الشركة وتصحيحها لاحقًا من قاعدة المعرفة.',pages:'صفحات راجعناها',facts:'معلومات محفوظة',knowledgeVersion:'إصدار المعرفة',coverage:'تغطية معلومات الشركة: ',unavailable:'غير متاحة',researching:'نبحث بعمق…',reviewing:'نراجع تقدمك…',preparingProfile:'نجهّز ملف شركتك…',arranging:'نرتب الاقتراحات…',preparingEmployee:'نحفظ المسودة…',checking:'نتحقق من كل معلومة',matching:'نطابق الاقتباسات مع صفحاتها الأصلية',reading:'نبحث في ',sourcePromise:'لن نحفظ معلومة بلا مصدر واقتباس واضح',incomplete:'لم نحفظ نتيجة غير مكتملة.',validUrl:'اكتب رابط موقع صالح.',stillProcessing:'البحث العميق ما زال مستمرًا. أعد المحاولة بعد قليل.',genericError:'تعذّر إكمال الخطوة. حاول مرة ثانية.',logoutError:'تعذّر تسجيل الخروج. حاول مرة أخرى.'},
-    en:{startSite:'Start with your company website.',startSiteSub:'We gather what your first employee needs, with a source for each fact.',startNoSite:'Tell us about your company.',startNoSiteSub:'Its name and what it does are enough to begin.',noSite:"I don't have a website",hasSite:'I have a website',next:'Continue',back:'Back',suggestions:'See suggestions',choose:'Choose an employee',prepare:'Save draft ',workspace:'Open workspace',version:'Version ',stepOf:' of ',best:'Best starting point',why:'Why ',reads:'Will use: ',note:'Your choice will appear on your team. It will not work until you test it.',company:'Your company',fromSite:'From your website · review it',siteEmpty:'Not enough information yet · add it later',fromDescription:'From your description · review it',siteNoFacts:'You can add or correct company information later.',descriptionFooter:'This comes from your description. You can edit it later.',summaryFallback:'You can add and correct company information later.',pages:'Pages reviewed',facts:'Saved facts',knowledgeVersion:'Knowledge version',coverage:'Company knowledge coverage: ',unavailable:'unavailable',researching:'Researching…',reviewing:'Checking your progress…',preparingProfile:'Preparing your company profile…',arranging:'Finding suggestions…',preparingEmployee:'Saving draft…',checking:'Checking each fact',matching:'Matching quotes to their source pages',reading:'Reading ',sourcePromise:'We keep only facts supported by a source and quote.',incomplete:'We did not save an incomplete result.',validUrl:'Enter a valid website URL.',stillProcessing:'Research is still running. Try again shortly.',genericError:'We could not complete this step. Try again.',logoutError:'Could not log out. Try again.'}
+    ar:{startSite:'ابدأ من موقع شركتك.',startSiteSub:'نستخرج ما يحتاجه موظفك الأول، مع مصدر كل معلومة.',startNoSite:'عرّفنا بشركتك.',startNoSiteSub:'اسمها وما تقدمه يكفيان لنبدأ.',noSite:'ما عندي موقع',hasSite:'عندي موقع',next:'التالي',back:'رجوع',suggestions:'استكشف اقتراحات الموظفين',continueChat:'تابع في الشات',handoffFailed:'تعذّر حفظ طلبك للانتقال. النص باقٍ هنا؛ حاول مرة ثانية.',choose:'اختر موظفًا',prepare:'احفظ مسودة ',workspace:'افتح مساحة العمل',version:'الإصدار ',stepOf:' من ',best:'أفضل بداية',why:'لماذا ',reads:'سيقرأ: ',note:'الموظف الذي تختاره سيظهر في فريقك، ولن يبدأ العمل حتى تختبره.',company:'شركتك',fromSite:'من موقعك · راجعها',siteEmpty:'لم نجد معلومات كافية · أضفها لاحقًا',fromDescription:'من وصفك · راجعه',siteNoFacts:'لم نحفظ معلومات موثقة من الموقع بعد. أضف التفاصيل التي يحتاجها طلبك أو صححها من قاعدة المعرفة.',descriptionFooter:'هذه المعلومات من وصفك، ويمكنك تعديلها لاحقًا.',summaryFallback:'يمكنك إكمال معلومات الشركة وتصحيحها لاحقًا من قاعدة المعرفة.',pages:'صفحات راجعناها',facts:'معلومات محفوظة',knowledgeVersion:'إصدار المعرفة',coverage:'تغطية معلومات الشركة: ',unavailable:'غير متاحة',researching:'نبحث بعمق…',reviewing:'نراجع تقدمك…',preparingProfile:'نجهّز ملف شركتك…',arranging:'نرتب الاقتراحات…',preparingEmployee:'نحفظ المسودة…',checking:'نتحقق من كل معلومة',matching:'نطابق الاقتباسات مع صفحاتها الأصلية',reading:'نبحث في ',sourcePromise:'لن نحفظ معلومة بلا مصدر واقتباس واضح',incomplete:'لم نحفظ نتيجة غير مكتملة.',validUrl:'اكتب رابط موقع صالح.',stillProcessing:'البحث العميق ما زال مستمرًا. أعد المحاولة بعد قليل.',genericError:'تعذّر إكمال الخطوة. حاول مرة ثانية.',logoutError:'تعذّر تسجيل الخروج. حاول مرة أخرى.',noSuggestions:'لم تصل اقتراحات بعد. احتفظنا بمهمتك؛ أعد المحاولة أو عدّلها.'},
+    en:{startSite:'Start with your company website.',startSiteSub:'We gather what your first employee needs, with a source for each fact.',startNoSite:'Tell us about your company.',startNoSiteSub:'Its name and what it does are enough to begin.',noSite:"I don't have a website",hasSite:'I have a website',next:'Continue',back:'Back',suggestions:'Explore employee suggestions',continueChat:'Continue in chat',handoffFailed:'We could not save your request for the next page. Your text is still here; try again.',choose:'Choose an employee',prepare:'Save draft ',workspace:'Open workspace',version:'Version ',stepOf:' of ',best:'Best starting point',why:'Why ',reads:'Will use: ',note:'Your choice will appear on your team. It will not work until you test it.',company:'Your company',fromSite:'From your website · review it',siteEmpty:'Not enough information yet · add it later',fromDescription:'From your description · review it',siteNoFacts:'No sourced website facts have been saved yet. Add or correct the details your request needs in company knowledge.',descriptionFooter:'This comes from your description. You can edit it later.',summaryFallback:'You can add and correct company information later.',pages:'Pages reviewed',facts:'Saved facts',knowledgeVersion:'Knowledge version',coverage:'Company knowledge coverage: ',unavailable:'unavailable',researching:'Researching…',reviewing:'Checking your progress…',preparingProfile:'Preparing your company profile…',arranging:'Finding suggestions…',preparingEmployee:'Saving draft…',checking:'Checking each fact',matching:'Matching quotes to their source pages',reading:'Reading ',sourcePromise:'We keep only facts supported by a source and quote.',incomplete:'We did not save an incomplete result.',validUrl:'Enter a valid website URL.',stillProcessing:'Research is still running. Try again shortly.',genericError:'We could not complete this step. Try again.',logoutError:'Could not log out. Try again.',noSuggestions:'No suggestions arrived. Your task is still here; try again or edit it.'}
   };
   var ROLE_EN={sales_leads:{name:'Saad',title:'Lead specialist',goal:'Captures leads, follows up, and flags qualified opportunities.'},customer_support:{name:'Fahad',title:'Customer support',goal:'Answers from company knowledge and escalates unanswered requests.'},marketing:{name:'Reem',title:'Marketing employee',goal:'Drafts content in your company voice, grounded in its offers.'},operations:{name:'Layan',title:'Operations employee',goal:'Organizes incoming requests and recurring operational work.'}};
   function t(key){return COPY[locale][key];}
@@ -59,7 +59,7 @@
   }
   function noSiteOn(){return $('#alts').classList.contains('on');}
   function step1Ready(){return noSiteOn()?!!$('#lines3').value.trim()&&!!$('#co').value.trim():!!PROFILE;}
-  function setBusy(value,label){busy=value;$('#next').disabled=value;$('#site').disabled=value;$('#noSite').disabled=value;$('#live').textContent=value?(label||''):'';if(label)$('#next').textContent=label;}
+  function setBusy(value,label){busy=value;$('#next').disabled=value;$('#next').setAttribute('aria-busy',String(value));['#site','#noSite','#co','#lines3','#brief','#back','#exploreEmployees'].forEach(function(selector){$(selector).disabled=value;});$$('[data-task-ar]').forEach(function(button){button.disabled=value;});$('#live').textContent=value?(label||''):'';if(label)$('#next').textContent=label;}
 
   function siteState(kind,title,detail){
     var st=$('#siteSt');st.style.display='flex';st.className='site '+kind;
@@ -123,14 +123,18 @@
     return matched.length?'Suggested because your company covers '+matched.join(', ')+'.':'A starting point based on your current company profile.';
   }
   function show(){
+    var changed=renderedStep!==step;renderedStep=step;
+    var focusedSuggestion=document.activeElement&&document.activeElement.dataset.suggestion;
     $$('.step').forEach(function(section){section.classList.toggle('on',+section.dataset.step===step);});
     $('#stepLbl').textContent=step+t('stepOf')+TOTAL;$('#prog').style.width=(step/TOTAL*100)+'%';
     var next=$('#next'),back=$('#back');back.style.visibility=(step===2||step===3)?'visible':'hidden';back.textContent=t('back');
     if(step===1){next.innerHTML=t('next')+' <span class="drop"></span>';next.disabled=busy||!step1Ready();}
-    if(step===2){$('#companyRead').innerHTML=companySummary();next.innerHTML=t('suggestions')+' <span class="drop"></span>';next.disabled=busy;$('#brief').focus();}
+    $('#exploreEmployees').hidden=step!==2;$('#exploreEmployees').textContent=t('suggestions');
+    if(step===2){$('#companyRead').innerHTML=companySummary();next.innerHTML=t('continueChat')+' <span class="drop"></span>';next.disabled=busy||!$('#brief').value.trim();if(changed&&!busy)$('#brief').focus();}
     if(step===3){renderSuggestions();var picked=SUGGESTIONS.find(function(item){return item.id===SELECTED;});next.innerHTML=(picked?t('prepare')+esc(role(picked,'name')):t('choose'))+' <span class="drop"></span>';next.disabled=busy||!SELECTED;}
     if(step===4){next.innerHTML=t('workspace')+' <span class="drop"></span>';next.disabled=false;if(CREATED){$('#doneAv').textContent=locale==='en'&&ROLE_EN[SELECTED]?ROLE_EN[SELECTED].name.slice(0,1):CREATED.initial;$('#doneKnowledge').textContent=t('version')+esc(CREATED.knowledgeVersion||PROFILE&&PROFILE.knowledgeVersion||1);}}
-    window.scrollTo({top:0,behavior:'smooth'});
+    if(focusedSuggestion&&step===3){var restored=$$('[data-suggestion]').find(function(button){return button.dataset.suggestion===focusedSuggestion;});if(restored)restored.focus();}
+    if(changed)window.scrollTo({top:0,behavior:'smooth'});
   }
 
   $('#site').addEventListener('change',function(){if(this.value.trim().length>3)readSite(this.value);});
@@ -143,7 +147,8 @@
   });
   $('#lines3').addEventListener('input',function(){clearStepError();show();});
   $('#co').addEventListener('input',function(){clearStepError();show();});
-  $('#brief').addEventListener('input',clearStepError);
+  $('#brief').addEventListener('input',function(){clearStepError();show();});
+  $$('[data-task-ar]').forEach(function(button){button.addEventListener('click',function(){if(busy)return;clearStepError();$('#brief').value=locale==='en'?button.dataset.taskEn:button.dataset.taskAr;$('#brief').focus();show();});});
   $('#plan').addEventListener('click',function(event){var button=event.target.closest('[data-suggestion]');if(!button)return;clearStepError();if(SELECTED!==button.dataset.suggestion)selectionRequestId=null;SELECTED=button.dataset.suggestion;show();});
   $('#next').addEventListener('click',async function(){
     if(busy)return;
@@ -151,15 +156,21 @@
     if(step===4){window.location.href='chat.html'+(CREATED&&CREATED.recordId?'#e='+encodeURIComponent(CREATED.recordId):'');return;}
     if(step===1){if(noSiteOn()&&!await readLines())return;step=2;show();return;}
     if(step===2){
-      setBusy(true,t('arranging'));
-      try{var data=await api({op:'recommend_employees',goal:$('#brief').value.trim()});SUGGESTIONS=data.suggestions||SUGGESTIONS;SELECTED=null;step=3;}
-      catch(error){showStepError(error);}finally{setBusy(false);show();}return;
+      var text=$('#brief').value.trim();if(!text)return;
+      try{var draft=JSON.stringify({text:text,createdAt:Date.now()});sessionStorage.setItem('siyadah_request_draft_v1',draft);if(sessionStorage.getItem('siyadah_request_draft_v1')!==draft)throw new Error('storage_failed');}
+      catch(error){showStepError(new Error(t('handoffFailed')));$('#brief').focus();return;}
+      window.location.href='chat.html';return;
     }
     if(step===3){
       setBusy(true,t('preparingEmployee'));
       try{var selected=await api({op:'select_employee',suggestion_id:SELECTED,request_id:employeeSelectionRequestId()});CREATED=selected.employee;forgetSelectionAttempt();step=4;}
       catch(error){showStepError(error);}finally{setBusy(false);show();}
     }
+  });
+  $('#exploreEmployees').addEventListener('click',async function(){
+    if(busy||step!==2)return;clearStepError();setBusy(true,t('arranging'));
+    try{var data=await api({op:'recommend_employees',goal:$('#brief').value.trim()});if(!Array.isArray(data.suggestions)||!data.suggestions.length)throw new Error(t('noSuggestions'));SUGGESTIONS=data.suggestions;SELECTED=null;step=3;}
+    catch(error){showStepError(error);}finally{setBusy(false);show();}
   });
   $('#back').addEventListener('click',function(){if(!busy&&step>1){clearStepError();step--;show();}});
   $('#logoutBtn').addEventListener('click',async function(){

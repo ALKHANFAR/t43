@@ -247,11 +247,14 @@ var I = {
     var refs=(items||[]).filter(function(x){return x&&typeof x[1]==="string"&&/^[A-Za-z0-9_-]+$/.test(x[1]);});
     if(!window.__SIY_REAL__||!refs.length) return "";
     var refNames=locale==='en'?{'الطلب':'Request','المهمة':'Task','التشغيل':'Run','النتيجة':'Result','طريقة العمل':'Work plan','الموظف':'Employee','النسخة المنشورة':'Published version','اختبار التهيئة':'Test run'}:{};
-    return '<details class="siyrefs"><summary>'+ui('الدليل التقني','Technical evidence')+'</summary>'+(note?'<p>'+esc(note)+'</p>':'')+'<div class="siyrefs__list">'+refs.map(function(x){return '<span>'+esc(refNames[x[0]]||customerText(x[0]))+' <code>'+esc(x[1])+'</code></span>';}).join("")+'</div></details>';
+    return '<details class="siyrefs"><summary>'+ui('كيف تأكدنا؟','How was this verified?')+'</summary>'+(note?'<p>'+esc(note)+'</p>':'')+'<div class="siyrefs__list">'+refs.map(function(x){return '<span>'+esc(refNames[x[0]]||customerText(x[0]))+' <code>'+esc(x[1])+'</code></span>';}).join("")+'</div></details>';
   }
   /* عنوان المحادثة: قصّ عند حدود الكلمة */
   function title(t){ if(t.length<=32) return t; var c=t.slice(0,32), i=c.lastIndexOf(" "); return (i>12?c.slice(0,i):c).replace(/[،,.؟?!:]+$/,"")+"…"; }
 
+  var historyExpanded=false;
+  function sideChatTitle(c){var value=String(c.t||'').trim();if(!value||value==='محادثة سيادة'){var first=c.msgs.find(function(m){return m.me&&typeof m.t==='string'&&m.t.trim();});if(first)value=first.t.trim();}return value||ui('محادثة','Chat');}
+  function sideChatButton(id,c){var full=sideChatTitle(c);return '<button type="button" class="hist" data-chat="'+esc(id)+'" title="'+esc(full)+'" aria-label="'+esc(full)+'" aria-current="'+(chatId===id)+'">'+esc(title(full))+'</button>';}
   /* --- الجانب --- */
   function renderSide(){
     /* حالة الصف: يشتغل الآن → نقطة نابضة · فيه شارة → الشارة فقط · شغّال → نقطة · متوقف → لا شيء والاسم باهت */
@@ -261,26 +264,39 @@ var I = {
         '<span class="emp__n">'+esc(e.n)+'<small>'+esc(e.r)+'</small></span>'+
         '<span style="display:flex;align-items:center;gap:6px">'+(e.wait?'<span class="badge'+(PULSE[e.id]?' badge--new':'')+'">'+e.wait+'</span>':'')+st+'</span></button>';
     }).join("");
+    var awaiting='';
+    Object.keys(CHATS).forEach(function(id){var c=CHATS[id],pending=c.msgs.some(function(m){return m.builderApproval||m.requestState==='awaiting_input';});if(pending)awaiting+=sideChatButton(id,c);});
+    $('#awaitingChats').innerHTML=awaiting;$('#awaitingSection').hidden=!awaiting;
+    $('#teamSection').hidden=window.__SIY_REAL__&&!EMPS.length;
     var g={today:"",yesterday:"",week:""};
     Object.keys(CHATS).forEach(function(id){ var c=CHATS[id];
-      g[c.when]+='<button type="button" class="hist" data-chat="'+esc(id)+'" aria-current="'+(chatId===id)+'">'+esc(c.t)+'</button>';
+      g[c.when]+=sideChatButton(id,c);
     });
     $("#histToday").innerHTML=g.today; $("#histYest").innerHTML=g.yesterday; $("#histWeek").innerHTML=g.week;
+    $$("[data-workspace-view]").forEach(function(b){if(b.dataset.workspaceView===who&&!chatId)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+    $("#toolsLink").setAttribute('aria-current',who==='tools'?'page':'false');
+    if(!$('#historyMore')){var more=document.createElement('button');more.type='button';more.id='historyMore';more.className='hist';$('#hgWeek').after(more);more.addEventListener('click',function(){historyExpanded=!historyExpanded;filterHist();});}
     filterHist();
   }
   /* بحث السجل: يخفي المحادثات اللي ما تطابق، ويخفي عنوان المجموعة الفاضية */
   function filterHist(){
     var q=($("#hq").value||"").trim().toLowerCase(), any=false;
-    $$(".hist[data-chat]").forEach(function(b){ var hit=!q||b.textContent.toLowerCase().indexOf(q)>-1; b.hidden=!hit; if(hit) any=true; });
+    var visible=0;
+    $$(".hist[data-chat]").forEach(function(b){var c=CHATS[b.dataset.chat],full=c?sideChatTitle(c):b.textContent,hit=!q||full.toLowerCase().indexOf(q)>-1;
+      if(!q&&!b.closest('#awaitingChats')){visible++;hit=historyExpanded||visible<=8||b.dataset.chat===chatId;}
+      b.hidden=!hit;if(hit)any=true;
+    });
+    var more=$('#historyMore');if(more){more.hidden=!!q||Object.keys(CHATS).length<=8;more.textContent=historyExpanded?ui('اختصر القائمة','Show less'):ui('كل المحادثات','All chats');more.setAttribute('aria-expanded',String(historyExpanded));}
     [["#hgToday","#histToday"],["#hgYest","#histYest"],["#hgWeek","#histWeek"]].forEach(function(p){ $(p[0]).hidden=!$$(".hist:not([hidden])",$(p[1])).length; });
+    $("#awaitingSection").hidden=!$$("#awaitingChats .hist:not([hidden])").length;
     $("#hqNone").hidden=any||!q||palOpen;
   }
 
   /* --- الشريط العلوي + المحرر --- */
   function renderBar(){
     $("#whoAv").innerHTML = who==="tools" ? '<svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 01-12 0V8zM12 17v4"/></svg>' : avHtml(who);
-    $("#whoN").textContent = who==="tools" ? ui("الأدوات","Tools") : (isEmp() ? name(who)+" · "+emp(who).r : name("siyadah"));
-    $(".comp").style.display = who==="tools" ? "none" : "";
+    $("#whoN").textContent = who==="team" ? ui("الموظفون","Employees") : who==="results" ? ui("النتائج","Results") : who==="tools" ? ui("الأدوات","Tools") : (isEmp() ? name(who)+" · "+emp(who).r : name("siyadah"));
+    $(".comp").style.display = ["tools","team","results"].includes(who) ? "none" : "";
     $("#input").placeholder = isEmp() ? ui("اكتب ل","Message ")+name(who)+"…" : ui("اكتب لسيادة…","Message Siyadah…");
     var lv=$("#whoLive"); if(lv){lv.hidden=!(isEmp()&&PRES[who]);lv.textContent=ui('يشتغل الآن…','Working now…');}
   }
@@ -333,7 +349,7 @@ var I = {
   /* ---------- افتتاحية «اليوم» — ثلاثة أسطر من البيانات + رقاقتا اقتراح ---------- */
   function cw(n){ return {1:"واحد",2:"اثنان",3:"ثلاثة",4:"أربعة",5:"خمسة"}[n]||('<span class="num">'+n+'</span>'); }
   function openerHtml(){
-    if(window.__SIY_REAL__) return '<div class="m m--ai"><div class="m__b"><div class="m__c" dir="auto"><p>'+esc(window.__SIY_LOAD_ERROR__||ui("وش هدفك اليوم؟ اكتب طلبك هنا، أو اختر موظفًا من فريقك.","What would you like to achieve today? Write your request here, or choose someone from your team."))+'</p></div></div></div>';
+    if(window.__SIY_REAL__) return '<div class="m m--ai"><div class="m__b"><div class="m__c" dir="auto"><p>'+esc(window.__SIY_LOAD_ERROR__||ui("وش تحتاج ننجز؟","What would you like done?"))+'</p></div></div></div>';
     var h=new Date().getHours(), greet=(h>=5&&h<12)?"صباح الخير.":"مساء الخير.";
     var n=EMPS.reduce(function(a,e){return a+e.log.length;},0)+ACTIONS.length;
     var X=EMPS.reduce(function(a,e){return a+e.wait;},0);
@@ -358,13 +374,27 @@ var I = {
     return 'باختصار — <span class="num">'+tot+'</span> حركة مسجّلة من أمس لليوم، وآخر سطر من كل واحد:<br>'+
       EMPS.map(function(e){return '<b>'+esc(e.n)+':</b> '+e.log[0][1];}).join('<br>');
   }
+  function workspacePageHtml(view){
+    var heading=view==='team'?ui('الموظفون','Employees'):ui('النتائج','Results');
+    var body;
+    if(window.__SIY_REAL__&&(!window.__SIY_DASH__||window.__SIY_LOAD_ERROR__))body='<p role="status">'+(window.__SIY_LOAD_ERROR__?loadErrorCopy():ui('جارٍ تحميل بيانات شركتك…','Loading your company data…'))+'</p>';
+    else if(view==='results')body=window.__SIY_REAL__?siyWorkHtml(null,ui('آخر المهام','Latest tasks')):'<p>'+ui('هذه معاينة؛ لا توجد نتائج تشغيل حقيقية هنا.','This is a preview; no real execution results are available here.')+'</p>';
+    else body=EMPS.length?EMPS.map(function(e){return '<button type="button" class="workspace-employee" data-open-employee="'+esc(e.id)+'"><span class="av">'+esc(e.ini)+'</span><span><b>'+esc(e.n)+'</b><small>'+esc(e.r)+'</small><small>'+esc(customerText(e.since))+'</small></span></button>';}).join(''):'<p>'+ui('لا يوجد موظفون محفوظون بعد. ابدأ بطلبك في شات سيادة.','No employees saved yet. Start with your request in Siyadah chat.')+'</p>';
+    if(window.__SIY_DASH__&&!window.__SIY_LOAD_ERROR__&&((view==='team'&&!EMPS.length)||(view==='results'&&!(window.__SIY_DASH__.recent_work||[]).length)))body+='<button type="button" class="bts" data-workspace-view="siyadah">'+ui('ابدأ بطلبك في شات سيادة','Start your request in Siyadah chat')+'</button>';
+    return '<div class="col workspace-page"><h1 tabindex="-1">'+heading+'</h1><p>'+ (view==='team'?ui('افتح الموظف لمحادثته ومراجعة تعليماته وطريقة عمله.','Open an employee to chat and review its instructions and workflow.'):ui('آخر ما أنجزه موظفوك','Your employees’ latest work'))+'</p>'+body+'</div>';
+  }
   function renderThread(){
     var t=$("#thread"), scroll=t.scrollTop, nearEnd=t.scrollHeight-t.clientHeight-scroll<80; t.classList.toggle("thread--emp",isEmp());
     if(who==="tools"){ t.innerHTML=toolsHtml(); bindTools(); return; }
+    if(who==='team'||who==='results'){t.innerHTML=workspacePageHtml(who);return;}
+    var activityOpen=$$('.siy-activity[open]',t).map(function(el){return el.dataset.activityRequest;}),activityFocused=document.activeElement.closest&&document.activeElement.closest('.siy-activity');
+    var activityFocusKey=activityFocused&&activityFocused.dataset.activityRequest;
     var savedPanel=window.__SIY_REAL__&&t.siyEmployee===who&&t.siyEmployeeGeneration===siyGeneration?$("#instrWrap"):null, savedFocus=savedPanel&&savedPanel.contains(document.activeElement)?document.activeElement:null, savedSelection=savedFocus&&savedFocus.id==='instr'?[savedFocus.selectionStart,savedFocus.selectionEnd,savedFocus.selectionDirection]:null;
+    var historyPanel=$('.employee-saved-results',t),historyFocus=historyPanel&&historyPanel.contains(document.activeElement)?document.activeElement:null,historyFocusChat=historyFocus&&historyFocus.dataset.resultChat,historySummaryFocused=historyFocus&&historyFocus===historyPanel.querySelector('summary');
+    if(historyPanel)siyEmployeeHistoryOpen[historyPanel.dataset.context]=historyPanel.open;
     var list, w;
     if(isEmp()){ var e=emp(who); list=empThread(who); w=who;
-      t.innerHTML='<div class="col'+(window.__SIY_REAL__&&e.draft&&!list.length?' col--draft':'')+'">'+pinHtml(e)+'<div id="instrWrap" hidden>'+instrHtml(e)+'</div>'+list.map(function(m,i){return msgHtml(m,who,i)}).join("")+(window.__SIY_REAL__&&e.draft&&!list.length?'<div class="emp-start"><span class="drop" aria-hidden="true"></span><button type="button" id="reviewStart" aria-expanded="false" aria-controls="instrWrap">'+ui('راجع التعليمات','Review instructions')+'</button></div>':'')+siyEmployeeProofHtml(e,list)+'</div>';
+      t.innerHTML='<div class="col'+(window.__SIY_REAL__&&e.draft&&!list.length?' col--draft':'')+'">'+pinHtml(e)+'<div id="instrWrap" hidden>'+instrHtml(e)+'</div>'+siyEmployeeHistoryHtml(e)+list.map(function(m,i){return msgHtml(m,who,i)}).join("")+(window.__SIY_REAL__&&e.draft&&!list.length?'<div class="emp-start"><span class="drop" aria-hidden="true"></span><button type="button" id="reviewStart" aria-expanded="false" aria-controls="instrWrap">'+ui('راجع التعليمات','Review instructions')+'</button></div>':'')+'</div>';
     } else {
       list = chatId ? CHATS[chatId].msgs : (live.siyadah||[]); w = chatId? CHATS[chatId].with : who;
       if(!list.length){ /* افتتاحية «اليوم»: سيادة تبدأ الكلام — كل أرقامها محسوبة من البيانات لحظتها */
@@ -374,6 +404,8 @@ var I = {
       t.innerHTML='<div class="col">'+list.map(function(m,i){return msgHtml(m, w, i)}).join("")+'</div>';
     }
     if(savedPanel&&isEmp()){var freshPanel=$("#instrWrap"),freshApply=freshPanel.querySelector('#instrApply'),savedApply=savedPanel.querySelector('#instrApply');if(freshApply&&!savedApply)savedPanel.querySelector('#instrF').appendChild(freshApply);else if(!freshApply&&savedApply)savedApply.remove();freshPanel.replaceWith(savedPanel);var toggle=$("#instrTgl")||$("#reviewStart");if(toggle)toggle.setAttribute('aria-expanded',String(!savedPanel.hidden));if(savedFocus){savedFocus.focus({preventScroll:true});if(savedSelection)savedFocus.setSelectionRange(savedSelection[0],savedSelection[1],savedSelection[2]);}}
+    $$('.siy-activity',t).forEach(function(el){if(el.dataset.activityRequest&&activityOpen.includes(el.dataset.activityRequest))el.open=true;if(el.dataset.activityRequest&&el.dataset.activityRequest===activityFocusKey)el.querySelector('summary').focus({preventScroll:true});});
+    var freshHistory=$('.employee-saved-results',t);if(freshHistory){if(historySummaryFocused)freshHistory.querySelector('summary').focus({preventScroll:true});else if(historyFocusChat){var focusButton=$$('[data-result-chat]',freshHistory).find(function(b){return b.dataset.resultChat===historyFocusChat;});if(focusButton)focusButton.focus({preventScroll:true});}}
     t.siyEmployee=isEmp()?who:null;t.siyEmployeeGeneration=siyGeneration;
     var follow=t.siyList!==list||nearEnd||(list.length>t.siyCount&&list[list.length-1].me);
     t.siyList=list; t.siyCount=list.length; t.scrollTop=follow?t.scrollHeight:scroll;
@@ -423,7 +455,7 @@ var I = {
       '<div class="pin__c">'+(e.wait?'<span class="pill">ينتظر قرارك '+e.wait+'</span>':'')+
       '<span class="swl" style="font-size:.8rem;color:var(--ash)"><span id="onLbl">'+(window.__SIY_REAL__?((siyEmployeeStatePending[e.id]||(siyActivationResumeNotice?.busy&&siyActivationResumeNotice.employeeId===e.id))?ui('جارٍ التحقق من تغيير الحالة…','Verifying status…'):(e.draft?ui('بانتظار الربط','Needs connection'):e.on?ui('نشط في السجل','Recorded as active'):ui('متوقف في السجل','Recorded as paused'))):(e.on?(f?ui('شغّالة','Active'):ui('شغّال','Active')):(f?ui('متوقفة','Paused'):ui('متوقف','Paused'))))+'</span><button type="button" class="sw" id="onSw" role="switch"'+((siyEmployeeStatePending[e.id]||(siyActivationResumeNotice?.busy&&siyActivationResumeNotice.employeeId===e.id))?' disabled aria-busy="true"':e.draft?' disabled title="'+ui('اربط الأدوات واختبرها قبل التشغيل','Connect and test tools before activation')+'"':'')+' aria-checked="'+e.on+'" aria-label="'+(e.draft?ui('التشغيل متاح بعد ربط الأدوات واختبارها','Activation available after connecting and testing tools'):ui('تشغيل ','Activate ')+esc(e.n))+'"></button></span></div></div>'+
       metrics+
-      (e.draft?'<div class="pin__r3"><button type="button" class="link" id="draftTools">'+ui('الأدوات والربط','Tools & connections')+'</button></div>':'<div class="pin__r3"><span class="pin__k">'+ui(f?'أدواتها':'أدواته','Tools')+'</span>'+e.tools.map(chipHtml).join("")+
+      (e.draft?'<div class="pin__r3"><button type="button" class="link" id="draftTools">'+ui('الأدوات والربط','Tools & connections')+'</button></div>':'<div class="pin__r3"><span class="pin__k">'+ui('الأدوات','Tools')+'</span>'+e.tools.map(chipHtml).join("")+
       '<span class="mchip tip" data-tip="'+ui('ساعات العمل','Working hours')+(e.hours&&e.hours!=="—"?": "+esc(e.hours):"")+'"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l3 2"/></svg>'+(e.hours&&e.hours!=="—"?'<span>'+esc(e.hours)+'</span>':'')+'</span>'+
       '<span class="mchip tip" data-tip="'+(window.__SIY_REAL__?ui('الصلاحيات المسجلة؛ تطبيقها أثناء التشغيل غير مؤكد','Permissions are recorded; runtime enforcement is unverified'):ui((f?'تستأذنك':'يستأذنك')+' في القرارات الحساسة','Asks before sensitive decisions'))+'"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span>'+
       '<button type="button" class="link" id="instrTgl" aria-expanded="false" aria-controls="instrWrap">'+ui('التعليمات','Instructions')+'</button></div>')+'</div>';
@@ -566,6 +598,7 @@ var I = {
     if(window.__SIY_REAL__){
       if(window.__SIY_LOAD_ERROR__){ window.alert(loadErrorCopy()); return; }
     }
+    delete composerDrafts[composerContextKey()];
     /* معاينة قيد التعديل: إرسال النص من المحرر = إعادة اعتماد وتكملة التشغيل */
     if(pendEdit){ var pe=pendEdit; pendEdit=null; var pl=pe.ctx.list;
       pe.row.text=text; pe.row.state="approved"; pe.row.at=now();
@@ -810,12 +843,26 @@ var I = {
   $("#input").addEventListener("keydown",function(e){ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(this.value);} });
   $("#input").addEventListener("input",function(){ this.style.height="auto"; this.style.height=Math.min(this.scrollHeight,160)+"px"; });
 
-  function go(w,c){ who=w; chatId=c||null; kpiOpen=null; renderSide(); renderBar(); renderThread();refreshLiveLabels(); if(window.__SIY_REAL__&&emp(w))siyResumePendingActivation(w); }
-  function newChat(){ live={}; go("siyadah"); $("#input").focus(); }
+  var composerDrafts=Object.create(null),composerNewContext=0,composerCompany=null;
+  function composerContextKey(){if(['tools','team','results'].includes(who))return null;var list=curList(),id=chatId||(list&&list.siyConversationId);var key=(isEmp()?'employee:'+who:'siyadah')+':'+(id||(isEmp()?'default':'new:'+composerNewContext));if(list)list.siyComposerDraftKey=key;return key;}
+  function composerRemember(){var key=composerContextKey(),input=$('#input');if(!key||!input)return;if(!input.value){delete composerDrafts[key];return;}composerDrafts[key]={text:input.value,start:input.selectionStart,end:input.selectionEnd,direction:input.selectionDirection};}
+  function composerRestore(){var input=$('#input'),draft=composerDrafts[composerContextKey()];input.value=draft?draft.text:'';input.style.height='auto';input.style.height=Math.min(input.scrollHeight,160)+'px';if(draft)input.setSelectionRange(draft.start,draft.end,draft.direction);}
+  function composerClear(){composerDrafts=Object.create(null);siyEmployeeHistoryOpen=Object.create(null);composerCompany=null;var input=$('#input');if(input){input.value='';input.style.height='auto';}}
+  function go(w,c){ composerRemember();if(mobile())setDrawer(false); who=w; chatId=c||null; kpiOpen=null; renderSide(); renderBar(); renderThread();composerRestore();refreshLiveLabels(); if(window.__SIY_REAL__&&emp(w))siyResumePendingActivation(w); }
+  document.addEventListener('click',function(event){
+    var resultChat=event.target.closest('[data-result-chat]');
+    if(resultChat){var savedChat=CHATS[resultChat.dataset.resultChat];if(savedChat){go(savedChat.emp&&emp(savedChat.emp)?savedChat.emp:'siyadah',resultChat.dataset.resultChat);$('#input').focus();}return;}
+    var view=event.target.closest('[data-workspace-view]'),employee=event.target.closest('[data-open-employee]');
+    if(!view&&!employee)return;
+    var next=employee?employee.dataset.openEmployee:view.dataset.workspaceView;
+    if(employee&&!emp(next))return;
+    go(next);if(employee||next==='siyadah')$('#input').focus();else {var heading=$('#thread h1');if(heading)heading.focus();}
+  });
+  function newChat(){ composerRemember();composerNewContext++;live={}; who="siyadah";chatId=null;$("#input").value="";go("siyadah"); $("#input").focus(); }
   $("#emps").addEventListener("click",function(e){ var b=e.target.closest(".emp"); if(!b) return; go(b.dataset.emp); $("#input").focus(); });
   $(".side__scroll").addEventListener("click",function(e){ var b=e.target.closest(".hist"); if(!b||!b.dataset.chat) return;
     var c=CHATS[b.dataset.chat]; if(c&&c.emp){ go(c.emp,window.__SIY_REAL__?b.dataset.chat:null); $("#input").focus(); return; } /* مبادرة موظف: سجلّها يفتح محادثته */
-    go("siyadah",b.dataset.chat); });
+    go("siyadah",b.dataset.chat); $("#input").focus(); });
   $("#newChat").addEventListener("click",newChat);
   $("#hq").addEventListener("input",function(){ filterHist(); if(palOpen) renderPal(); });
 
@@ -943,7 +990,7 @@ var I = {
   function tgrid(a,e){ return a.length?'<div class="tgrid">'+a.map(tcard).join("")+'</div>':'<div class="tempty">'+e+'</div>'; }
   function toolsHtml(){
     var f=TOOLS.filter(function(t){return !tq||(t.n+" "+t.d+" "+t.en+" "+t.s+" "+t.c).toLowerCase().indexOf(tq)>-1});
-    var h='<div class="tools"><h1>'+ui('الأدوات','Tools')+'</h1><p class="sub">'+TOOLS.length+ui(' أداة. اربط اللي تستخدمه، وموظفوك يشتغلون فيه — ولا يوصل موظف لأداة ما ربطتها أنت.',' tools. Connect the ones you use. Employees only access tools you connect.')+'</p>'+
+    var h='<div class="tools"><h1 tabindex="-1">'+ui('الأدوات','Tools')+'</h1><p class="sub">'+TOOLS.length+ui(' أداة. اربط اللي تستخدمه، وموظفوك يشتغلون فيه — ولا يوصل موظف لأداة ما ربطتها أنت.',' tools. Connect the ones you use. Employees only access tools you connect.')+'</p>'+
       '<div class="tsearch"><span class="drop"></span><input id="tq" placeholder="'+ui('ابحث… واتساب، قيود، HubSpot','Search… WhatsApp, Wafeq, HubSpot')+'" aria-label="'+ui('ابحث في الأدوات','Search tools')+'" value="'+esc(tq)+'"><kbd>/</kbd></div>';
     if(window.__SIY_TOOLS_ERROR__)h+='<p class="mf__e" role="alert">'+ui('تعذّر تحميل حالة الاتصالات.','Could not load connection status.')+' <button type="button" class="lnk" data-retry-tools="1">'+ui('أعد المحاولة','Try again')+'</button></p>';
     if(!tq){
@@ -1067,7 +1114,7 @@ var I = {
     }catch(error){if(rc&&rc.tool===tool)rcBox('<p class="mf__e" role="alert">'+esc(error.message||ui("تعذّر تجهيز الربط.","Could not prepare the connection."))+'</p>'+(authorizationStored?workspaceAuthorizationControl(false):''));}
   }
   function rcValues(method){var values={};for(var i=0;i<(method.fields||[]).length;i++){var field=method.fields[i];if(field.type==="markdown")continue;var el=$("#mf"+i),value=field.type==="multiselect"?Array.from(el.selectedOptions).filter(function(option){return option.value!=="";}).map(function(option){return field.options[+option.value].value;}):field.type==="checkbox"?el.checked:field.type==="dropdown"?(el.value===""?"":field.options[+el.value].value):field.type==="number"?(el.value===""?"":Number(el.value)):el.value.trim();if(field.required&&(value===""||value==null||Array.isArray(value)&&!value.length)){rcMsg(ui("أكمل «","Complete “")+(field.label||field.name)+ui("» أولًا.","” first."));el.focus();return null;}if(value!=="")values[field.name]=value;}return values;}
-  async function rcPost(payload){var tool=rc.tool,button=$("#mOk");button.disabled=true;rcMsg("");try{var data=await integration(payload);tool.connection=data.connection;tool.on=data.connection.status==='ACTIVE';tool.by=usersOf(tool.s);tool.sug="";rc=null;closeModal();toolsCount();renderThread();if(tool.on)siyResumePendingActivation();}catch(error){button=$("#mOk");if(button)button.disabled=false;rcMsg(error.message||ui("تعذّر الربط. راجع البيانات وحاول مرة ثانية.","Could not connect. Check the details and try again."));}}
+  async function rcPost(payload){var tool=rc.tool,button=$("#mOk"),focused=document.activeElement;button.disabled=true;rcMsg("");try{var data=await integration(payload);if(!rc||rc.tool!==tool)return;tool.connection=data.connection;tool.on=data.connection.status==='ACTIVE';if(!tool.on){button.disabled=false;toolsCount();rcMsg(ui("حُفظ الاتصال لكنه غير جاهز. راجع البيانات وأعد المحاولة.","The connection was saved but is not ready. Check the details and try again."));if(focused&&focused.isConnected)focused.focus();return;}tool.by=usersOf(tool.s);tool.sug="";rc=null;closeModal();toolsCount();renderThread();if(tool.on)siyResumePendingActivation();}catch(error){button=$("#mOk");if(button)button.disabled=false;rcMsg(error.message||ui("تعذّر الربط. راجع البيانات وحاول مرة ثانية.","Could not connect. Check the details and try again."));}}
   function oauthResult(data){if(data&&typeof data==="object"&&data.data)data=data.data;if(data&&typeof data==="object"&&data.code)return {code:String(data.code),state:String(data.state||"")};if(data&&typeof data==="object")data=data.url;var code=typeof data==="string"&&/[?&#]code=([^&#]+)/.exec(data),state=typeof data==="string"&&/[?&#]state=([^&#]+)/.exec(data);return {code:code?decodeURIComponent(code[1].replace(/\+/g," ")):"",state:state?decodeURIComponent(state[1].replace(/\+/g," ")):""};}
   async function rcOAuth(values){
     var tool=rc.tool,button=$("#mOk"),popup=window.open("about:blank","siyadah_oauth","width=520,height=680");
@@ -1102,10 +1149,10 @@ var I = {
     if(event.target.closest("[data-workspace-connect]")){event.preventDefault();authorizeWorkspace();return;}
     var method=event.target.closest("[data-method]");if(method&&rc){rc.index=+method.dataset.method;rcRender(true);return;}
     var reconnect=event.target.closest("[data-reconnect]");if(reconnect&&picked?.s==='gmail'&&picked.connection){realConnect(picked);return;}
-    var test=event.target.closest("[data-revalidate]"),disconnect=event.target.closest("[data-disconnect]");if(!picked||!picked.connection||(!test&&!disconnect))return;event.target.disabled=true;rcMsg("");try{if(test){var data=await integration({op:"revalidate",connection_id:picked.connection.id});picked.connection=data.connection;picked.on=data.connection.status==='ACTIVE';$("#mD").textContent=(data.connection.status==='ERROR'?ui("الاتصال فيه خطأ","Connection needs attention"):ui("تم التحقق من بيانات الربط؛ نتيجة الاستخدام تحتاج مهمة فعلية","Connection details verified. A real task is needed to verify the outcome"))+ui(" · يستخدمها: "," · Used by: ")+usersOf(picked.s);event.target.disabled=false;}else{await integration({op:"disconnect",connection_id:picked.connection.id});picked.connection=null;picked.on=false;closeModal();toolsCount();renderThread();}}catch(error){event.target.disabled=false;rcMsg(error.message||ui("لم يتم تأكيد العملية.","The action could not be confirmed."));}
+    var test=event.target.closest("[data-revalidate]"),disconnect=event.target.closest("[data-disconnect]");if(!picked||!picked.connection||(!test&&!disconnect))return;event.target.disabled=true;rcMsg("");try{if(test){var data=await integration({op:"revalidate",connection_id:picked.connection.id});picked.connection=data.connection;picked.on=data.connection.status==='ACTIVE';$("#mD").textContent=(data.connection.status!=='ACTIVE'?ui("الاتصال يحتاج إعادة ربط أو مراجعة البيانات","Reconnect or review the connection details"):ui("تم التحقق من بيانات الربط؛ نتيجة الاستخدام تحتاج مهمة فعلية","Connection details verified. A real task is needed to verify the outcome"))+ui(" · يستخدمها: "," · Used by: ")+usersOf(picked.s);event.target.disabled=false;}else{await integration({op:"disconnect",connection_id:picked.connection.id});picked.connection=null;picked.on=false;closeModal();toolsCount();renderThread();}}catch(error){event.target.disabled=false;rcMsg(error.message||ui("لم يتم تأكيد العملية.","The action could not be confirmed."));}
   });
   $("#mF").addEventListener("submit",function(event){event.preventDefault();var method=rc&&rc.methods[rc.index],values=method&&rcValues(method);if(!method||values===null)return;if(method.type==="OAUTH2")rcOAuth(values);else rcPost({op:"connect",piece:rc.tool.s,type:method.type,methodId:method.id,methodFingerprint:method.fingerprint,values:values});});
-  function openTools(){ allOpen=false; tshown=24; go("tools"); }
+  function openTools(){ allOpen=false; tshown=24; go("tools"); var heading=$("#thread h1");if(heading)heading.focus(); }
   $("#toolsLink").addEventListener("click",openTools);
 
   /* ---------- قائمة الحساب ---------- */
@@ -1116,7 +1163,7 @@ var I = {
   var lo=$("#logoutBtn"); if(lo) lo.addEventListener("click",function(){
     if(lo.disabled)return;lo.disabled=true;lo.setAttribute("aria-busy","true");$("#logoutStatus").textContent="";
     fetch((window.SIYADAH_AUTH_BASE||"/siyadah-api")+"/v1/auth/logout",{method:"POST",credentials:"include"})
-      .then(function(response){if(!response.ok)throw new Error("logout_failed");siyStopPolling();location.replace("../auth.html");})
+      .then(function(response){if(!response.ok)throw new Error("logout_failed");siyStopPolling();composerClear();location.replace("../auth.html");})
       .catch(function(){lo.disabled=false;lo.removeAttribute("aria-busy");$("#logoutStatus").textContent=ui("تعذّر تسجيل الخروج. حاول مرة أخرى.","Could not sign out. Try again.");pop.classList.add("on");});
   });
   document.addEventListener("click",function(e){ pop.classList.remove("on");
@@ -1287,7 +1334,7 @@ var I = {
     var abort=new AbortController(), timer=setTimeout(function(){abort.abort();},timeoutMs||60000);
     try{
       var response=await fetch(url,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:abort.signal});
-      if(response.status===401){location.replace("../auth.html");throw siyAccessError(ui("انتهت جلستك. سجّل الدخول من جديد.","Your session ended. Sign in again."));}
+      if(response.status===401){composerClear();location.replace("../auth.html");throw siyAccessError(ui("انتهت جلستك. سجّل الدخول من جديد.","Your session ended. Sign in again."));}
       if(response.status===403) throw siyAccessError(ui("تعذّر التحقق من صلاحية هذا الطلب لحسابك.","This request could not be authorized for your account."));
       if(!response.ok){
         if(url==="/siyadah-api/v1/integrations"&&body.op==="disconnect"&&response.status===409){
@@ -1337,6 +1384,15 @@ var I = {
       delete siyEmployeeStatePending[id]; if(generation===siyGeneration) siyDraw();
     }
   }
+  function siyPublishedWorkStepsHtml(p){
+    if(!Array.isArray(p.work_steps)||!p.work_steps.length)return '';
+    var labels=locale==='en'?{trigger:'Start',action:'Action',decision:'Branch',loop:'Repeat',code:'Code',unknown:'Step'}:{trigger:'البداية',action:'إجراء',decision:'تفرّع',loop:'تكرار',code:'كود',unknown:'خطوة'};
+    return '<section class="published-work"><h3>'+ui('طريقة العمل المنشورة','Published workflow')+'</h3><p>'+ui('ترتيب الخطوات من النسخة المنشورة؛ لا يثبت تنفيذها أو نتيجتها.','Steps from the published version; this does not prove execution or outcomes.')+(p.work_structure_complete===true?'':ui(' القراءة جزئية.',' This is a partial read.'))+'</p><ol>'+p.work_steps.filter(function(step){return step&&typeof step.name==='string';}).map(function(step){
+      var path=Array.isArray(step.path)?step.path:[];
+      var branch=path.map(function(edge){if(!edge)return '';return edge.kind==='branch'?ui('فرع ','Branch ')+(Number.isInteger(edge.index)?edge.index+1:''):edge.kind==='loop'?ui('داخل تكرار','Inside loop'):edge.kind==='failure'?ui('عند التعثر','On failure'):edge.kind==='success'?ui('عند النجاح','On success'):'';}).filter(Boolean).join(' · ');
+      return '<li><b>'+esc(customerText(step.display_name||step.name))+'</b><small>'+esc(labels[step.kind]||labels.unknown)+(branch?' · '+esc(branch):'')+(step.skipped===true?' · '+ui('متخطاة','Skipped'):'')+(step.valid===false?' · '+ui('إعداد غير صالح','Invalid configuration'):'')+'</small></li>';
+    }).join('')+'</ol></section>';
+  }
   async function siyReadPublishedInstructions(e){
     var target=$("#publishedInstr");if(!e||!target)return;var readId=target.siyReadId=(target.siyReadId||0)+1;
     target.textContent=ui('نقرأ تعليمات طريقة العمل المنشورة…','Reading published workflow instructions…');
@@ -1347,7 +1403,7 @@ var I = {
       if(p.read_status!=='verified'){target.textContent=p.read_status==='not_published'?ui('لا توجد نسخة منشورة لطريقة العمل.','The workflow has no published version.'):ui('تعذّرت قراءة تعليمات طريقة العمل المنشورة.','Published workflow instructions could not be read.');return;}
       if(!/^[A-Za-z0-9]{21}$/.test(p.flow_id)||!/^[A-Za-z0-9]{21}$/.test(p.published_version_id)||!['ENABLED','DISABLED'].includes(p.flow_status)||!Array.isArray(p.steps)||p.steps.some(function(step){return !step||typeof step.prompt!=='string';}))throw new Error();
       var steps=p.steps.filter(function(step){return step&&typeof step.prompt==='string';});
-      target.innerHTML='<b>'+ui('تعليمات طريقة العمل المنشورة','Published workflow instructions')+'</b><p>'+ui('هذه قراءة للنسخة المنشورة؛ ليست إثباتًا لنتيجة تنفيذ.','This reads the published version; it does not prove an execution result.')+(p.flow_status==='DISABLED'?ui(' طريقة العمل متوقفة.',' The workflow is disabled.'):'')+'</p>'+steps.map(function(step){return '<details class="adv"><summary>'+esc(step.display_name||step.name||step.step_name||ui('خطوة الذكاء الاصطناعي','AI step'))+'</summary><div class="prompt">'+esc(step.prompt)+'</div>'+(step.agent_instructions_unverified===true?'<p>'+ui('هذا مدخل مهمة للوكيل؛ تعليمات الوكيل المحفوظ نفسه لم تُتحقق هنا.','This is the agent’s task input; the saved agent’s own instructions are unverified here.')+'</p>':'')+'</details>';}).join('')+(steps.length?'':'<p>'+ui('لا توجد تعليمات خطوات ذكاء اصطناعي قابلة للعرض في هذه النسخة.','This version has no AI-step instructions available to display.')+'</p>')+siyRefsHtml([[ui('طريقة العمل','Workflow'),p.flow_id],[ui('النسخة المنشورة','Published version'),p.published_version_id]]);
+      target.innerHTML=siyPublishedWorkStepsHtml(p)+'<b>'+ui('تعليمات طريقة العمل المنشورة','Published workflow instructions')+'</b><p>'+ui('هذه قراءة للنسخة المنشورة؛ ليست إثباتًا لنتيجة تنفيذ.','This reads the published version; it does not prove an execution result.')+(p.flow_status==='DISABLED'?ui(' طريقة العمل متوقفة.',' The workflow is disabled.'):'')+'</p>'+steps.map(function(step){return '<details class="adv"><summary>'+esc(step.display_name||step.name||step.step_name||ui('خطوة الذكاء الاصطناعي','AI step'))+'</summary><div class="prompt">'+esc(step.prompt)+'</div>'+(step.agent_instructions_unverified===true?'<p>'+ui('هذا مدخل مهمة للوكيل؛ تعليمات الوكيل المحفوظ نفسه لم تُتحقق هنا.','This is the agent’s task input; the saved agent’s own instructions are unverified here.')+'</p>':'')+'</details>';}).join('')+(steps.length?'':'<p>'+ui('لا توجد تعليمات خطوات ذكاء اصطناعي قابلة للعرض في هذه النسخة.','This version has no AI-step instructions available to display.')+'</p>')+siyRefsHtml([[ui('طريقة العمل','Workflow'),p.flow_id],[ui('النسخة المنشورة','Published version'),p.published_version_id]]);
     }catch(error){if(target.isConnected&&who===e.id&&$("#publishedInstr")===target&&target.siyReadId===readId)target.textContent=ui('تعذّرت قراءة تعليمات طريقة العمل المنشورة. أعد فتح التعليمات للمحاولة.','Published workflow instructions could not be read. Reopen instructions to retry.');}
   }
   async function siySaveEmployeeInstructions(e,instructions){
@@ -1396,7 +1452,7 @@ var I = {
       try{
         var parsed=JSON.parse(trimmed), rows=Array.isArray(parsed)?parsed:(parsed&&typeof parsed==='object'&&Object.keys(parsed).length===1&&Array.isArray(Object.values(parsed)[0])?Object.values(parsed)[0]:null);
         if(rows&&rows.length&&rows.length<=50&&rows.every(function(row){return row&&typeof row==='object'&&!Array.isArray(row)&&Object.values(row).every(function(v){return v===null||['string','number','boolean'].includes(typeof v);});})){
-          var keys=Array.from(new Set(rows.flatMap(function(row){return Object.keys(row);}))).slice(0,12);
+          var keys=Array.from(new Set(rows.flatMap(function(row){return Object.keys(row);})));
           return '<div class="reply-table" role="region" tabindex="0" aria-label="'+ui('نتيجة منظمة','Structured result')+'"><table><thead><tr>'+keys.map(function(key){return '<th scope="col">'+esc(key)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(row){return '<tr>'+keys.map(function(key){return '<td dir="auto">'+esc(row[key]===undefined||row[key]===null?'':String(row[key]))+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
         }
       }catch(error){}
@@ -1419,6 +1475,9 @@ var I = {
     return date&&Number.isFinite(date.getTime())?siyClock(date):esc(text);
   }
   function siyMerge(data, restore){
+    var companyId=data.owned_knowledge&&data.owned_knowledge.companyId||(data.company&&typeof data.company==='object'&&data.company.id),companyName=typeof data.company==='string'?data.company:data.company&&data.company.name;
+    if(restore||(composerCompany&&((companyId&&composerCompany.id&&companyId!==composerCompany.id)||(companyName&&composerCompany.name&&companyName!==composerCompany.name&&!(companyId&&companyId===composerCompany.id)))))composerClear();
+    if(companyId||companyName)composerCompany={id:companyId||(composerCompany&&composerCompany.id),name:companyName||(composerCompany&&composerCompany.name)};
     if(Array.isArray(data.team)){
       var mapped=data.team.map(mapEmployee).filter(Boolean); EMPS.length=0; mapped.forEach(function(e){EMPS.push(e);});
       if(!window.__SIY_REAL__) TOOLS.forEach(function(t){ var users=EMPS.filter(function(e){return e.tools.indexOf(t.s)>-1;}); t.on=users.length>0; t.by=users.map(function(e){return e.n;}); });
@@ -1452,25 +1511,30 @@ var I = {
     window.__SIY_DASH__=dash; window.__SIY_EMPTY__=EMPS.length===0;
     if($("#memList")&&!$("#memList").hidden) renderMem();
     PLAN.employees.used=EMPS.length; PLAN.actions.used=typeof dash.work_count==="number"?dash.work_count:null;
+    var restoredEmployees={};
     if(restore&&Array.isArray(data.conversations)) data.conversations.forEach(function(c){
       if(typeof c.id!=="string"||!c.id||!Array.isArray(c.messages)) return;
       var messages=c.messages.filter(function(m){return ["user","assistant"].includes(m.role)&&typeof m.content==="string";}).map(function(m){return {me:m.role==="user",t:m.role==="user"?m.content:siyReplyHtml(m.content),at:siyMessageTime(m.at)};});
       messages.siyConversationId=c.id;
-      CHATS[c.id]={with:c.employee_id||"siyadah",emp:c.employee_id||null,t:String(c.title||"محادثة سيادة"),when:"today",msgs:messages};
-      if(c.employee_id&&emp(c.employee_id)) eth[c.employee_id]=messages;
+      CHATS[c.id]={with:c.employee_id||"siyadah",emp:c.employee_id||null,t:typeof c.title==='string'?c.title:"محادثة سيادة",when:"today",msgs:messages};
+      if(c.employee_id&&emp(c.employee_id)&&!restoredEmployees[c.employee_id]){eth[c.employee_id]=messages;restoredEmployees[c.employee_id]=true;}
     });
     if(restore&&Array.isArray(data.pending_work)) data.pending_work.forEach(function(work){
-      if(typeof work.work_id!=="string"||!work.work_id||!["queued","running"].includes(work.work_status)) return;
+      if(typeof work.work_id!=="string"||!work.work_id||!["queued","running","awaiting_input"].includes(work.work_status)) return;
       var convo=CHATS[work.conversation_id]; if(!convo) return;
-      var row=siyResultRow(work); convo.msgs.push(row); siyPoll(work.work_id,convo.msgs,row,0);
+      var expires=work.work_status==='awaiting_input'?Date.parse(work.approval_expires_at):null;
+      if(work.work_status==='awaiting_input'&&(!Number.isFinite(expires)||expires<=Date.now()))return;
+      var row=siyResultRow(work); convo.msgs.push(row);
+      if(work.work_status==='awaiting_input'){var generation=siyGeneration;setTimeout(function(){if(generation!==siyGeneration||!row.builderApproval)return;row.builderApproval=null;row.requestState='unknown';row.t=siyReplyHtml(ui('انتهت مهلة القرار. اطلب تجهيز الإجراء من جديد.','This decision expired. Ask to prepare the action again.'));siyDraw();},Math.min(expires-Date.now(),2147483647));}
+      else siyPoll(work.work_id,convo.msgs,row,0);
     });
     if(isEmp()&&!emp(who)) {who="siyadah";chatId=null;}
     refreshLiveLabels();
   }
   function siyRememberConversation(data,list,employeeId,text){
     if(typeof data.conversation_id!=="string"||!data.conversation_id) return;
-    var id=data.conversation_id; list.siyConversationId=id;
-    if(!CHATS[id]) CHATS[id]={with:employeeId||"siyadah",emp:employeeId||null,t:title(text),when:"today",msgs:list};
+    var id=data.conversation_id,oldDraftKey=list.siyComposerDraftKey,newDraftKey=(employeeId?'employee:'+employeeId:'siyadah')+':'+id;if(oldDraftKey&&oldDraftKey!==newDraftKey&&composerDrafts[oldDraftKey]){composerDrafts[newDraftKey]=composerDrafts[oldDraftKey];delete composerDrafts[oldDraftKey];}if(oldDraftKey&&oldDraftKey!==newDraftKey&&Object.prototype.hasOwnProperty.call(siyEmployeeHistoryOpen,oldDraftKey)){siyEmployeeHistoryOpen[newDraftKey]=siyEmployeeHistoryOpen[oldDraftKey];delete siyEmployeeHistoryOpen[oldDraftKey];}list.siyComposerDraftKey=newDraftKey;list.siyConversationId=id;
+    if(!CHATS[id]) CHATS=Object.assign({[id]:{with:employeeId||"siyadah",emp:employeeId||null,t:String(text||""),when:"today",msgs:list}},CHATS);
     if(!employeeId&&curList()===list){chatId=id;live.siyadah=null;}
   }
   function siyDraw(){ renderSide(); renderBar(); renderThread(); renderPlan();refreshLiveLabels(); }
@@ -1545,6 +1609,21 @@ var I = {
     var r=data.draft_receipt;
     return data.outcome_kind==='flow_draft_saved'&&data.request_status==='succeeded'&&data.work_status==='succeeded'&&r&&r.status==='DRAFT'&&typeof r.flow_id==='string'&&/^[0-9A-Za-z]{21}$/.test(r.flow_id)&&(!data.flow_id||data.flow_id===r.flow_id)&&(!data.employee?.flowId||data.employee.flowId===r.flow_id)&&typeof r.version_id==='string'&&r.version_id.length>0&&r.version_id.length<=100&&(!Object.prototype.hasOwnProperty.call(r,'used_mock_trigger_data')||typeof r.used_mock_trigger_data==='boolean')&&(!Object.prototype.hasOwnProperty.call(r,'test_run_id')||r.test_environment==='TESTING'&&/^[0-9A-Za-z]{21}$/.test(r.test_run_id))?r:null;
   }
+  function siyActivityIcon(state){
+    var paths={started:'<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',returned:'<path d="M9 7 4 12l5 5M4 12h10a6 6 0 0 0 6-6"/>',error:'<circle cx="12" cy="12" r="8"/><path d="M12 7v6m0 3h.01"/>'};
+    return '<svg class="activity-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'+paths[state]+'</svg>';
+  }
+  function siyActivityHtml(data){
+    if(!Array.isArray(data.activity))return '';
+    var byId=new Map();data.activity.slice(-80).forEach(function(item){if(item&&Number.isSafeInteger(item.id)&&item.id>=0&&typeof item.name==='string'&&item.name.length<=200&&['started','returned','error'].includes(item.state))byId.set(item.id,item);});
+    var items=Array.from(byId.values());if(!items.length)return '';
+    var names=locale==='en'?{ap_search_actions:'Find tools',ap_setup_guide:'Prepare connection',ap_list_connections:'Read connections',ap_get_flow:'Read workflow',ap_list_flows:'Read workflows',ap_build_flow:'Build workflow',ap_update_step:'Update workflow',ap_add_step:'Update workflow',ap_delete_step:'Update workflow',ap_test_flow:'Test workflow',ap_lock_and_publish:'Activate workflow',ap_run_action:'Run action'}:{ap_search_actions:'البحث في الأدوات',ap_setup_guide:'تجهيز الربط',ap_list_connections:'قراءة الحسابات المرتبطة',ap_get_flow:'قراءة طريقة العمل',ap_list_flows:'قراءة طرق العمل',ap_build_flow:'بناء طريقة العمل',ap_update_step:'تعديل طريقة العمل',ap_add_step:'تعديل طريقة العمل',ap_delete_step:'تعديل طريقة العمل',ap_test_flow:'اختبار طريقة العمل',ap_lock_and_publish:'تفعيل طريقة العمل',ap_run_action:'تشغيل الإجراء'};
+    var states=locale==='en'?{started:'Call started',returned:'Tool response received',error:'Call failed'}:{started:'جارٍ العمل',returned:'وصل الرد',error:'تعثّرت الخطوة'};
+    function label(item){return esc(Object.prototype.hasOwnProperty.call(names,item.name)?names[item.name]:ui('أداة العمل','Work tool'))+' · '+states[item.state];}
+    var current=items.filter(function(item){return item.state==='started';}).at(-1)||items.at(-1);
+    var key=typeof data.work_id==='string'?data.work_id:typeof data.request_id==='string'?data.request_id:'';
+    return '<details class="siy-activity" dir="'+(locale==='en'?'ltr':'rtl')+'" data-activity-request="'+esc(key)+'"><summary>'+siyActivityIcon(current.state)+'<span class="activity-current" role="status">'+label(current)+'</span><svg class="activity-chevron" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m7 10 5 5 5-5"/></svg></summary><ol class="activity-timeline">'+items.map(function(item){return '<li data-activity-id="'+item.id+'" data-activity-state="'+item.state+'"><span class="activity-node">'+siyActivityIcon(item.state)+'</span><span>'+label(item)+'</span></li>';}).join('')+'</ol></details>';
+  }
   function siyResultRow(data){
     var state=data.work_status, kind=data.outcome_kind, text=data.reply,ready=siyReadinessReceipt(data),savedDraft=siyDraftReceipt(data);
     if(kind==='employee_ready'){var complete=ready&&data.request_status==='succeeded'&&state==='succeeded';if(!complete)state='unknown';if(!text)text=complete?ui('اختبرنا طريقة العمل وفعّلناها. لم تُثبت نتيجة مهمة إنتاجية بعد.','We tested and activated the workflow. A production task result is not verified yet.'):ui('لم نتأكد من اختبار طريقة العمل وتفعيلها.','Workflow testing and activation are unverified.');}
@@ -1563,7 +1642,7 @@ var I = {
     var receipts=Array.isArray(data.tool_receipts)?data.tool_receipts.filter(function(r){return r&&typeof r.name==='string'&&['returned','error'].includes(r.status);}).slice(0,80):[];
     var partialActionResult=state==='unknown'&&receipts.some(function(r){return r.name==='ap_run_action'&&r.status==='returned'&&r.outcome==='action_completed'&&typeof r.run_id==='string'&&/^[0-9A-Za-z]{21}$/.test(r.run_id);})&&receipts.some(function(r){return r.status==='error'||r.effect_attempted===true&&r.outcome!=='action_completed';});
     var tools=receipts.length?'<details class="plan nr" style="margin-top:10px"><summary>'+ui('استدعاءات الأدوات','Tool calls')+' · '+receipts.length+'</summary>'+receipts.map(function(r,i){var run=r.name==='ap_run_action'&&typeof r.run_id==='string'&&/^[0-9A-Za-z]{21}$/.test(r.run_id)?r.run_id:'';return '<div class="prow"><b>'+(i+1)+'</b><span>'+esc(r.name)+' · '+(r.status==='error'?ui('تعذّر الاستدعاء','Call failed'):run&&r.outcome==='action_completed'?ui('اكتمل استدعاء الإجراء','Action completed'):ui('أعادت ردًا','Returned a response'))+(run?'<small>'+ui('مرجع الإجراء: ','Action run: ')+'<code>'+esc(run)+'</code></small>':'')+(r.output_limited===true?'<small>'+ui('اختصرت الخدمة بعض الحقول؛ اطلب نطاقًا أضيق لعرضها كاملة.','The service shortened some fields; request a narrower scope to display them in full.')+'</small>':'')+'</span></div>';}).join('')+'<p>'+ui('رد الأداة وحده لا يثبت نتيجة الخدمة.','A tool response alone does not prove the provider outcome.')+'</p></details>':'';
-    return {me:false,at:now(),requestState:state,partialActionResult:partialActionResult,t:siyReplyHtml(text)+readiness+draftProof+verifiedRun+tools+siyBuilderProposalHtml(data)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,ui('نتائج هذا الطلب','Results for this request')):'')+siyLegacyProofHtml(records)+draft,workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;}),builderApproval:data.approval&&data.approval.required===true?{id:data.approval.approval_id,conversationId:data.conversation_id}:null};
+    return {me:false,at:now(),requestState:state,partialActionResult:partialActionResult,t:siyReplyHtml(text)+siyActivityHtml(data)+readiness+draftProof+verifiedRun+tools+siyBuilderProposalHtml(data)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,ui('نتائج هذا الطلب','Results for this request')):'')+siyLegacyProofHtml(records)+draft,workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;}),builderApproval:data.approval&&data.approval.required===true?{id:data.approval.approval_id,conversationId:data.conversation_id}:null};
   }
   async function siyDecideBuilder(row,decision){
     if(!row||!row.builderApproval||row.siyInFlight) return;
@@ -1634,27 +1713,23 @@ var I = {
              {v:String(s.replies||0),l:"ردود",t:"—"}, {v:t,l:"آخر نشاط",t:"—"} ]; }
   function siyChatReal(e,text,list){ siyMessage(text,list,e.id); }
   /* سجل العمل الفعلي من جدول الإثبات (recent_work في رد الـDashboard) */
-  function siyEmployeeProofHtml(e,list){
-    if(!window.__SIY_REAL__) return "";
-    var proofs=((window.__SIY_DASH__&&window.__SIY_DASH__.recent_work)||[]).filter(function(r){
-      return r.employeeId===e.id&&r.flowId===e.flowId&&r.recordId&&r.runId&&
-        (!r.conversation_id||r.conversation_id===list.siyConversationId)&&
-        !list.some(function(m){return Array.isArray(m.proofIds)&&m.proofIds.includes(r.recordId);});
-    });
-    return proofs.length?'<div class="m m--ai"><span class="m__av">'+avHtml(e.id)+'</span><div class="m__b"><div class="m__c">'+(proofs.some(function(r){return r.conversation_id;})?siyWorkHtml(proofs.filter(function(r){return r.conversation_id;}),ui('سجل تشغيل في هذه المحادثة — غير مربوط برسالة محددة','Run history in this conversation — not linked to a specific message')):'')+siyLegacyProofHtml(proofs)+'</div></div></div>':"";
-  }
   function siyLegacyProofHtml(records){
     var legacy=records.filter(function(r){return !r.conversation_id;});
     return legacy.length?siyWorkHtml(legacy,ui('نشاط سابق للموظف — غير مرتبط بهذه المحادثة','Earlier employee activity — unrelated to this conversation')):'';
   }
+  var siyEmployeeHistoryOpen=Object.create(null);
+  function siyEmployeeHistoryHtml(e){if(!window.__SIY_REAL__)return '';var records=((window.__SIY_DASH__&&window.__SIY_DASH__.recent_work)||[]).filter(function(r){return r&&r.employeeId===e.id;}),key=composerContextKey();return '<details class="employee-saved-results" data-context="'+esc(key)+'"'+(siyEmployeeHistoryOpen[key]?' open':'')+'><summary>'+ui('نتائجه المحفوظة','Saved employee results')+'</summary><p class="msrc">'+ui('سجل سابق لهذا الموظف، غير مربوط برسالة محددة؛ لا يثبت نتيجة طلبك الحالي.','Earlier records for this employee, not tied to a specific message; not proof of your current request.')+'</p>'+siyWorkHtml(records,ui('المتاح من سجل الموظف','Available employee records'),{historyEmployee:e})+'</details>';}
+  document.addEventListener('toggle',function(event){var el=event.target;if(el.classList&&el.classList.contains('employee-saved-results'))siyEmployeeHistoryOpen[el.dataset.context]=el.open;},true);
   function siyWorkStatus(value){ return (locale==='en'?{succeeded:'Completed',failed:'Failed',running:'In progress',queued:'Queued',awaiting_input:'Needs information',cancelled:'Cancelled'}:{succeeded:"مكتملة",failed:"تعذّرت",running:"قيد العمل",queued:"بانتظار البدء",awaiting_input:"تنتظر معلومات",cancelled:"ملغاة"})[value]||ui("غير مؤكدة","Unverified"); }
-  function siyWorkHtml(records,label){ var d=window.__SIY_DASH__, w=Array.isArray(records)?records:(d&&d.recent_work)||[];
+  function siyWorkHtml(records,label,options){ var history=options&&options.historyEmployee,showResults=who==='results'||!!history;var d=window.__SIY_DASH__, w=Array.isArray(records)?records:(d&&d.recent_work)||[];
     if(!w.length) return '<p>'+ui('ما فيه عمل مسجّل بعد — أول ما يشتغل فريقك، كل نتيجة تنكتب هنا بإثباتها.','No work recorded yet. Verified results will appear here when your team runs.')+'</p>';
     return '<p>'+esc(label||ui('آخر عمل فعلي للفريق','Latest verified team work'))+' (<span class="num">'+(Array.isArray(records)?w.length:(d.work_count||w.length))+'</span>):</p>'+w.map(function(x){
-      return '<div style="margin:8px 0;padding-inline-start:10px;border-inline-start:2px solid var(--hair)"><b>'+esc(x.subject||ui("مهمة","Task"))+'</b>'+
+      var owner=emp(x.employeeId),savedChat=x.conversation_id&&CHATS[x.conversation_id],canOpenChat=savedChat&&(!history||!savedChat.emp||savedChat.emp===history.id);return '<div class="work-record"><div class="work-record__heading"><b>'+esc(x.subject||ui("مهمة","Task"))+'</b><span class="work-record__status" data-state="'+(['succeeded','failed','running','queued','awaiting_input','cancelled'].includes(x.status)?x.status:'unknown')+'">'+esc(siyWorkStatus(x.status))+'</span></div>'+(owner&&String(x.subject||'').indexOf(owner.n)===-1?'<small class="msrc">'+esc(owner.n)+'</small>':'')+
         (x.priority?' <span class="msrc">· '+esc(x.priority)+'</span>':'')+
         (x.message?'<div>'+esc(x.message)+'</div>':'')+
-        '<div class="msrc">'+(x.status==='succeeded'&&x.recordId&&x.runId&&x.flowId?'✓ ':'')+esc(siyWorkStatus(x.status))+(x.proof?' · '+esc(customerText(x.proof)):'')+'</div>'+siyRefsHtml([['الطلب',x.work_id||x.workId],['التشغيل',x.runId],['النتيجة',x.recordId],['طريقة العمل',x.flowId]])+'</div>';
+        (showResults&&x.status==='succeeded'&&x.runId&&x.flowId&&x.result?.schemaVersion===1&&x.result.source==='flow_reply'&&typeof x.result.content==='string'&&x.result.content.trim()&&x.result.content.length<=12000?'<div class="work-record__result">'+siyReplyHtml(x.result.content)+'</div>':'')+
+        (showResults&&canOpenChat?'<button type="button" class="bts" data-result-chat="'+esc(x.conversation_id)+'">'+ui('شوف المحادثة','View conversation')+'</button>':'')+
+        (history&&x.flowId&&x.flowId!==history.flowId?'<small class="msrc">'+ui('طريقة عمل سابقة','Earlier workflow')+'</small>':'')+(showResults?'':'<div class="msrc">'+(x.status==='succeeded'&&x.recordId&&x.runId&&x.flowId?'✓ ':'')+esc(siyWorkStatus(x.status))+(x.proof?' · '+esc(customerText(x.proof)):'')+'</div>')+siyRefsHtml([['الطلب',x.work_id||x.workId],['التشغيل',x.runId],['النتيجة',x.recordId],['طريقة العمل',x.flowId]],showResults&&x.proof?customerText(x.proof):'')+'</div>';
     }).join("");
   }
   var TOOL_SLUG={ "واتساب بزنس":"whatsapp","واتساب":"whatsapp","التقويم":"google-calendar","Wafeq":"wafeq","قيود/Wafeq":"wafeq","HTTP":"http","اتصال ويب":"http",
@@ -1698,6 +1773,7 @@ var I = {
     var memory=$("#memTgl");if(memory){var summary=memory.parentNode;if(summary.firstChild&&summary.firstChild.nodeType===3)summary.firstChild.textContent=ui('المعرفة المحفوظة في حسابك ','Saved knowledge in your account ');var caption=summary.parentNode.querySelector('small');if(caption)caption.textContent=ui('المعلومات المتاحة لمستشار سيادة وموظفيك','Information available to Siyadah and your employees');}
   }
   function siyClearDemo(){
+    composerClear();
     window.__SIY_REAL__=true; window.__SIY_EMPTY__=false; document.body.classList.add("chat-real");
     window.__SIY_BRAIN__=null; window.__SIY_DASH__=null; window.__SIY_STATS__=null;
     EMPS.length=0; MEM.length=0; ACTIONS.length=0;
@@ -1756,6 +1832,16 @@ var I = {
       go("noura"); playEvents(empThread("noura"),collectEvents()); }
     if(!window.__SIY_REAL__ && q.get("run")==="proactive"&&!ranDemo.proactive){ ranDemo.proactive=true; triggerProactive(true); } /* للعروض: نورة تبادر فورًا وتنفتح محادثتها */
   }
+  function siyRestoreRequestDraft(){
+    if(!window.__SIY_REAL__||window.__SIY_LOAD_ERROR__)return;
+    var key='siyadah_request_draft_v1',draft;
+    try{draft=JSON.parse(sessionStorage.getItem(key)||'null');}catch(error){return;}
+    if(!draft)return;
+    if(typeof draft.text!=='string'||!draft.text.trim()||draft.text.length>5000||!Number.isFinite(draft.createdAt)||Date.now()-draft.createdAt>30*60*1000||draft.createdAt>Date.now()+60000){try{sessionStorage.removeItem(key);}catch(error){}return;}
+    if($('#input').value.trim())return;
+    go('siyadah');$('#input').value=draft.text;$('#input').focus();
+    try{sessionStorage.removeItem(key);}catch(error){}
+  }
   function siyBoot(){
     /* حساب جديد بلا فريق: رسالة ترحيب واضحة تدعوه لبناء فريقه — بدل أي بيانات تجريبية */
     if(window.__SIY_REAL__ && window.__SIY_LOAD_ERROR__){
@@ -1767,7 +1853,7 @@ var I = {
         t:'<p>'+ui('أهلًا بك في ','Welcome to ')+'<b>'+esc(co||ui('سيادة','Siyadah'))+'</b>.</p><p>'+ui('وش هدفك اليوم؟ اكتب طلبك، ونبدأ من المعلومات والأدوات المتاحة لشركتك.','What would you like to achieve today? Write your request, and we will use the information and tools available to your company.')+'</p><p><a href="onboard.html">'+ui('أضف ملف شركتك لتخصيص الاقتراحات','Add your company profile for tailored suggestions')+'</a></p>'}];
     }
     renderSide(); renderBar(); renderThread(); renderPlan(); refreshLiveLabels(); if(window.__SIY_REAL__)realTools();
-    route(); window.addEventListener("hashchange",route);
+    route(); siyRestoreRequestDraft(); window.addEventListener("hashchange",route);
     /* المبادرة التلقائية للعرض التجريبي فقط — الحساب الحقيقي لا يُظهر مبادرات وهمية */
     if(!window.__SIY_REAL__) setTimeout(function(){ triggerProactive(false); }, reduced()?0:6000);
   }

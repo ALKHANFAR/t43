@@ -36,7 +36,7 @@ function harness(overrides={}){
       const name=new URL(url).searchParams.get('searchQuery');return response(200,[name==='stripe'?stripe:name==='whatsapp'?whatsapp:name==='slack'?slack:overrides.gmail||gmail]);
     }
     if(url.includes('/oauth2/authorization-url'))return response(200,{authorizationUrl:'https://accounts.google.com/o/oauth2/auth?client_id=google-client'});
-    if(url.includes('/revalidate'))return response(200,{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:projects('revalidate')});
+    if(url.includes('/revalidate'))return response(200,overrides.revalidateResponse||{id:CONNECTION,pieceName:'@activepieces/piece-stripe',pieceVersion:'0.7.0',displayName:'Stripe',status:'ACTIVE',scope:'PROJECT',projectIds:projects('revalidate')});
     if(options.method==='DELETE')return response(204,{});
     if(url.includes(`/app-connections/${CONNECTION}`))return response(200,{id:CONNECTION,externalId:'company-a-stripe',pieceName:'@activepieces/piece-stripe',scope:'PROJECT',projectIds:projects('get'),flowIds:Object.hasOwn(overrides,'getFlowIds')?overrides.getFlowIds:[]});
     if(url.includes('/api/v1/flows?')){const query=new URL(url).searchParams,cursor=query.get('cursor'),state=query.get('versionState');return response(200,overrides.flowPages?.[state]?.[cursor||'first']??(state==='LOCKED'?overrides.publishedPages?.[cursor||'first']:undefined)??{data:[],next:null});}
@@ -247,5 +247,31 @@ test('existing OAuth attempts remain single-use under concurrent completion',asy
     assert.equal(results.filter(result=>result.status==='fulfilled').length,1);
     assert.equal(results.filter(result=>result.status==='rejected'&&result.reason.code==='invalid_oauth_state').length,1);
     assert.equal(h.calls.length,1);assert.equal(h.pending.size,0);
+  }
+});
+
+test('unsupported native auth controls cannot be presented or bypassed as plain text',async()=>{
+  const piece={...whatsapp,auth:{type:'CUSTOM_AUTH',props:{account:{type:'DROPDOWN',required:true}}}};
+  const {service,calls}=harness({mcp:{call:async()=>({structuredContent:{schemaVersion:1,piece}})}});
+  const method=(await service.methods({tenantId:'company-a',piece:'whatsapp'})).methods[0];
+  assert.equal(method.available,false);
+  await assert.rejects(()=>service.connect({tenantId:'company-a',piece:'whatsapp',type:'CUSTOM_AUTH',values:{account:'invented'}}),{code:'unsupported_auth_fields'});
+  assert.equal(calls.length,0);
+});
+
+test('supported native auth controls validate values before writing a project connection',async()=>{
+  const piece={...whatsapp,auth:{type:'CUSTOM_AUTH',props:{enabled:{type:'CHECKBOX'},count:{type:'NUMBER'},region:{type:'STATIC_DROPDOWN',options:{options:[{label:'Saudi Arabia',value:'SA'}]}},token:{type:'SECRET_TEXT',required:true}}}};
+  const {service,calls}=harness({mcp:{call:async()=>({structuredContent:{schemaVersion:1,piece}})}});
+  assert.equal((await service.methods({tenantId:'company-a',piece:'whatsapp'})).methods[0].available,true);
+  for(const values of [{enabled:'false',token:'t'},{count:'Infinity',token:'t'},{region:'XX',token:'t'},{token:{secret:'t'}}])await assert.rejects(()=>service.connect({tenantId:'company-a',piece:'whatsapp',type:'CUSTOM_AUTH',values}),{code:'invalid_connection_field'});
+  assert.equal(calls.length,0);
+  await service.connect({tenantId:'company-a',piece:'whatsapp',type:'CUSTOM_AUTH',values:{enabled:false,count:'5',region:'SA',token:'t'}});
+  assert.deepEqual(calls[0].body.value.props,{enabled:false,count:5,region:'SA',token:'t'});
+});
+
+test('revalidation cannot report success for a different connection or piece in the same project',async()=>{
+  for(const override of [{id:'D'.repeat(21)},{pieceName:'@activepieces/piece-slack'}]){
+    const {service}=harness({revalidateResponse:{id:CONNECTION,pieceName:'@activepieces/piece-stripe',status:'ACTIVE',scope:'PROJECT',projectIds:[PROJECT],...override}});
+    await assert.rejects(()=>service.revalidate({tenantId:'company-a',id:CONNECTION}),{code:'connection_readback_mismatch'});
   }
 });

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
-import {publishedAIInstructionSteps} from '../lib/chat-intelligence.mjs';
+import {publishedAIInstructionSteps,publishedFlowWorkSteps} from '../lib/chat-intelligence.mjs';
 import {CompanyProfileError} from '../lib/company-profile.mjs';
 import {TenantProjectError} from '../lib/tenant-projects.mjs';
 
@@ -14,7 +14,7 @@ const normalized=value=>JSON.parse(JSON.stringify(value));
 
 function request({input={op:'employee_instructions',employee_id:'employee-1',read_published:true},employee={id:'employee-1',activepieces_flow_id:flowId},current={id:flowId,status:'DISABLED',publishedVersionId:versionId},version={id:versionId,trigger:{type:'PIECE_TRIGGER',name:'trigger',nextAction:ai('ask','askAi','Published instruction')}},failure=null,publishedRead=null}={}){
   const calls=[],writes=[];
-  const context={input,companyId:'company-1',res:{},sessionHeaders:{},CompanyProfileError,TenantProjectError,publishedAIInstructionSteps,console:{warn:()=>{}},
+  const context={input,companyId:'company-1',res:{},sessionHeaders:{},CompanyProfileError,TenantProjectError,publishedAIInstructionSteps,publishedFlowWorkSteps,console:{warn:()=>{}},
     companyProfiles:async()=>({findEmployee:async(company,id)=>{calls.push(['employee',company,id]);return id==='employee-1'?employee:null;},updateEmployeeInstructions:async args=>{writes.push(args);return {recordId:args.employeeId,instructions:args.instructions};}}),
     tenantProjects:async()=>({ownedFlow:async(company,id,selectedVersion)=>{calls.push(['flow',company,id,selectedVersion||null]);if(failure)throw failure;if(selectedVersion&&version.id!==selectedVersion)throw new TenantProjectError('flow_version_mismatch','Version mismatch',502);return {flow:selectedVersion?{...current,...publishedRead,version}:current};}}),
     json:(_res,status,response)=>({status,response})};
@@ -84,4 +84,21 @@ test('a concurrent new publication cannot label an old version prompt as current
 test('published read reports the status of its final snapshot without claiming activation',async()=>{
   const {run}=request({current:{id:flowId,status:'ENABLED',publishedVersionId:versionId},publishedRead:{status:'DISABLED'}}),result=normalized(await run());
   assert.equal(result.response.published_instructions.read_status,'verified');assert.equal(result.response.published_instructions.flow_status,'DISABLED');
+});
+
+test('non-AI published employee work returns its native path without credentials or task inputs',async()=>{
+  const action={name:'asana_read',displayName:'Read account',type:'PIECE',settings:{pieceName:'@activepieces/piece-asana',actionName:'get_current_user',input:{auth:'secret-marker',privateCustomer:'private-marker'}}};
+  const {run,writes}=request({version:{id:versionId,trigger:{name:'trigger',type:'PIECE_TRIGGER',settings:{pieceName:'@activepieces/piece-mcp',triggerName:'mcp_tool'},nextAction:action}}});
+  const result=normalized(await run()),published=result.response.published_instructions;
+  assert.equal(published.read_status,'verified');assert.deepEqual(published.steps,[]);
+  assert.equal(published.work_structure_complete,true);assert.deepEqual(published.work_steps.map(step=>step.name),['trigger','asana_read']);
+  assert.equal(published.work_steps[1].action_name,'get_current_user');
+  assert.equal(JSON.stringify(result).includes('secret-marker'),false);assert.equal(JSON.stringify(result).includes('private-marker'),false);assert.deepEqual(writes,[]);
+});
+
+test('unavailable and unpublished reads never expose a work graph',async()=>{
+  for(const options of [{failure:new TenantProjectError('flow_project_mismatch','private',403)},{current:{id:flowId,status:'DISABLED',publishedVersionId:null}}]){
+    const published=normalized(await request(options).run()).response.published_instructions;
+    assert.deepEqual(published.work_steps,[]);assert.equal(published.work_structure_complete,false);
+  }
 });

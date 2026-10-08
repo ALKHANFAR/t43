@@ -62,6 +62,8 @@ textarea.in:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-w
 
 
 /* قراءة الموقع — تصير في الخلفية، العميل يشوف النتيجة فقط */
+.task-examples{display:flex;flex-wrap:wrap;gap:8px 20px;margin-block-start:-8px;margin-block-end:24px}
+.task-examples .nosite{margin:0;text-align:start}
 .site{position:relative;overflow:hidden;border:1px solid var(--hair);padding:14px 16px;margin-block-start:12px;display:flex;align-items:center;gap:12px;font-size:.875rem;color:var(--ash);min-height:52px;transition:border-color .3s ease,background-color .3s ease}
 .site.busy .drop{animation:pulse 1.2s infinite}
 @keyframes pulse{50%{opacity:.2}}
@@ -184,10 +186,16 @@ html[data-session="error"] .session-gate__actions{display:flex}
   <!-- 2 — أولويتك -->
   <section class="step" data-step="2">
     <div class="k"><span class="drop"></span><span data-en="Your company">ملف شركتك</span></div>
-    <h1 data-en="Your company, as we understand it.">هذه شركتك كما فهمناها.</h1>
-    <p class="sub" data-en="Review what we found. Then choose your employee's first task.">راجع المعلومات، ثم اختر ما يبدأ به موظفك.</p>
+    <h1 data-en="Company information saved so far.">معلومات شركتك المحفوظة الآن.</h1>
+    <p class="sub" data-en="Review the information, then tell us what you need. You can correct or add details later.">راجع المعلومات، ثم اكتب وش تحتاج. تقدر تصححها وتكمل الناقص لاحقًا.</p>
     <div id="companyRead"></div>
-    <div class="field"><label for="brief"><span data-en="What's the first task?">ما أول مهمة تريدها؟</span> <span class="optional" data-en="Optional">اختياري</span></label><textarea class="in" id="brief" placeholder="مثلًا: ابنِ لي موظف سوشيال ميديا." data-en-placeholder="For example: Build me a social media employee."></textarea></div>
+    <div class="field"><label for="brief"><span data-en="What would you like to get done?">وش تحتاج ننجز؟</span></label><textarea class="in" id="brief" placeholder="مثلًا: جهّز منشورًا عن خدمات شركتي أراجعه قبل النشر." data-en-placeholder="For example: Prepare a post about our services for me to review before publishing."></textarea></div>
+    <div class="task-examples" role="group" aria-label="أمثلة للمهمة الأولى" data-en-aria-label="First task examples">
+      <button type="button" class="nosite" data-task-ar="جهّز مسودة منشور تعرّف بخدمات شركتي للمراجعة." data-task-en="Prepare a draft post introducing my company services for review." data-en="Draft a service post">مسودة منشور خدمات</button>
+      <button type="button" class="nosite" data-task-ar="جهّز إجابات للأسئلة الشائعة من معلومات شركتي، ووضح المعلومات الناقصة." data-task-en="Prepare FAQ answers from company knowledge and identify missing information." data-en="Prepare FAQ answers">إجابات للأسئلة الشائعة</button>
+      <button type="button" class="nosite" data-task-ar="رتّب الطلبات الواردة حسب الأولوية، واعرض ما يحتاج موافقتي." data-task-en="Organize incoming requests by priority and show what needs my approval." data-en="Organize requests">ترتيب الطلبات</button>
+    </div>
+    <button type="button" class="nosite" id="exploreEmployees" hidden data-en="Explore employee suggestions">استكشف اقتراحات الموظفين</button>
   </section>
 
   <!-- 3 — الخطة -->

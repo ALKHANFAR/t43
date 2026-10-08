@@ -97,13 +97,14 @@ test('chat shows only safe tool receipt metadata while the request remains unver
   }finally{p.close();}
 });
 
-async function page({storage={},locale,hydrate=empty,message,work,approve,employee_state,employee_instructions,resume_employee_activation={ok:true,activation_status:'none'},add_knowledge,update_company_settings,export:exportResponse,integrations={list:{ok:true,connections:[]}},integrationStatus={ok:true,connected:false},integrationConnect,mcpStatus={ok:true,state:'authorization_stored',liveVerified:false},mcpConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد',{pieceName:'@activepieces/piece-gmail'}]]}={}){
+async function page({storage={},session={},locale,hydrate=empty,message,work,approve,employee_state,employee_instructions,resume_employee_activation={ok:true,activation_status:'none'},add_knowledge,update_company_settings,export:exportResponse,integrations={list:{ok:true,connections:[]}},integrationStatus={ok:true,connected:false},integrationConnect,mcpStatus={ok:true,state:'authorization_stored',liveVerified:false},mcpConnect,hash='#run=build&plan=over',real=true,pieces=[['gmail','Gmail','Email','communication','https://example.test/logo.png','البريد',{pieceName:'@activepieces/piece-gmail'}]]}={}){
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/chat.html'+hash,runScripts:'outside-only'});
   const w=dom.window,requests=[],activationRequests=[],alerts=[],polls=[],navigations=[];let hydrateTimer;
   w.matchMedia=()=>({matches:true,addEventListener(){}});
   w.PIECES=pieces;
   w.SIYADAH_REAL_ACCOUNT=real;
   w.SIYADAH_CHAT_GATEWAY='https://gateway.test/sync';
+  Object.entries(session).forEach(([k,v])=>w.sessionStorage.setItem(k,v));
   if(locale)w.sessionStorage.setItem('siyadah_locale',locale);
   Object.entries(storage).forEach(([k,v])=>w.localStorage.setItem(k,v));
   const realTimeout=w.setTimeout.bind(w);
@@ -145,7 +146,7 @@ test('interface language follows the account choice without changing company dat
   const saved={id:'saved-locale',title:'خطة النمو',messages:[{role:'user',content:'Build a sales assistant',at:'09:00'},{role:'assistant',content:'هذه خطتك',at:'09:01'}]};
   const p=await page({locale:'en',hydrate:{...empty,company:'شركة مدار',team:[employee],conversations:[saved]},hash:''});try{
     assert.equal(p.d.documentElement.lang,'en');assert.equal(p.d.documentElement.dir,'ltr');
-    assert.match(p.d.querySelector('#newChat').textContent,/New chat/);
+    assert.match(p.d.querySelector('#newChat').textContent,/New request/);
     assert.match(p.d.querySelector('#meBtn').textContent,/شركة مدار/);
     assert.equal(p.d.querySelector('#companyNameField').value,'شركة مدار');
     assert.equal(p.d.querySelector('#companyNameField').getAttribute('aria-label'),'Company name');
@@ -363,7 +364,7 @@ test('builder labels hide platform vocabulary while assistant reply retains orig
 });
 test('MCP action approval shows exact inputs and never places credentials in the browser',async()=>{
   const proposal={ok:true,conversation_id:'chat-mcp',request_status:'succeeded',work_status:'awaiting_input',outcome_kind:'conversation_reply',reply:'راجع الإجراء.',approval:{required:true,kind:'tool_action',approval_id:'approval-mcp',summary:'اقرأ التقويم',details:'{"pieceName":"google-calendar","input":"<img src=x onerror=alert(1)>"}'}};
-  const p=await page({message:proposal,approve:{ok:true,conversation_id:'chat-mcp',request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',reply:'وصل رد الأداة، ولم نتحقق بعد من أثره لدى المزود.'}});try{
+  const p=await page({message:proposal,approve:{ok:true,conversation_id:'chat-mcp',request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',reply:'وصل الرد، ولم نتحقق بعد من أثره لدى المزود.'}});try{
     send(p,'وش عندي في التقويم؟');await flush();
     const details=p.d.querySelector('.plan details');assert.ok(details);assert.match(details.textContent,/google-calendar/);assert.equal(details.querySelector('img'),null);
     p.d.querySelector('[data-siy-approval="approve"]').click();await flush();
@@ -676,7 +677,7 @@ test('restored proofs match conversation and legacy evidence is labelled separat
   {...proof,recordId:'elsewhere',conversation_id:'c-other',subject:'دليل محادثة أخرى'},
   {...proof,recordId:'legacy',subject:'دليل قديم'}
  ]}});try{
-  p.d.querySelector('[data-chat="c-here"]').click();assert.match(thread(p),/دليل هذه المحادثة/);assert.ok(!thread(p).includes('دليل محادثة أخرى'));assert.match(thread(p),/نشاط سابق للموظف — غير مرتبط بهذه المحادثة/);assert.match(thread(p),/دليل قديم/);
+  p.d.querySelector('[data-chat="c-here"]').click();const history=p.d.querySelector('.employee-saved-results');assert.match(history.textContent,/دليل هذه المحادثة/);assert.match(history.textContent,/دليل محادثة أخرى/);assert.match(history.textContent,/دليل قديم/);assert.match(history.textContent,/لا يثبت نتيجة طلبك الحالي/);assert.ok(![...p.d.querySelectorAll('.m__c')].some(m=>m.textContent.includes('دليل محادثة أخرى')));
  }finally{p.close();}
 });
 
@@ -1290,3 +1291,153 @@ test('invalid or absent completed-action identity cannot change unknown request 
   const p=await page({message:{ok:true,conversation_id:'mixed',request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',reply:'رد المصدر',tool_receipts:[{name:'ap_run_action',status:'error',effect_attempted:true},{name:'ap_run_action',status:'returned',run_id:run,outcome:'action_completed',effect_attempted:true}]}});try{send(p,'اقرأ');await flush();assert.equal(p.d.querySelector('.request-state').textContent,'النتيجة غير مؤكدة');}finally{p.close();}
  }
 });
+
+test('workspace navigation reads saved team and results without dispatching work',async()=>{
+ const p=await page({hydrate:{...empty,team:[employee],recent_work:[proof]}});try{
+  p.d.querySelector('[data-workspace-view="results"]').click();assert.match(thread(p),/فرصة أ/);assert.match(thread(p),/run-1/);assert.equal(p.d.querySelector('.comp').style.display,'none');
+  p.d.querySelector('[data-workspace-view="team"]').click();assert.match(thread(p),/سارة/);p.d.querySelector('[data-open-employee]').click();assert.match(p.d.querySelector('#whoN').textContent,/سارة/);assert.equal(p.d.querySelector('.comp').style.display,'');
+  p.d.querySelector('[data-workspace-view="siyadah"]').click();assert.equal(p.d.querySelector('[data-workspace-view="siyadah"]').getAttribute('aria-current'),'page');
+  assert.equal(p.requests.filter(r=>['message','approve','employee_state'].includes(r.body?.op)).length,0);
+ }finally{p.close();}
+});
+test('results page empty state and failed records never fabricate provider success',async()=>{
+ for(const records of [[],[{...proof,status:'failed',runId:null}]]){const p=await page({hydrate:{...empty,recent_work:records}});try{
+  p.d.querySelector('[data-workspace-view="results"]').click();assert.doesNotMatch(thread(p),/✓/);assert.match(thread(p),records.length?/تعذّرت/:/ما فيه عمل مسجّل/);
+ }finally{p.close();}}
+});
+test('published workflow structure displays branches and escapes labels without promoting proof',async()=>{
+ const p=await page({hash:'#e='+publishedEmployee.recordId,hydrate:{...empty,team:[publishedEmployee]},employee_instructions:{ok:true,published_instructions:{...publishedProjection,work_structure_complete:false,work_steps:[{name:'trigger',display_name:'البداية',kind:'trigger',path:[]},{name:'send',display_name:'<img src=x>',kind:'action',path:[{kind:'branch',index:1},{kind:'loop'}],skipped:true,valid:false}]}}});try{
+  p.d.querySelector('#instrTgl').click();await flush();await flush();const panel=p.d.querySelector('.published-work');assert.equal(panel.querySelector('img'),null);assert.match(panel.textContent,/<img src=x>/);assert.match(panel.textContent,/فرع 2.*داخل تكرار/);assert.match(panel.textContent,/متخطاة.*إعداد غير صالح/);assert.match(panel.textContent,/القراءة جزئية/);assert.match(panel.textContent,/لا يثبت تنفيذها/);assert.equal(p.requests.filter(r=>r.body?.op==='message').length,0);
+ }finally{p.close();}
+});
+
+test('workspace pages focus their heading and offer a non-dispatching empty-state return',async()=>{
+ const p=await page({hydrate:empty});try{
+  p.d.querySelector('#openSide').click();p.d.querySelector('[data-workspace-view="team"]').click();assert.equal(p.d.activeElement,p.d.querySelector('#thread h1'));assert.equal(p.d.querySelector('#app').classList.contains('open'),false);
+  p.d.querySelector('#thread [data-workspace-view="siyadah"]').click();assert.equal(p.d.activeElement,p.d.querySelector('#input'));assert.equal(p.requests.filter(r=>r.body?.op==='message').length,0);
+ }finally{p.close();}
+});
+test('unavailable company data is never shown as an empty team or results record',async()=>{
+ const p=await page({hydrate:Error('offline')});try{
+  for(const view of ['team','results']){p.d.querySelector('[data-workspace-view="'+view+'"]').click();assert.match(thread(p),/تعذّر تحميل بيانات حسابك/);assert.doesNotMatch(thread(p),/لا يوجد موظفون محفوظون|ما فيه عمل مسجّل/);assert.equal(p.d.querySelector('#thread [data-workspace-view="siyadah"]'),null);}
+ }finally{p.close();}
+});
+
+test('employee entry restores the latest server-ordered conversation while older history remains selectable',async()=>{
+ const p=await page({hydrate:{...empty,team:[employee],conversations:[{id:'latest',title:'آخر نتيجة',employee_id:employee.recordId,messages:[{role:'assistant',content:'النتيجة الحديثة'}]},{id:'older',title:'طلب قديم',employee_id:employee.recordId,messages:[{role:'assistant',content:'رد قديم'}]}]}});try{
+  p.d.querySelector('#emps .emp').click();assert.match(thread(p),/النتيجة الحديثة/);assert.doesNotMatch(thread(p),/رد قديم/);p.d.querySelector('[data-chat="older"]').click();assert.match(thread(p),/رد قديم/);
+ }finally{p.close();}
+});
+
+test('saving a non-active connection retains its form values and focus without activation',async()=>{
+ for(const status of ['ERROR','EXPIRED','MISSING']){const p=await page({hash:'',integrations:{list:{ok:true,connections:[]},methods:{ok:true,methods:[{id:'secret',type:'SECRET_TEXT',available:true,fields:[{name:'token',label:'Token',type:'password',required:true}]}]},connect:{ok:true,connection:{id:'C'.repeat(21),slug:'gmail',status,scope:'PROJECT'}}}});try{
+  p.d.querySelector('#toolsLink').click();await flush();p.d.querySelector('#allTgl').click();p.d.querySelector('[data-c="gmail"]').click();await flush();const field=p.d.querySelector('#mf0');field.value='private-test-value';field.focus();p.d.querySelector('#mF form').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));await flush();
+  assert.equal(p.d.querySelector('#modal').classList.contains('on'),true);assert.equal(p.d.querySelector('#mf0'),field);assert.equal(field.value,'private-test-value');assert.equal(p.d.activeElement,field);assert.equal(p.d.querySelector('#mOk').disabled,false);assert.match(p.d.querySelector('#mF').textContent,/غير جاهز/);assert.doesNotMatch(p.d.querySelector('#mF').textContent,/private-test-value/);assert.equal(p.activationRequests.filter(r=>r.body.employee_id).length,0);
+ }finally{p.close();}}
+});
+test('revalidation only describes an ACTIVE saved connection as verified',async()=>{
+ for(const status of ['ACTIVE','ERROR','EXPIRED','MISSING']){const connection={id:'C'.repeat(21),slug:'gmail',status:'ACTIVE',scope:'PROJECT'};const p=await page({integrations:{list:{ok:true,connections:[connection]},revalidate:{ok:true,connection:{...connection,status}}}});try{
+  p.d.querySelector('#toolsLink').click();await flush();p.d.querySelector('[data-tool-details="gmail"]').click();p.d.querySelector('[data-revalidate]').click();await flush();assert.match(p.d.querySelector('#mD').textContent,status==='ACTIVE'?/تم التحقق من بيانات الربط/:/يحتاج إعادة ربط/);if(status!=='ACTIVE')assert.doesNotMatch(p.d.querySelector('#mD').textContent,/تم التحقق/);
+ }finally{p.close();}}
+});
+
+test('results card puts technical provider proof in details and avoids repeated employee and status labels',async()=>{
+ const p=await page({hydrate:{...empty,team:[employee],recent_work:[{...proof,subject:'آخر مهمة لـ '+employee.name,proof:'نتيجة الخدمة 200'}]}});try{
+  p.d.querySelector('[data-workspace-view="results"]').click();const card=p.d.querySelector('.work-record');assert.equal(card.querySelectorAll('.work-record__status').length,1);assert.equal(card.querySelector('small.msrc'),null);assert.match(card.querySelector('details').textContent,/200/);assert.doesNotMatch([...card.children].filter(el=>el.tagName!=='DETAILS').map(el=>el.textContent).join(' '),/200/);
+ }finally{p.close();}
+});
+
+test('right column orders real return contexts before employee management and hides empty team',async()=>{
+ const fresh=await page({hydrate:empty});try{assert.equal(fresh.d.querySelector('#teamSection').hidden,true);assert.equal(fresh.d.querySelector('#awaitingSection').hidden,true);assert.match(fresh.d.querySelector('#newChat').textContent,/طلب جديد/);assert.doesNotMatch(fresh.d.querySelector('.side').textContent,/مهمة واحدة|موظف دائم|4 مربوطة/);}finally{fresh.close();}
+ const p=await page({hydrate:{...empty,team:[employee],conversations:[{id:'newest',title:'العقد الجديد',messages:[]},{id:'older',title:'عرض سعر',messages:[]}]}});try{
+  const order=[...p.d.querySelector('.side__scroll').children].map(el=>el.id||el.className);assert.ok(order.indexOf('hgToday')<order.indexOf('teamSection'));assert.equal(p.d.querySelector('#teamSection').hidden,false);assert.deepEqual([...p.d.querySelectorAll('#histToday [data-chat]')].map(el=>el.dataset.chat),['newest','older']);assert.match(p.d.querySelector('#hgToday .lbl').textContent,/محادثاتك/);
+ }finally{p.close();}
+});
+test('right column highlights a real waiting request and opens it without resubmitting',async()=>{
+ const p=await page({message:{ok:true,conversation_id:'waiting',work_id:'w',work_status:'awaiting_input',reply:'أحتاج عدد النسخ'}});try{
+  send(p,'جهز العقد');await flush();assert.equal(p.d.querySelector('#awaitingSection').hidden,false);const pending=p.d.querySelector('#awaitingChats [data-chat="waiting"]');assert.ok(pending);p.d.querySelector('#newChat').click();p.d.querySelector('#awaitingChats [data-chat="waiting"]').click();assert.match(thread(p),/أحتاج عدد النسخ/);assert.equal(p.requests.filter(r=>r.body?.op==='message').length,1);
+ }finally{p.close();}
+});
+
+
+test('onboarding request arrives in the composer without creating an employee or sending',async()=>{
+ const text='راجع عقد اليوم وأعطني الملاحظات';
+ const p=await page({hash:'',session:{siyadah_request_draft_v1:JSON.stringify({text,createdAt:Date.now()})}});try{
+  assert.equal(p.d.querySelector('#input').value,text);assert.equal(p.w.sessionStorage.getItem('siyadah_request_draft_v1'),null);assert.equal(p.requests.filter(r=>r.body&&['message','approve','select_employee'].includes(r.body.op)).length,0);assert.equal(p.d.activeElement.id,'input');
+ }finally{p.close();}
+});
+
+test('onboarding request survives failed account load and expired drafts do not enter the composer',async()=>{
+ const key='siyadah_request_draft_v1',raw=JSON.stringify({text:'راجع العقد',createdAt:Date.now()});
+ const failed=await page({hash:'',hydrate:Error('offline'),session:{[key]:raw}});try{assert.equal(failed.w.sessionStorage.getItem(key),raw);assert.equal(failed.d.querySelector('#input').value,'');assert.equal(failed.requests.filter(r=>r.body&&r.body.op==='message').length,0);}finally{failed.close();}
+ const old=await page({hash:'',session:{[key]:JSON.stringify({text:'طلب قديم',createdAt:Date.now()-31*60*1000})}});try{assert.equal(old.d.querySelector('#input').value,'');assert.equal(old.w.sessionStorage.getItem(key),null);assert.equal(old.requests.filter(r=>r.body&&r.body.op==='message').length,0);}finally{old.close();}
+});
+
+test('chat titles shorten only visually and search the complete source including fallback user request',async()=>{
+ const full='جهّز عقد العميل بحسب الشروط التي كتبتها بالكامل مع إضافة الملحق الخاص بالمواعيد النهائية';const fallback='طلب مختلف طويل فيه عبارة للبحث في نهاية النص مثل بند الضمان';
+ const p=await page({hydrate:{...empty,conversations:[{id:'valid',title:full,messages:[]},{id:'fallback',title:' ',messages:[{role:'user',content:fallback}]}]}});try{
+  const button=p.d.querySelector('[data-chat="valid"]');assert.equal(button.title,full);assert.equal(button.getAttribute('aria-label'),full);assert.ok(button.textContent.length<full.length);assert.match(button.textContent,/…$/);const other=p.d.querySelector('[data-chat="fallback"]');assert.equal(other.title,fallback);
+  const search=p.d.querySelector('#hq');search.value='بند الضمان';search.dispatchEvent(new p.w.Event('input',{bubbles:true}));assert.equal(other.hidden,false);assert.equal(button.hidden,true);other.click();assert.match(thread(p),/بند الضمان/);
+ }finally{p.close();}
+});
+test('compact chat history keeps all saved chats reachable by search and expansion',async()=>{
+ const conversations=Array.from({length:12},(_,i)=>({id:'history-'+i,title:'طلب '+i,messages:[{role:'user',content:'طلب '+i}]}));const p=await page({hydrate:{...empty,conversations}});try{
+  assert.equal(p.d.querySelectorAll('#histToday .hist:not([hidden])').length,8);const search=p.d.querySelector('#hq');search.value='طلب 11';search.dispatchEvent(new p.w.Event('input',{bubbles:true}));assert.equal(p.d.querySelector('[data-chat="history-11"]').hidden,false);search.value='';search.dispatchEvent(new p.w.Event('input',{bubbles:true}));p.d.querySelector('#historyMore').click();assert.equal(p.d.querySelectorAll('#histToday .hist:not([hidden])').length,12);p.d.querySelector('[data-chat="history-11"]').click();p.d.querySelector('#historyMore').click();assert.equal(p.d.querySelector('[data-chat="history-11"]').hidden,false);assert.equal(p.requests.filter(r=>r.body?.op==='message').length,0);
+ }finally{p.close();}
+});
+
+test('a saved result opens only its own loaded conversation without resending',async()=>{
+ const p=await page({hydrate:{...empty,team:[employee],recent_work:[{...proof,conversation_id:'result-chat'}],conversations:[{id:'result-chat',employee_id:employee.recordId,title:'تقرير العميل',messages:[{role:'assistant',content:'هذه النتيجة المحفوظة'}]}]}});try{
+  p.d.querySelector('[data-workspace-view="results"]').click();const result=p.d.querySelector('[data-result-chat="result-chat"]');assert.ok(result);result.click();assert.match(thread(p),/هذه النتيجة المحفوظة/);assert.equal(p.requests.filter(r=>r.body&&r.body.op==='message').length,0);
+ }finally{p.close();}
+ const missing=await page({hydrate:{...empty,recent_work:[{...proof,conversation_id:'not-loaded'}]}});try{missing.d.querySelector('[data-workspace-view="results"]').click();assert.equal(missing.d.querySelector('[data-result-chat]'),null);}finally{missing.close();}
+});
+
+test('reload restores a live pending decision without dispatching or polling its action',async()=>{
+ const p=await page({hash:'',hydrate:{...empty,conversations:[{id:'waiting',title:'عرض السعر',messages:[]}],pending_work:[{ok:true,work_id:'request_saved',approval_expires_at:new Date(Date.now()+60000).toISOString(),conversation_id:'waiting',request_status:'succeeded',work_status:'awaiting_input',reply:'راجع عرض السعر',approval:{required:true,kind:'tool_action',approval_id:'11111111-1111-1111-1111-111111111111',summary:'حفظ عرض السعر',details:'العميل: مثال'}}]}});try{
+  assert.equal(p.d.querySelector('#awaitingSection').hidden,false);p.d.querySelector('#awaitingChats [data-chat="waiting"]').click();assert.match(thread(p),/راجع عرض السعر/);assert.ok(p.d.querySelector('[data-siy-approval="approve"]'));assert.equal(p.requests.filter(r=>r.body&&['approve','message','work'].includes(r.body.op)).length,0);assert.equal(p.polls.length,0);
+ }finally{p.close();}
+});
+
+test('an expired restored decision is not offered as an available action',async()=>{
+ const p=await page({hash:'',hydrate:{...empty,conversations:[{id:'expired',title:'قرار قديم',messages:[]}],pending_work:[{work_id:'request_expired',conversation_id:'expired',work_status:'awaiting_input',approval_expires_at:new Date(Date.now()-1000).toISOString(),approval:{required:true,kind:'tool_action',approval_id:'expired'}}]}});try{assert.equal(p.d.querySelector('#awaitingSection').hidden,true);assert.equal(p.d.querySelector('[data-siy-approval]'),null);assert.equal(p.requests.filter(r=>r.body&&r.body.op==='approve').length,0);}finally{p.close();}
+});
+
+test('results show the saved flow reply body safely instead of a status-only card',async()=>{
+ const p=await page({hydrate:{...empty,recent_work:[{...proof,message:'',result:{schemaVersion:1,source:'flow_reply',content:'[{"النتيجة":"تقرير اليوم <script>bad()</script>"}]'}}]}});try{p.d.querySelector('[data-workspace-view="results"]').click();assert.match(thread(p),/تقرير اليوم/);assert.ok(p.d.querySelector('.work-record__result table'));assert.equal(p.d.querySelector('.work-record__result script'),null);}finally{p.close();}
+});
+
+test('structured results keep fields beyond the twelfth column',async()=>{
+ const data=Object.fromEntries(Array.from({length:13},(_,i)=>['field'+i,'value'+i]));const p=await page({hydrate:{...empty,recent_work:[{...proof,result:{schemaVersion:1,source:'flow_reply',content:JSON.stringify([data])}}]}});try{p.d.querySelector('[data-workspace-view="results"]').click();assert.equal(p.d.querySelectorAll('.work-record__result th').length,13);assert.match(thread(p),/value12/);}finally{p.close();}
+});
+
+test('live activity renders backend calls and returned responses without claiming provider success',async()=>{
+ const p=await page({message:{ok:true,conversation_id:'activity',work_id:'w',work_status:'running',activity:[{id:1,name:'ap_search_actions',state:'returned'},{id:2,name:'ap_get_flow',state:'started'}]},work:{ok:true,conversation_id:'activity',work_id:'w',work_status:'running',activity:[{id:1,name:'ap_search_actions',state:'returned'},{id:2,name:'ap_get_flow',state:'returned'}]}});try{
+  send(p,'راجع طريقة العمل');await flush();const block=p.d.querySelector('.siy-activity');assert.match(block.querySelector('summary').textContent,/قراءة طريقة العمل.*جارٍ العمل/);assert.match(block.textContent,/البحث في الأدوات.*وصل الرد/);assert.doesNotMatch(block.textContent,/اكتمل|مُثبت|✓/);assert.equal(block.querySelectorAll('li').length,2);
+  await p.polls.shift()();await flush();assert.equal(p.d.querySelectorAll('[data-activity-id="2"]').length,1);assert.equal(p.d.querySelector('[data-activity-id="2"]').dataset.activityState,'returned');assert.doesNotMatch(p.d.querySelector('.siy-activity').textContent,/جارٍ العمل|نجح/);
+ }finally{p.close();}
+});
+test('live activity ignores malformed events limits snapshots and never exposes unknown raw tool names',async()=>{
+ const activity=Array.from({length:85},(_,i)=>({id:i,name:'<img src=x onerror=alert(1)>',state:'returned'}));activity.push({id:99,name:'secret',state:'succeeded'},{id:-1,name:'secret',state:'started'},{id:100,name:'__proto__',state:'started'},{id:100,name:'__proto__',state:'returned'});
+ const p=await page({message:{ok:true,conversation_id:'activity',work_id:'w',work_status:'failed',activity}});try{send(p,'راجع');await flush();const block=p.d.querySelector('.siy-activity');assert.ok(block);assert.ok(block.querySelectorAll('li').length<=80);assert.equal(block.querySelector('img'),null);assert.doesNotMatch(block.textContent,/secret|onerror|<img|succeeded|Object|__proto__/);assert.equal(block.querySelectorAll('[data-activity-id="100"]').length,1);assert.match(block.textContent,/أداة العمل/);}finally{p.close();}
+ const absent=await page({message:{ok:true,conversation_id:'plain',reply:'رد عادي'}});try{send(absent,'سؤال');await flush();assert.equal(absent.d.querySelector('.siy-activity'),null);}finally{absent.close();}
+});
+
+test('activity timeline keeps its open state and keyboard focus during same-request polling',async()=>{
+ const p=await page({message:{ok:true,conversation_id:'timeline',work_id:'timeline-work',work_status:'running',activity:[{id:1,name:'ap_get_flow',state:'started'}]},work:{ok:true,conversation_id:'timeline',work_id:'timeline-work',work_status:'running',activity:[{id:1,name:'ap_get_flow',state:'returned'},{id:2,name:'ap_test_flow',state:'started'}]}});try{
+  send(p,'راجع');await flush();let block=p.d.querySelector('.siy-activity');block.open=true;block.querySelector('summary').focus();await p.polls.shift()();await flush();block=p.d.querySelector('.siy-activity');assert.equal(block.open,true);assert.equal(p.d.activeElement,block.querySelector('summary'));assert.equal(block.querySelectorAll('li').length,2);assert.equal(block.querySelectorAll('.activity-node svg').length,2);assert.match(block.querySelector('summary').textContent,/اختبار طريقة العمل.*جارٍ العمل/);assert.equal(block.querySelectorAll('svg:not([aria-hidden="true"])').length,0);assert.doesNotMatch(block.textContent,/✓|نجح|نتيجة مثبتة/);
+ }finally{p.close();}
+});
+for(const locale of ['ar','en'])test('activity UI direction follows the interface rather than the provider reply '+locale,async()=>{
+ const p=await page({locale,message:{ok:true,conversation_id:'direction',work_id:'direction-work',work_status:'failed',reply:locale==='en'?'رد عربي من الأداة':'An English provider response',activity:[{id:1,name:'ap_test_flow',state:'error'}]}});try{
+  send(p,'راجع');await flush();const block=p.d.querySelector('.siy-activity');assert.equal(block.getAttribute('dir'),locale==='en'?'ltr':'rtl');assert.match(block.textContent,locale==='en'?/Test workflow.*Call failed/:/اختبار طريقة العمل.*تعثّرت الخطوة/);assert.equal(block.querySelector('svg').getAttribute('aria-hidden'),'true');
+ }finally{p.close();}
+});
+
+test('composer draft stays with its employee when switching employee context',async()=>{const other={...employee,recordId:'employee-record-2',flowId:'flow-2',name:'عمر'};const p=await page({hash:'',hydrate:{...empty,team:[employee,other]}});try{p.d.querySelector('[data-emp="'+employee.recordId+'"]').click();const input=p.d.querySelector('#input');input.value='مسودة سارة';input.setSelectionRange(2,5);p.d.querySelector('[data-emp="'+other.recordId+'"]').click();assert.equal(input.value,'');input.value='مسودة عمر';p.d.querySelector('[data-emp="'+employee.recordId+'"]').click();assert.equal(input.value,'مسودة سارة');assert.equal(input.selectionStart,2);assert.equal(input.selectionEnd,5);assert.equal(p.requests.filter(r=>r.body?.op==='message').length,0);}finally{p.close();}});
+
+test('composer keeps saved main-chat drafts distinct from employee and new request contexts',async()=>{const p=await page({hash:'',hydrate:{...empty,team:[employee],conversations:[{id:'draft-chat-a',title:'ألف',messages:[]},{id:'draft-chat-b',title:'باء',messages:[]}]}});try{const input=p.d.querySelector('#input');p.d.querySelector('[data-chat="draft-chat-a"]').click();input.value='مسودة ألف';p.d.querySelector('[data-chat="draft-chat-b"]').click();assert.equal(input.value,'');input.value='مسودة باء';p.d.querySelector('[data-chat="draft-chat-a"]').click();assert.equal(input.value,'مسودة ألف');p.d.querySelector('[data-emp="'+employee.recordId+'"]').click();input.value='مسودة الموظف';p.d.querySelector('#newChat').click();assert.equal(input.value,'');p.d.querySelector('[data-emp="'+employee.recordId+'"]').click();assert.equal(input.value,'مسودة الموظف');p.d.querySelector('[data-chat="draft-chat-b"]').click();assert.equal(input.value,'مسودة باء');assert.equal(p.requests.filter(r=>r.body?.op==='message').length,0);}finally{p.close();}});
+for(const boundary of ['logout','unauthorized','company-change'])test('composer clears foreign drafts at '+boundary+' boundary',async()=>{const p=await page({hash:'',hydrate:{...empty,team:[employee],owned_knowledge:{schemaVersion:1,companyId:'company-a',facts:[]}},message:boundary==='unauthorized'?{httpStatus:401}:{ok:true,company:'Different Company',reply:'تم'}});try{const input=p.d.querySelector('#input');p.d.querySelector('[data-emp="'+employee.recordId+'"]').click();input.value='مسودة لا تنتقل إلى حساب آخر';p.d.querySelector('#newChat').click();if(boundary==='logout'){p.dom.virtualConsole.removeAllListeners('jsdomError');const original=p.w.fetch;p.w.fetch=(url,opts)=>String(url).endsWith('/auth/logout')?Promise.resolve({ok:true}):original(url,opts);p.d.querySelector('#logoutBtn').click();}else {p.dom.virtualConsole.removeAllListeners('jsdomError');send(p,'طلب داخل اختبار الواجهة فقط');}await flush();await flush();p.d.querySelector('[data-emp="'+employee.recordId+'"]').click();assert.equal(input.value,'');assert.equal(p.w.localStorage.getItem('siyadah_composer_drafts'),null);}finally{p.close();}});
+
+test('employee saved results contain only its own records and bounded escaped historical reply',async()=>{const other={...employee,recordId:'other-employee',flowId:'other-flow',name:'موظف آخر'},reply='<img src=x onerror=alert(1)> نتيجة محفوظة',records=[{...proof,result:{schemaVersion:1,source:'flow_reply',content:reply},conversation_id:'same-owner'},{...proof,recordId:'prior',flowId:'previous-flow',subject:'قديم بطريقة سابقة',status:'failed'},{...proof,recordId:'pending',runId:null,status:'running',subject:'عمل محفوظ جارٍ'},{...proof,recordId:'foreign',employeeId:other.recordId,subject:'سجل موظف آخر'},{...proof,recordId:'unowned',employeeId:null,subject:'هوية مجهولة'},{...proof,recordId:'unknown',status:'nonsense',subject:'حالة غير مؤكدة'},{...proof,recordId:'wrongchat',conversation_id:'foreign-chat',subject:'مرجع غير مطابق'},{...proof,recordId:'oversized',result:{schemaVersion:1,source:'flow_reply',content:'x'.repeat(12001)}}];const p=await page({hash:'#e='+employee.recordId,hydrate:{...empty,team:[employee,other],recent_work:records,conversations:[{id:'same-owner',employee_id:employee.recordId,title:'سجل',messages:[]},{id:'foreign-chat',employee_id:other.recordId,title:'آخر',messages:[]}]}});try{const h=p.d.querySelector('.employee-saved-results');assert.equal(h.open,false);assert.match(h.textContent,/نتيجة محفوظة/);assert.equal(h.querySelector('img'),null);assert.match(h.textContent,/طريقة عمل سابقة/);assert.match(h.textContent,/عمل محفوظ جارٍ/);assert.match(h.textContent,/غير مؤكدة/);assert.doesNotMatch(h.textContent,/سجل موظف آخر|هوية مجهولة|x{12001}/);assert.equal(h.querySelectorAll('[data-result-chat="foreign-chat"]').length,0);assert.equal(h.querySelectorAll('[data-result-chat="same-owner"]').length,1);assert.match(h.textContent,/لا يثبت نتيجة طلبك الحالي/);p.d.querySelector('[data-emp="'+other.recordId+'"]').click();assert.doesNotMatch(p.d.querySelector('.employee-saved-results').textContent,/نتيجة محفوظة|قديم بطريقة سابقة/);}finally{p.close();}});
+test('employee result disclosure keeps per-context open state and focus during an update',async()=>{const other={...employee,recordId:'other-employee',flowId:'other-flow',name:'آخر'};const p=await page({hash:'#e='+employee.recordId,hydrate:{...empty,team:[employee,other],recent_work:[proof]},message:{ok:true,conversation_id:'employee-new-history-context',work_status:'succeeded',reply:'رد الطلب الجديد',recent_work:[proof]}});try{let h=p.d.querySelector('.employee-saved-results');h.open=true;h.querySelector('summary').focus();send(p,'طلب اختبار');await flush();h=p.d.querySelector('.employee-saved-results');assert.equal(h.open,true);h.open=true;h.querySelector('summary').focus();p.d.querySelector('#localeToggle').click();assert.equal(p.d.querySelector('.employee-saved-results').open,true);assert.equal(p.d.activeElement.tagName,'SUMMARY');p.d.querySelector('[data-emp="'+other.recordId+'"]').click();assert.equal(p.d.querySelector('.employee-saved-results').open,false);p.d.querySelector('[data-emp="'+employee.recordId+'"]').click();assert.equal(p.d.querySelector('.employee-saved-results').open,true);}finally{p.close();}});

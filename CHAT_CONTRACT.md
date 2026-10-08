@@ -82,6 +82,8 @@ To apply saved instructions to ongoing work, use the existing message route with
 
 The editable saved-context panel is conversation context. Opening instructions requests `employee_instructions` with `read_published:true`; the separate read-only `published_instructions` section reads the owned exact published Flow version. The two reads must agree on the published pointer; a publish race, wrong ownership or provider failure returns `read_status:unavailable` without prompts. No published version returns `not_published`. `verified` means version readback only, not activation, execution or synchronization.
 
+The same verified published response adds `work_steps` and `work_structure_complete`. These describe the native Flow graph, including non-AI actions, branches and loops. Step metadata is allowlisted; inputs, auth, conditions, code and sample data are not returned. Missing or unavailable publication returns an empty structure with completeness false. Unknown nodes or traversal limits make completeness false. A graph read does not prove that its steps ran or that an external result occurred.
+
 The projection preserves literal AI `askAi` and `run_agent` prompt inputs, including variable references, without returning full settings/auth. A saved Agent task input is marked separately and `agent_instructions_unverified:true` prevents claiming its saved Agent instructions were read. Unknown AI actions have no projected prompt. UI reads lazily on each opening, preserves editable conversation text and discards stale employee/panel responses. Read mode writes no instructions, Flow or Agent and never tests/publishes.
 
 
@@ -139,3 +141,35 @@ Customer MCP start first provisions the verified company project, reads exactly 
 A provider HTTP402 before native execution produces a durable failed request explaining that the assistant service is unavailable due to its balance. Provider payloads and credentials are not exposed. Existing attempted-execution/unknown-result/transport-receipt precedence stays intact; no automatic redispatch occurs. ABO-69 / ABO-37.
 
 A bounded instruction such as «لا تنفذ أكثر من مرة» limits repetition and is not a blanket do-not-run instruction. Independent explicit prohibitions remain enforced. This clarification fixes a witnessed pre-dispatch refusal; it does not itself add retry or deduplication behavior. ABO-69.
+
+## Restoring a pending decision
+
+`hydrate.pending_work` may include a saved `awaiting_input` response only when its native approval row still exists, belongs to the same company and conversation, and has not expired. It includes the existing customer-facing reply, approval and optional flow plan; no encrypted action arguments or unrelated response fields. The browser renders this decision without polling, dispatching or consuming it. The existing `approve` route remains the authority and rechecks expiry and ownership at action time. Restoring a decision does not grant MCP access or prove execution.
+
+Restored decisions include `approval_expires_at` from the matched approval row. The browser rejects missing/expired timestamps and replaces the restored action controls when that deadline passes, without executing an API operation. The server expiry check still governs any submitted decision.
+
+## Saved flow reply in recent work
+
+A `recent_work` item may include `result: {schemaVersion: 1, source: 'flow_reply', content: string}`. It projects only a nonempty saved reply body with 2xx status and at most 12,000 characters; response headers are not exposed. No content is fabricated for metadata-only recovery records, missing bodies, non-2xx responses or oversized bodies. This is the saved flow reply, not independent proof of external delivery. The results page escapes its text and preserves all JSON table fields.
+
+The employee space also presents these saved records as employee history, selected by the exact employee ID from the company-scoped hydration response. Earlier flow IDs remain historical and are labeled as an earlier workflow. This history does not establish a new request's outcome: exact request/conversation/run evidence remains separately checked in the current response. A conversation shortcut is offered only for an available conversation belonging to the employee or the main chat. Unknown, failed or pending records keep their saved status and do not display a successful flow reply.
+
+## Tool activity while a request runs
+
+Company knowledge supplied to both chat contexts uses the existing text-ranking helper from the consolidation branch before applying the knowledge-facts budget (40 whole facts, 6,000 JSON characters). The current request words and the selected employee's configured knowledge topics affect ranking. Fact keys, sources, source kinds, certainty and observed dates remain projected. A large fact may be omitted rather than truncated. This limits only the knowledge-facts array, not the entire prompt, and does not implement cumulative memory or establish that the model understood the facts.
+
+`activity` is a bounded snapshot of up to 80 `{id, name, state}` records. An id identifies one native tool invocation; `started` is recorded immediately before the call, `returned` after its response, and `error` after a thrown error or `isError` response. No tool inputs, outputs or error details are included. Returned does not establish business success or delivery. The ledger writer requires the exact company/request/conversation/claim token and pending state. Failure to store activity does not retry or prevent the tool invocation.
+
+Long chat requests return their existing queued work identity after 1.5 seconds instead of waiting 20 seconds. The browser reads that identity; these reads never dispatch another action. Pending `work` and hydration can carry stored activity, and the final reply retains the snapshot. This covers native calls made by the main and employee message loops; it is not a stream of each internal Activepieces flow step or model reasoning.
+
+## Work that ends without a standing employee
+
+For a new build in main chat without an existing employee draft, the model supplies `_siyadah_work_mode: one_off | standing` in the build tool schema. Siyadah removes it before native MCP dispatch. Missing mode is corrected before effects; customers do not choose a category. One-off builds do not call employee creation or employee state writers. They use an owned native MCP Flow that returns a response; continuous schedule triggers are rejected before activation. The current version must pass a verified test before publishing.
+
+After publication, the server reads the exact owned published version and refreshes the native tool list. Before invocation it checks the same Flow, published version, activation and MCP tool identity again. A changed version blocks dispatch. One-off invocation follows the same native execution identity/readback mechanism and exact tenant/request ledger; one-off recovery does not update the employee table. Readonly inspection may precede building another goal in the conversation; old work is context rather than an automatic execution target.
+
+This remains an unpublished local implementation. Its tests do not establish a production provider outcome, automatic understanding of all intentions, or customer-visible one-off records in the aggregate employee results page.
+
+Native employee run reconciliation also retains only status and a successful, nonempty flow reply body up to 12,000 characters in the employee receipt. Object bodies are serialized once. Headers and other output fields remain outside this saved result. Oversized, empty, absent and non-2xx bodies retain status metadata only. Existing tenant, run, employee snapshot and ordering checks still guard the atomic write. This does not backfill earlier metadata-only receipts or establish external delivery.
+
+Employee instruction application lets the model choose the suitable native piece, model and execution method, including preparing a missing step inside the owned employee Flow. Run Agent is required in the employee execution Flow; the surrounding Flow may use multiple branches and native tools as the task requires. Existing authorization, tenant/Flow ownership, explicit draft/no-run intent and tested-version activation checks remain enforced. Missing provider access is requested specifically; this policy does not grant access or prove execution.

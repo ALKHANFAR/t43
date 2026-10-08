@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {JSDOM} from 'jsdom';
+import {JSDOM,VirtualConsole} from 'jsdom';
 
 test('onboarding uses live company enrichment and prepares one employee safely',async()=>{
   const [html,js,server]=await Promise.all([readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),readFile(new URL('../app/onboard.js',import.meta.url),'utf8'),readFile(new URL('../server.mjs',import.meta.url),'utf8')]);
@@ -14,7 +14,7 @@ test('onboarding uses live company enrichment and prepares one employee safely',
   assert.ok(!html.includes('وافق وشغّل'));
   assert.match(html,/مسودة موظفك جاهزة/);
   assert.match(html,/أدواته غير متصلة/);
-  assert.match(html,/هذه شركتك كما فهمناها/);
+  assert.match(html,/معلومات شركتك المحفوظة الآن/);
   assert.match(html,/حالة الموظف/);
   assert.match(html,/circle cx="12" cy="12" r="8"\/\><path d="M12 8v4"/);
   assert.match(js,/chat\.html'\+\(CREATED&&CREATED\.recordId\?'#e='\+encodeURIComponent\(CREATED\.recordId\)/);
@@ -127,13 +127,14 @@ test('suggestion and employee preparation failures remain visible and retryable'
     return {ok:true,json:async()=>({ok:true,employee:{initial:'ر',knowledgeVersion:1}})};
   };
   w.eval(js);await new Promise(resolve=>setImmediate(resolve));
-  w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+  w.document.querySelector('#exploreEmployees').click();await new Promise(resolve=>setImmediate(resolve));
   assert.equal(w.document.querySelector('#stepLbl').textContent,'2 من 4');
   assert.match(w.document.querySelector('#stepError').textContent,/تعذّر جلب الاقتراحات/);
-  assert.equal(w.document.querySelector('#next').disabled,false);
-  w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(w.document.querySelector('#exploreEmployees').disabled,false);
+  w.document.querySelector('#exploreEmployees').click();await new Promise(resolve=>setImmediate(resolve));
   assert.equal(w.document.querySelector('#stepLbl').textContent,'3 من 4');
-  w.document.querySelector('[data-suggestion="marketing"]').click();
+  w.document.querySelector('[data-suggestion="marketing"]').focus();w.document.querySelector('[data-suggestion="marketing"]').click();
+  assert.equal(w.document.activeElement.dataset.suggestion,'marketing');
   assert.match(w.document.querySelector('#next').textContent,/احفظ مسودة ريم/);
   w.document.querySelector('#next').click();assert.match(w.document.querySelector('#live').textContent,/نحفظ المسودة/);await new Promise(resolve=>setImmediate(resolve));
   assert.equal(w.document.querySelector('#stepLbl').textContent,'3 من 4');
@@ -159,7 +160,7 @@ test('reload after an uncertain employee save reuses the original request ID',as
     return {ok:true,json:async()=>input.op==='recommend_employees'?{ok:true,suggestions:[suggestion]}:{ok:true,status:'ready',profile:{companyName:'شركة مثال',coverageScore:30,pagesRead:1,factCount:1,knowledgeVersion:1},suggestions:[suggestion]}};
   };
   first.eval(js);await new Promise(resolve=>setImmediate(resolve));
-  first.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+  first.document.querySelector('#exploreEmployees').click();await new Promise(resolve=>setImmediate(resolve));
   first.document.querySelector('[data-suggestion="marketing"]').click();first.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
   const savedAttempt=first.sessionStorage.getItem('siyadah_employee_selection_attempt');
   assert.ok(savedAttempt);assert.equal(JSON.parse(savedAttempt).requestId,originalId);assert.equal(JSON.parse(savedAttempt).profileKey,'شركة مثال');first.close();
@@ -172,7 +173,7 @@ test('reload after an uncertain employee save reuses the original request ID',as
     return {ok:true,json:async()=>input.op==='recommend_employees'?{ok:true,suggestions:[suggestion]}:{ok:true,status:'ready',profile:{companyName:'شركة مثال',coverageScore:30,pagesRead:1,factCount:1,knowledgeVersion:1},suggestions:[suggestion]}};
   };
   second.eval(js);await new Promise(resolve=>setImmediate(resolve));
-  second.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+  second.document.querySelector('#exploreEmployees').click();await new Promise(resolve=>setImmediate(resolve));
   second.document.querySelector('[data-suggestion="marketing"]').click();second.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
   assert.equal(retriedId,originalId);
   assert.equal(second.sessionStorage.getItem('siyadah_employee_selection_attempt'),null);
@@ -201,7 +202,7 @@ test('English onboarding keeps its labels, role choices, and draft status in LTR
   assert.equal(w.document.querySelector('#stepLbl').textContent,'2 of 4');
   assert.match(w.document.querySelector('#companyRead').textContent,/From your website/);
   assert.match(w.document.querySelector('#companyRead').textContent,/Saved facts/);
-  w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+  w.document.querySelector('#exploreEmployees').click();await new Promise(resolve=>setImmediate(resolve));
   assert.equal(w.document.querySelector('#stepLbl').textContent,'3 of 4');
   assert.match(w.document.querySelector('#plan').textContent,/Reem · Marketing employee/);
   w.document.querySelector('[data-suggestion="marketing"]').click();
@@ -224,9 +225,90 @@ test('suggestions omit uncalibrated scores and show the supplied reason safely',
   const dom=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html',runScripts:'outside-only'}),w=dom.window;
   w.scrollTo=()=>{};w.fetch=async(_url,options)=>({ok:true,json:async()=>JSON.parse(options.body).op==='check_company_enrichment'?{ok:true,status:'ready',profile}:{ok:true,suggestions:[suggestion]}});
   try{
-    w.eval(js);await new Promise(resolve=>setImmediate(resolve));w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+    w.eval(js);await new Promise(resolve=>setImmediate(resolve));w.document.querySelector('#exploreEmployees').click();await new Promise(resolve=>setImmediate(resolve));
     const panel=w.document.querySelector('#plan');assert.equal(panel.querySelector('.fit,.rank'),null);assert.doesNotMatch(panel.textContent,/95%|أفضل بداية/);
     w.document.querySelector('[data-suggestion="sales"]').click();assert.ok(panel.textContent.includes(suggestion.reason));assert.equal(panel.querySelector('script'),null);
     assert.match(w.document.querySelector('#next').textContent,/احفظ مسودة سعد/);
   }finally{w.close();}
+});
+
+test('first task examples fill an editable goal without executing or losing input on an empty recommendation',async()=>{
+  const [html,js]=await Promise.all([readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),readFile(new URL('../app/onboard.js',import.meta.url),'utf8')]);
+  for(const locale of ['ar','en']){
+    const w=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html?lang='+locale,runScripts:'outside-only'}).window,calls=[];w.scrollTo=()=>{};
+    w.fetch=async(_url,options)=>{const input=JSON.parse(options.body);calls.push(input);return {ok:true,json:async()=>input.op==='check_company_enrichment'?{ok:true,status:'ready',profile:{companyName:'Example'}}:{ok:true,suggestions:[]}};};
+    try{
+      w.eval(js);await new Promise(resolve=>setImmediate(resolve));const before=calls.length;
+      w.document.querySelector('[data-task-ar]').click();const goal=w.document.querySelector('#brief').value;
+      assert.ok(goal.length>20);assert.equal(calls.length,before);assert.equal(w.document.activeElement.id,'brief');
+      w.document.querySelector('#exploreEmployees').click();await new Promise(resolve=>setImmediate(resolve));
+      assert.equal(w.document.querySelector('#stepLbl').textContent,locale==='en'?'2 of 4':'2 من 4');assert.equal(w.document.querySelector('#brief').value,goal);
+      assert.equal(w.document.querySelector('#stepError').hidden,false);assert.equal(w.document.querySelector('#next').disabled,false);assert.equal(calls.at(-1).goal,goal);
+    }finally{w.close();}
+  }
+});
+
+test('recommendation waits preserve goal and announce busy without permitting contradictory edits',async()=>{
+  const [html,js]=await Promise.all([readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),readFile(new URL('../app/onboard.js',import.meta.url),'utf8')]);
+  const w=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html',runScripts:'outside-only'}).window;w.scrollTo=()=>{};let finish;
+  w.fetch=async(_url,options)=>JSON.parse(options.body).op==='check_company_enrichment'?{ok:true,json:async()=>({ok:true,status:'ready',profile:{companyName:'Example'}})}:new Promise(resolve=>{finish=resolve;});
+  try{
+    w.eval(js);await new Promise(resolve=>setImmediate(resolve));w.document.querySelector('#brief').value='احتفظ بهذه المهمة';w.document.querySelector('#exploreEmployees').click();
+    assert.equal(w.document.querySelector('#brief').disabled,true);assert.equal(w.document.querySelector('#back').disabled,true);assert.equal(w.document.querySelector('#next').getAttribute('aria-busy'),'true');assert.ok([...w.document.querySelectorAll('[data-task-ar]')].every(button=>button.disabled));
+    finish({ok:false,json:async()=>({ok:false,message:'حاول مجددا'})});await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(w.document.querySelector('#brief').disabled,false);assert.equal(w.document.querySelector('#brief').value,'احتفظ بهذه المهمة');assert.equal(w.document.querySelector('#next').getAttribute('aria-busy'),'false');assert.equal(w.document.querySelector('#back').disabled,false);
+  }finally{w.close();}
+});
+
+test('typing company details does not scroll the page',async()=>{
+  const [html,js]=await Promise.all([readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),readFile(new URL('../app/onboard.js',import.meta.url),'utf8')]);
+  const w=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html',runScripts:'outside-only'}).window;let scrolls=0;w.scrollTo=()=>{scrolls++;};w.fetch=async()=>{throw new Error('no profile');};
+  try{
+    w.eval(js);await new Promise(resolve=>setImmediate(resolve));w.document.querySelector('#noSite').click();const before=scrolls;
+    for(let i=0;i<3;i++){w.document.querySelector('#co').value+='a';w.document.querySelector('#co').dispatchEvent(new w.Event('input'));}
+    assert.equal(scrolls,before);
+  }finally{w.close();}
+});
+
+
+test('onboarding asks for a natural request and states empty sourced knowledge without claiming understanding',async()=>{
+  const [html,js]=await Promise.all([readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),readFile(new URL('../app/onboard.js',import.meta.url),'utf8')]);
+  const w=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html',runScripts:'outside-only'}).window;w.scrollTo=()=>{};
+  w.fetch=async()=>({ok:true,json:async()=>({ok:true,status:'ready',profile:{companyName:'مثال',pagesRead:2,factCount:0,knowledgeVersion:1}})});
+  try{
+    w.eval(js);await new Promise(resolve=>setImmediate(resolve));
+    assert.match(w.document.querySelector('[data-step="2"]').textContent,/وش تحتاج ننجز/);assert.match(w.document.querySelector('#companyRead').textContent,/لم نحفظ معلومات موثقة/);
+    assert.match(w.document.querySelector('#brief').placeholder,/أراجعه قبل النشر/);assert.doesNotMatch(w.document.querySelector('[data-step="2"]').textContent,/مهمة مرة واحدة|موظف دائم|كما فهمناها/);
+    assert.match(w.document.querySelector('#exploreEmployees').textContent,/اقتراحات الموظفين/);
+  }finally{w.close();}
+});
+
+
+test('primary onboarding continues with a private editable request and does not create or execute an employee',async()=>{
+  const [html,js]=await Promise.all([readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),readFile(new URL('../app/onboard.js',import.meta.url),'utf8')]);
+  const virtualConsole=new VirtualConsole(),navigation=[];virtualConsole.on('jsdomError',error=>navigation.push(error));
+  const w=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html',runScripts:'outside-only',virtualConsole}).window,calls=[];w.scrollTo=()=>{};
+  w.fetch=async(_url,options)=>{calls.push(JSON.parse(options.body));return {ok:true,json:async()=>({ok:true,status:'ready',profile:{companyName:'مثال'}})};};
+  try{
+    w.eval(js);await new Promise(resolve=>setImmediate(resolve));assert.equal(w.document.querySelector('#next').disabled,true);
+    const text='جهز مسودة عقد للعميل & راجع البنود';w.document.querySelector('#brief').value=text;w.document.querySelector('#brief').dispatchEvent(new w.Event('input'));
+    assert.match(w.document.querySelector('#next').textContent,/تابع في الشات/);w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+    const draft=JSON.parse(w.sessionStorage.getItem('siyadah_request_draft_v1'));assert.equal(draft.text,text);assert.ok(Number.isFinite(draft.createdAt));assert.deepEqual(Object.keys(draft).sort(),['createdAt','text']);
+    assert.deepEqual(calls.map(call=>call.op),['check_company_enrichment']);assert.equal(navigation.length,1);assert.doesNotMatch(w.location.href,/عقد|%D8|request|goal/);
+  }finally{w.close();}
+});
+
+test('blocked or silently failed session storage keeps the request in onboarding without navigation',async()=>{
+  const [html,js]=await Promise.all([readFile(new URL('../app/onboard.html',import.meta.url),'utf8'),readFile(new URL('../app/onboard.js',import.meta.url),'utf8')]);
+  for(const silent of [false,true]){
+    const virtualConsole=new VirtualConsole(),navigation=[];virtualConsole.on('jsdomError',error=>navigation.push(error));
+    const w=new JSDOM(html,{url:'https://siyadah.test/app/onboard.html',runScripts:'outside-only',virtualConsole}).window,calls=[];w.scrollTo=()=>{};
+    w.fetch=async(_url,options)=>{calls.push(JSON.parse(options.body));return {ok:true,json:async()=>({ok:true,status:'ready',profile:{companyName:'مثال'}})};};
+    try{
+      w.eval(js);await new Promise(resolve=>setImmediate(resolve));w.document.querySelector('#brief').value='لا تفقد هذا النص';w.document.querySelector('#brief').dispatchEvent(new w.Event('input'));
+      w.Storage.prototype.setItem=function(){if(!silent)throw new Error('storage blocked');};
+      w.document.querySelector('#next').click();await new Promise(resolve=>setImmediate(resolve));
+      assert.equal(navigation.length,0);assert.equal(w.document.querySelector('#brief').value,'لا تفقد هذا النص');assert.equal(w.document.activeElement.id,'brief');assert.match(w.document.querySelector('#stepError').textContent,/النص باقٍ هنا/);assert.equal(w.document.querySelector('#next').disabled,false);assert.equal(calls.length,1);
+    }finally{w.close();}
+  }
 });
