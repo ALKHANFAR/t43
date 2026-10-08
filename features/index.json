@@ -822,6 +822,40 @@
           "anchor": "live activity renders backend calls and returned responses without claiming provider success"
         }
       ]
+    },
+{
+      "id": "interactive_chat_experience_v2_preview",
+      "name": "معاينة تجربة المحادثة والأدوات والنتائج",
+      "aliases": [
+        "معاينة تفاعلية",
+        "اختيار أدوات الطلب",
+        "تجربة جديدة لسيادة"
+      ],
+      "state": "illustrative",
+      "meaning": "معاينة محلية مستقلة ببيانات توضيحية: طلب وأدوات سياق وخطوات قابلة للفتح ونتيجة ومسودة وإلغاء. لا ربط حسابات ولا نموذج ولا تشغيل مزود. لا تعدل واجهة الإنتاج.",
+      "linear": "ABO-54",
+      "locations": [
+        {
+          "role": "entry",
+          "path": "design/siyadah-chat-experience-v2.html",
+          "anchor": "id=\"requestInput\""
+        },
+        {
+          "role": "tool_picker",
+          "path": "design/siyadah-chat-experience-v2.js",
+          "anchor": "function openPicker("
+        },
+        {
+          "role": "state",
+          "path": "design/siyadah-chat-experience-v2.js",
+          "anchor": "function run("
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-experience-preview-runtime.test.mjs",
+          "anchor": "preview cancel prevents late fixture progress and preserves editable request context"
+        }
+      ]
     }
   ]
 }
