@@ -471,6 +471,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
       const data=await response.json().catch(()=>({}));
       const usage=data.usage||{};
       console.info('chat_model_usage',JSON.stringify({conversation_id:conversationId,elapsed_ms:Date.now()-modelStarted,status:response.status,prompt_tokens:usage.prompt_tokens,completion_tokens:usage.completion_tokens,total_tokens:usage.total_tokens,cache_hit_tokens:usage.prompt_cache_hit_tokens,cache_miss_tokens:usage.prompt_cache_miss_tokens,reasoning_tokens:usage.completion_tokens_details?.reasoning_tokens}));
+      if(response.status===402)throw new TenantProjectError('assistant_billing_unavailable','خدمة المساعد غير متاحة بسبب الرصيد.',503);
       if(!response.ok)throw new TenantProjectError('assistant_unavailable','تعذّر إكمال التفكير الآن.',502);
       return data?.choices?.[0]?.message;
     }finally{clearTimeout(timer);}
@@ -940,7 +941,7 @@ async function publicChat(req,res){
       console.error('chat request failed',error instanceof TenantProjectError||error instanceof CompanyProfileError?error.code:error?.name==='AbortError'?'AbortError':'unexpected_error');
       const {companyId,requestId,conversationId,profiles,effectStarted,executionAttempt,conversationSaved,userMessage,employeeId}=activeRequest;
       const status=effectStarted?'unknown':'failed',httpStatus=200;
-      const response=failedChatExecution({conversationId,requestId,effectStarted,executionAttempt,transportReceipt:error?.transportReceipt});
+      const response=failedChatExecution({conversationId,requestId,effectStarted,executionAttempt,transportReceipt:error?.transportReceipt,failureCode:error?.code});
       if(conversationSaved)try{await profiles.recordConversation({companyId,conversationId,employeeId,requestId,userMessage,assistantMessage:response.reply});}
       catch{console.error('chat failure transcript unavailable');}
       try{const settled=await profiles.settleChatRequest({companyId,requestId,status,httpStatus,response});return json(res,settled.httpStatus,settled.response,sessionHeaders);}
