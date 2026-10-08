@@ -650,6 +650,29 @@
           "anchor": "workspace navigation reads saved team and results without dispatching work"
         }
       ]
+    },
+    {
+      "id": "connection_unready_form_recovery",
+      "name": "استكمال الربط عند اتصال غير جاهز",
+      "aliases": [
+        "الاتصال يحتاج إعادة ربط",
+        "حفظ بيانات الربط عند التعثر"
+      ],
+      "state": "draft_pr",
+      "meaning": "الاتصال المحفوظ غير ACTIVE لا يغلق نموذج الربط ولا يستأنف تشغيل الموظف؛ يحتفظ بالقيم والتركيز ويطلب المراجعة. إعادة التحقق لا تصف EXPIRED أو MISSING أو ERROR بأنها جاهزة. محلي غير منشور.",
+      "linear": "ABO-64",
+      "locations": [
+        {
+          "role": "save",
+          "path": "app/chat.js",
+          "anchor": "async function rcPost(payload)"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "saving a non-active connection retains its form values and focus without activation"
+        }
+      ]
     }
   ]
 }

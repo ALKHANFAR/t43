@@ -1327,3 +1327,21 @@ test('employee entry restores the latest server-ordered conversation while older
   p.d.querySelector('#emps .emp').click();assert.match(thread(p),/النتيجة الحديثة/);assert.doesNotMatch(thread(p),/رد قديم/);p.d.querySelector('[data-chat="older"]').click();assert.match(thread(p),/رد قديم/);
  }finally{p.close();}
 });
+
+test('saving a non-active connection retains its form values and focus without activation',async()=>{
+ for(const status of ['ERROR','EXPIRED','MISSING']){const p=await page({hash:'',integrations:{list:{ok:true,connections:[]},methods:{ok:true,methods:[{id:'secret',type:'SECRET_TEXT',available:true,fields:[{name:'token',label:'Token',type:'password',required:true}]}]},connect:{ok:true,connection:{id:'C'.repeat(21),slug:'gmail',status,scope:'PROJECT'}}}});try{
+  p.d.querySelector('#toolsLink').click();await flush();p.d.querySelector('#allTgl').click();p.d.querySelector('[data-c="gmail"]').click();await flush();const field=p.d.querySelector('#mf0');field.value='private-test-value';field.focus();p.d.querySelector('#mF form').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));await flush();
+  assert.equal(p.d.querySelector('#modal').classList.contains('on'),true);assert.equal(p.d.querySelector('#mf0'),field);assert.equal(field.value,'private-test-value');assert.equal(p.d.activeElement,field);assert.equal(p.d.querySelector('#mOk').disabled,false);assert.match(p.d.querySelector('#mF').textContent,/غير جاهز/);assert.doesNotMatch(p.d.querySelector('#mF').textContent,/private-test-value/);assert.equal(p.activationRequests.filter(r=>r.body.employee_id).length,0);
+ }finally{p.close();}}
+});
+test('revalidation only describes an ACTIVE saved connection as verified',async()=>{
+ for(const status of ['ACTIVE','ERROR','EXPIRED','MISSING']){const connection={id:'C'.repeat(21),slug:'gmail',status:'ACTIVE',scope:'PROJECT'};const p=await page({integrations:{list:{ok:true,connections:[connection]},revalidate:{ok:true,connection:{...connection,status}}}});try{
+  p.d.querySelector('#toolsLink').click();await flush();p.d.querySelector('[data-tool-details="gmail"]').click();p.d.querySelector('[data-revalidate]').click();await flush();assert.match(p.d.querySelector('#mD').textContent,status==='ACTIVE'?/تم التحقق من بيانات الربط/:/يحتاج إعادة ربط/);if(status!=='ACTIVE')assert.doesNotMatch(p.d.querySelector('#mD').textContent,/تم التحقق/);
+ }finally{p.close();}}
+});
+
+test('results card puts technical provider proof in details and avoids repeated employee and status labels',async()=>{
+ const p=await page({hydrate:{...empty,team:[employee],recent_work:[{...proof,subject:'آخر مهمة لـ '+employee.name,proof:'نتيجة الخدمة 200'}]}});try{
+  p.d.querySelector('[data-workspace-view="results"]').click();const card=p.d.querySelector('.work-record');assert.equal(card.querySelectorAll('.work-record__status').length,1);assert.equal(card.querySelector('small.msrc'),null);assert.match(card.querySelector('details').textContent,/200/);assert.doesNotMatch([...card.children].filter(el=>el.tagName!=='DETAILS').map(el=>el.textContent).join(' '),/200/);
+ }finally{p.close();}
+});
