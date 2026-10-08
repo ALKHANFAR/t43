@@ -364,10 +364,10 @@ var I = {
     var heading=view==='team'?ui('الموظفون','Employees'):ui('العمل والنتائج','Work and results');
     var body;
     if(window.__SIY_REAL__&&(!window.__SIY_DASH__||window.__SIY_LOAD_ERROR__))body='<p role="status">'+(window.__SIY_LOAD_ERROR__?loadErrorCopy():ui('جارٍ تحميل بيانات شركتك…','Loading your company data…'))+'</p>';
-    else if(view==='results')body=window.__SIY_REAL__?siyWorkHtml(null,ui('آخر سجلات العمل المحفوظة — الحالة والدليل لكل مهمة','Latest saved work records — status and evidence for each task')):'<p>'+ui('هذه معاينة؛ لا توجد نتائج تشغيل حقيقية هنا.','This is a preview; no real execution results are available here.')+'</p>';
+    else if(view==='results')body=window.__SIY_REAL__?siyWorkHtml(null,ui('آخر المهام','Latest tasks')):'<p>'+ui('هذه معاينة؛ لا توجد نتائج تشغيل حقيقية هنا.','This is a preview; no real execution results are available here.')+'</p>';
     else body=EMPS.length?EMPS.map(function(e){return '<button type="button" class="workspace-employee" data-open-employee="'+esc(e.id)+'"><span class="av">'+esc(e.ini)+'</span><span><b>'+esc(e.n)+'</b><small>'+esc(e.r)+'</small><small>'+esc(customerText(e.since))+'</small></span></button>';}).join(''):'<p>'+ui('لا يوجد موظفون محفوظون بعد. ابدأ بطلبك في شات سيادة.','No employees saved yet. Start with your request in Siyadah chat.')+'</p>';
     if(window.__SIY_DASH__&&!window.__SIY_LOAD_ERROR__&&((view==='team'&&!EMPS.length)||(view==='results'&&!(window.__SIY_DASH__.recent_work||[]).length)))body+='<button type="button" class="bts" data-workspace-view="siyadah">'+ui('ابدأ بطلبك في شات سيادة','Start your request in Siyadah chat')+'</button>';
-    return '<div class="col workspace-page"><h1 tabindex="-1">'+heading+'</h1><p>'+ (view==='team'?ui('افتح الموظف لمحادثته ومراجعة تعليماته وطريقة عمله.','Open an employee to chat and review its instructions and workflow.'):ui('السجل المحفوظ يوضح ما حدث؛ نجاح التشغيل لا يعني وحده إنجاز هدف تجاري.','Saved records show what happened; a successful run alone does not prove a business outcome.'))+'</p>'+body+'</div>';
+    return '<div class="col workspace-page"><h1 tabindex="-1">'+heading+'</h1><p>'+ (view==='team'?ui('افتح الموظف لمحادثته ومراجعة تعليماته وطريقة عمله.','Open an employee to chat and review its instructions and workflow.'):ui('نتائج فريقك وآخر تحديث لكل مهمة.','Your team’s results and the latest update for each task.'))+'</p>'+body+'</div>';
   }
   function renderThread(){
     var t=$("#thread"), scroll=t.scrollTop, nearEnd=t.scrollHeight-t.clientHeight-scroll<80; t.classList.toggle("thread--emp",isEmp());
@@ -435,7 +435,7 @@ var I = {
       '<div class="pin__c">'+(e.wait?'<span class="pill">ينتظر قرارك '+e.wait+'</span>':'')+
       '<span class="swl" style="font-size:.8rem;color:var(--ash)"><span id="onLbl">'+(window.__SIY_REAL__?((siyEmployeeStatePending[e.id]||(siyActivationResumeNotice?.busy&&siyActivationResumeNotice.employeeId===e.id))?ui('جارٍ التحقق من تغيير الحالة…','Verifying status…'):(e.draft?ui('بانتظار الربط','Needs connection'):e.on?ui('نشط في السجل','Recorded as active'):ui('متوقف في السجل','Recorded as paused'))):(e.on?(f?ui('شغّالة','Active'):ui('شغّال','Active')):(f?ui('متوقفة','Paused'):ui('متوقف','Paused'))))+'</span><button type="button" class="sw" id="onSw" role="switch"'+((siyEmployeeStatePending[e.id]||(siyActivationResumeNotice?.busy&&siyActivationResumeNotice.employeeId===e.id))?' disabled aria-busy="true"':e.draft?' disabled title="'+ui('اربط الأدوات واختبرها قبل التشغيل','Connect and test tools before activation')+'"':'')+' aria-checked="'+e.on+'" aria-label="'+(e.draft?ui('التشغيل متاح بعد ربط الأدوات واختبارها','Activation available after connecting and testing tools'):ui('تشغيل ','Activate ')+esc(e.n))+'"></button></span></div></div>'+
       metrics+
-      (e.draft?'<div class="pin__r3"><button type="button" class="link" id="draftTools">'+ui('الأدوات والربط','Tools & connections')+'</button></div>':'<div class="pin__r3"><span class="pin__k">'+ui(f?'أدواتها':'أدواته','Tools')+'</span>'+e.tools.map(chipHtml).join("")+
+      (e.draft?'<div class="pin__r3"><button type="button" class="link" id="draftTools">'+ui('الأدوات والربط','Tools & connections')+'</button></div>':'<div class="pin__r3"><span class="pin__k">'+ui('الأدوات','Tools')+'</span>'+e.tools.map(chipHtml).join("")+
       '<span class="mchip tip" data-tip="'+ui('ساعات العمل','Working hours')+(e.hours&&e.hours!=="—"?": "+esc(e.hours):"")+'"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l3 2"/></svg>'+(e.hours&&e.hours!=="—"?'<span>'+esc(e.hours)+'</span>':'')+'</span>'+
       '<span class="mchip tip" data-tip="'+(window.__SIY_REAL__?ui('الصلاحيات المسجلة؛ تطبيقها أثناء التشغيل غير مؤكد','Permissions are recorded; runtime enforcement is unverified'):ui((f?'تستأذنك':'يستأذنك')+' في القرارات الحساسة','Asks before sensitive decisions'))+'"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span>'+
       '<button type="button" class="link" id="instrTgl" aria-expanded="false" aria-controls="instrWrap">'+ui('التعليمات','Instructions')+'</button></div>')+'</div>';
@@ -1480,12 +1480,13 @@ var I = {
     window.__SIY_DASH__=dash; window.__SIY_EMPTY__=EMPS.length===0;
     if($("#memList")&&!$("#memList").hidden) renderMem();
     PLAN.employees.used=EMPS.length; PLAN.actions.used=typeof dash.work_count==="number"?dash.work_count:null;
+    var restoredEmployees={};
     if(restore&&Array.isArray(data.conversations)) data.conversations.forEach(function(c){
       if(typeof c.id!=="string"||!c.id||!Array.isArray(c.messages)) return;
       var messages=c.messages.filter(function(m){return ["user","assistant"].includes(m.role)&&typeof m.content==="string";}).map(function(m){return {me:m.role==="user",t:m.role==="user"?m.content:siyReplyHtml(m.content),at:siyMessageTime(m.at)};});
       messages.siyConversationId=c.id;
       CHATS[c.id]={with:c.employee_id||"siyadah",emp:c.employee_id||null,t:String(c.title||"محادثة سيادة"),when:"today",msgs:messages};
-      if(c.employee_id&&emp(c.employee_id)) eth[c.employee_id]=messages;
+      if(c.employee_id&&emp(c.employee_id)&&!restoredEmployees[c.employee_id]){eth[c.employee_id]=messages;restoredEmployees[c.employee_id]=true;}
     });
     if(restore&&Array.isArray(data.pending_work)) data.pending_work.forEach(function(work){
       if(typeof work.work_id!=="string"||!work.work_id||!["queued","running"].includes(work.work_status)) return;
@@ -1679,7 +1680,7 @@ var I = {
   function siyWorkHtml(records,label){ var d=window.__SIY_DASH__, w=Array.isArray(records)?records:(d&&d.recent_work)||[];
     if(!w.length) return '<p>'+ui('ما فيه عمل مسجّل بعد — أول ما يشتغل فريقك، كل نتيجة تنكتب هنا بإثباتها.','No work recorded yet. Verified results will appear here when your team runs.')+'</p>';
     return '<p>'+esc(label||ui('آخر عمل فعلي للفريق','Latest verified team work'))+' (<span class="num">'+(Array.isArray(records)?w.length:(d.work_count||w.length))+'</span>):</p>'+w.map(function(x){
-      return '<div style="margin:8px 0;padding-inline-start:10px;border-inline-start:2px solid var(--hair)"><b>'+esc(x.subject||ui("مهمة","Task"))+'</b>'+
+      var owner=emp(x.employeeId);return '<div class="work-record"><div class="work-record__heading"><b>'+esc(x.subject||ui("مهمة","Task"))+'</b><span class="work-record__status" data-state="'+(['succeeded','failed','running','queued','awaiting_input','cancelled'].includes(x.status)?x.status:'unknown')+'">'+esc(siyWorkStatus(x.status))+'</span></div>'+(owner?'<small class="msrc">'+esc(owner.n)+'</small>':'')+
         (x.priority?' <span class="msrc">· '+esc(x.priority)+'</span>':'')+
         (x.message?'<div>'+esc(x.message)+'</div>':'')+
         '<div class="msrc">'+(x.status==='succeeded'&&x.recordId&&x.runId&&x.flowId?'✓ ':'')+esc(siyWorkStatus(x.status))+(x.proof?' · '+esc(customerText(x.proof)):'')+'</div>'+siyRefsHtml([['الطلب',x.work_id||x.workId],['التشغيل',x.runId],['النتيجة',x.recordId],['طريقة العمل',x.flowId]])+'</div>';

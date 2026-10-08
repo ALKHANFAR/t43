@@ -1321,3 +1321,9 @@ test('unavailable company data is never shown as an empty team or results record
   for(const view of ['team','results']){p.d.querySelector('[data-workspace-view="'+view+'"]').click();assert.match(thread(p),/تعذّر تحميل بيانات حسابك/);assert.doesNotMatch(thread(p),/لا يوجد موظفون محفوظون|ما فيه عمل مسجّل/);assert.equal(p.d.querySelector('#thread [data-workspace-view="siyadah"]'),null);}
  }finally{p.close();}
 });
+
+test('employee entry restores the latest server-ordered conversation while older history remains selectable',async()=>{
+ const p=await page({hydrate:{...empty,team:[employee],conversations:[{id:'latest',title:'آخر نتيجة',employee_id:employee.recordId,messages:[{role:'assistant',content:'النتيجة الحديثة'}]},{id:'older',title:'طلب قديم',employee_id:employee.recordId,messages:[{role:'assistant',content:'رد قديم'}]}]}});try{
+  p.d.querySelector('#emps .emp').click();assert.match(thread(p),/النتيجة الحديثة/);assert.doesNotMatch(thread(p),/رد قديم/);p.d.querySelector('[data-chat="older"]').click();assert.match(thread(p),/رد قديم/);
+ }finally{p.close();}
+});

@@ -489,6 +489,54 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
 .tr-live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);animation:trPulse 1.2s ease-in-out infinite}
 @media (max-width:640px){ .rc-r{grid-template-columns:56px 1fr} }
 
+/* Workspace craft: hierarchy adapted from the existing isolated chat-craft reference.
+   Icon/title/description grouping follows the reviewed Tailark card reference;
+   implementation uses this app's own tokens and verified data, without new dependencies. */
+:root{--side:260px}
+.side{border-inline-end-color:transparent}
+.newc,.emp,.hist{border-radius:10px}
+.newc{border-color:transparent;min-height:44px}
+.lbl{padding-block-start:20px;font-size:.72rem;letter-spacing:0}
+.workspace-nav{border:0;margin-block-end:4px;padding-block-end:4px}
+.workspace-nav .hist{min-height:44px;display:flex;align-items:center}
+.workspace-nav .hist[aria-current="page"]{background:var(--paper);box-shadow:0 1px 3px rgb(0 0 0 / 4%)}
+.hist:hover,.emp:hover{background:var(--paper)}
+.bar{min-height:64px;flex-shrink:0}
+.thread{padding-block-start:28px}
+.col{max-width:740px;gap:30px}
+.m--me .m__b{border-color:transparent;border-radius:16px 16px 5px 16px;padding:12px 18px}
+.m__av{border-color:transparent;border-radius:8px}
+.m__b{line-height:1.85;overflow-wrap:anywhere}
+.box{min-height:64px;border-color:var(--hair);border-radius:18px;padding:9px 9px 9px 18px;box-shadow:0 3px 14px rgb(0 0 0 / 3%)}
+.box:focus-within{box-shadow:0 0 0 3px var(--accent-wash)}
+.box textarea{min-width:0;line-height:1.8}
+.send{border-radius:12px}
+.workspace-page{gap:12px;padding-block-end:36px}
+.workspace-page h1,.tools h1{font-size:clamp(1.5rem,3vw,2rem);font-weight:500;line-height:1.6}
+.workspace-page>p,.tools .sub{line-height:1.9;max-width:64ch}
+.workspace-employee{border-radius:14px;padding:18px;gap:14px;margin:0;transition:background .18s,border-color .18s}
+.workspace-employee:hover,.workspace-employee:focus-visible{background:var(--wash);border-color:var(--accent-edge)}
+.workspace-employee .av{width:42px;height:42px;border-radius:12px;flex:none}
+.workspace-employee b{font-size:1rem;font-weight:500}
+.workspace-employee small{font-size:.8rem;line-height:1.8}
+.work-record{margin-block:12px;padding:16px 18px;border:1px solid var(--hair);border-radius:14px;background:var(--paper);line-height:1.85;overflow-wrap:anywhere}
+.work-record__heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-block-end:8px}
+.work-record__heading>b{font-size:1rem;font-weight:500;min-width:0}
+.work-record__status{display:inline-flex;align-items:center;min-height:26px;padding:2px 8px;border-radius:7px;background:var(--wash);color:var(--ash);font-size:.72rem;white-space:nowrap;flex:none}
+.work-record__status[data-state="succeeded"]{color:var(--ok)}
+.work-record__status[data-state="failed"]{color:var(--bad)}
+.work-record>.msrc{margin-block-start:8px}
+.siyrefs summary{min-height:32px}
+.tgrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr));gap:14px}
+.tl{border-radius:14px;padding:18px;gap:14px}
+.tl:hover{transform:none;background:var(--wash);box-shadow:none;border-color:var(--accent-edge)}
+.tl__n{font-size:1rem;line-height:1.6}.tl__d{line-height:1.8;margin-block-start:4px}
+.published-work ol{list-style:none;padding:0;margin:16px 0;counter-reset:workstep}
+.published-work li{position:relative;padding:10px 0;padding-inline-start:36px;border-inline-start:1px solid var(--hair);margin-inline-start:13px;counter-increment:workstep}
+.published-work li::before{content:counter(workstep);position:absolute;inset-inline-start:-13px;top:12px;width:26px;height:26px;display:grid;place-items:center;border:1px solid var(--hair);border-radius:8px;background:var(--paper);font-size:.7rem;color:var(--ash);font-variant-numeric:tabular-nums}
+.published-work li:last-child{border-color:transparent}
+@media(max-width:640px){.thread{padding:18px 16px 0}.col{gap:24px}.comp{padding:10px 12px 14px}.workspace-employee,.work-record,.tl{padding:15px}.workspace-page h1{font-size:1.5rem}.bar{min-height:56px}.box{padding-inline-start:14px}.m--me .m__b{max-width:94%}}
+
 @media (prefers-reduced-motion:reduce){ *{animation:none !important;transition:none !important} }
 
 /* ==========================  المرحلة الثانية: طبقة الحياة  ==========================
