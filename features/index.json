@@ -825,20 +825,31 @@
     },
 {
       "id": "interactive_chat_experience_v2_preview",
-      "name": "مثال تصميم لمساحة موظف سيادة",
+      "name": "معاينة الموظف ومساحته الواحدة",
       "aliases": [
-        "موظف متابعة العملاء",
-        "تكليف الموظف",
-        "معاينة مساحة الموظف"
+        "كل شيء داخل الموظف",
+        "البحث عن الموظف",
+        "موظفون كثيرون",
+        "تكليف الموظف"
       ],
       "state": "illustrative",
-      "meaning": "مثال تصميم مستقل لموظف متابعة العملاء؛ يحفظ نص التكليف والتوجيهات محليًا فقط ويدعم التعديل والتنقل. النتائج فارغة. لا مؤقتات تنفيذ ولا مخرجات مزود ولا إنشاء موظف فعلي. الأدوات أسماء توضيحية داخل تفاصيل طريقة العمل فقط. لا يعدل الإنتاج.",
+      "meaning": "معاينة مستقلة بأدوار توضيحية وبيانات محلية: نظرة مختصرة مرتبة بآخر استخدام وبحث في جميع الأدوار، ثم مساحة واحدة لكل موظف تجمع تكليفاته وتوجيهاته ونتائج فارغة. المسودة والتعديل والتوجيه والسجل منفصلة لكل موظف. البيانات غير محدودة بالعدد التجريبي20؛ إعداد العرض الأخير قابل للتغيير. لا API أو تشغيل أو إنشاء موظف أو نتيجة مزود ولا تعديل إنتاج.",
       "linear": "ABO-54",
       "locations": [
         {
-          "role": "employee_workspace",
+          "role": "unified_employee_space",
           "path": "design/siyadah-chat-experience-v2.html",
-          "anchor": "id=\"employeeMethod\""
+          "anchor": "id=\"employeeView\""
+        },
+        {
+          "role": "all_search",
+          "path": "design/siyadah-chat-experience-v2.js",
+          "anchor": "function renderDirectory()"
+        },
+        {
+          "role": "employee_context",
+          "path": "design/siyadah-chat-experience-v2.js",
+          "anchor": "function select(id)"
         },
         {
           "role": "local_assignment",
@@ -846,14 +857,14 @@
           "anchor": "function save()"
         },
         {
-          "role": "no_execution_test",
+          "role": "isolation_test",
           "path": "scripts/chat-experience-preview-runtime.test.mjs",
-          "anchor": "employee example saves a local assignment without execution or provider results"
+          "anchor": "employee assignments drafts and instructions stay isolated when returning through home"
         },
         {
-          "role": "secondary_tools_test",
+          "role": "scale_test",
           "path": "scripts/chat-experience-preview-runtime.test.mjs",
-          "anchor": "tools are secondary unopened detail and instructions save locally"
+          "anchor": "empty and larger employee collections use the same space without an employee capacity limit"
         }
       ]
     }
