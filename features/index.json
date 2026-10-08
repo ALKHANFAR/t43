@@ -832,7 +832,7 @@
         "تجربة جديدة لسيادة"
       ],
       "state": "illustrative",
-      "meaning": "معاينة محلية مستقلة ببيانات توضيحية: طلب وأدوات سياق وخطوات قابلة للفتح ونتيجة ومسودة وإلغاء. لا ربط حسابات ولا نموذج ولا تشغيل مزود. لا تعدل واجهة الإنتاج.",
+      "meaning": "معاينة محلية مستقلة ببيانات توضيحية: طلب وأدوات سياق مقترحة وسؤال أولوية للطلب الناقص. خطوة حالية مختصرة، نتيجة أولًا وطلب واحد، جدول وتفاصيل عند الطلب وإلغاء. لا ربط حسابات ولا نموذج ولا تشغيل مزود. لا تعدل الإنتاج.",
       "linear": "ABO-54",
       "locations": [
         {
@@ -854,6 +854,21 @@
           "role": "test",
           "path": "scripts/chat-experience-preview-runtime.test.mjs",
           "anchor": "preview cancel prevents late fixture progress and preserves editable request context"
+        },
+        {
+          "role": "context_question",
+          "path": "design/siyadah-chat-experience-v2.js",
+          "anchor": "function answerQuestion(value)"
+        },
+        {
+          "role": "compact_result",
+          "path": "design/siyadah-chat-experience-v2.js",
+          "anchor": "function resultHtml(r,archive=false)"
+        },
+        {
+          "role": "focus_regression",
+          "path": "scripts/chat-experience-preview-runtime.test.mjs",
+          "anchor": "opening question edit during progress keeps typed answer and focus through a tick"
         }
       ]
     }
