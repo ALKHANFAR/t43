@@ -484,6 +484,8 @@
         {"role": "native_run_contract", "path": "CHAT_CONTRACT.md", "anchor": "## Native employee production run receipt"},
         {"role": "durable_identity", "path": "lib/employee-run-recovery.mjs", "anchor": "async function capture("},
         {"role": "exact_run_recovery", "path": "lib/employee-run-recovery.mjs", "anchor": "async function reconcile("},
+        {"role": "one_off_identity", "path": "lib/employee-run-recovery.mjs", "anchor": "employee=null,flowId=null"},
+        {"role": "one_off_readback_test", "path": "scripts/one-off-run-recovery-runtime.test.mjs", "anchor": "one-off identity and successful receipt"},
         {"role": "identity_migration", "path": "migrations/0006-native-execution-identity.sql", "anchor": "execution_identity_json jsonb"},
         {"role": "recovery_contract", "path": "CHAT_CONTRACT.md", "anchor": "## Durable native employee receipt recovery"},
         {"role": "recovery_pg_test", "path": "scripts/employee-run-recovery-runtime.test.mjs", "anchor": "durable native receipts survive restart, expiry and concurrent reconciliation in PostgreSQL"},

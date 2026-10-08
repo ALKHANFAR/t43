@@ -27,6 +27,19 @@ test('durable native receipts survive restart, expiry and concurrent reconciliat
       await fresh().capture({...context,claimToken,employee,execution,publishedVersion:'v1'});
       return {...context,employeeId,runId,execution,calls,fresh,unavailable:value=>{unavailable=value;},overrides:value=>{overrides=value;}};
     }
+    await t.test('one-off recovery settles its durable request without any employee row',async()=>{
+      const companyId=`qa_${randomUUID()}`,requestId='one-off',conversationId='one-off-chat',claimToken='e'.repeat(64),flowId='F'.repeat(21),runId='R'.repeat(21),projectId='P'.repeat(21),flowVersionId='v1';
+      await query(`INSERT INTO siyadah_chat_requests(company_id,request_id,conversation_id,request_hash,claim_token,created_at)
+        VALUES ($1,$2,$3,$4,$5,now()-interval '20 minutes')`,[companyId,requestId,conversationId,'f'.repeat(64),claimToken]);
+      const calls=[],projects={requireProject:async()=>projectId,ownedFlow:async(...args)=>{assert.deepEqual(args,[companyId,flowId,flowVersionId]);return {flow:{projectId,version:{id:flowVersionId}}};}};
+      const mcp={call:async(_company,method,params)=>{calls.push(params.name);assert.equal(method,'tools/call');assert.deepEqual(params,{name:'ap_get_run',arguments:{flowRunId:runId}});return {structuredContent:{id:runId,flowId,projectId,flowVersionId,environment:'PRODUCTION',status:'SUCCEEDED',steps:[{output:{status:200,body:'one-off reply'}}]}};}};
+      const fresh=()=>createEmployeeRunRecovery({query,projects,mcp}),context={companyId,requestId,conversationId};
+      const identity=await fresh().capture({...context,claimToken,employee:null,flowId,execution:{runId,flowId,projectId,flowVersionId,environment:'PRODUCTION'},publishedVersion:flowVersionId});
+      assert.equal(Object.hasOwn(identity,'employeeId'),false);await profiles.expireChatRequest(context);
+      const result=await fresh().reconcile(context);assert.equal(result.run_id,runId);assert.match(result.reply,/one-off reply/);assert.equal(Object.hasOwn(result,'result'),false);
+      assert.equal((await profiles.readChatRequest(context)).status,'succeeded');assert.equal((await query('SELECT id FROM siyadah_digital_employees WHERE company_id=$1',[companyId])).rows.length,0);
+      assert.deepEqual(await fresh().reconcile(context),result);assert.deepEqual(calls,['ap_get_run']);
+    });
     await t.test('crash after durable identity and expiry then recovery does not redispatch',async()=>{
       const f=await fixture();f.unavailable(true);await assert.rejects(f.fresh().reconcile(f));
       await profiles.expireChatRequest(f);
