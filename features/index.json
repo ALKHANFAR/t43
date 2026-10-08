@@ -565,7 +565,7 @@
       "state": "draft_pr",
       "meaning": "يفسر رفض مزود النموذج 402 قبل التنفيذ برسالة محفوظة في الطلب والمحادثة، دون كشف تفاصيل المزود أو تغيير دليل تنفيذ بدأ بالفعل.",
       "linear": "ABO-69",
-      "pr": null,
+      "pr": "https://github.com/ALKHANFAR/t43/pull/66",
       "locations": [
         {
           "role": "provider_error",
