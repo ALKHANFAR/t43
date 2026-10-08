@@ -597,11 +597,11 @@ kbd{font-family:var(--f-display);font-size:.7rem;color:var(--ash);border:1px sol
       <input class="hq" id="hq" type="search" placeholder="ابحث عن محادثة أو موظف" data-en-placeholder="Find a chat or employee" aria-label="ابحث في المحادثات أو اكتب أمرًا" data-en-aria-label="Search chats or enter a command" autocomplete="off" aria-controls="pal">
       <div class="pal" id="pal" hidden></div>
       <section id="awaitingSection" hidden aria-label="بانتظارك" data-en-aria-label="Needs your input"><div class="lbl"><span data-en="Needs your input">بانتظارك</span></div><div id="awaitingChats"></div></section>
-      <div id="hgToday"><div class="lbl"><span data-en="Your chats">محادثاتك</span></div><div id="histToday"></div></div>
-      <div id="hgYest"><div class="lbl"><span data-en="Yesterday">أمس</span></div><div id="histYest"></div></div>
-      <div id="hgWeek"><div class="lbl"><span data-en="Last week">الأسبوع الماضي</span></div><div id="histWeek"></div></div>
+      <div id="hgToday" hidden><div class="lbl"><span data-en="Your chats">محادثاتك</span></div><div id="histToday"></div></div>
+      <div id="hgYest" hidden><div class="lbl"><span data-en="Yesterday">أمس</span></div><div id="histYest"></div></div>
+      <div id="hgWeek" hidden><div class="lbl"><span data-en="Last week">الأسبوع الماضي</span></div><div id="histWeek"></div></div>
       <div class="hq__none" id="hqNone" data-en="No chats match that name." hidden>ما فيه محادثة بهذا الاسم.</div>
-      <section id="teamSection"><div class="lbl"><span data-en="Your employees">موظفوك</span></div><div id="emps"></div></section>
+      <section id="teamSection" hidden><div class="lbl"><span data-en="Your employees">موظفوك</span></div><div id="emps"></div></section>
       <nav class="workspace-nav" aria-label="إدارة العمل" data-en-aria-label="Manage work">
         <button type="button" class="hist" data-workspace-view="results"><span data-en="Results">النتائج</span></button>
         <button type="button" class="hist" data-workspace-view="team"><span data-en="All employees">كل الموظفين</span></button>

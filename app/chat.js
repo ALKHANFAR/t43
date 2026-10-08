@@ -247,7 +247,7 @@ var I = {
     var refs=(items||[]).filter(function(x){return x&&typeof x[1]==="string"&&/^[A-Za-z0-9_-]+$/.test(x[1]);});
     if(!window.__SIY_REAL__||!refs.length) return "";
     var refNames=locale==='en'?{'الطلب':'Request','المهمة':'Task','التشغيل':'Run','النتيجة':'Result','طريقة العمل':'Work plan','الموظف':'Employee','النسخة المنشورة':'Published version','اختبار التهيئة':'Test run'}:{};
-    return '<details class="siyrefs"><summary>'+ui('الدليل التقني','Technical evidence')+'</summary>'+(note?'<p>'+esc(note)+'</p>':'')+'<div class="siyrefs__list">'+refs.map(function(x){return '<span>'+esc(refNames[x[0]]||customerText(x[0]))+' <code>'+esc(x[1])+'</code></span>';}).join("")+'</div></details>';
+    return '<details class="siyrefs"><summary>'+ui('كيف تأكدنا؟','How was this verified?')+'</summary>'+(note?'<p>'+esc(note)+'</p>':'')+'<div class="siyrefs__list">'+refs.map(function(x){return '<span>'+esc(refNames[x[0]]||customerText(x[0]))+' <code>'+esc(x[1])+'</code></span>';}).join("")+'</div></details>';
   }
   /* عنوان المحادثة: قصّ عند حدود الكلمة */
   function title(t){ if(t.length<=32) return t; var c=t.slice(0,32), i=c.lastIndexOf(" "); return (i>12?c.slice(0,i):c).replace(/[،,.؟?!:]+$/,"")+"…"; }
@@ -286,7 +286,7 @@ var I = {
   /* --- الشريط العلوي + المحرر --- */
   function renderBar(){
     $("#whoAv").innerHTML = who==="tools" ? '<svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 01-12 0V8zM12 17v4"/></svg>' : avHtml(who);
-    $("#whoN").textContent = who==="team" ? ui("الموظفون","Employees") : who==="results" ? ui("العمل والنتائج","Work and results") : who==="tools" ? ui("الأدوات","Tools") : (isEmp() ? name(who)+" · "+emp(who).r : name("siyadah"));
+    $("#whoN").textContent = who==="team" ? ui("الموظفون","Employees") : who==="results" ? ui("النتائج","Results") : who==="tools" ? ui("الأدوات","Tools") : (isEmp() ? name(who)+" · "+emp(who).r : name("siyadah"));
     $(".comp").style.display = ["tools","team","results"].includes(who) ? "none" : "";
     $("#input").placeholder = isEmp() ? ui("اكتب ل","Message ")+name(who)+"…" : ui("اكتب لسيادة…","Message Siyadah…");
     var lv=$("#whoLive"); if(lv){lv.hidden=!(isEmp()&&PRES[who]);lv.textContent=ui('يشتغل الآن…','Working now…');}
@@ -340,7 +340,7 @@ var I = {
   /* ---------- افتتاحية «اليوم» — ثلاثة أسطر من البيانات + رقاقتا اقتراح ---------- */
   function cw(n){ return {1:"واحد",2:"اثنان",3:"ثلاثة",4:"أربعة",5:"خمسة"}[n]||('<span class="num">'+n+'</span>'); }
   function openerHtml(){
-    if(window.__SIY_REAL__) return '<div class="m m--ai"><div class="m__b"><div class="m__c" dir="auto"><p>'+esc(window.__SIY_LOAD_ERROR__||ui("وش هدفك اليوم؟ اكتب طلبك هنا، أو اختر موظفًا من فريقك.","What would you like to achieve today? Write your request here, or choose someone from your team."))+'</p></div></div></div>';
+    if(window.__SIY_REAL__) return '<div class="m m--ai"><div class="m__b"><div class="m__c" dir="auto"><p>'+esc(window.__SIY_LOAD_ERROR__||ui("وش تحتاج ننجز؟","What would you like done?"))+'</p></div></div></div>';
     var h=new Date().getHours(), greet=(h>=5&&h<12)?"صباح الخير.":"مساء الخير.";
     var n=EMPS.reduce(function(a,e){return a+e.log.length;},0)+ACTIONS.length;
     var X=EMPS.reduce(function(a,e){return a+e.wait;},0);
@@ -366,13 +366,13 @@ var I = {
       EMPS.map(function(e){return '<b>'+esc(e.n)+':</b> '+e.log[0][1];}).join('<br>');
   }
   function workspacePageHtml(view){
-    var heading=view==='team'?ui('الموظفون','Employees'):ui('العمل والنتائج','Work and results');
+    var heading=view==='team'?ui('الموظفون','Employees'):ui('النتائج','Results');
     var body;
     if(window.__SIY_REAL__&&(!window.__SIY_DASH__||window.__SIY_LOAD_ERROR__))body='<p role="status">'+(window.__SIY_LOAD_ERROR__?loadErrorCopy():ui('جارٍ تحميل بيانات شركتك…','Loading your company data…'))+'</p>';
     else if(view==='results')body=window.__SIY_REAL__?siyWorkHtml(null,ui('آخر المهام','Latest tasks')):'<p>'+ui('هذه معاينة؛ لا توجد نتائج تشغيل حقيقية هنا.','This is a preview; no real execution results are available here.')+'</p>';
     else body=EMPS.length?EMPS.map(function(e){return '<button type="button" class="workspace-employee" data-open-employee="'+esc(e.id)+'"><span class="av">'+esc(e.ini)+'</span><span><b>'+esc(e.n)+'</b><small>'+esc(e.r)+'</small><small>'+esc(customerText(e.since))+'</small></span></button>';}).join(''):'<p>'+ui('لا يوجد موظفون محفوظون بعد. ابدأ بطلبك في شات سيادة.','No employees saved yet. Start with your request in Siyadah chat.')+'</p>';
     if(window.__SIY_DASH__&&!window.__SIY_LOAD_ERROR__&&((view==='team'&&!EMPS.length)||(view==='results'&&!(window.__SIY_DASH__.recent_work||[]).length)))body+='<button type="button" class="bts" data-workspace-view="siyadah">'+ui('ابدأ بطلبك في شات سيادة','Start your request in Siyadah chat')+'</button>';
-    return '<div class="col workspace-page"><h1 tabindex="-1">'+heading+'</h1><p>'+ (view==='team'?ui('افتح الموظف لمحادثته ومراجعة تعليماته وطريقة عمله.','Open an employee to chat and review its instructions and workflow.'):ui('نتائج فريقك وآخر تحديث لكل مهمة.','Your team’s results and the latest update for each task.'))+'</p>'+body+'</div>';
+    return '<div class="col workspace-page"><h1 tabindex="-1">'+heading+'</h1><p>'+ (view==='team'?ui('افتح الموظف لمحادثته ومراجعة تعليماته وطريقة عمله.','Open an employee to chat and review its instructions and workflow.'):ui('آخر ما أنجزه موظفوك','Your employees’ latest work'))+'</p>'+body+'</div>';
   }
   function renderThread(){
     var t=$("#thread"), scroll=t.scrollTop, nearEnd=t.scrollHeight-t.clientHeight-scroll<80; t.classList.toggle("thread--emp",isEmp());
