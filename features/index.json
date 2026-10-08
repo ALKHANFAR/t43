@@ -86,6 +86,8 @@
           "path": "lib/company-profile.mjs",
           "anchor": "source:'flow_reply',content"
         },
+        {"role":"saved_reply_recovery","path":"lib/employee-run-recovery.mjs","anchor":"Retain only the bounded successful flow reply"},
+        {"role":"saved_reply_recovery_test","path":"scripts/one-off-run-recovery-runtime.test.mjs","anchor":"employee recovery saves only bounded successful reply bodies for the saved result view"},
         {
           "role": "card",
           "path": "app/chat.js",

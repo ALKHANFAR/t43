@@ -59,3 +59,26 @@ test('legacy employee capture and reconciliation retain their employee snapshot 
   assert.deepEqual(await recovery.capture(context),{runId,projectId,flowId,flowVersionId:'v1',environment:'PRODUCTION',employeeId:'employee-legacy',employeeUpdatedAt:'2026-10-08T00:00:00Z',previousRunId:null});
   assert.equal((await recovery.reconcile(context)).run_id,runId);assert.equal(writes[0][7],'employee-legacy');assert.equal(writes[0][9],context.employee.run_snapshot_updated_at);assert.equal(writes[0][10],null);assert.equal(writes[0][6],JSON.stringify({status:200}));
 });
+
+
+test('employee recovery saves only bounded successful reply bodies for the saved result view',async()=>{
+  for(const [output,expected] of [
+    [{status:200,body:'نتيجة الموظف',headers:{authorization:'private'},extra:'private'},{status:200,body:'نتيجة الموظف'}],
+    [{status:201,body:{items:[1,2]}},{status:201,body:'{"items":[1,2]}'}],
+    [{status:200,body:'x'.repeat(12000)},{status:200,body:'x'.repeat(12000)}],
+    [{status:200,body:'x'.repeat(12001)},{status:200}],
+    [{status:200,body:'  '},{status:200}],
+    [{status:500,body:'failure'},{status:500}],
+    [{status:200,body:null},{status:200}],
+    [{value:42},{status:null}],
+  ]){
+    const identity={runId,flowId,projectId,flowVersionId:'v1',employeeId:'employee-1',employeeUpdatedAt:'2026-10-08T00:00:00Z',previousRunId:null};let persisted;
+    const recovery=createEmployeeRunRecovery({query:async(sql,values)=>{
+      if(sql.startsWith('SELECT '))return {rows:[{conversation_id:'c1',status:'pending',execution_identity_json:identity}]};
+      assert.ok(sql.startsWith('WITH receipt AS'));assert.deepEqual(values.slice(0,3),['company-1','r1','c1']);
+      assert.match(sql,/e.updated_at=\$10::timestamptz/);persisted=JSON.parse(values[6]);return {rows:[{created_at:'now'}]};
+    },projects:{requireProject:async()=>projectId,ownedFlow:async()=>({})},mcp:{call:async()=>({structuredContent:{id:runId,flowId,projectId,flowVersionId:'v1',environment:'PRODUCTION',status:'SUCCEEDED',steps:[{output}]}})}});
+    const result=await recovery.reconcile({companyId:'company-1',requestId:'r1',conversationId:'c1'});
+    assert.equal(result.run_id,runId);assert.deepEqual(persisted,expected);assert.equal(Object.hasOwn(result,'result'),false);
+  }
+});
