@@ -259,3 +259,8 @@ test('pending decisions are read from tenant-owned unexpired approvals without c
  const rows=await service.pendingChatWork('company-a');assert.equal(rows[0].work_status,'awaiting_input');assert.equal(rows[0].approval.approval_id,'id');assert.equal(JSON.stringify(rows).includes('do-not-expose'),false);
  assert.deepEqual(calls[0].values,['company-a']);assert.match(calls[0].sql,/a\.tenant_id=r\.company_id/);assert.match(calls[0].sql,/a\.conversation_id=r\.conversation_id/);assert.match(calls[0].sql,/a\.expires_at>now\(\)/);assert.doesNotMatch(calls[0].sql,/DELETE|UPDATE|INSERT/);
 });
+
+test('saved work exposes only the successful flow reply body, never response headers or a guessed result',async()=>{
+ const query=async(sql,values)=>{assert.deepEqual(values,['company-a']);assert.match(sql,/company_id=\$1/);return {rows:[{id:'e1',activepieces_flow_id:'f1',name:'التقرير',last_run_id:'r1',last_result_json:{status:200,body:{report:'تقرير اليوم'},headers:{Authorization:'secret'}}},{id:'e2',name:'قديم',last_run_id:'r2',last_result_json:{status:200}},{id:'e3',name:'خطأ',last_run_id:'r3',last_result_json:{status:500,body:'خطأ'}},{id:'e4',name:'كبير',last_run_id:'r4',last_result_json:{status:200,body:'x'.repeat(12001)}}]};};
+ const rows=await createCompanyProfileService({query}).recentWork('company-a');assert.deepEqual(rows[0].result,{schemaVersion:1,source:'flow_reply',content:'{"report":"تقرير اليوم"}'});assert.equal(JSON.stringify(rows).includes('secret'),false);assert.equal(rows.slice(1).every(row=>!row.result),true);
+});

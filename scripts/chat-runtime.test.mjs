@@ -1402,3 +1402,11 @@ test('reload restores a live pending decision without dispatching or polling its
 test('an expired restored decision is not offered as an available action',async()=>{
  const p=await page({hash:'',hydrate:{...empty,conversations:[{id:'expired',title:'قرار قديم',messages:[]}],pending_work:[{work_id:'request_expired',conversation_id:'expired',work_status:'awaiting_input',approval_expires_at:new Date(Date.now()-1000).toISOString(),approval:{required:true,kind:'tool_action',approval_id:'expired'}}]}});try{assert.equal(p.d.querySelector('#awaitingSection').hidden,true);assert.equal(p.d.querySelector('[data-siy-approval]'),null);assert.equal(p.requests.filter(r=>r.body&&r.body.op==='approve').length,0);}finally{p.close();}
 });
+
+test('results show the saved flow reply body safely instead of a status-only card',async()=>{
+ const p=await page({hydrate:{...empty,recent_work:[{...proof,message:'',result:{schemaVersion:1,source:'flow_reply',content:'[{"النتيجة":"تقرير اليوم <script>bad()</script>"}]'}}]}});try{p.d.querySelector('[data-workspace-view="results"]').click();assert.match(thread(p),/تقرير اليوم/);assert.ok(p.d.querySelector('.work-record__result table'));assert.equal(p.d.querySelector('.work-record__result script'),null);}finally{p.close();}
+});
+
+test('structured results keep fields beyond the twelfth column',async()=>{
+ const data=Object.fromEntries(Array.from({length:13},(_,i)=>['field'+i,'value'+i]));const p=await page({hydrate:{...empty,recent_work:[{...proof,result:{schemaVersion:1,source:'flow_reply',content:JSON.stringify([data])}}]}});try{p.d.querySelector('[data-workspace-view="results"]').click();assert.equal(p.d.querySelectorAll('.work-record__result th').length,13);assert.match(thread(p),/value12/);}finally{p.close();}
+});

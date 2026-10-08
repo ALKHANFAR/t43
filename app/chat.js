@@ -1440,7 +1440,7 @@ var I = {
       try{
         var parsed=JSON.parse(trimmed), rows=Array.isArray(parsed)?parsed:(parsed&&typeof parsed==='object'&&Object.keys(parsed).length===1&&Array.isArray(Object.values(parsed)[0])?Object.values(parsed)[0]:null);
         if(rows&&rows.length&&rows.length<=50&&rows.every(function(row){return row&&typeof row==='object'&&!Array.isArray(row)&&Object.values(row).every(function(v){return v===null||['string','number','boolean'].includes(typeof v);});})){
-          var keys=Array.from(new Set(rows.flatMap(function(row){return Object.keys(row);}))).slice(0,12);
+          var keys=Array.from(new Set(rows.flatMap(function(row){return Object.keys(row);})));
           return '<div class="reply-table" role="region" tabindex="0" aria-label="'+ui('نتيجة منظمة','Structured result')+'"><table><thead><tr>'+keys.map(function(key){return '<th scope="col">'+esc(key)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(row){return '<tr>'+keys.map(function(key){return '<td dir="auto">'+esc(row[key]===undefined||row[key]===null?'':String(row[key]))+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
         }
       }catch(error){}
@@ -1703,6 +1703,7 @@ var I = {
       var owner=emp(x.employeeId);return '<div class="work-record"><div class="work-record__heading"><b>'+esc(x.subject||ui("مهمة","Task"))+'</b><span class="work-record__status" data-state="'+(['succeeded','failed','running','queued','awaiting_input','cancelled'].includes(x.status)?x.status:'unknown')+'">'+esc(siyWorkStatus(x.status))+'</span></div>'+(owner&&String(x.subject||'').indexOf(owner.n)===-1?'<small class="msrc">'+esc(owner.n)+'</small>':'')+
         (x.priority?' <span class="msrc">· '+esc(x.priority)+'</span>':'')+
         (x.message?'<div>'+esc(x.message)+'</div>':'')+
+        (who==='results'&&x.status==='succeeded'&&x.runId&&x.flowId&&x.result?.schemaVersion===1&&x.result.source==='flow_reply'&&typeof x.result.content==='string'?'<div class="work-record__result">'+siyReplyHtml(x.result.content)+'</div>':'')+
         (who==='results'&&x.conversation_id&&CHATS[x.conversation_id]?'<button type="button" class="bts" data-result-chat="'+esc(x.conversation_id)+'">'+ui('شوف المحادثة','View conversation')+'</button>':'')+
         (who==='results'?'':'<div class="msrc">'+(x.status==='succeeded'&&x.recordId&&x.runId&&x.flowId?'✓ ':'')+esc(siyWorkStatus(x.status))+(x.proof?' · '+esc(customerText(x.proof)):'')+'</div>')+siyRefsHtml([['الطلب',x.work_id||x.workId],['التشغيل',x.runId],['النتيجة',x.recordId],['طريقة العمل',x.flowId]],who==='results'&&x.proof?customerText(x.proof):'')+'</div>';
     }).join("");

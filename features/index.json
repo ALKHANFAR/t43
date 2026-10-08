@@ -56,6 +56,9 @@
       "linear": "ABO-69",
       "pr": "https://github.com/ALKHANFAR/t43/pull/64",
       "locations": [
+        {"role":"saved_reply","path":"lib/company-profile.mjs","anchor":"source:'flow_reply',content"},
+        {"role":"card","path":"app/chat.js","anchor":"x.result.source==='flow_reply'"},
+        {"role":"saved_reply_test","path":"scripts/company-profile-runtime.test.mjs","anchor":"saved work exposes only the successful flow reply body"},
         {"role": "render", "path": "app/chat.js", "anchor": "function siyReplyHtml(text)"},
         {"role": "verified_run", "path": "app/chat.js", "anchor": "var verifiedRun=kind==='tool_result'"},
         {"role": "proof_scope", "path": "app/chat.js", "anchor": "r.work_id===data.work_id"},

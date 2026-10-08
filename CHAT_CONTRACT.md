@@ -147,3 +147,7 @@ A bounded instruction such as «لا تنفذ أكثر من مرة» limits repe
 `hydrate.pending_work` may include a saved `awaiting_input` response only when its native approval row still exists, belongs to the same company and conversation, and has not expired. It includes the existing customer-facing reply, approval and optional flow plan; no encrypted action arguments or unrelated response fields. The browser renders this decision without polling, dispatching or consuming it. The existing `approve` route remains the authority and rechecks expiry and ownership at action time. Restoring a decision does not grant MCP access or prove execution.
 
 Restored decisions include `approval_expires_at` from the matched approval row. The browser rejects missing/expired timestamps and replaces the restored action controls when that deadline passes, without executing an API operation. The server expiry check still governs any submitted decision.
+
+## Saved flow reply in recent work
+
+A `recent_work` item may include `result: {schemaVersion: 1, source: 'flow_reply', content: string}`. It projects only a nonempty saved reply body with 2xx status and at most 12,000 characters; response headers are not exposed. No content is fabricated for metadata-only recovery records, missing bodies, non-2xx responses or oversized bodies. This is the saved flow reply, not independent proof of external delivery. The results page escapes its text and preserves all JSON table fields.
