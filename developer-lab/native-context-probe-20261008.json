@@ -1,0 +1,67 @@
+{
+  "mode": "source_backed_native_path_resolution",
+  "sourceCommit": "23e0c254979c73cfbfbde00242668ee873e79508",
+  "sources": [
+    {
+      "path": "packages/core/utils/src/lib/object-utils.ts",
+      "sha256": "ccb35baff0a196d6bcd879fa30661f650e4bd2f627a6a5f0f85b42a8d64245a6"
+    },
+    {
+      "path": "packages/core/utils/src/lib/mustache-utils.ts",
+      "sha256": "1e7cca563ff43fb0665d767ae7be9e1fb810988c0ee676ee014d23e4be9e07da"
+    },
+    {
+      "path": "packages/server/engine/src/lib/variables/property-path.ts",
+      "sha256": "b5283a17014455262bf17628f650da5c9cf1519007b344463a97286922962a7b"
+    },
+    {
+      "path": "packages/server/engine/src/lib/variables/props-resolver.ts",
+      "sha256": "74fb9f12bcf2a27a5204c729c3a95f5ceea72906d7651d6fc8f0731d31dc7d58"
+    }
+  ],
+  "checksRun": 6,
+  "passed": 6,
+  "results": [
+    {
+      "id": "native_input_120",
+      "passed": true,
+      "checks": [
+        "saved_instructions",
+        "current_knowledge",
+        "server_owned_company"
+      ],
+      "syntheticInvocations": 1
+    },
+    {
+      "id": "native_input_240",
+      "passed": true,
+      "checks": [
+        "saved_instructions",
+        "current_knowledge",
+        "server_owned_company"
+      ],
+      "syntheticInvocations": 1
+    },
+    {
+      "id": "same_template_changes_with_context",
+      "passed": true
+    },
+    {
+      "id": "missing_binding_is_not_instruction_delivery",
+      "passed": true
+    },
+    {
+      "id": "describing_context_does_not_insert_it",
+      "passed": true
+    },
+    {
+      "id": "resolved_object_does_not_mutate_trigger",
+      "passed": true
+    }
+  ],
+  "limits": [
+    "Scripted LLM, actual Siyadah chat loop; synthetic trigger execution state and run/profile services.",
+    "Executes native property-path lookup, clone and token helpers; dotted-path parsing and interpolation are probe adapters. Full jsep, formulas, script evaluation and engine orchestration are not exercised.",
+    "No AI provider call, live Activepieces run, delivery, business outcome or added production gate."
+  ]
+}
