@@ -702,6 +702,8 @@
       "meaning": "زر التهيئة الأساسي يحفظ نص الطلب في sessionStorage مع زمنه ثم يفتح الشات دون URL أو إرسال تلقائي. اقتراح الموظفين خيار ثانوي. فشل التخزين يبقي النص في مكانه ويمنع الانتقال. مستهلك الشات في مسار التكامل؛ غير منشور ولا يثبت تنفيذ طلب أو إنشاء موظف.",
       "linear": "ABO-69",
       "locations": [
+        {"role":"consumer","path":"app/chat.js","anchor":"function siyRestoreRequestDraft()"},
+        {"role":"consumer_test","path":"scripts/chat-runtime.test.mjs","anchor":"onboarding request arrives in the composer without creating an employee or sending"},
         {
           "role": "producer",
           "path": "app/onboard.js",

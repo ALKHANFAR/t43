@@ -1699,7 +1699,7 @@ var I = {
       var owner=emp(x.employeeId);return '<div class="work-record"><div class="work-record__heading"><b>'+esc(x.subject||ui("مهمة","Task"))+'</b><span class="work-record__status" data-state="'+(['succeeded','failed','running','queued','awaiting_input','cancelled'].includes(x.status)?x.status:'unknown')+'">'+esc(siyWorkStatus(x.status))+'</span></div>'+(owner&&String(x.subject||'').indexOf(owner.n)===-1?'<small class="msrc">'+esc(owner.n)+'</small>':'')+
         (x.priority?' <span class="msrc">· '+esc(x.priority)+'</span>':'')+
         (x.message?'<div>'+esc(x.message)+'</div>':'')+
-        (x.conversation_id&&CHATS[x.conversation_id]?'<button type="button" class="bts" data-result-chat="'+esc(x.conversation_id)+'">'+ui('افتح النتيجة','Open result')+'</button>':'')+
+        (who==='results'&&x.conversation_id&&CHATS[x.conversation_id]?'<button type="button" class="bts" data-result-chat="'+esc(x.conversation_id)+'">'+ui('شوف المحادثة','View conversation')+'</button>':'')+
         (who==='results'?'':'<div class="msrc">'+(x.status==='succeeded'&&x.recordId&&x.runId&&x.flowId?'✓ ':'')+esc(siyWorkStatus(x.status))+(x.proof?' · '+esc(customerText(x.proof)):'')+'</div>')+siyRefsHtml([['الطلب',x.work_id||x.workId],['التشغيل',x.runId],['النتيجة',x.recordId],['طريقة العمل',x.flowId]],who==='results'&&x.proof?customerText(x.proof):'')+'</div>';
     }).join("");
   }

@@ -1385,3 +1385,10 @@ test('compact chat history keeps all saved chats reachable by search and expansi
   assert.equal(p.d.querySelectorAll('#histToday .hist:not([hidden])').length,8);const search=p.d.querySelector('#hq');search.value='طلب 11';search.dispatchEvent(new p.w.Event('input',{bubbles:true}));assert.equal(p.d.querySelector('[data-chat="history-11"]').hidden,false);search.value='';search.dispatchEvent(new p.w.Event('input',{bubbles:true}));p.d.querySelector('#historyMore').click();assert.equal(p.d.querySelectorAll('#histToday .hist:not([hidden])').length,12);p.d.querySelector('[data-chat="history-11"]').click();p.d.querySelector('#historyMore').click();assert.equal(p.d.querySelector('[data-chat="history-11"]').hidden,false);assert.equal(p.requests.filter(r=>r.body?.op==='message').length,0);
  }finally{p.close();}
 });
+
+test('a saved result opens only its own loaded conversation without resending',async()=>{
+ const p=await page({hydrate:{...empty,team:[employee],recent_work:[{...proof,conversation_id:'result-chat'}],conversations:[{id:'result-chat',employee_id:employee.recordId,title:'تقرير العميل',messages:[{role:'assistant',content:'هذه النتيجة المحفوظة'}]}]}});try{
+  p.d.querySelector('[data-workspace-view="results"]').click();const result=p.d.querySelector('[data-result-chat="result-chat"]');assert.ok(result);result.click();assert.match(thread(p),/هذه النتيجة المحفوظة/);assert.equal(p.requests.filter(r=>r.body&&r.body.op==='message').length,0);
+ }finally{p.close();}
+ const missing=await page({hydrate:{...empty,recent_work:[{...proof,conversation_id:'not-loaded'}]}});try{missing.d.querySelector('[data-workspace-view="results"]').click();assert.equal(missing.d.querySelector('[data-result-chat]'),null);}finally{missing.close();}
+});
