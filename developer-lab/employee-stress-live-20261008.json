@@ -1,0 +1,1039 @@
+{
+  "mode": "live_model_synthetic_AP",
+  "modelCasesRun": 28,
+  "results": [
+    {
+      "id": "latest_price",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 760
+        }
+      ]
+    },
+    {
+      "id": "latest_price",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 837
+        }
+      ]
+    },
+    {
+      "id": "older_needle",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 2399
+        }
+      ]
+    },
+    {
+      "id": "older_needle",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 2547
+        }
+      ]
+    },
+    {
+      "id": "multi_session",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1087
+        }
+      ]
+    },
+    {
+      "id": "multi_session",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": false,
+        "reasons": [
+          "unsupported_or_missing_evidence"
+        ]
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1147
+        }
+      ]
+    },
+    {
+      "id": "historical_price",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 703
+        }
+      ]
+    },
+    {
+      "id": "historical_price",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": false,
+        "reasons": [
+          "unsupported_or_missing_evidence"
+        ]
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1020
+        }
+      ]
+    },
+    {
+      "id": "missing_fact",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 491
+        }
+      ]
+    },
+    {
+      "id": "missing_fact",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 685
+        }
+      ]
+    },
+    {
+      "id": "conflicting_sources",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1153
+        }
+      ]
+    },
+    {
+      "id": "conflicting_sources",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1360
+        }
+      ]
+    },
+    {
+      "id": "employee_scope",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1429
+        }
+      ]
+    },
+    {
+      "id": "employee_scope",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1599
+        }
+      ]
+    },
+    {
+      "id": "long_context_injection",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 2602
+        }
+      ]
+    },
+    {
+      "id": "long_context_injection",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 2579
+        }
+      ]
+    },
+    {
+      "id": "negation_and_currency",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 727
+        }
+      ]
+    },
+    {
+      "id": "negation_and_currency",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 941
+        }
+      ]
+    },
+    {
+      "id": "scoped_task_history",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 926
+        }
+      ]
+    },
+    {
+      "id": "scoped_task_history",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 941
+        }
+      ]
+    },
+    {
+      "id": "evidence_not_success",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 669
+        }
+      ]
+    },
+    {
+      "id": "evidence_not_success",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "modelCalls": 1,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 930
+        }
+      ]
+    },
+    {
+      "id": "tool_discovery_aggregation",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "tool_trace": [
+        {
+          "name": "ap_list_tables",
+          "args": {},
+          "result": {
+            "structuredContent": {
+              "tables": [
+                {
+                  "id": "QQQQQQQQQQQQQQQQQQQQQ",
+                  "name": "Invoices"
+                },
+                {
+                  "id": "XXXXXXXXXXXXXXXXXXXXX",
+                  "name": "Old invoices"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_find_records",
+          "args": {
+            "tableId": "QQQQQQQQQQQQQQQQQQQQQ"
+          },
+          "result": {
+            "structuredContent": {
+              "records": [
+                {
+                  "status": "paid",
+                  "amount": 100
+                },
+                {
+                  "status": "paid",
+                  "amount": 250
+                },
+                {
+                  "status": "pending",
+                  "amount": 900
+                },
+                {
+                  "status": "cancelled",
+                  "amount": 800
+                }
+              ],
+              "evidence_key": "invoice_total"
+            }
+          }
+        }
+      ],
+      "workflow_passed": true,
+      "modelCalls": 3,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1034
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1179
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1309
+        }
+      ]
+    },
+    {
+      "id": "tool_discovery_aggregation",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "tool_trace": [
+        {
+          "name": "ap_list_tables",
+          "args": {},
+          "result": {
+            "structuredContent": {
+              "tables": [
+                {
+                  "id": "QQQQQQQQQQQQQQQQQQQQQ",
+                  "name": "Invoices"
+                },
+                {
+                  "id": "XXXXXXXXXXXXXXXXXXXXX",
+                  "name": "Old invoices"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_find_records",
+          "args": {
+            "tableId": "QQQQQQQQQQQQQQQQQQQQQ"
+          },
+          "result": {
+            "structuredContent": {
+              "records": [
+                {
+                  "status": "paid",
+                  "amount": 100
+                },
+                {
+                  "status": "paid",
+                  "amount": 250
+                },
+                {
+                  "status": "pending",
+                  "amount": 900
+                },
+                {
+                  "status": "cancelled",
+                  "amount": 800
+                }
+              ],
+              "evidence_key": "invoice_total"
+            }
+          }
+        }
+      ],
+      "workflow_passed": true,
+      "modelCalls": 3,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1268
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1444
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1591
+        }
+      ]
+    },
+    {
+      "id": "read_failure_recovery",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "tool_trace": [
+        {
+          "name": "ap_list_tables",
+          "args": {},
+          "result": {
+            "structuredContent": {
+              "tables": [
+                {
+                  "id": "QQQQQQQQQQQQQQQQQQQQQ",
+                  "name": "Invoices"
+                },
+                {
+                  "id": "XXXXXXXXXXXXXXXXXXXXX",
+                  "name": "Old invoices"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_find_records",
+          "args": {
+            "tableId": "QQQQQQQQQQQQQQQQQQQQQ"
+          },
+          "result": {
+            "isError": true,
+            "content": [
+              {
+                "type": "text",
+                "text": "Temporary read timeout. Safe to retry this read; no operation executed."
+              }
+            ]
+          }
+        },
+        {
+          "name": "ap_find_records",
+          "args": {
+            "tableId": "XXXXXXXXXXXXXXXXXXXXX"
+          },
+          "result": {
+            "isError": true,
+            "content": [
+              {
+                "type": "text",
+                "text": "wrong_table; read the current table catalog"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ap_find_records",
+          "args": {
+            "tableId": "QQQQQQQQQQQQQQQQQQQQQ"
+          },
+          "result": {
+            "structuredContent": {
+              "records": [
+                {
+                  "status": "paid",
+                  "amount": 100
+                },
+                {
+                  "status": "paid",
+                  "amount": 250
+                },
+                {
+                  "status": "pending",
+                  "amount": 900
+                },
+                {
+                  "status": "cancelled",
+                  "amount": 800
+                }
+              ],
+              "evidence_key": "invoice_total"
+            }
+          }
+        }
+      ],
+      "workflow_passed": true,
+      "modelCalls": 4,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1060
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1293
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1478
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1607
+        }
+      ]
+    },
+    {
+      "id": "read_failure_recovery",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 0,
+      "tool_trace": [
+        {
+          "name": "ap_list_tables",
+          "args": {},
+          "result": {
+            "structuredContent": {
+              "tables": [
+                {
+                  "id": "QQQQQQQQQQQQQQQQQQQQQ",
+                  "name": "Invoices"
+                },
+                {
+                  "id": "XXXXXXXXXXXXXXXXXXXXX",
+                  "name": "Old invoices"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_find_records",
+          "args": {
+            "tableId": "QQQQQQQQQQQQQQQQQQQQQ"
+          },
+          "result": {
+            "isError": true,
+            "content": [
+              {
+                "type": "text",
+                "text": "Temporary read timeout. Safe to retry this read; no operation executed."
+              }
+            ]
+          }
+        },
+        {
+          "name": "ap_find_records",
+          "args": {
+            "tableId": "XXXXXXXXXXXXXXXXXXXXX"
+          },
+          "result": {
+            "isError": true,
+            "content": [
+              {
+                "type": "text",
+                "text": "wrong_table; read the current table catalog"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ap_find_records",
+          "args": {
+            "tableId": "QQQQQQQQQQQQQQQQQQQQQ"
+          },
+          "result": {
+            "structuredContent": {
+              "records": [
+                {
+                  "status": "paid",
+                  "amount": 100
+                },
+                {
+                  "status": "paid",
+                  "amount": 250
+                },
+                {
+                  "status": "pending",
+                  "amount": 900
+                },
+                {
+                  "status": "cancelled",
+                  "amount": 800
+                }
+              ],
+              "evidence_key": "invoice_total"
+            }
+          }
+        }
+      ],
+      "workflow_passed": true,
+      "modelCalls": 4,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1281
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1516
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1697
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1856
+        }
+      ]
+    },
+    {
+      "id": "effect_then_independent_readback",
+      "chat": "main",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 1,
+      "tool_trace": [
+        {
+          "name": "invoice_report_ffff_92xsoq_mcp",
+          "args": {},
+          "result": {
+            "structuredContent": {
+              "accepted": true,
+              "runId": "RRRRRRRRRRRRRRRRRRRRR",
+              "evidence_key": "acceptance_only",
+              "execution": {
+                "runId": "RRRRRRRRRRRRRRRRRRRRR",
+                "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+                "projectId": "quality-project",
+                "flowVersionId": "VVVVVVVVVVVVVVVVVVVVV",
+                "environment": "PRODUCTION"
+              }
+            }
+          }
+        },
+        {
+          "name": "ap_list_tables",
+          "args": {},
+          "result": {
+            "structuredContent": {
+              "tables": [
+                {
+                  "id": "QQQQQQQQQQQQQQQQQQQQQ",
+                  "name": "Invoices"
+                },
+                {
+                  "id": "XXXXXXXXXXXXXXXXXXXXX",
+                  "name": "Old invoices"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_find_records",
+          "args": {
+            "tableId": "QQQQQQQQQQQQQQQQQQQQQ"
+          },
+          "result": {
+            "isError": true,
+            "content": [
+              {
+                "type": "text",
+                "text": "Filter by exact runId from acceptance receipt."
+              }
+            ]
+          }
+        },
+        {
+          "name": "ap_find_records",
+          "args": {
+            "tableId": "QQQQQQQQQQQQQQQQQQQQQ",
+            "filters": [
+              {
+                "fieldName": "runId",
+                "operator": "EQ",
+                "value": "RRRRRRRRRRRRRRRRRRRRR"
+              }
+            ]
+          },
+          "result": {
+            "structuredContent": {
+              "records": [
+                {
+                  "runId": "RRRRRRRRRRRRRRRRRRRRR",
+                  "status": "SUCCEEDED",
+                  "total": 350,
+                  "evidence_key": "verified_total"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "workflow_passed": true,
+      "modelCalls": 4,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1257
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1492
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1672
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1887
+        }
+      ]
+    },
+    {
+      "id": "effect_then_independent_readback",
+      "chat": "employee",
+      "mode": "live_model_synthetic_AP",
+      "context_passed": true,
+      "answer_quality": {
+        "passed": true,
+        "reasons": []
+      },
+      "effects": 1,
+      "tool_trace": [
+        {
+          "name": "invoice_report_ffff_92xsoq_mcp",
+          "args": {},
+          "result": {
+            "structuredContent": {
+              "accepted": true,
+              "runId": "RRRRRRRRRRRRRRRRRRRRR",
+              "evidence_key": "acceptance_only",
+              "execution": {
+                "runId": "RRRRRRRRRRRRRRRRRRRRR",
+                "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+                "projectId": "quality-project",
+                "flowVersionId": "VVVVVVVVVVVVVVVVVVVVV",
+                "environment": "PRODUCTION"
+              }
+            }
+          }
+        },
+        {
+          "name": "ap_get_run",
+          "args": {
+            "flowRunId": "RRRRRRRRRRRRRRRRRRRRR"
+          },
+          "result": {
+            "structuredContent": {
+              "id": "RRRRRRRRRRRRRRRRRRRRR",
+              "flowId": "FFFFFFFFFFFFFFFFFFFFF",
+              "environment": "PRODUCTION",
+              "status": "SUCCEEDED",
+              "steps": [
+                {
+                  "output": {
+                    "total": 350
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_list_tables",
+          "args": {},
+          "result": {
+            "structuredContent": {
+              "tables": [
+                {
+                  "id": "QQQQQQQQQQQQQQQQQQQQQ",
+                  "name": "Invoices"
+                },
+                {
+                  "id": "XXXXXXXXXXXXXXXXXXXXX",
+                  "name": "Old invoices"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "ap_find_records",
+          "args": {
+            "tableId": "QQQQQQQQQQQQQQQQQQQQQ"
+          },
+          "result": {
+            "isError": true,
+            "content": [
+              {
+                "type": "text",
+                "text": "Filter by exact runId from acceptance receipt."
+              }
+            ]
+          }
+        },
+        {
+          "name": "ap_find_records",
+          "args": {
+            "tableId": "QQQQQQQQQQQQQQQQQQQQQ",
+            "filters": [
+              {
+                "fieldName": "runId",
+                "operator": "EQ",
+                "value": "RRRRRRRRRRRRRRRRRRRRR"
+              }
+            ]
+          },
+          "result": {
+            "structuredContent": {
+              "records": [
+                {
+                  "runId": "RRRRRRRRRRRRRRRRRRRRR",
+                  "status": "SUCCEEDED",
+                  "total": 350,
+                  "evidence_key": "verified_total"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "workflow_passed": true,
+      "modelCalls": 4,
+      "usage": [
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1489
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 1850
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 2067
+        },
+        {
+          "model": "deepseek-v4-pro",
+          "tokens": 2254
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total": 28,
+    "passed": 26,
+    "workflowCases": 6,
+    "syntheticEffects": 2
+  },
+  "contract": "Live DeepSeek, actual production chat loop, synthetic AP tools only. Every answer, evidence key, scope and required workflow must pass. Diagnostic retries never erase failures. No real provider effects or deployment proof.",
+  "date": "2026-10-08",
+  "source_blobs": {
+    "server.mjs": "e4818d1d358d96b7b9ec4d9df363eb821782cceb",
+    "scripts/knowledge-quality-eval.mjs": "bda8e153ea145658b9b2c9b04cb8aca3f9bd33bb",
+    "scripts/employee-stress-eval.mjs": "30eba27e6c90f24397336a7e3bef890cdafe8002"
+  },
+  "validation": {
+    "runtime_passed": 472,
+    "runtime_skipped": 1,
+    "runtime_failed": 0,
+    "context_passed": 28,
+    "workflow_passed": 6,
+    "workflow_total": 6
+  },
+  "note": "Two exact citation-set failures retained. Synthetic AP effects: two; live AP/provider effects: zero. Production code unchanged."
+}
