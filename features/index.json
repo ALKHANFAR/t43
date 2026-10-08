@@ -3,6 +3,20 @@
   "repository": "ALKHANFAR/t43",
   "features": [
     {
+      "id": "chat_saved_company_context",
+      "name": "سيادة تتذكر معلومات شركتي وحساباتي",
+      "aliases": ["لا تسألني عن شيء محفوظ", "لغة عربية طبيعية", "سياق الشركة"],
+      "state": "draft_pr",
+      "meaning": "يحفظ سياق النموذج مصدر المعلومة وتاريخها والنواقص المحفوظة، ويقرأ جرد الاتصالات المقيد بالشركة دون أسرار. فشل الجرد يبقى مجهولا ولا يصبح قائمة فارغة. الاتصال المحفوظ ليس إثبات نتيجة مزود. لا يفرض تصنيف المهمة أو الموظف في البداية. غير منشور.",
+      "linear": "ABO-54",
+      "locations": [
+        {"role": "context", "path": "server.mjs", "anchor": "let connections={state:'unknown',items:[]};"},
+        {"role": "knowledge", "path": "lib/company-profile.mjs", "anchor": "missingCritical:(Array.isArray(profile.profile_json?.missingCritical)"},
+        {"role": "test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "saved company context preserves fact provenance and projects connections without credentials"},
+        {"role": "direction", "path": "docs/experience/experience-direction-20261008.md", "anchor": "تصحيح لاحق في الجلسة نفسها"}
+      ]
+    },
+    {
       "id": "native_flow_draft_test_receipt",
       "name": "إثبات حفظ مسودة الفلو واختبارها في الشات",
       "aliases": ["دليل مسودة الفلو", "نتيجة اختبار الفلو", "draft flow test receipt"],

@@ -41,7 +41,7 @@ const catalog=[
 const say=content=>({content});
 const use=(...calls)=>({content:'',tool_calls:calls.map(([name,args],index)=>({id:`call_${name}_${index}`,function:{name,arguments:typeof args==='string'?args:JSON.stringify(args||{})}}))});
 
-function setup({script,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false}={}){
+function setup({script,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false,connections=[]}={}){
   const log={model:[],tools:[],effects:0,states:[],owned:[],runs:[]};
   let stateAttempts=0,step=0,status=flowStatus,publishedVersionId=published?'v1':null,draftVersionId='v1',versionState=published?'LOCKED':'DRAFT',sampleData,updated='before',updatedBy,taskInput='{{trigger.task}}';
   const mcp={call:async(_company,method,params)=>{
@@ -74,13 +74,27 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false,edit
       setEmployeeState:async({employeeId,status:next})=>{if(saveStateFailure===true||saveStateFailure==='once'&&stateAttempts++===0)throw new Error('save failed');log.states.push([employeeId,next]);return {recordId:employeeId,flowId,name:'أمين المحتوى',status:next};},
     }),
     tenantProjects:async()=>({requireProject:async()=> 'P'.repeat(21),ownedFlow:async(_company,id)=>{log.owned.push(id);return {flow:{...publishedFlow,id,status,publishedVersionId,version:{...publishedFlow.version,id:draftVersionId,state:versionState,updated,...(updatedBy?{updatedBy}:{}),trigger:{...publishedFlow.version.trigger,settings:{...publishedFlow.version.trigger.settings,input:{...publishedFlow.version.trigger.settings.input,task:taskInput},...(sampleData?{sampleData}:{})}}}}};}}),
-    toolConnections:async()=>({assertOwnedExternal:async({externalId})=>{if(externalId==='foreign')throw new TenantProjectError('connection_not_owned','الاتصال لا يخص هذه الشركة.',403);}}),
+    toolConnections:async()=>({list:async company=>{assert.equal(company,'company-1');if(connections instanceof Error)throw connections;return connections;},assertOwnedExternal:async({externalId})=>{if(externalId==='foreign')throw new TenantProjectError('connection_not_owned','الاتصال لا يخص هذه الشركة.',403);}}),
   };
   const deepseekReply=runInNewContext(`${source.slice(start,end)}; deepseekReply`,ctx);
   const run=(extra={})=>deepseekReply({company:{name:'شركة'},settings:{},knowledge:{},team:[],history:[],message:'جهّز الموظف',mcp,companyId:'company-1',conversationId:'c1',deadlineMs:600_000,onEffectStart:()=>{log.effects++;},...extra});
   return {run,log};
 }
 const toolMessages=request=>request.messages.filter(item=>item.role==='tool').map(item=>item.content);
+
+test('saved company context preserves fact provenance and projects connections without credentials',async()=>{
+  const {run,log}=setup({script:[say('ما تحتاج تعيد معلومات شركتك')],connections:[{id:'saved',slug:'asana',displayName:'حساب العمل',status:'ACTIVE',secret:'never-in-context',externalId:'private-external'}]});
+  await run({knowledge:{facts:[{key:'services',topic:'services',value:'استشارات',sourceUrl:'https://company.example',sourceKind:'company_website',certainty:'high',observedAt:'2026-10-01'}],missingCritical:['ساعات العمل']}});
+  const system=log.model[0].messages[0].content,context=JSON.parse(system.split('سياق العمل الحالي بصيغة JSON:\n')[1].split('\n\n## Activepieces')[0]);
+  assert.equal(context.knowledge.facts[0].observedAt,'2026-10-01');assert.equal(context.knowledge.facts[0].key,'services');
+  assert.equal(context.knowledge.missing[0],'ساعات العمل');assert.equal(context.connections.state,'read');assert.equal(context.connections.items[0].tool,'asana');
+  assert.equal(system.includes('never-in-context'),false);assert.equal(system.includes('private-external'),false);
+});
+
+test('unavailable connection inventory stays unknown rather than claiming no saved accounts',async()=>{
+  const {run,log}=setup({script:[say('سأتحقق من حسابك')],connections:new Error('unavailable')});await run();
+  assert.match(log.model[0].messages[0].content,/"connections":\{"state":"unknown","items":\[\]\}/);
+});
 
 test('the model builds, tests and publishes in one request and writes the reply itself',async()=>{
   const {run,log}=setup({script:[

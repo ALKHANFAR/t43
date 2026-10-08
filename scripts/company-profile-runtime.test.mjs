@@ -94,7 +94,7 @@ test('company voice settings are bounded, deduplicated and separate from knowled
 test('knowledge and employees are always read through the owning company id',async()=>{
   const seen=[];
   const profiles={
-    company_alpha:{company_id:'company_alpha',coverage_score:80,last_success_at:'2026-09-29T00:00:00Z',last_error:null},
+    company_alpha:{company_id:'company_alpha',coverage_score:80,last_success_at:'2026-09-29T00:00:00Z',last_error:null,profile_json:{missingCritical:['ساعات العمل']}},
     company_beta:{company_id:'company_beta',coverage_score:20,last_success_at:null,last_error:null},
   };
   const query=async(text,values=[])=>{
@@ -113,6 +113,8 @@ test('knowledge and employees are always read through the owning company id',asy
   assert.equal(betaKnowledge.companyId,'company_beta');
   assert.equal(alphaKnowledge.facts[0].key,'fact_company_alpha');
   assert.equal(betaKnowledge.facts[0].key,'fact_company_beta');
+  assert.deepEqual(alphaKnowledge.missingCritical,['ساعات العمل']);
+  assert.deepEqual(betaKnowledge.missingCritical,[]);
   assert.equal(alphaEmployees[0].recordId,'employee_company_alpha');
   assert.equal(betaEmployees[0].recordId,'employee_company_beta');
   assert.notEqual(alphaEmployees[0].flowId,betaEmployees[0].flowId);
