@@ -587,6 +587,16 @@ test('native metadata tolerance cannot mask a concurrent instruction change',asy
   assert.equal(completedToolActions(answer).work_status,'unknown');
 });
 
+test('a successful test run explicitly belonging to an older version cannot authorize publication in either chat',async()=>{
+  for(const chat of ['main','employee']){
+    const saved={id:'employee-1',name:'نور',status:'draft',activepieces_flow_id:flowId};
+    const {run,log}=setup({script:[use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),say('تحتاج النسخة الحالية تجربة.')],toolResults:{ap_get_run:{structuredContent:{id:runId,flowId,flowVersionId:'older-version',status:'SUCCEEDED',environment:'TESTING',steps:[{name:'trigger',status:'SUCCEEDED'}]}}}});
+    const answer=await run(chat==='employee'?{employee:saved}:{draftEmployee:saved});
+    assert.equal(log.tools.some(([name])=>name==='ap_lock_and_publish'),false,chat);
+    assert.equal(answer.readinessReceipt,undefined,chat);
+  }
+});
+
 test('a different published version or failed local state readback never produces readiness',async()=>{
   for(const option of [{publishDifferentVersion:true},{saveStateFailure:true}]){
     const {run}=setup({...option,script:[use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),say('قرأت النتيجة.') ]});
