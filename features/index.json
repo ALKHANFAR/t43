@@ -88,6 +88,7 @@
         },
         {"role":"saved_reply_recovery","path":"lib/employee-run-recovery.mjs","anchor":"Retain only the bounded successful flow reply"},
         {"role":"saved_reply_recovery_test","path":"scripts/one-off-run-recovery-runtime.test.mjs","anchor":"employee recovery saves only bounded successful reply bodies for the saved result view"},
+        {"role":"saved_reply_recovery_pg_test","path":"scripts/employee-run-recovery-runtime.test.mjs","anchor":"saved successful reply survives recovery restart and company-scoped result readback"},
         {
           "role": "card",
           "path": "app/chat.js",

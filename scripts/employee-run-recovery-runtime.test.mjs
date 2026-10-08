@@ -54,6 +54,18 @@ test('durable native receipts survive restart, expiry and concurrent reconciliat
       await f.fresh().reconcile(f);assert.equal((await profiles.findEmployee(f.companyId,f.employeeId)).run_snapshot_updated_at,before);
       assert.deepEqual(f.calls,['ap_get_run','ap_get_run']);
     });
+    await t.test('saved successful reply survives recovery restart and company-scoped result readback',async()=>{
+      const f=await fixture();f.overrides({steps:[{output:{status:200,body:{report:'تقرير الموظف المحفوظ'},headers:{Authorization:'must-not-persist'},extra:'must-not-persist'}}]});
+      await f.fresh().reconcile(f);
+      const persisted=(await query('SELECT last_result_json FROM siyadah_digital_employees WHERE company_id=$1 AND id=$2',[f.companyId,f.employeeId])).rows[0].last_result_json;
+      assert.deepEqual(persisted,{status:200,body:'{"report":"تقرير الموظف المحفوظ"}'});
+      const work=await createCompanyProfileService({query}).recentWork(f.companyId);
+      assert.equal(work.length,1);assert.equal(work[0].employeeId,f.employeeId);assert.equal(work[0].runId,f.runId);
+      assert.deepEqual(work[0].result,{schemaVersion:1,source:'flow_reply',content:persisted.body});
+      assert.deepEqual(await profiles.recentWork(`foreign_${randomUUID()}`),[]);
+      await f.fresh().reconcile(f);assert.deepEqual(await profiles.recentWork(f.companyId),work);
+      assert.deepEqual(f.calls,['ap_get_run']);assert.equal(JSON.stringify(work).includes('must-not-persist'),false);
+    });
     await t.test('concurrent repair persists one stable result and employee timestamp',async()=>{
       const f=await fixture();const results=await Promise.all(Array.from({length:8},()=>f.fresh().reconcile(f)));
       assert.ok(results.every(result=>result.run_id===f.runId));
