@@ -151,3 +151,9 @@ Restored decisions include `approval_expires_at` from the matched approval row. 
 ## Saved flow reply in recent work
 
 A `recent_work` item may include `result: {schemaVersion: 1, source: 'flow_reply', content: string}`. It projects only a nonempty saved reply body with 2xx status and at most 12,000 characters; response headers are not exposed. No content is fabricated for metadata-only recovery records, missing bodies, non-2xx responses or oversized bodies. This is the saved flow reply, not independent proof of external delivery. The results page escapes its text and preserves all JSON table fields.
+
+## Tool activity while a request runs
+
+`activity` is a bounded snapshot of up to 80 `{id, name, state}` records. An id identifies one native tool invocation; `started` is recorded immediately before the call, `returned` after its response, and `error` after a thrown error or `isError` response. No tool inputs, outputs or error details are included. Returned does not establish business success or delivery. The ledger writer requires the exact company/request/conversation/claim token and pending state. Failure to store activity does not retry or prevent the tool invocation.
+
+Long chat requests return their existing queued work identity after 1.5 seconds instead of waiting 20 seconds. The browser reads that identity; these reads never dispatch another action. Pending `work` and hydration can carry stored activity, and the final reply retains the snapshot. This covers native calls made by the main and employee message loops; it is not a stream of each internal Activepieces flow step or model reasoning.

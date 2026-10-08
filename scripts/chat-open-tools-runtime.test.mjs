@@ -278,7 +278,7 @@ test('a long request answers queued once, keeps working, and settles the same re
     earlierPendingChatRequest:async()=>null,
     settleChatRequest:async entry=>{settled.push(entry);return {status:entry.status,httpStatus:entry.httpStatus,response:entry.response};},
     read:async()=>({company_name:'شركة'}),readSettings:async()=>({}),ownedKnowledge:async()=>({}),listEmployees:async()=>[],listConversations:async()=>[],conversationHistory:async()=>[],
-    findConversationDraft:async()=>null,recordConversation:async entry=>{recorded.push(entry);},
+    recordChatActivity:async entry=>{assert.equal(entry.companyId,'company-1');assert.equal(entry.requestId,'r1');assert.equal(entry.conversationId,'c1');assert.equal(entry.claimToken,'t');},findConversationDraft:async()=>null,recordConversation:async entry=>{recorded.push(entry);},
   };
   const ctx={
     console:{error:()=>{},info:()=>{},warn:()=>{}},JSON,String,Object,Number,Array,Boolean,
@@ -291,7 +291,7 @@ test('a long request answers queued once, keeps working, and settles the same re
     employeeRequestMode:()=>'explore',explicitNewEmployee:()=>false,flowName:()=>'x',
     completedWithoutExecution:(kind,response)=>({...response,request_status:'succeeded',outcome_kind:kind,work_status:'not_started'}),
     failedChatExecution,
-    deepseekReply:()=>new Promise(resolve=>{release=resolve;}),
+    deepseekReply:async({onActivity})=>{await onActivity({id:1,name:'ap_build_flow',state:'started'});return new Promise(resolve=>{release=resolve;});},
   };
   const publicChat=runInNewContext(`${source.slice(jsonStart,jsonEnd)}\n${source.slice(chatStart,chatEnd)}; publicChat`,ctx);
   const writes=[];
@@ -301,7 +301,7 @@ test('a long request answers queued once, keeps working, and settles the same re
   const wait=timers.find(timer=>timer.ms===1500&&!timer.cleared);
   assert.ok(wait);
   wait.fn();
-  assert.equal(writes.length,1);
+  assert.equal(writes.length,1);assert.equal(writes[0].body.work_status,'running');assert.equal(writes[0].body.activity[0].state,'started');
   assert.deepEqual([writes[0].body.request_status,writes[0].body.work_id],['queued','request_r1']);
   release({reply:'بُنيت ونُشرت.',flowId});
   await running;

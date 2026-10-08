@@ -908,7 +908,7 @@ async function publicChat(req,res){
       if(input.employee_id&&!await profiles.findEmployee(companyId,input.employee_id))throw new CompanyProfileError('employee_not_found','الموظف غير موجود في شركتك.',404);
       await profiles.recordConversation({companyId,conversationId,employeeId:input.employee_id||null,requestId,userMessage:input.message});
       activeRequest.conversationSaved=true;
-      const activity=[];
+      const activity=[];activeRequest.activity=activity;
       const onActivity=async item=>{const index=activity.findIndex(row=>row.id===item.id);if(index>=0)activity[index]=item;else if(activity.length<80)activity.push(item);await profiles.recordChatActivity({companyId,requestId,conversationId,claimToken:claim.claimToken,activity});};
 
       // Building and publishing takes minutes. The browser gets `queued` and reads the same request ID; the work continues here.
@@ -957,9 +957,10 @@ async function publicChat(req,res){
     clearTimeout(waiting);
     if(activeRequest){
       console.error('chat request failed',error instanceof TenantProjectError||error instanceof CompanyProfileError?error.code:error?.name==='AbortError'?'AbortError':'unexpected_error');
-      const {companyId,requestId,conversationId,profiles,effectStarted,executionAttempt,conversationSaved,userMessage,employeeId}=activeRequest;
+      const {companyId,requestId,conversationId,profiles,effectStarted,executionAttempt,conversationSaved,userMessage,employeeId,activity}=activeRequest;
       const status=effectStarted?'unknown':'failed',httpStatus=200;
       const response=failedChatExecution({conversationId,requestId,effectStarted,executionAttempt,transportReceipt:error?.transportReceipt,failureCode:error?.code});
+      if(activity?.length)response.activity=activity;
       if(conversationSaved)try{await profiles.recordConversation({companyId,conversationId,employeeId,requestId,userMessage,assistantMessage:response.reply});}
       catch{console.error('chat failure transcript unavailable');}
       try{const settled=await profiles.settleChatRequest({companyId,requestId,status,httpStatus,response});return json(res,settled.httpStatus,settled.response,sessionHeaders);}

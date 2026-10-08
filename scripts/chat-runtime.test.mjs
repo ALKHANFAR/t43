@@ -364,7 +364,7 @@ test('builder labels hide platform vocabulary while assistant reply retains orig
 });
 test('MCP action approval shows exact inputs and never places credentials in the browser',async()=>{
   const proposal={ok:true,conversation_id:'chat-mcp',request_status:'succeeded',work_status:'awaiting_input',outcome_kind:'conversation_reply',reply:'راجع الإجراء.',approval:{required:true,kind:'tool_action',approval_id:'approval-mcp',summary:'اقرأ التقويم',details:'{"pieceName":"google-calendar","input":"<img src=x onerror=alert(1)>"}'}};
-  const p=await page({message:proposal,approve:{ok:true,conversation_id:'chat-mcp',request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',reply:'وصل رد الأداة، ولم نتحقق بعد من أثره لدى المزود.'}});try{
+  const p=await page({message:proposal,approve:{ok:true,conversation_id:'chat-mcp',request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',reply:'وصل الرد، ولم نتحقق بعد من أثره لدى المزود.'}});try{
     send(p,'وش عندي في التقويم؟');await flush();
     const details=p.d.querySelector('.plan details');assert.ok(details);assert.match(details.textContent,/google-calendar/);assert.equal(details.querySelector('img'),null);
     p.d.querySelector('[data-siy-approval="approve"]').click();await flush();
@@ -1413,8 +1413,8 @@ test('structured results keep fields beyond the twelfth column',async()=>{
 
 test('live activity renders backend calls and returned responses without claiming provider success',async()=>{
  const p=await page({message:{ok:true,conversation_id:'activity',work_id:'w',work_status:'running',activity:[{id:1,name:'ap_search_actions',state:'returned'},{id:2,name:'ap_get_flow',state:'started'}]},work:{ok:true,conversation_id:'activity',work_id:'w',work_status:'running',activity:[{id:1,name:'ap_search_actions',state:'returned'},{id:2,name:'ap_get_flow',state:'returned'}]}});try{
-  send(p,'راجع طريقة العمل');await flush();const block=p.d.querySelector('.siy-activity');assert.match(block.querySelector('summary').textContent,/قراءة طريقة العمل.*بدأ الاستدعاء/);assert.match(block.textContent,/البحث في الأدوات.*وصل رد الأداة/);assert.doesNotMatch(block.textContent,/اكتمل|مُثبت|✓/);assert.equal(block.querySelectorAll('li').length,2);
-  await p.polls.shift()();await flush();assert.equal(p.d.querySelectorAll('[data-activity-id="2"]').length,1);assert.equal(p.d.querySelector('[data-activity-id="2"]').dataset.activityState,'returned');assert.doesNotMatch(p.d.querySelector('.siy-activity').textContent,/بدأ الاستدعاء|نجح/);
+  send(p,'راجع طريقة العمل');await flush();const block=p.d.querySelector('.siy-activity');assert.match(block.querySelector('summary').textContent,/قراءة طريقة العمل.*جارٍ العمل/);assert.match(block.textContent,/البحث في الأدوات.*وصل الرد/);assert.doesNotMatch(block.textContent,/اكتمل|مُثبت|✓/);assert.equal(block.querySelectorAll('li').length,2);
+  await p.polls.shift()();await flush();assert.equal(p.d.querySelectorAll('[data-activity-id="2"]').length,1);assert.equal(p.d.querySelector('[data-activity-id="2"]').dataset.activityState,'returned');assert.doesNotMatch(p.d.querySelector('.siy-activity').textContent,/جارٍ العمل|نجح/);
  }finally{p.close();}
 });
 test('live activity ignores malformed events limits snapshots and never exposes unknown raw tool names',async()=>{
