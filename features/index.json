@@ -267,6 +267,8 @@
         {"role": "published_projection", "path": "lib/chat-intelligence.mjs", "anchor": "export function publishedAIInstructionSteps(version)"},
         {"role": "ui_save", "path": "app/chat.js", "anchor": "async function siySaveEmployeeInstructions(e,instructions)"},
         {"role": "scope", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function scopeMcpTool"},
+        {"role":"execution_context","path":"lib/mcp-flow-scope.mjs","anchor":"export function bindEmployeeFlowContext("},
+        {"role":"execution_context_test","path":"scripts/chat-open-tools-runtime.test.mjs","anchor":"a declared native context field receives saved knowledge and instructions without assuming a task field"},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "## Employee instructions — conversation context and Activepieces work"},
         {"role": "test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "main-chat draft carries saved owner instructions"}
       ]
