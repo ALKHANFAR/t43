@@ -579,7 +579,7 @@ var I = {
     if(isEmp()){ var e=emp(who); list=empThread(who); list.push({me:true,t:text,at:now()});
       $("#input").value=""; $("#input").style.height="auto"; renderThread();
       if(pendAns&&pendAns.who===who){ var p=pendAns; pendAns=null; resolveWait(e,list,p.mi,"كتبت الجواب",list[p.mi].wait.r[0],true); return; }
-      if(window.__SIY_REAL__){ siyChatReal(e,text,list); return; } /* رد فعلي من الخلفية */
+      if(window.__SIY_REAL__){ siyMessage(text,list,e.id); return; } /* رد فعلي من الخلفية */
       typeReply(e,list,function(){ return empReply(e,text); }); return; }
     list = chatId ? CHATS[chatId].msgs : (live.siyadah=live.siyadah||[]);
     if(!window.__SIY_REAL__ && !chatId && !list.length){ // السجل التجريبي فقط؛ الهوية الحقيقية يصدرها الخادم
@@ -1630,7 +1630,6 @@ var I = {
   function kpiFrom(s){ var t=(s.last_at||"").slice(11,16)||"—";
     return [ {v:String(s.messages||0),l:"رسائل",t:"—"}, {v:String(s.client_msgs||0),l:"من العملاء",t:"—"},
              {v:String(s.replies||0),l:"ردود",t:"—"}, {v:t,l:"آخر نشاط",t:"—"} ]; }
-  function siyChatReal(e,text,list){ siyMessage(text,list,e.id); }
   /* سجل العمل الفعلي من جدول الإثبات (recent_work في رد الـDashboard) */
   function siyEmployeeProofHtml(e,list){
     if(!window.__SIY_REAL__) return "";
