@@ -1,3 +1,4 @@
+import {discoverMcpCatalog} from '../lib/activepieces-mcp.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -11,7 +12,7 @@ class TenantProjectError extends Error{constructor(code,message,status){super(me
 const origin='https://accounts.example';
 function harness({invalidSession=false,input={},grantPresent=false,grantRevision=null,projectMissing=false,verificationError=false,membershipError=false,boundCallback=false,authorizationUrl='https://ap.example/authorize?client_id=registered-client&state=sealed'}={}){
   const calls=[];
-  const context={TenantProjectError,AccountAuthError:TenantProjectError,createHash,URL,console:{warn(){}},publicOrigin:()=>origin,
+  const context={discoverMcpCatalog,TenantProjectError,AccountAuthError:TenantProjectError,createHash,URL,console:{warn(){}},publicOrigin:()=>origin,
     tenantSession:async()=>{calls.push('session');if(invalidSession)throw new TenantProjectError('unauthorized','login',401);return {session:{companyId:'company-a'}};},
     body:async()=>{calls.push('body');return input;},oauthSessionBinding:()=> 'session-bound',
     database:async()=>{calls.push('database');return {query:async()=>({rows:[]})};},
@@ -19,6 +20,7 @@ function harness({invalidSession=false,input={},grantPresent=false,grantRevision
     tenantProjects:async()=>({ensure:async()=>{throw Error('must use verified provisioning');},ensureMember:async value=>{calls.push(['membership',value.tenantId,value.email]);if(membershipError)throw new TenantProjectError('customer_membership_unverified','membership',502);}}),
     provisionVerifiedTenant:async value=>{calls.push(['provision',value.tenantId]);if(verificationError)throw new TenantProjectError('email_not_verified','verify',403);},
     activepiecesMcp:async()=>{calls.push('adapter');return {
+      call:async(company,method)=>{calls.push(['native',company,method]);return method==='initialize'?{instructions:'native'}:{tools:[{name:'ap_list_flows',inputSchema:{type:'object'}}]};},
       begin:async(company,options)=>{calls.push(['begin',company,options.sessionBinding]);return authorizationUrl;},
       status:async company=>{calls.push(['status',company]);if(projectMissing)throw new TenantProjectError('project_not_ready','project',409);return {grantPresent,grantRevision};},
       complete:async(url,options)=>{calls.push(['complete',options]);if(boundCallback&&options.sessionBinding!=='session-bound')throw new TenantProjectError('mcp_session_mismatch','session',403);},
@@ -28,7 +30,7 @@ function harness({invalidSession=false,input={},grantPresent=false,grantRevision
   return {calls,run:runInNewContext(`${accessSource}; customerMcpAccess`,context),callback:runInNewContext(`${callbackSource}; finishMcpGrant`,context)};
 }
 test('customer MCP access rejects invalid sessions before provisioning or provider access',async()=>{
-  for(const op of ['start','status']){const h=harness({invalidSession:true});const r=await h.run({headers:{origin}}, {},op);assert.equal(r.status,401);assert.deepEqual(h.calls,['session']);}
+  for(const op of ['start','status','catalog']){const h=harness({invalidSession:true});const r=await h.run({headers:{origin}}, {},op);assert.equal(r.status,401);assert.deepEqual(h.calls,['session']);}
 });
 test('customer MCP start rejects all client-supplied scope and unsupported bodies before provider access',async()=>{
   for(const input of [{companyId:'foreign'},{tenantId:'foreign'},{projectId:'foreign'},{scope:'foreign'},{op:'start'},[],null]){
@@ -70,4 +72,12 @@ test('a rejected bound callback returns a failed page and never substitutes a di
   const h=harness({invalidSession:true,boundCallback:true});let status;let page;
   await h.callback({url:'/callback?state=bound&code=native',headers:{}},{writeHead:value=>{status=value;},end:value=>{page=value;}});
   assert.equal(status,400);assert.equal(h.calls.filter(value=>Array.isArray(value)&&value[0]==='complete').length,1);assert.match(page,/لم يكتمل/);
+});
+
+test('authenticated catalog receipt discovers only the session company and cannot provision or expose tokens',async()=>{
+ const h=harness();const r=await h.run({headers:{}},{},'catalog');
+ assert.equal(r.status,200);assert.equal(r.body.liveVerified,true);assert.equal(r.body.source,'activepieces_native_mcp');
+ assert.equal(r.body.toolCount,1);assert.equal(r.body.toolNames[0],'ap_list_flows');
+ assert.deepEqual(h.calls,['session','adapter',['native','company-a','initialize'],['native','company-a','tools/list']]);
+ assert.equal(r.body.authorizationUrl,undefined);assert.equal(r.body.token,undefined);
 });

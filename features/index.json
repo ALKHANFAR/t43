@@ -3,69 +3,219 @@
   "repository": "ALKHANFAR/t43",
   "features": [
     {
-      "id":"one_off_flow_request",
-      "name":"طلب ينتهي دون إنشاء موظف",
-      "aliases":["نفذ هذا الطلب الآن","مهمة متعددة الخطوات","لا أريد موظفا جديدا"],
-      "state":"draft_pr",
-      "meaning":"نية البناء داخلية للنموذج وليست شاشة تصنيف. one_off يبني فلو أصليًا دون موظف، ويتحقق من مشغل MCP واختبار النسخة قبل النشر ومن المشروع والفلو والنسخة قبل الاستدعاء ونتيجة التشغيل بعده. نتيجة الطلب محفوظة في ledger دون تحديث موظف. مرجع العمل السابق لا يفرض إعادة استخدامه لطلب جديد. فحوص محلية فقط؛ غير منشور ولا إثبات مزود حي.",
-      "linear":"ABO-37",
-      "locations":[
-        {"role":"returning_customer","path":"server.mjs","anchor":"const onboardingRequired=!(await (await companyProfiles()).read(account.company_id));"},
-        {"role":"login_test","path":"scripts/login-onboarding-runtime.test.mjs","anchor":"returning customer without employees goes to chat"},
-        {"role":"intent","path":"server.mjs","anchor":"_siyadah_work_mode:{type:'string'"},
-        {"role":"dispatch","path":"server.mjs","anchor":"one_off_version_changed"},
-        {"role":"continuation","path":"lib/company-profile.mjs","anchor":"async function findConversationWork("},
-        {"role":"recovery","path":"lib/employee-run-recovery.mjs","anchor":"if(!identity.employeeId){"},
-        {"role":"test","path":"scripts/chat-open-tools-runtime.test.mjs","anchor":"one-off Flow can test publish and invoke its exact native tool once without employee persistence"},
-        {"role":"version_test","path":"scripts/chat-open-tools-runtime.test.mjs","anchor":"one-off invocation rejects a changed published version before the native action"}
+      "id": "native_mcp_catalog_proof",
+      "name": "إثبات أدوات MCP الأصلية في الشات",
+      "aliases": [
+        "كل أدوات MCP",
+        "الشات مربوط بالموديل",
+        "كتالوج أدوات المشروع"
+      ],
+      "state": "draft_pr",
+      "meaning": "اكتشاف أصلي initialize ثم جميع صفحات tools/list مع ختم أسماء ومخططات الكتالوج ووقت القراءة؛ endpoint محمي بجلسة الشركة للقراءة فقط. الشات يسجل الكتالوج المرصود؛ مراجعة القدرات لا تعلن دون استدعاء اكتشاف ناجح. ردود نتائج الموافقات للبناء والأدوات تمر بنفس LLM دون إعادة التنفيذ. محلي غير منشور، لا يثبت الصلاحيات أو أثر المزود.",
+      "linear": "ABO-69",
+      "locations": [
+        {
+          "role": "catalog",
+          "path": "lib/activepieces-mcp.mjs",
+          "anchor": "export async function discoverMcpCatalog"
+        },
+        {
+          "role": "receipt_route",
+          "path": "server.mjs",
+          "anchor": "if(op==='catalog')"
+        },
+        {
+          "role": "approval_model",
+          "path": "server.mjs",
+          "anchor": "const explainOutcome=async observedOutcome=>"
+        },
+        {
+          "role": "test",
+          "path": "scripts/native-mcp-catalog-runtime.test.mjs",
+          "anchor": "test('native catalog initializes first"
+        }
+      ]
+    },
+    {
+      "id": "one_off_flow_request",
+      "name": "طلب ينتهي دون إنشاء موظف",
+      "aliases": [
+        "نفذ هذا الطلب الآن",
+        "مهمة متعددة الخطوات",
+        "لا أريد موظفا جديدا"
+      ],
+      "state": "draft_pr",
+      "meaning": "نية البناء داخلية للنموذج وليست شاشة تصنيف. one_off يبني فلو أصليًا دون موظف، ويتحقق من مشغل MCP واختبار النسخة قبل النشر ومن المشروع والفلو والنسخة قبل الاستدعاء ونتيجة التشغيل بعده. نتيجة الطلب محفوظة في ledger دون تحديث موظف. مرجع العمل السابق لا يفرض إعادة استخدامه لطلب جديد. فحوص محلية فقط؛ غير منشور ولا إثبات مزود حي.",
+      "linear": "ABO-37",
+      "locations": [
+        {
+          "role": "returning_customer",
+          "path": "server.mjs",
+          "anchor": "const onboardingRequired=!(await (await companyProfiles()).read(account.company_id));"
+        },
+        {
+          "role": "login_test",
+          "path": "scripts/login-onboarding-runtime.test.mjs",
+          "anchor": "returning customer without employees goes to chat"
+        },
+        {
+          "role": "intent",
+          "path": "server.mjs",
+          "anchor": "_siyadah_work_mode:{type:'string'"
+        },
+        {
+          "role": "dispatch",
+          "path": "server.mjs",
+          "anchor": "one_off_version_changed"
+        },
+        {
+          "role": "continuation",
+          "path": "lib/company-profile.mjs",
+          "anchor": "async function findConversationWork("
+        },
+        {
+          "role": "recovery",
+          "path": "lib/employee-run-recovery.mjs",
+          "anchor": "if(!identity.employeeId){"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "one-off Flow can test publish and invoke its exact native tool once without employee persistence"
+        },
+        {
+          "role": "version_test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "one-off invocation rejects a changed published version before the native action"
+        }
       ]
     },
     {
       "id": "restored_pending_decision",
       "name": "القرار الذي ينتظرني بعد العودة",
-      "aliases": ["بانتظارك", "موافقة محفوظة", "رجعت للمحادثة"],
+      "aliases": [
+        "بانتظارك",
+        "موافقة محفوظة",
+        "رجعت للمحادثة"
+      ],
       "state": "draft_pr",
       "meaning": "تستعيد المحادثة موافقة محفوظة غير مستهلكة وغير منتهية فقط عند مطابقة الشركة والمحادثة. تعرضها دون إرسال الإجراء أو فحصه بالتنفيذ؛ مسار الموافقة يعيد التحقق عند القرار. لا تُنشئ هذه الميزة موافقات جديدة ولا تفويض MCP. محلي غير منشور.",
       "linear": "ABO-37",
       "locations": [
-        {"role":"ownership","path":"lib/company-profile.mjs","anchor":"AND a.tenant_id=r.company_id AND a.conversation_id=r.conversation_id AND a.expires_at>now()"},
-        {"role":"restore","path":"app/chat.js","anchor":"else siyPoll(work.work_id,convo.msgs,row,0)"},
-        {"role":"test","path":"scripts/chat-runtime.test.mjs","anchor":"reload restores a live pending decision without dispatching or polling its action"},
-        {"role":"contract","path":"CHAT_CONTRACT.md","anchor":"## Restoring a pending decision"}
+        {
+          "role": "ownership",
+          "path": "lib/company-profile.mjs",
+          "anchor": "AND a.tenant_id=r.company_id AND a.conversation_id=r.conversation_id AND a.expires_at>now()"
+        },
+        {
+          "role": "restore",
+          "path": "app/chat.js",
+          "anchor": "else siyPoll(work.work_id,convo.msgs,row,0)"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "reload restores a live pending decision without dispatching or polling its action"
+        },
+        {
+          "role": "contract",
+          "path": "CHAT_CONTRACT.md",
+          "anchor": "## Restoring a pending decision"
+        }
       ]
     },
     {
       "id": "chat_saved_company_context",
       "name": "سيادة تتذكر معلومات شركتي وحساباتي",
-      "aliases": ["لا تسألني عن شيء محفوظ", "لغة عربية طبيعية", "سياق الشركة"],
+      "aliases": [
+        "لا تسألني عن شيء محفوظ",
+        "لغة عربية طبيعية",
+        "سياق الشركة"
+      ],
       "state": "draft_pr",
       "meaning": "يحفظ سياق النموذج مصدر المعلومة وتاريخها والنواقص المحفوظة، ويقرأ جرد الاتصالات المقيد بالشركة دون أسرار. فشل الجرد يبقى مجهولا ولا يصبح قائمة فارغة. الاتصال المحفوظ ليس إثبات نتيجة مزود. لا يفرض تصنيف المهمة أو الموظف في البداية. غير منشور. يعاد استخدام ترتيب المعرفة من فرع consolidation لاختيار المعلومات المرتبطة بالطلب وموضوعات الموظف قبل حد40معلومة/6000حرف، مع إبقاء المعلومة كاملة ومصدرها. هذا استرجاع نصي محلي وليس إثبات فهم النموذج أو ذاكرة تراكمية.",
       "linear": "ABO-54",
       "locations": [
-        {"role": "knowledge_selection", "path": "lib/knowledge-context.mjs", "anchor": "export function selectKnowledgeContext("},
-        {"role": "knowledge_selection_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "both chats retrieve older relevant company facts beyond the first forty with their source"},
-        {"role": "knowledge_budget_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "both chats bound the company knowledge context without truncating individual evidence"},
-        {"role": "context", "path": "server.mjs", "anchor": "let connections={state:'unknown',items:[]};"},
-        {"role": "knowledge", "path": "lib/company-profile.mjs", "anchor": "missingCritical:(Array.isArray(profile.profile_json?.missingCritical)"},
-        {"role": "test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "saved company context preserves fact provenance and projects connections without credentials"},
-        {"role": "direction", "path": "docs/experience/experience-direction-20261008.md", "anchor": "تصحيح لاحق في الجلسة نفسها"}
+        {
+          "role": "knowledge_selection",
+          "path": "lib/knowledge-context.mjs",
+          "anchor": "export function selectKnowledgeContext("
+        },
+        {
+          "role": "knowledge_selection_test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "both chats retrieve older relevant company facts beyond the first forty with their source"
+        },
+        {
+          "role": "knowledge_budget_test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "both chats bound the company knowledge context without truncating individual evidence"
+        },
+        {
+          "role": "context",
+          "path": "server.mjs",
+          "anchor": "let connections={state:'unknown',items:[]};"
+        },
+        {
+          "role": "knowledge",
+          "path": "lib/company-profile.mjs",
+          "anchor": "missingCritical:(Array.isArray(profile.profile_json?.missingCritical)"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "saved company context preserves fact provenance and projects connections without credentials"
+        },
+        {
+          "role": "direction",
+          "path": "docs/experience/experience-direction-20261008.md",
+          "anchor": "تصحيح لاحق في الجلسة نفسها"
+        }
       ]
     },
     {
       "id": "native_flow_draft_test_receipt",
       "name": "إثبات حفظ مسودة الفلو واختبارها في الشات",
-      "aliases": ["دليل مسودة الفلو", "نتيجة اختبار الفلو", "draft flow test receipt"],
+      "aliases": [
+        "دليل مسودة الفلو",
+        "نتيجة اختبار الفلو",
+        "draft flow test receipt"
+      ],
       "state": "draft_pr",
       "meaning": "بعد أدوات MCP الأصلية، تؤكد سيادة من Activepieces أن الفلو المملوك للشركة ما زال DRAFT وDISABLED. لا تعرض اختبار TESTING إلا بعد قراءة رقم تشغيله ومطابقة النسخة الحالية؛ التعديل بعد الاختبار أو الأثر المختلط يبقي الطلب غير مؤكد. لا يثبت ذلك نشرًا أو تشغيلًا إنتاجيًا أو نتيجة مزود. التغيير غير منشور.",
       "linear": "ABO-69",
       "pr": "https://github.com/ALKHANFAR/t43/pull/64",
       "locations": [
-        {"role": "readback", "path": "server.mjs", "anchor": "let draftReceipt=null;"},
-        {"role": "settlement", "path": "lib/chat-outcome.mjs", "anchor": "outcome_kind:'flow_draft_saved'"},
-        {"role": "render", "path": "app/chat.js", "anchor": "function siyDraftReceipt(data)"},
-        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "| Verified Flow draft |"},
-        {"role": "server_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "saved native draft and exact TESTING run settle with scoped draft proof"},
-        {"role": "ui_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "native draft receipt shows scoped TESTING proof without production claim"}
+        {
+          "role": "readback",
+          "path": "server.mjs",
+          "anchor": "let draftReceipt=null;"
+        },
+        {
+          "role": "settlement",
+          "path": "lib/chat-outcome.mjs",
+          "anchor": "outcome_kind:'flow_draft_saved'"
+        },
+        {
+          "role": "render",
+          "path": "app/chat.js",
+          "anchor": "function siyDraftReceipt(data)"
+        },
+        {
+          "role": "contract",
+          "path": "CHAT_CONTRACT.md",
+          "anchor": "| Verified Flow draft |"
+        },
+        {
+          "role": "server_test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "saved native draft and exact TESTING run settle with scoped draft proof"
+        },
+        {
+          "role": "ui_test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "native draft receipt shows scoped TESTING proof without production claim"
+        }
       ]
     },
     {
@@ -86,9 +236,21 @@
           "path": "lib/company-profile.mjs",
           "anchor": "source:'flow_reply',content"
         },
-        {"role":"saved_reply_recovery","path":"lib/employee-run-recovery.mjs","anchor":"Retain only the bounded successful flow reply"},
-        {"role":"saved_reply_recovery_test","path":"scripts/one-off-run-recovery-runtime.test.mjs","anchor":"employee recovery saves only bounded successful reply bodies for the saved result view"},
-        {"role":"saved_reply_recovery_pg_test","path":"scripts/employee-run-recovery-runtime.test.mjs","anchor":"saved successful reply survives recovery restart and company-scoped result readback"},
+        {
+          "role": "saved_reply_recovery",
+          "path": "lib/employee-run-recovery.mjs",
+          "anchor": "Retain only the bounded successful flow reply"
+        },
+        {
+          "role": "saved_reply_recovery_test",
+          "path": "scripts/one-off-run-recovery-runtime.test.mjs",
+          "anchor": "employee recovery saves only bounded successful reply bodies for the saved result view"
+        },
+        {
+          "role": "saved_reply_recovery_pg_test",
+          "path": "scripts/employee-run-recovery-runtime.test.mjs",
+          "anchor": "saved successful reply survives recovery restart and company-scoped result readback"
+        },
         {
           "role": "card",
           "path": "app/chat.js",
@@ -173,46 +335,110 @@
     {
       "id": "mixed_native_action_receipts",
       "name": "توضيح نجاح إجراء مع نتيجة طلب غير مؤكدة",
-      "aliases": ["النتيجة غير مؤكدة", "نجحت القراءة بعد تعذر محاولة"],
+      "aliases": [
+        "النتيجة غير مؤكدة",
+        "نجحت القراءة بعد تعذر محاولة"
+      ],
       "state": "draft_pr",
       "meaning": "توضح الواجهة اكتمال إجراء ذي مرجع صالح عند وجود محاولة أخرى غير مؤكدة، دون تحويل حالة الطلب unknown إلى نجاح. تغيير عرض فقط؛ لا تعديل تنفيذ MCP أو حدود REST.",
       "linear": "ABO-69",
       "locations": [
-        {"role": "badge", "path": "app/chat.js", "anchor": "function siyRequestStateHtml(state,partialActionResult)"},
-        {"role": "receipt", "path": "app/chat.js", "anchor": "var partialActionResult=state==='unknown'"},
-        {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "mixed action receipts explain completed action"}
+        {
+          "role": "badge",
+          "path": "app/chat.js",
+          "anchor": "function siyRequestStateHtml(state,partialActionResult)"
+        },
+        {
+          "role": "receipt",
+          "path": "app/chat.js",
+          "anchor": "var partialActionResult=state==='unknown'"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "mixed action receipts explain completed action"
+        }
       ]
     },
     {
       "id": "native_mcp_chat_capabilities",
       "name": "كل قدرات MCP في الشات وشات الموظف",
-      "aliases": ["إمكانيات MCP", "أدوات الموظف الأصلية", "استخدام MCP فعليًا"],
+      "aliases": [
+        "إمكانيات MCP",
+        "أدوات الموظف الأصلية",
+        "استخدام MCP فعليًا"
+      ],
       "state": "draft_pr",
       "meaning": "الشات الرئيسي وشات الموظف يعرضان كامل كتالوج أدوات MCP المشروع المعلن دون عدد ثابت أو إخفاء وفق حالة الموظف. قيود الملكية وتبديل المشروع وتكرار الأثر تُطبق عند التنفيذ، لا بفلترة الكتالوج. البناء والتعديل واكتشاف الحقول عبر MCP فقط. التغيير في PR60 غير منشور.",
       "linear": "ABO-69",
       "pr": "https://github.com/ALKHANFAR/t43/pull/60",
       "locations": [
-        {"role": "scope", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function visibleMcpTool"},
-        {"role": "live_catalog", "path": "server.mjs", "anchor": "const modelTools=()=>available.filter"},
-        {"role": "run_scope", "path": "server.mjs", "anchor": "employee_run_scope"},
-        {"role": "test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "paused employee actually uses native action tables and AI discovery"},
-        {"role": "build_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "employee without a Flow builds and edits its own linked Flow"}
+        {
+          "role": "scope",
+          "path": "lib/mcp-flow-scope.mjs",
+          "anchor": "export function visibleMcpTool"
+        },
+        {
+          "role": "live_catalog",
+          "path": "server.mjs",
+          "anchor": "const modelTools=()=>available.filter"
+        },
+        {
+          "role": "run_scope",
+          "path": "server.mjs",
+          "anchor": "employee_run_scope"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "paused employee actually uses native action tables and AI discovery"
+        },
+        {
+          "role": "build_test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "employee without a Flow builds and edits its own linked Flow"
+        }
       ]
     },
     {
       "id": "native_mcp_build_discovery_boundary",
       "name": "إيقاف إنشاء الفلو واكتشاف الأدوات والحقول عبر REST",
-      "aliases": ["بناء الفلو", "منع REST", "اكتشاف الحقول", "MCP فقط للبناء"],
+      "aliases": [
+        "بناء الفلو",
+        "منع REST",
+        "اكتشاف الحقول",
+        "MCP فقط للبناء"
+      ],
       "state": "draft_pr",
       "meaning": "حذف إنشاء الفلو وتغيير حالته من محول REST؛ المسار الداخلي القديم يعيد 410. البناء والاكتشاف في MCP الشركة، وتغيير الحالة عبر MCP مع قراءة تأكيد. قراءة تفاصيل الفلو وتهيئة المشاريع وإدارة الاتصالات الحالية تبقى. تجهيز اتصالات جديدة يتوقف حتى توفر عقد حقول مصادقة أصلي؛ لا بديل REST. تغيير محلي غير منشور.",
       "linear": "ABO-69",
       "pr": "https://github.com/ALKHANFAR/t43/pull/60",
       "locations": [
-        {"role": "closed_route", "path": "server.mjs", "anchor": "native_mcp_creation_required"},
-        {"role": "native_status", "path": "server.mjs", "anchor": "mcp=mcp||await activepiecesMcp();"},
-        {"role": "closed_metadata", "path": "lib/tool-connections.mjs", "anchor": "native_mcp_discovery_required"},
-        {"role": "contract", "path": "docs/mcp-tool-discovery-boundary.md", "anchor": "# Tool discovery boundary"},
-        {"role": "test", "path": "scripts/native-mcp-boundary-runtime.test.mjs", "anchor": "closed internal create route never initializes a provider"}
+        {
+          "role": "closed_route",
+          "path": "server.mjs",
+          "anchor": "native_mcp_creation_required"
+        },
+        {
+          "role": "native_status",
+          "path": "server.mjs",
+          "anchor": "mcp=mcp||await activepiecesMcp();"
+        },
+        {
+          "role": "closed_metadata",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "native_mcp_discovery_required"
+        },
+        {
+          "role": "contract",
+          "path": "docs/mcp-tool-discovery-boundary.md",
+          "anchor": "# Tool discovery boundary"
+        },
+        {
+          "role": "test",
+          "path": "scripts/native-mcp-boundary-runtime.test.mjs",
+          "anchor": "closed internal create route never initializes a provider"
+        }
       ]
     },
     {
@@ -253,384 +479,1248 @@
     {
       "id": "employee_instructions_context",
       "name": "تعليمات الموظف وتطبيقها على طريقة العمل",
-      "aliases": ["تعليمات الموظف", "تعديل التعليمات", "طبق التعليمات", "employee instructions"],
+      "aliases": [
+        "تعليمات الموظف",
+        "تعديل التعليمات",
+        "طبق التعليمات",
+        "employee instructions"
+      ],
       "state": "live_needs_change",
       "meaning": "توجيه إنشاء الموظف يبدأ من النتيجة واكتشاف قدرات MCP المناسبة، ولا يحصره في الاتصالات الحالية أو يستبدل عمله بالتنبيهات. تعديل محلي يحتاج تقييم النموذج الفعلي. حفظ التعليمات يثبت سياق المحادثة فقط. توجيه النموذج يتيح اختيار القطعة والنموذج وتجهيز خطوة ناقصة داخل فلو الموظف ضمن التفويض الحالي مع إلزام Run Agent وإتاحة مسارات متعددة حسب المهمة؛ تعديل محلي غير منشور. الشات الرئيسي يقرأ تعليمات المسودة، والشات المحدد يستخدم أدوات Flow المملوك لمراجعة تطبيقها. عند فتح التعليمات تُقرأ مدخلات prompt لخطوات AI بما فيها مسارات النجاح والفشل المتداخلة من النسخة المنشورة المملوكة في Activepieces وتُعرض منفصلة؛ هذه القراءة لا تثبت نتيجة تشغيل أو مزامنة التعليمات، ولا تدّعي قراءة تعليمات Saved Agent الكاملة. إعادة رسم حالة المحادثة تحفظ لوحة التعليمات ونص التعديل غير المحفوظ والتركيز داخل الموظف نفسه.",
       "linear": "ABO-66",
       "locations": [
-        {"role": "context", "path": "server.mjs", "anchor": "instructionSource:draftEmployee.prompt_source"},
-        {"role": "save", "path": "server.mjs", "anchor": "instruction_scope:'conversation'"},
-        {"role": "storage", "path": "lib/company-profile.mjs", "anchor": "async function updateEmployeeInstructions({companyId,employeeId,instructions})"},
-        {"role": "render", "path": "app/chat.js", "anchor": "function instrHtml(e)"},
-        {"role": "published_ui", "path": "app/chat.js", "anchor": "async function siyReadPublishedInstructions(e)"},
-        {"role": "published_read", "path": "server.mjs", "anchor": "if(input.read_published===true)"},
-        {"role": "published_projection", "path": "lib/chat-intelligence.mjs", "anchor": "export function publishedAIInstructionSteps(version)"},
-        {"role": "ui_save", "path": "app/chat.js", "anchor": "async function siySaveEmployeeInstructions(e,instructions)"},
-        {"role": "scope", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function scopeMcpTool"},
-        {"role":"execution_context","path":"lib/mcp-flow-scope.mjs","anchor":"export function bindEmployeeFlowContext("},
-        {"role":"execution_context_test","path":"scripts/chat-open-tools-runtime.test.mjs","anchor":"a declared native context field receives saved knowledge and instructions without assuming a task field"},
-        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "## Employee instructions — conversation context and Activepieces work"},
-        {"role": "test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "main-chat draft carries saved owner instructions"}
+        {
+          "role": "context",
+          "path": "server.mjs",
+          "anchor": "instructionSource:draftEmployee.prompt_source"
+        },
+        {
+          "role": "save",
+          "path": "server.mjs",
+          "anchor": "instruction_scope:'conversation'"
+        },
+        {
+          "role": "storage",
+          "path": "lib/company-profile.mjs",
+          "anchor": "async function updateEmployeeInstructions({companyId,employeeId,instructions})"
+        },
+        {
+          "role": "render",
+          "path": "app/chat.js",
+          "anchor": "function instrHtml(e)"
+        },
+        {
+          "role": "published_ui",
+          "path": "app/chat.js",
+          "anchor": "async function siyReadPublishedInstructions(e)"
+        },
+        {
+          "role": "published_read",
+          "path": "server.mjs",
+          "anchor": "if(input.read_published===true)"
+        },
+        {
+          "role": "published_projection",
+          "path": "lib/chat-intelligence.mjs",
+          "anchor": "export function publishedAIInstructionSteps(version)"
+        },
+        {
+          "role": "ui_save",
+          "path": "app/chat.js",
+          "anchor": "async function siySaveEmployeeInstructions(e,instructions)"
+        },
+        {
+          "role": "scope",
+          "path": "lib/mcp-flow-scope.mjs",
+          "anchor": "export function scopeMcpTool"
+        },
+        {
+          "role": "execution_context",
+          "path": "lib/mcp-flow-scope.mjs",
+          "anchor": "export function bindEmployeeFlowContext("
+        },
+        {
+          "role": "execution_context_test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "a declared native context field receives saved knowledge and instructions without assuming a task field"
+        },
+        {
+          "role": "contract",
+          "path": "CHAT_CONTRACT.md",
+          "anchor": "## Employee instructions — conversation context and Activepieces work"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "main-chat draft carries saved owner instructions"
+        }
       ]
     },
     {
       "id": "chat_employee_approval",
       "name": "موافقة تجهيز الموظف التي تظهر في الشات",
-      "aliases": ["موافقة الموظف", "موافقة على الموظف الي تظهر في الشات", "وافق وشغل", "اعتماد خطة الموظف", "employee approval in chat", "approve employee"],
+      "aliases": [
+        "موافقة الموظف",
+        "موافقة على الموظف الي تظهر في الشات",
+        "وافق وشغل",
+        "اعتماد خطة الموظف",
+        "employee approval in chat",
+        "approve employee"
+      ],
       "state": "live_needs_change",
       "meaning": "يوجد مسار موافقة خادم لأدوات MCP قابل للتنفيذ بعد منح المشروع؛ الموافقة تُستهلك مرة واحدة. مسار بناء Flow الموظف يُحفظ كمسودة ويرتبط بنفس الموظف، ولا يثبت تشغيله أو نتيجة المزود حتى الاختبار الحي.",
       "linear": "ABO-44",
       "locations": [
-        {"role": "render", "path": "app/chat.js", "anchor": "function siyBuilderProposalHtml(data)"},
-        {"role": "click", "path": "app/chat.js", "anchor": "async function siyDecideBuilder(row,decision)"},
-        {"role": "request", "path": "app/chat.js", "anchor": "op:'approve'"},
-        {"role": "ui_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "data-siy-approval=\"approve\""},
-        {"role": "server_entry", "path": "server.mjs", "anchor": "async function publicChat(req,res)"}
+        {
+          "role": "render",
+          "path": "app/chat.js",
+          "anchor": "function siyBuilderProposalHtml(data)"
+        },
+        {
+          "role": "click",
+          "path": "app/chat.js",
+          "anchor": "async function siyDecideBuilder(row,decision)"
+        },
+        {
+          "role": "request",
+          "path": "app/chat.js",
+          "anchor": "op:'approve'"
+        },
+        {
+          "role": "ui_test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "data-siy-approval=\"approve\""
+        },
+        {
+          "role": "server_entry",
+          "path": "server.mjs",
+          "anchor": "async function publicChat(req,res)"
+        }
       ]
     },
     {
       "id": "employee_draft_chat",
       "name": "حفظ موظف كمسودة من الشات",
-      "aliases": ["انشاء موظف", "تجهيز موظف", "مسودة الموظف", "employee draft from chat"],
+      "aliases": [
+        "انشاء موظف",
+        "تجهيز موظف",
+        "مسودة الموظف",
+        "employee draft from chat"
+      ],
       "state": "live_needs_change",
       "meaning": "يفهم النموذج هدف الشركة وسياقها ويختار بناء Flow عبر MCP عند الحاجة. عند أول بناء فقط يحفظ سيادة سجل الموظف ويربطه بعد قراءة ملكية Flow في مشروع الشركة؛ لا ينشئ مسودة من كلمات الطلب وحدها. المسودة والبناء لا يثبتان تجربة أو دوامًا.",
       "linear": "ABO-55",
       "pr": "https://github.com/ALKHANFAR/t43/pull/17",
       "locations": [
-        {"role": "route", "path": "server.mjs", "anchor": "const draft=!oneOffWork&&existing?.status==='draft'?existing:null"},
-        {"role": "build", "path": "server.mjs", "anchor": "if(['ap_build_flow','ap_create_flow'].includes(name))"},
-        {"role": "storage", "path": "lib/company-profile.mjs", "anchor": "async function createManualEmployeeDraft({companyId,name,requestId})"},
-        {"role": "migration", "path": "migrations/0002-local-employee-drafts.sql", "anchor": "ADD COLUMN IF NOT EXISTS creation_request_id"},
-        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "| Employee saved |"},
-        {"role": "test", "path": "scripts/local-employee-draft-runtime.test.mjs", "anchor": "createManualEmployeeDraft(input)"}
+        {
+          "role": "route",
+          "path": "server.mjs",
+          "anchor": "const draft=!oneOffWork&&existing?.status==='draft'?existing:null"
+        },
+        {
+          "role": "build",
+          "path": "server.mjs",
+          "anchor": "if(['ap_build_flow','ap_create_flow'].includes(name))"
+        },
+        {
+          "role": "storage",
+          "path": "lib/company-profile.mjs",
+          "anchor": "async function createManualEmployeeDraft({companyId,name,requestId})"
+        },
+        {
+          "role": "migration",
+          "path": "migrations/0002-local-employee-drafts.sql",
+          "anchor": "ADD COLUMN IF NOT EXISTS creation_request_id"
+        },
+        {
+          "role": "contract",
+          "path": "CHAT_CONTRACT.md",
+          "anchor": "| Employee saved |"
+        },
+        {
+          "role": "test",
+          "path": "scripts/local-employee-draft-runtime.test.mjs",
+          "anchor": "createManualEmployeeDraft(input)"
+        }
       ]
     },
     {
       "id": "employee_draft_onboarding",
       "name": "اختيار موظف وحفظه أثناء التهيئة",
-      "aliases": ["اختيار الموظف", "موظف التهيئة", "onboarding employee selection"],
+      "aliases": [
+        "اختيار الموظف",
+        "موظف التهيئة",
+        "onboarding employee selection"
+      ],
       "state": "draft_pr",
       "meaning": "PR #17 يحفظ اختيار الموظف محليًا فورًا بمعرّف طلب ثابت أثناء الجلسة؛ لا يطلب تجهيز Flow أو اتصال أداة حتى يحتاج العميل التفعيل.",
       "linear": "ABO-55",
       "pr": "https://github.com/ALKHANFAR/t43/pull/17",
       "locations": [
-        {"role": "screen", "path": "app/onboard.js", "anchor": "op:'select_employee'"},
-        {"role": "recommendation_reason", "path": "app/onboard.js", "anchor": "function renderSuggestions()"},
-        {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='select_employee')"},
-        {"role": "storage", "path": "lib/company-profile.mjs", "anchor": "async function createEmployeeDraft({companyId,suggestionId,requestId})"},
-        {"role": "request_identity", "path": "app/onboard.js", "anchor": "function employeeSelectionRequestId()"},
-        {"role": "task_examples", "path": "app/onboard.html", "anchor": "data-task-ar=\"جهّز مسودة منشور"},
-        {"role": "empty_suggestions", "path": "app/onboard.js", "anchor": "throw new Error(t('noSuggestions'))"},
-        {"role": "correction_test", "path": "scripts/onboarding-runtime.test.mjs", "anchor": "first task examples fill an editable goal"},
-        {"role": "natural_request", "path": "app/onboard.html", "anchor": "وش تحتاج ننجز؟"},
-        {"role": "natural_request_test", "path": "scripts/onboarding-runtime.test.mjs", "anchor": "onboarding asks for a natural request"},
-        {"role": "test", "path": "scripts/local-employee-draft-runtime.test.mjs", "anchor": "createEmployeeDraft(input)"}
+        {
+          "role": "screen",
+          "path": "app/onboard.js",
+          "anchor": "op:'select_employee'"
+        },
+        {
+          "role": "recommendation_reason",
+          "path": "app/onboard.js",
+          "anchor": "function renderSuggestions()"
+        },
+        {
+          "role": "route",
+          "path": "server.mjs",
+          "anchor": "if(input.op==='select_employee')"
+        },
+        {
+          "role": "storage",
+          "path": "lib/company-profile.mjs",
+          "anchor": "async function createEmployeeDraft({companyId,suggestionId,requestId})"
+        },
+        {
+          "role": "request_identity",
+          "path": "app/onboard.js",
+          "anchor": "function employeeSelectionRequestId()"
+        },
+        {
+          "role": "task_examples",
+          "path": "app/onboard.html",
+          "anchor": "data-task-ar=\"جهّز مسودة منشور"
+        },
+        {
+          "role": "empty_suggestions",
+          "path": "app/onboard.js",
+          "anchor": "throw new Error(t('noSuggestions'))"
+        },
+        {
+          "role": "correction_test",
+          "path": "scripts/onboarding-runtime.test.mjs",
+          "anchor": "first task examples fill an editable goal"
+        },
+        {
+          "role": "natural_request",
+          "path": "app/onboard.html",
+          "anchor": "وش تحتاج ننجز؟"
+        },
+        {
+          "role": "natural_request_test",
+          "path": "scripts/onboarding-runtime.test.mjs",
+          "anchor": "onboarding asks for a natural request"
+        },
+        {
+          "role": "test",
+          "path": "scripts/local-employee-draft-runtime.test.mjs",
+          "anchor": "createEmployeeDraft(input)"
+        }
       ]
     },
     {
       "id": "legacy_employee_flow_inventory",
       "name": "فحص تدفقات الموظفين القديمة قبل نشر الحفظ المحلي",
-      "aliases": ["التدفقات القديمة", "تدفق بلا موظف", "legacy employee flows", "migration gate"],
+      "aliases": [
+        "التدفقات القديمة",
+        "تدفق بلا موظف",
+        "legacy employee flows",
+        "migration gate"
+      ],
       "state": "draft_pr",
       "meaning": "فحص قراءة فقط من PR #21 ضمن إصدار #19: تدفقات مشروع العميل تحتاج صف موظف مطابق، بينما تدفقات مشروع بلا أي مؤشر ملكية عميل تُحسب منفصلة وتُقبل فقط إذا كانت DISABLED. أي حالة مفعّلة أو مجهولة أو ربط ناقص يوقف الدمج. أعاد جرد production المصنف 10 مشاريع عملاء و4 مشاريع يتيمة و5 تدفقات يتيمة معطلة و0 تدفقات عملاء بلا موظف؛ يُعاد الجرد قبل النشر.",
       "linear": "ABO-55",
       "pr": "https://github.com/ALKHANFAR/t43/pull/19",
       "locations": [
-        {"role": "command", "path": "scripts/check-legacy-employee-flows.mjs", "anchor": "inventoryLegacyFlows({projects,employees"},
-        {"role": "ownership_sources", "path": "scripts/check-legacy-employee-flows.mjs", "anchor": "associatedCompanies=(await client.query"},
-        {"role": "logic", "path": "lib/legacy-flow-inventory.mjs", "anchor": "export async function inventoryLegacyFlows"},
-        {"role": "classification", "path": "lib/legacy-flow-inventory.mjs", "anchor": "if(customerOwned)customerProjects++;else orphanProjects++;"},
-        {"role": "orphan_gate", "path": "lib/legacy-flow-inventory.mjs", "anchor": "if(String(flow.status||'').toUpperCase()!=='DISABLED')"},
-        {"role": "release_gate", "path": "RELEASE-ABO55.md", "anchor": "Before merging"},
-        {"role": "test_customer", "path": "scripts/legacy-flow-inventory-runtime.test.mjs", "anchor": "any associated company data keeps an unmapped flow in the customer gate"},
-        {"role": "test_orphan", "path": "scripts/legacy-flow-inventory-runtime.test.mjs", "anchor": "orphan project flows must be verifiably disabled"}
+        {
+          "role": "command",
+          "path": "scripts/check-legacy-employee-flows.mjs",
+          "anchor": "inventoryLegacyFlows({projects,employees"
+        },
+        {
+          "role": "ownership_sources",
+          "path": "scripts/check-legacy-employee-flows.mjs",
+          "anchor": "associatedCompanies=(await client.query"
+        },
+        {
+          "role": "logic",
+          "path": "lib/legacy-flow-inventory.mjs",
+          "anchor": "export async function inventoryLegacyFlows"
+        },
+        {
+          "role": "classification",
+          "path": "lib/legacy-flow-inventory.mjs",
+          "anchor": "if(customerOwned)customerProjects++;else orphanProjects++;"
+        },
+        {
+          "role": "orphan_gate",
+          "path": "lib/legacy-flow-inventory.mjs",
+          "anchor": "if(String(flow.status||'').toUpperCase()!=='DISABLED')"
+        },
+        {
+          "role": "release_gate",
+          "path": "RELEASE-ABO55.md",
+          "anchor": "Before merging"
+        },
+        {
+          "role": "test_customer",
+          "path": "scripts/legacy-flow-inventory-runtime.test.mjs",
+          "anchor": "any associated company data keeps an unmapped flow in the customer gate"
+        },
+        {
+          "role": "test_orphan",
+          "path": "scripts/legacy-flow-inventory-runtime.test.mjs",
+          "anchor": "orphan project flows must be verifiably disabled"
+        }
       ]
     },
     {
       "id": "employee_activation",
       "name": "تفعيل الموظف أو إيقافه",
-      "aliases": ["تشغيل الموظف", "ايقاف الموظف", "زر الموظف", "employee state"],
+      "aliases": [
+        "تشغيل الموظف",
+        "ايقاف الموظف",
+        "زر الموظف",
+        "employee state"
+      ],
       "state": "live",
       "meaning": "تفعيل Flow الموظف داخل مشروع الشركة بعد اختبار النسخة الحالية وقراءة النسخة المنشورة. إصلاح فرع المراجعة يمنع استدعاء نشر الفلو أو تفعيله عبر MCP ويمنع تسجيل نية التفعيل التلقائي عند طلب المسودة أو عدم النشر. ويمنع اختبار الفلو أو تشغيله عند طلب عدم التشغيل صراحة؛ لم يُنشر الإصلاح بعد. إيصال الجاهزية يثبت الاختبار والتفعيل فقط؛ الطلب المختلط يبقى غير مؤكد ولا يتحول الاختبار إلى نتيجة إنتاجية أو KPI. التفعيل التلقائي يعرض الانتظار ورسالة النقص أو الخطأ على الأسطح الموجودة، ولا يغير مفتاح الحالة إلا بعد قراءة موظف مطابق.",
       "linear": "ABO-17",
       "locations": [
-        {"role": "readiness_contract", "path": "CHAT_CONTRACT.md", "anchor": "## Employee readiness receipt"},
-        {"role": "test_snapshot", "path": "lib/chat-outcome.mjs", "anchor": "export function flowTestSnapshot(version)"},
-        {"role": "readiness_ui", "path": "app/chat.js", "anchor": "function siyReadinessReceipt(data)"},
-        {"role": "screen", "path": "app/chat.js", "anchor": "async function siySetEmployeeState(e)"},
-        {"role": "resume_ui", "path": "app/chat.js", "anchor": "async function siyResumePendingActivation(employeeId)"},
-        {"role": "editor_continuity_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "late activation redraw preserves the instruction panel, edit, focus and selection"},
-        {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='employee_state')"},
-        {"role": "draft_only_intent", "path": "lib/chat-intelligence.mjs", "anchor": "export function draftOnlyIntent(message)"},
-        {"role": "do_not_run_intent", "path": "lib/chat-intelligence.mjs", "anchor": "export function doNotRunIntent(message)"},
-        {"role": "draft_only_mcp_guard", "path": "server.mjs", "anchor": "draft_only_publish_forbidden"},
-        {"role": "draft_only_mcp_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "an explicit draft request blocks model publish and enable calls at MCP dispatch"},
-        {"role": "draft_only_test", "path": "scripts/employee-activation-resume-runtime.test.mjs", "anchor": "a request to leave the Flow unpublished and disabled cannot queue activation"},
-        {"role": "provider", "path": "server.mjs", "anchor": "mcp=mcp||await activepiecesMcp();"},
-        {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "op:'employee_state'"}
+        {
+          "role": "readiness_contract",
+          "path": "CHAT_CONTRACT.md",
+          "anchor": "## Employee readiness receipt"
+        },
+        {
+          "role": "test_snapshot",
+          "path": "lib/chat-outcome.mjs",
+          "anchor": "export function flowTestSnapshot(version)"
+        },
+        {
+          "role": "readiness_ui",
+          "path": "app/chat.js",
+          "anchor": "function siyReadinessReceipt(data)"
+        },
+        {
+          "role": "screen",
+          "path": "app/chat.js",
+          "anchor": "async function siySetEmployeeState(e)"
+        },
+        {
+          "role": "resume_ui",
+          "path": "app/chat.js",
+          "anchor": "async function siyResumePendingActivation(employeeId)"
+        },
+        {
+          "role": "editor_continuity_test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "late activation redraw preserves the instruction panel, edit, focus and selection"
+        },
+        {
+          "role": "route",
+          "path": "server.mjs",
+          "anchor": "if(input.op==='employee_state')"
+        },
+        {
+          "role": "draft_only_intent",
+          "path": "lib/chat-intelligence.mjs",
+          "anchor": "export function draftOnlyIntent(message)"
+        },
+        {
+          "role": "do_not_run_intent",
+          "path": "lib/chat-intelligence.mjs",
+          "anchor": "export function doNotRunIntent(message)"
+        },
+        {
+          "role": "draft_only_mcp_guard",
+          "path": "server.mjs",
+          "anchor": "draft_only_publish_forbidden"
+        },
+        {
+          "role": "draft_only_mcp_test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "an explicit draft request blocks model publish and enable calls at MCP dispatch"
+        },
+        {
+          "role": "draft_only_test",
+          "path": "scripts/employee-activation-resume-runtime.test.mjs",
+          "anchor": "a request to leave the Flow unpublished and disabled cannot queue activation"
+        },
+        {
+          "role": "provider",
+          "path": "server.mjs",
+          "anchor": "mcp=mcp||await activepiecesMcp();"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "op:'employee_state'"
+        }
       ]
     },
     {
       "id": "chat_request_identity",
       "name": "منع تكرار طلب الشات ومعرفة حالته",
-      "aliases": ["حالة الطلب", "اعادة المحاولة", "request id", "idempotency"],
+      "aliases": [
+        "حالة الطلب",
+        "اعادة المحاولة",
+        "request id",
+        "idempotency"
+      ],
       "state": "draft_pr",
       "meaning": "رأس المراجعة الموحد PR #24 يتضمن سجل طلبات PR #13: يربط الطلب بالشركة ومعرّف ثابت، وقراءة الحالة بالمعرّف نفسه لا ترسل العمل مرة ثانية. وجود الكود في الرأس أو نشره على خدمة لا يعني دمجه في فرع الأساس أو main.",
       "linear": "ABO-37",
       "pr": "https://github.com/ALKHANFAR/t43/pull/24",
       "locations": [
-        {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='work')"},
-        {"role": "claim", "path": "lib/company-profile.mjs", "anchor": "async function claimChatRequest({companyId,conversationId,requestId,requestHash})"},
-        {"role": "result", "path": "lib/chat-outcome.mjs", "anchor": "export function failedChatExecution("},
-        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "## Request identity and company boundary"},
-        {"role": "test", "path": "scripts/chat-request-ledger-runtime.test.mjs", "anchor": "claimChatRequest(input)"},
-        {"role": "pending_restore", "path": "lib/company-profile.mjs", "anchor": "async function pendingChatWork(companyId)"},
-        {"role": "ordered_history", "path": "lib/company-profile.mjs", "anchor": "async function conversationHistory({companyId,conversationId,requestId})"}
+        {
+          "role": "route",
+          "path": "server.mjs",
+          "anchor": "if(input.op==='work')"
+        },
+        {
+          "role": "claim",
+          "path": "lib/company-profile.mjs",
+          "anchor": "async function claimChatRequest({companyId,conversationId,requestId,requestHash})"
+        },
+        {
+          "role": "result",
+          "path": "lib/chat-outcome.mjs",
+          "anchor": "export function failedChatExecution("
+        },
+        {
+          "role": "contract",
+          "path": "CHAT_CONTRACT.md",
+          "anchor": "## Request identity and company boundary"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-request-ledger-runtime.test.mjs",
+          "anchor": "claimChatRequest(input)"
+        },
+        {
+          "role": "pending_restore",
+          "path": "lib/company-profile.mjs",
+          "anchor": "async function pendingChatWork(companyId)"
+        },
+        {
+          "role": "ordered_history",
+          "path": "lib/company-profile.mjs",
+          "anchor": "async function conversationHistory({companyId,conversationId,requestId})"
+        }
       ]
     },
     {
       "id": "customer_tool_oauth_connection",
       "name": "ربط أداة الشركة عند الحاجة",
-      "aliases": ["ربط الأدوات", "اتصال أداة", "تسجيل دخول الأداة", "OAuth الأداة", "كتالوج الأدوات", "company tool connection", "tool catalog"],
+      "aliases": [
+        "ربط الأدوات",
+        "اتصال أداة",
+        "تسجيل دخول الأداة",
+        "OAuth الأداة",
+        "كتالوج الأدوات",
+        "company tool connection",
+        "tool catalog"
+      ],
       "state": "draft_pr",
       "meaning": "PR #64 يقرأ حقول الربط من ap_setup_guide ضمن MCP مشروع الشركة. اجتاز العقد اختبارًا حيًا مع صورة PR #4 في QA معزولة وأظهر طريقة Asana متاحة؛ لم تنشر النسختان على خدمات العملاء، ولم تثبت موافقة عميل أو اتصال مزود محفوظ أو نتيجة شات الموظف. أثبتت QA بشكل منفصل فلو منشورًا وتشغيل PRODUCTION ناجحًا وقراءة حقيقية من Open-Meteo.",
       "linear": "ABO-61",
       "pr": "https://github.com/ALKHANFAR/t43/pull/64",
       "locations": [
-        {"role": "catalog", "path": "pieces.js", "anchor": "window.PIECES="},
-        {"role": "catalog_mapping", "path": "app/chat.js", "anchor": "x.s===c.slug"},
-        {"role": "connection_response", "path": "lib/tool-connections.mjs", "anchor": "return {id:connection.id,slug,"},
-        {"role": "icon_allowlist", "path": "data/tool-icon-sources.json", "anchor": "\"gmail\":"},
-        {"role": "catalog_test", "path": "scripts/check-pieces.js", "anchor": "Customer catalog integrity"},
-        {"role": "customer_action", "path": "app/chat.js", "anchor": "async function rcOAuth(values)"},
-        {"role": "route", "path": "server.mjs", "anchor": "if(input.op==='oauth_start')"},
-        {"role": "tenant_scope", "path": "lib/tool-connections.mjs", "anchor": "async function selected("},
-        {"role": "method_schema", "path": "lib/tool-connections.mjs", "anchor": "function authFingerprint"},
-        {"role": "native_auth_schema", "path": "lib/tool-connections.mjs", "anchor": "name:'ap_setup_guide'"},
-        {"role": "revalidate_identity_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "revalidation cannot report success for a different connection or piece in the same project"},
-        {"role": "auth_control_support", "path": "lib/tool-connections.mjs", "anchor": "const AUTH_FIELD_TYPES="},
-        {"role": "auth_control_validation_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "supported native auth controls validate values before writing a project connection"},
-        {"role": "native_auth_schema_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "company MCP auth schema prepares a project-owned connection without REST piece discovery"},
-        {"role": "grant_guard", "path": "lib/tool-connections.mjs", "anchor": "unsupported_oauth_grant"},
-        {"role": "typed_field_ui", "path": "app/chat.js", "anchor": "function rcField(field,index)"},
-        {"role": "project_connections_list", "path": "lib/tool-connections.mjs", "anchor": "async function list(tenantId)"},
-        {"role": "project_connections_pagination_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "lists every page of the company project connections"},
-        {"role": "owned_google_start", "path": "lib/tool-connections.mjs", "anchor": "async function oauthStart("},
-        {"role": "owned_google_finish", "path": "lib/tool-connections.mjs", "anchor": "async function oauthFinish({tenantId,sessionBinding,state,code})"},
-        {"role": "cloud_oauth_start", "path": "lib/tool-connections.mjs", "anchor": "if(cloudFor(pieceName(piece)))"},
-        {"role": "cloud_oauth_finish", "path": "lib/tool-connections.mjs", "anchor": "async function cloudOauthFinish({tenantId,sessionBinding,attempt,code})"},
-        {"role": "cloud_oauth_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "connection methods, fields and new connection preparation never fall back to REST metadata"},
-        {"role": "cloud_popup_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "cloud OAuth accepts only the opened popup"},
-        {"role": "disconnect_guard", "path": "lib/tool-connections.mjs", "anchor": "if(connection.flowIds.length)fail('connection_in_use'"},
-        {"role": "disconnect_unknown_guard", "path": "lib/tool-connections.mjs", "anchor": "if(!Array.isArray(rawFlowIds)||rawFlowIds.some"},
-        {"role": "version_dependency_guard", "path": "lib/tool-connections.mjs", "anchor": "async function flowVersionsUseConnection(projectId,externalId)"},
-        {"role": "disconnect_customer_message", "path": "app/chat.js", "anchor": "if(failure&&failure.error===\"connection_in_use\")"},
-        {"role": "disconnect_unknown_message", "path": "app/chat.js", "anchor": "if(failure&&failure.error===\"connection_usage_unknown\")"},
-        {"role": "single_use_attempt", "path": "lib/google-oauth-attempts.mjs", "anchor": "async consume({state,companyId,sessionBinding})"},
-        {"role": "callback", "path": "server.mjs", "anchor": "async function googleOAuthCallback(req,res,url)"},
-        {"role": "migration", "path": "migrations/0003-google-oauth-attempts.sql", "anchor": "CREATE TABLE IF NOT EXISTS siyadah_google_oauth_attempts"},
-        {"role": "handoff", "path": "GOOGLE-OAUTH-PILOT.md", "anchor": "# Gmail connection under Siyadah"},
-        {"role": "test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "connection methods, fields and new connection preparation never fall back to REST metadata"},
-        {"role": "disconnect_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "in-use connection stays attached and is not reported as disconnected"},
-        {"role": "disconnect_unknown_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "unknown or malformed flow references fail closed before disconnect"},
-        {"role": "ledger_test", "path": "scripts/google-oauth-attempts-runtime.test.mjs", "anchor": "OAuth attempt ledger stores hashes and consumes exactly once"}
+        {
+          "role": "catalog",
+          "path": "pieces.js",
+          "anchor": "window.PIECES="
+        },
+        {
+          "role": "catalog_mapping",
+          "path": "app/chat.js",
+          "anchor": "x.s===c.slug"
+        },
+        {
+          "role": "connection_response",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "return {id:connection.id,slug,"
+        },
+        {
+          "role": "icon_allowlist",
+          "path": "data/tool-icon-sources.json",
+          "anchor": "\"gmail\":"
+        },
+        {
+          "role": "catalog_test",
+          "path": "scripts/check-pieces.js",
+          "anchor": "Customer catalog integrity"
+        },
+        {
+          "role": "customer_action",
+          "path": "app/chat.js",
+          "anchor": "async function rcOAuth(values)"
+        },
+        {
+          "role": "route",
+          "path": "server.mjs",
+          "anchor": "if(input.op==='oauth_start')"
+        },
+        {
+          "role": "tenant_scope",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "async function selected("
+        },
+        {
+          "role": "method_schema",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "function authFingerprint"
+        },
+        {
+          "role": "native_auth_schema",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "name:'ap_setup_guide'"
+        },
+        {
+          "role": "revalidate_identity_test",
+          "path": "scripts/tool-connections-runtime.test.mjs",
+          "anchor": "revalidation cannot report success for a different connection or piece in the same project"
+        },
+        {
+          "role": "auth_control_support",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "const AUTH_FIELD_TYPES="
+        },
+        {
+          "role": "auth_control_validation_test",
+          "path": "scripts/tool-connections-runtime.test.mjs",
+          "anchor": "supported native auth controls validate values before writing a project connection"
+        },
+        {
+          "role": "native_auth_schema_test",
+          "path": "scripts/tool-connections-runtime.test.mjs",
+          "anchor": "company MCP auth schema prepares a project-owned connection without REST piece discovery"
+        },
+        {
+          "role": "grant_guard",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "unsupported_oauth_grant"
+        },
+        {
+          "role": "typed_field_ui",
+          "path": "app/chat.js",
+          "anchor": "function rcField(field,index)"
+        },
+        {
+          "role": "project_connections_list",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "async function list(tenantId)"
+        },
+        {
+          "role": "project_connections_pagination_test",
+          "path": "scripts/tool-connections-runtime.test.mjs",
+          "anchor": "lists every page of the company project connections"
+        },
+        {
+          "role": "owned_google_start",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "async function oauthStart("
+        },
+        {
+          "role": "owned_google_finish",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "async function oauthFinish({tenantId,sessionBinding,state,code})"
+        },
+        {
+          "role": "cloud_oauth_start",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "if(cloudFor(pieceName(piece)))"
+        },
+        {
+          "role": "cloud_oauth_finish",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "async function cloudOauthFinish({tenantId,sessionBinding,attempt,code})"
+        },
+        {
+          "role": "cloud_oauth_test",
+          "path": "scripts/tool-connections-runtime.test.mjs",
+          "anchor": "connection methods, fields and new connection preparation never fall back to REST metadata"
+        },
+        {
+          "role": "cloud_popup_test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "cloud OAuth accepts only the opened popup"
+        },
+        {
+          "role": "disconnect_guard",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "if(connection.flowIds.length)fail('connection_in_use'"
+        },
+        {
+          "role": "disconnect_unknown_guard",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "if(!Array.isArray(rawFlowIds)||rawFlowIds.some"
+        },
+        {
+          "role": "version_dependency_guard",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "async function flowVersionsUseConnection(projectId,externalId)"
+        },
+        {
+          "role": "disconnect_customer_message",
+          "path": "app/chat.js",
+          "anchor": "if(failure&&failure.error===\"connection_in_use\")"
+        },
+        {
+          "role": "disconnect_unknown_message",
+          "path": "app/chat.js",
+          "anchor": "if(failure&&failure.error===\"connection_usage_unknown\")"
+        },
+        {
+          "role": "single_use_attempt",
+          "path": "lib/google-oauth-attempts.mjs",
+          "anchor": "async consume({state,companyId,sessionBinding})"
+        },
+        {
+          "role": "callback",
+          "path": "server.mjs",
+          "anchor": "async function googleOAuthCallback(req,res,url)"
+        },
+        {
+          "role": "migration",
+          "path": "migrations/0003-google-oauth-attempts.sql",
+          "anchor": "CREATE TABLE IF NOT EXISTS siyadah_google_oauth_attempts"
+        },
+        {
+          "role": "handoff",
+          "path": "GOOGLE-OAUTH-PILOT.md",
+          "anchor": "# Gmail connection under Siyadah"
+        },
+        {
+          "role": "test",
+          "path": "scripts/tool-connections-runtime.test.mjs",
+          "anchor": "connection methods, fields and new connection preparation never fall back to REST metadata"
+        },
+        {
+          "role": "disconnect_test",
+          "path": "scripts/tool-connections-runtime.test.mjs",
+          "anchor": "in-use connection stays attached and is not reported as disconnected"
+        },
+        {
+          "role": "disconnect_unknown_test",
+          "path": "scripts/tool-connections-runtime.test.mjs",
+          "anchor": "unknown or malformed flow references fail closed before disconnect"
+        },
+        {
+          "role": "ledger_test",
+          "path": "scripts/google-oauth-attempts-runtime.test.mjs",
+          "anchor": "OAuth attempt ledger stores hashes and consumes exactly once"
+        }
       ]
     },
     {
       "id": "full_google_account_disconnect",
       "name": "فصل حساب Google وكل أدواته",
-      "aliases": ["فصل قوقل بالكامل", "فصل جميع أدوات Google", "إلغاء وصول Google", "disconnect Google account", "revoke Google access"],
+      "aliases": [
+        "فصل قوقل بالكامل",
+        "فصل جميع أدوات Google",
+        "إلغاء وصول Google",
+        "disconnect Google account",
+        "revoke Google access"
+      ],
       "state": "gap",
       "meaning": "فصل الاتصال الفردي يرفض الاعتماد الظاهر في Activepieces، ويفحص جميع صفحات المسودات والنسخ المنشورة لأن قائمة flowIds قد تخفي مرجع نسخة منشورة عند وجود مسودة أحدث أو لا تكمل الجرد. ثبت سلوك النسخ حيًا في Activepieces 0.92.1، ويغلق حارس سيادة فجوة الفصل الفردي. عقد دورة Google يحدد حدود فصل الأداة والشركة وإلغاء منحة Google، لكن لا يوجد بعد تنفيذ يثبت حساب Google عبر الشركات ويلغي المنحة؛ لذلك يبقى الفصل الشامل فجوة.",
       "linear": "ABO-63",
       "locations": [
-        {"role": "account_lifecycle_contract", "path": "GOOGLE-CONNECTION-LIFECYCLE.md", "anchor": "## Meaning of each action"},
-        {"role": "revocation_release_gate", "path": "GOOGLE-CONNECTION-LIFECYCLE.md", "anchor": "## Implementation gate"},
-        {"role": "version_dependency_guard", "path": "lib/tool-connections.mjs", "anchor": "async function flowVersionsUseConnection(projectId,externalId)"},
-        {"role": "disconnect_gate", "path": "lib/tool-connections.mjs", "anchor": "if(await flowVersionsUseConnection(projectId,externalId))"},
-        {"role": "published_dependency_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "published flow reference blocks disconnect even when connection flowIds omits it"},
-        {"role": "pagination_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "checks later pages of published flows before disconnect"},
-        {"role": "draft_pagination_test", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "checks later pages of draft flows before disconnect"}
+        {
+          "role": "account_lifecycle_contract",
+          "path": "GOOGLE-CONNECTION-LIFECYCLE.md",
+          "anchor": "## Meaning of each action"
+        },
+        {
+          "role": "revocation_release_gate",
+          "path": "GOOGLE-CONNECTION-LIFECYCLE.md",
+          "anchor": "## Implementation gate"
+        },
+        {
+          "role": "version_dependency_guard",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "async function flowVersionsUseConnection(projectId,externalId)"
+        },
+        {
+          "role": "disconnect_gate",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "if(await flowVersionsUseConnection(projectId,externalId))"
+        },
+        {
+          "role": "published_dependency_test",
+          "path": "scripts/tool-connections-runtime.test.mjs",
+          "anchor": "published flow reference blocks disconnect even when connection flowIds omits it"
+        },
+        {
+          "role": "pagination_test",
+          "path": "scripts/tool-connections-runtime.test.mjs",
+          "anchor": "checks later pages of published flows before disconnect"
+        },
+        {
+          "role": "draft_pagination_test",
+          "path": "scripts/tool-connections-runtime.test.mjs",
+          "anchor": "checks later pages of draft flows before disconnect"
+        }
       ]
     },
     {
       "id": "public_waitlist_brand_boundary",
       "name": "تسجيل قائمة الانتظار عبر سيادة",
-      "aliases": ["قائمة الانتظار", "تسجيل الزائر", "نموذج الموقع", "حذف طلب الانتظار بعد 90 يوم", "waitlist", "same origin form"],
+      "aliases": [
+        "قائمة الانتظار",
+        "تسجيل الزائر",
+        "نموذج الموقع",
+        "حذف طلب الانتظار بعد 90 يوم",
+        "waitlist",
+        "same origin form"
+      ],
       "state": "draft_pr",
       "meaning": "متصفح الزائر يرسل إلى واجهة سيادة، والخادم يحفظ طلب الوصول المبكر في قاعدة بيانات سيادة قبل عرض حالة القبول. موقع LWS الحي لا ينتقل لهذا المسار حتى تُنشر نسخة الصفحة المراجعة ويُختبر إرسال حقيقي.",
       "linear": "ABO-62",
       "pr": "https://github.com/ALKHANFAR/t43/pull/26",
       "locations": [
-        {"role": "browser", "path": "site.js", "anchor": "endpoint: \"/siyadah-api/v1/waitlist\""},
-        {"role": "route", "path": "server.mjs", "anchor": "async function waitlist(req,res)"},
-        {"role": "store", "path": "lib/public-waitlist.mjs", "anchor": "export function createPublicWaitlist"},
-        {"role": "retention", "path": "lib/public-waitlist.mjs", "anchor": "async purgeExpired()"},
-        {"role": "migration", "path": "migrations/0004-public-waitlist.sql", "anchor": "CREATE TABLE IF NOT EXISTS siyadah_public_waitlist"},
-        {"role": "test", "path": "scripts/waitlist-runtime.test.mjs", "anchor": "public waitlist saves a bounded lead"}
+        {
+          "role": "browser",
+          "path": "site.js",
+          "anchor": "endpoint: \"/siyadah-api/v1/waitlist\""
+        },
+        {
+          "role": "route",
+          "path": "server.mjs",
+          "anchor": "async function waitlist(req,res)"
+        },
+        {
+          "role": "store",
+          "path": "lib/public-waitlist.mjs",
+          "anchor": "export function createPublicWaitlist"
+        },
+        {
+          "role": "retention",
+          "path": "lib/public-waitlist.mjs",
+          "anchor": "async purgeExpired()"
+        },
+        {
+          "role": "migration",
+          "path": "migrations/0004-public-waitlist.sql",
+          "anchor": "CREATE TABLE IF NOT EXISTS siyadah_public_waitlist"
+        },
+        {
+          "role": "test",
+          "path": "scripts/waitlist-runtime.test.mjs",
+          "anchor": "public waitlist saves a bounded lead"
+        }
       ]
     },
     {
       "id": "chat_unverified_result",
       "name": "نتيجة الطلب غير مؤكدة في شات سيادة",
-      "aliases": ["لم نتأكد من نتيجة الطلب", "حالة الطلب غير معروفة", "التحقق من حالة الطلب", "unknown chat outcome", "unverified chat result"],
+      "aliases": [
+        "لم نتأكد من نتيجة الطلب",
+        "حالة الطلب غير معروفة",
+        "التحقق من حالة الطلب",
+        "unknown chat outcome",
+        "unverified chat result"
+      ],
       "state": "draft_pr",
       "meaning": "رأس المراجعة الموحد PR #24 يتضمن صياغة PR #14: يعرض النتيجة غير المؤكدة دون علامة نجاح ويعيد قراءة معرّف الطلب نفسه دون تنفيذ تلقائي جديد. فحص رسالة Gmail التجريبية يقرأ نتيجة المزود عند الطلب فقط. حالة النشر تُثبت مستقلة عن حالة دمج الفرع.",
       "linear": "ABO-44",
       "pr": "https://github.com/ALKHANFAR/t43/pull/24",
       "locations": [
-        {"role": "render", "path": "app/chat.js", "anchor": "function siyResultRow(data)"},
-        {"role": "message", "path": "app/chat.js", "anchor": "if(!text&&data.request_status==='not_observed'&&state==='unknown')"},
-        {"role": "retry", "path": "app/chat.js", "anchor": "row.siyRetry=function(){submit(true);}"},
-        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "| Uncertain outcome |"},
-        {"role": "test", "path": "scripts/chat-runtime.test.mjs", "anchor": "terminal unknown request shows the actual tool account without claiming success"},
-        {"role": "request_state", "path": "app/chat.js", "anchor": "function siyRequestStateHtml(state,partialActionResult)"},
-        {"role": "recorded_team", "path": "app/chat.js", "anchor": "function renderPlan()"}
+        {
+          "role": "render",
+          "path": "app/chat.js",
+          "anchor": "function siyResultRow(data)"
+        },
+        {
+          "role": "message",
+          "path": "app/chat.js",
+          "anchor": "if(!text&&data.request_status==='not_observed'&&state==='unknown')"
+        },
+        {
+          "role": "retry",
+          "path": "app/chat.js",
+          "anchor": "row.siyRetry=function(){submit(true);}"
+        },
+        {
+          "role": "contract",
+          "path": "CHAT_CONTRACT.md",
+          "anchor": "| Uncertain outcome |"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "terminal unknown request shows the actual tool account without claiming success"
+        },
+        {
+          "role": "request_state",
+          "path": "app/chat.js",
+          "anchor": "function siyRequestStateHtml(state,partialActionResult)"
+        },
+        {
+          "role": "recorded_team",
+          "path": "app/chat.js",
+          "anchor": "function renderPlan()"
+        }
       ]
     },
     {
       "id": "schema_predeploy_readiness",
       "name": "ترحيل قاعدة بيانات سيادة قبل النشر وفحص جاهزيتها",
-      "aliases": ["ترحيل قاعدة البيانات", "جاهزية الصحة", "فحص health", "predeploy migration", "schema readiness"],
+      "aliases": [
+        "ترحيل قاعدة البيانات",
+        "جاهزية الصحة",
+        "فحص health",
+        "predeploy migration",
+        "schema readiness"
+      ],
       "state": "draft_pr",
       "meaning": "PR #18 ضمن إصدار #19 يشغّل الترحيل في خطوة Railway pre-deploy، ثم يجعل /health يفحص الجداول والقيود باستعلامات قراءة فقط. إعداد Railway والإنتاج لم يثبتا بعد؛ جرد التدفقات القديمة بوابة مانعة للدمج.",
       "linear": "ABO-57",
       "pr": "https://github.com/ALKHANFAR/t43/pull/19",
       "locations": [
-        {"role": "deploy_command", "path": "railway.json", "anchor": "preDeployCommand"},
-        {"role": "migration", "path": "scripts/migrate-schema.mjs", "anchor": "await client.query('BEGIN');"},
-        {"role": "schema_guard", "path": "lib/schema-ready.mjs", "anchor": "export async function assertSchemaReady"},
-        {"role": "health_route", "path": "server.mjs", "anchor": "async function health(res)"},
-        {"role": "contract", "path": "migrations/README.md", "anchor": "The application does not run schema initialization while serving requests."},
-        {"role": "test", "path": "scripts/schema-ready-runtime.test.mjs", "anchor": "health checks schema without creating or altering tables"}
+        {
+          "role": "deploy_command",
+          "path": "railway.json",
+          "anchor": "preDeployCommand"
+        },
+        {
+          "role": "migration",
+          "path": "scripts/migrate-schema.mjs",
+          "anchor": "await client.query('BEGIN');"
+        },
+        {
+          "role": "schema_guard",
+          "path": "lib/schema-ready.mjs",
+          "anchor": "export async function assertSchemaReady"
+        },
+        {
+          "role": "health_route",
+          "path": "server.mjs",
+          "anchor": "async function health(res)"
+        },
+        {
+          "role": "contract",
+          "path": "migrations/README.md",
+          "anchor": "The application does not run schema initialization while serving requests."
+        },
+        {
+          "role": "test",
+          "path": "scripts/schema-ready-runtime.test.mjs",
+          "anchor": "health checks schema without creating or altering tables"
+        }
       ]
     },
     {
       "id": "pilot_tool_discovery",
       "name": "جرد أدوات Pilot واتصالات مشروع الشركة",
-      "aliases": ["جرد الأدوات", "اكتشاف الأدوات", "tool inventory", "pilot tool discovery", "ABO-40"],
+      "aliases": [
+        "جرد الأدوات",
+        "اكتشاف الأدوات",
+        "tool inventory",
+        "pilot tool discovery",
+        "ABO-40"
+      ],
       "state": "draft_pr",
       "meaning": "جرد REST القديم مغلق؛ اكتشاف الأدوات والحقول يتم عبر MCP مشروع الشركة بلا بديل REST. استدعاء المكتبة القديمة يفشل قبل HTTP. الحظر في PR #60 ولم يُنشر بعد.",
       "linear": "ABO-40",
       "pr": "https://github.com/ALKHANFAR/t43/pull/60",
       "locations": [
-        {"role": "service", "path": "lib/pilot-tool-discovery.mjs", "anchor": "export function createPilotToolDiscovery"},
-        {"role": "closed_inventory", "path": "lib/pilot-tool-discovery.mjs", "anchor": "native_mcp_discovery_required"},
-        {"role": "contract", "path": "PILOT_TOOL_DISCOVERY.md", "anchor": "The legacy REST inventory is closed"},
-        {"role": "test", "path": "scripts/pilot-tool-discovery-runtime.test.mjs", "anchor": "legacy inventory cannot fall back to REST discovery"},
-        {"role": "test_mismatch", "path": "scripts/pilot-tool-discovery-runtime.test.mjs", "anchor": "legacy discovery preserves the company-project gate"}
+        {
+          "role": "service",
+          "path": "lib/pilot-tool-discovery.mjs",
+          "anchor": "export function createPilotToolDiscovery"
+        },
+        {
+          "role": "closed_inventory",
+          "path": "lib/pilot-tool-discovery.mjs",
+          "anchor": "native_mcp_discovery_required"
+        },
+        {
+          "role": "contract",
+          "path": "PILOT_TOOL_DISCOVERY.md",
+          "anchor": "The legacy REST inventory is closed"
+        },
+        {
+          "role": "test",
+          "path": "scripts/pilot-tool-discovery-runtime.test.mjs",
+          "anchor": "legacy inventory cannot fall back to REST discovery"
+        },
+        {
+          "role": "test_mismatch",
+          "path": "scripts/pilot-tool-discovery-runtime.test.mjs",
+          "anchor": "legacy discovery preserves the company-project gate"
+        }
       ]
     },
     {
       "id": "customer_project_on_demand",
       "name": "تجهيز مشروع أدوات الشركة بعد تأكيد الحساب وعند أول اتصال",
-      "aliases": ["مشروع العميل الجديد", "تهيئة أدوات الشركة", "project provisioning", "first connection"],
+      "aliases": [
+        "مشروع العميل الجديد",
+        "تهيئة أدوات الشركة",
+        "project provisioning",
+        "first connection"
+      ],
       "state": "draft_pr",
       "meaning": "بعد تأكيد البريد تبدأ سيادة ensure الموجود دون تعطيل الرد، وعند فتح الاتصالات تعيد محاولته من جلسة الشركة؛ Activepieces ينشئ مشروعًا واحدًا بالمعرف الخارجي أو يعيده بعد تعارض إنشاء. حفظ مسودة الموظف لا ينتظر Activepieces. هذا لا ينشئ منحة MCP أو يثبت عمل أداة.",
       "linear": "ABO-69",
       "locations": [
-        {"role": "verify", "path": "server.mjs", "anchor": "customer project setup pending retry"},
-        {"role": "verified_account_guard", "path": "lib/tenant-provisioning.mjs", "anchor": "export async function provisionVerifiedTenant"},
-        {"role": "guard_test", "path": "scripts/tenant-provisioning-runtime.test.mjs", "anchor": "internal provisioning rejects an absent company before provider access"},
-        {"role": "request", "path": "server.mjs", "anchor": "await (await tenantProjects()).ensure({tenantId,displayName:resolved.account.company_name})"},
-        {"role": "recovery", "path": "lib/tenant-projects.mjs", "anchor": "project=projectFrom(await provider("},
-        {"role": "test", "path": "scripts/tenant-projects-runtime.test.mjs", "anchor": "recovers the provider project after a concurrent or ambiguous create failure"}
+        {
+          "role": "verify",
+          "path": "server.mjs",
+          "anchor": "customer project setup pending retry"
+        },
+        {
+          "role": "verified_account_guard",
+          "path": "lib/tenant-provisioning.mjs",
+          "anchor": "export async function provisionVerifiedTenant"
+        },
+        {
+          "role": "guard_test",
+          "path": "scripts/tenant-provisioning-runtime.test.mjs",
+          "anchor": "internal provisioning rejects an absent company before provider access"
+        },
+        {
+          "role": "request",
+          "path": "server.mjs",
+          "anchor": "await (await tenantProjects()).ensure({tenantId,displayName:resolved.account.company_name})"
+        },
+        {
+          "role": "recovery",
+          "path": "lib/tenant-projects.mjs",
+          "anchor": "project=projectFrom(await provider("
+        },
+        {
+          "role": "test",
+          "path": "scripts/tenant-projects-runtime.test.mjs",
+          "anchor": "recovers the provider project after a concurrent or ambiguous create failure"
+        }
       ]
     },
     {
       "id": "exclusive_project_connections",
       "name": "عزل اتصال الأداة داخل مشروع شركة واحدة",
-      "aliases": ["ملكية الاتصال", "اتصال مشترك", "عزل الأدوات", "connection scope", "shared connection"],
+      "aliases": [
+        "ملكية الاتصال",
+        "اتصال مشترك",
+        "عزل الأدوات",
+        "connection scope",
+        "shared connection"
+      ],
       "state": "draft_pr",
       "meaning": "يتحقق خادم سيادة من أن اتصال Activepieces بنطاق PROJECT وله projectIds بمشروع الشركة وحده في القائمة والقراءة والإنشاء وOAuth وإعادة التحقق والفصل. الصف المشترك أو الناقص يرفض؛ لم يفحص اتصالات العملاء الحية أو يعالجها.",
       "linear": "ABO-50",
       "pr": "https://github.com/ALKHANFAR/t43/pull/23",
       "locations": [
-        {"role": "ownership_guard", "path": "lib/tool-connections.mjs", "anchor": "function publicConnection(connection,projectId)"},
-        {"role": "read_before_write", "path": "lib/tool-connections.mjs", "anchor": "async function owned(tenantId,id)"},
-        {"role": "test_shared", "path": "scripts/tool-connections-runtime.test.mjs", "anchor": "shared connection ownership is rejected before revalidate"},
-        {"role": "contract", "path": "CONNECTION_SCOPE.md", "anchor": "projectIds` contains exactly that one project"}
+        {
+          "role": "ownership_guard",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "function publicConnection(connection,projectId)"
+        },
+        {
+          "role": "read_before_write",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "async function owned(tenantId,id)"
+        },
+        {
+          "role": "test_shared",
+          "path": "scripts/tool-connections-runtime.test.mjs",
+          "anchor": "shared connection ownership is rejected before revalidate"
+        },
+        {
+          "role": "contract",
+          "path": "CONNECTION_SCOPE.md",
+          "anchor": "projectIds` contains exactly that one project"
+        }
       ]
     },
     {
       "id": "external_run_proof",
       "name": "تشغيل أداة الموظف وإثبات نتيجتها",
-      "aliases": ["نتيجة الاداة", "Activepieces run", "دليل التنفيذ", "runId"],
+      "aliases": [
+        "نتيجة الاداة",
+        "Activepieces run",
+        "دليل التنفيذ",
+        "runId"
+      ],
       "state": "gap",
       "meaning": "أُوقف استدعاء Webhook المباشر من سيادة. تشغيل الموظف يمر بأداة الفلو المنشورة في MCP فقط، ويظل أثر المزود غير مؤكد حتى تعيد الأداة إيصالًا يمكن التحقق منه. الفلوهات القديمة بلا مشغّل MCP Tool لا تُشغّل من شات الموظف.",
       "linear": "ABO-43",
       "pr": "https://github.com/ALKHANFAR/t43/pull/15",
       "locations": [
-        {"role": "route", "path": "server.mjs", "anchor": "if(answer.flowToolAttempted||answer.effects?.length)"},
-        {"role": "native_run_readback", "path": "server.mjs", "anchor": "const execution=result?.structuredContent?.execution,projects=await tenantProjects();"},
-        {"role": "native_run_contract", "path": "CHAT_CONTRACT.md", "anchor": "## Native employee production run receipt"},
-        {"role": "durable_identity", "path": "lib/employee-run-recovery.mjs", "anchor": "async function capture("},
-        {"role": "exact_run_recovery", "path": "lib/employee-run-recovery.mjs", "anchor": "async function reconcile("},
-        {"role": "one_off_identity", "path": "lib/employee-run-recovery.mjs", "anchor": "employee=null,flowId=null"},
-        {"role": "one_off_readback_test", "path": "scripts/one-off-run-recovery-runtime.test.mjs", "anchor": "one-off identity and successful receipt"},
-        {"role": "identity_migration", "path": "migrations/0006-native-execution-identity.sql", "anchor": "execution_identity_json jsonb"},
-        {"role": "recovery_contract", "path": "CHAT_CONTRACT.md", "anchor": "## Durable native employee receipt recovery"},
-        {"role": "recovery_pg_test", "path": "scripts/employee-run-recovery-runtime.test.mjs", "anchor": "durable native receipts survive restart, expiry and concurrent reconciliation in PostgreSQL"},
-        {"role": "native_run_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "native employee execution receipt reads its exact production run and saves proof before the next model call"},
-        {"role": "flow_tool", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function employeeFlowMcpToolName("},
-        {"role": "mcp_transport", "path": "lib/activepieces-mcp.mjs", "anchor": "async function rpc(token,method,params)"},
-        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "For a provider result from a Flow"},
-        {"role": "test", "path": "scripts/mcp-flow-scope-runtime.test.mjs", "anchor": "employee Flow ID comes from its saved record"}
+        {
+          "role": "route",
+          "path": "server.mjs",
+          "anchor": "if(answer.flowToolAttempted||answer.effects?.length)"
+        },
+        {
+          "role": "native_run_readback",
+          "path": "server.mjs",
+          "anchor": "const execution=result?.structuredContent?.execution,projects=await tenantProjects();"
+        },
+        {
+          "role": "native_run_contract",
+          "path": "CHAT_CONTRACT.md",
+          "anchor": "## Native employee production run receipt"
+        },
+        {
+          "role": "durable_identity",
+          "path": "lib/employee-run-recovery.mjs",
+          "anchor": "async function capture("
+        },
+        {
+          "role": "exact_run_recovery",
+          "path": "lib/employee-run-recovery.mjs",
+          "anchor": "async function reconcile("
+        },
+        {
+          "role": "one_off_identity",
+          "path": "lib/employee-run-recovery.mjs",
+          "anchor": "employee=null,flowId=null"
+        },
+        {
+          "role": "one_off_readback_test",
+          "path": "scripts/one-off-run-recovery-runtime.test.mjs",
+          "anchor": "one-off identity and successful receipt"
+        },
+        {
+          "role": "identity_migration",
+          "path": "migrations/0006-native-execution-identity.sql",
+          "anchor": "execution_identity_json jsonb"
+        },
+        {
+          "role": "recovery_contract",
+          "path": "CHAT_CONTRACT.md",
+          "anchor": "## Durable native employee receipt recovery"
+        },
+        {
+          "role": "recovery_pg_test",
+          "path": "scripts/employee-run-recovery-runtime.test.mjs",
+          "anchor": "durable native receipts survive restart, expiry and concurrent reconciliation in PostgreSQL"
+        },
+        {
+          "role": "native_run_test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "native employee execution receipt reads its exact production run and saves proof before the next model call"
+        },
+        {
+          "role": "flow_tool",
+          "path": "lib/mcp-flow-scope.mjs",
+          "anchor": "export function employeeFlowMcpToolName("
+        },
+        {
+          "role": "mcp_transport",
+          "path": "lib/activepieces-mcp.mjs",
+          "anchor": "async function rpc(token,method,params)"
+        },
+        {
+          "role": "contract",
+          "path": "CHAT_CONTRACT.md",
+          "anchor": "For a provider result from a Flow"
+        },
+        {
+          "role": "test",
+          "path": "scripts/mcp-flow-scope-runtime.test.mjs",
+          "anchor": "employee Flow ID comes from its saved record"
+        }
       ]
     },
     {
       "id": "chat_project_mcp",
       "name": "قدرات أدوات مشروع الشركة في الشات",
-      "aliases": ["ربط الشات بـMCP", "أدوات الشات", "شات الموظف والأدوات", "project scoped MCP chat"],
+      "aliases": [
+        "ربط الشات بـMCP",
+        "أدوات الشات",
+        "شات الموظف والأدوات",
+        "project scoped MCP chat"
+      ],
       "state": "live_needs_change",
       "meaning": "وصلة MCP واحدة إلى مشروع الشركة؛ يعاد استخدام رمز الوصول الصالح داخل طلب الشات نفسه بعد فحص المشروع والمنحة عند كل استدعاء، ويُجدّد عند انتهاء عمره. لا يُحتفظ به بين طلبات الشات. مع اكتشاف ديناميكي للأدوات ودليل الاستخدام الذي يرسله خادم Activepieces نفسه. أدوات المشروع تُنفَّذ مباشرة من الشات، ونتيجتها تعود للنموذج. شات الموظف يعرض أداة فلوه المنشور عبر MCP وحدها بعد مطابقة الاسم الدقيق للفلو ونسخته المنشورة؛ الفلو القديم بلا مشغّل MCP لا يُشغّل. يبقى نطاق الشركة محددًا من الخادم. الطلب الطويل يرد queued ويكمل في الخادم. ثبتت قراءة Slack List Channels حية في مشروع عشر أبعاد وظهرت نتيجتها للعميل؛ سجل طلب سيادة بقي unverified، ولم يثبت تفعيل موظف حي.",
       "linear": "ABO-48",
       "locations": [
-        {"role": "chat_route", "path": "server.mjs", "anchor": "async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null"},
-        {"role": "tool_receipt", "path": "server.mjs", "anchor": "const effects=[],toolReceipts=[];"},
-        {"role": "tool_receipt_render", "path": "app/chat.js", "anchor": "var receipts=Array.isArray(data.tool_receipts)"},
-        {"role": "draft_build", "path": "server.mjs", "anchor": "async function buildOwnedDraftFlow("},
-        {"role": "approval_route", "path": "server.mjs", "anchor": "if(input.op==='approve')"},
-        {"role": "table_readback", "path": "lib/chat-intelligence.mjs", "anchor": "export function createdTableReadback("},
-        {"role": "table_continuation", "path": "server.mjs", "anchor": "if(pending.toolName==='ap_create_table')"},
-        {"role": "mcp_adapter", "path": "lib/activepieces-mcp.mjs", "anchor": "export function createActivepiecesMcp("},
-        {"role": "employee_flow_scope", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function scopeMcpTool("},
-        {"role": "employee_flow_mcp_name", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function employeeFlowMcpToolName("},
-        {"role": "connection_guard", "path": "lib/tool-connections.mjs", "anchor": "async function assertOwnedExternal({tenantId,externalId,pieceName})"},
-        {"role": "migration", "path": "migrations/0005-activepieces-mcp.sql", "anchor": "CREATE TABLE IF NOT EXISTS siyadah_mcp_grants"},
-        {"role": "client_approval", "path": "app/chat.js", "anchor": "if(data.approval.kind==='tool_action')"},
-        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "## Project MCP chat"},
-        {"role": "test", "path": "scripts/activepieces-mcp-runtime.test.mjs", "anchor": "MCP OAuth grant is bound to the server-owned company project"},
-        {"role": "expired_grant_test", "path": "scripts/activepieces-mcp-runtime.test.mjs", "anchor": "an expired native OAuth refresh grant requests consent without replaying tools or changing stored grants"},
-        {"role": "employee_flow_test", "path": "scripts/mcp-flow-scope-runtime.test.mjs", "anchor": "employee Flow ID comes from its saved record"},
-        {"role": "intact_results", "path": "server.mjs", "anchor": "const modelResult="},
-        {"role": "employee_state_context", "path": "server.mjs", "anchor": "const syncEmployeeState=async()=>"},
-        {"role": "native_wait_for_response_test", "path": "scripts/mcp-flow-scope-runtime.test.mjs", "anchor": "native string Wait for Response exposes only the owned published employee tool"},
-        {"role": "intact_results_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "large MCP results reach the model as complete JSON"},
-        {"role": "reply_tables", "path": "app/chat.js", "anchor": "function siyReplyHtml(text)"},
-        {"role": "riyadh_time", "path": "app/chat.js", "anchor": "function siyMessageTime("},
-        {"role": "open_tools_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "the model builds, tests and publishes in one request and writes the reply itself"},
-        {"role": "activation_resume", "path": "server.mjs", "anchor": "if(input.op==='resume_employee_activation')"},
-        {"role": "activation_intent", "path": "lib/company-profile.mjs", "anchor": "async function pendingEmployeeActivation(companyId,employeeId=null)"},
-        {"role": "activation_resume_test", "path": "scripts/employee-activation-resume-runtime.test.mjs", "anchor": "manual activation and connection resume share one tested activation path"},
-        {"role": "native_receipt", "path": "lib/chat-outcome.mjs", "anchor": "export function nativeActionReceipt(name,result)"},
-        {"role": "usage", "path": "server.mjs", "anchor": "console.info('chat_model_usage'"},
-        {"role": "outcome_test", "path": "scripts/chat-outcome-runtime.test.mjs", "anchor": "native ActionRun completion is distinct from provider or FlowRun proof"}
+        {
+          "role": "chat_route",
+          "path": "server.mjs",
+          "anchor": "async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null"
+        },
+        {
+          "role": "tool_receipt",
+          "path": "server.mjs",
+          "anchor": "const effects=[],toolReceipts=[];"
+        },
+        {
+          "role": "tool_receipt_render",
+          "path": "app/chat.js",
+          "anchor": "var receipts=Array.isArray(data.tool_receipts)"
+        },
+        {
+          "role": "draft_build",
+          "path": "server.mjs",
+          "anchor": "async function buildOwnedDraftFlow("
+        },
+        {
+          "role": "approval_route",
+          "path": "server.mjs",
+          "anchor": "if(input.op==='approve')"
+        },
+        {
+          "role": "table_readback",
+          "path": "lib/chat-intelligence.mjs",
+          "anchor": "export function createdTableReadback("
+        },
+        {
+          "role": "table_continuation",
+          "path": "server.mjs",
+          "anchor": "if(pending.toolName==='ap_create_table')"
+        },
+        {
+          "role": "mcp_adapter",
+          "path": "lib/activepieces-mcp.mjs",
+          "anchor": "export function createActivepiecesMcp("
+        },
+        {
+          "role": "employee_flow_scope",
+          "path": "lib/mcp-flow-scope.mjs",
+          "anchor": "export function scopeMcpTool("
+        },
+        {
+          "role": "employee_flow_mcp_name",
+          "path": "lib/mcp-flow-scope.mjs",
+          "anchor": "export function employeeFlowMcpToolName("
+        },
+        {
+          "role": "connection_guard",
+          "path": "lib/tool-connections.mjs",
+          "anchor": "async function assertOwnedExternal({tenantId,externalId,pieceName})"
+        },
+        {
+          "role": "migration",
+          "path": "migrations/0005-activepieces-mcp.sql",
+          "anchor": "CREATE TABLE IF NOT EXISTS siyadah_mcp_grants"
+        },
+        {
+          "role": "client_approval",
+          "path": "app/chat.js",
+          "anchor": "if(data.approval.kind==='tool_action')"
+        },
+        {
+          "role": "contract",
+          "path": "CHAT_CONTRACT.md",
+          "anchor": "## Project MCP chat"
+        },
+        {
+          "role": "test",
+          "path": "scripts/activepieces-mcp-runtime.test.mjs",
+          "anchor": "MCP OAuth grant is bound to the server-owned company project"
+        },
+        {
+          "role": "expired_grant_test",
+          "path": "scripts/activepieces-mcp-runtime.test.mjs",
+          "anchor": "an expired native OAuth refresh grant requests consent without replaying tools or changing stored grants"
+        },
+        {
+          "role": "employee_flow_test",
+          "path": "scripts/mcp-flow-scope-runtime.test.mjs",
+          "anchor": "employee Flow ID comes from its saved record"
+        },
+        {
+          "role": "intact_results",
+          "path": "server.mjs",
+          "anchor": "const modelResult="
+        },
+        {
+          "role": "employee_state_context",
+          "path": "server.mjs",
+          "anchor": "const syncEmployeeState=async()=>"
+        },
+        {
+          "role": "native_wait_for_response_test",
+          "path": "scripts/mcp-flow-scope-runtime.test.mjs",
+          "anchor": "native string Wait for Response exposes only the owned published employee tool"
+        },
+        {
+          "role": "intact_results_test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "large MCP results reach the model as complete JSON"
+        },
+        {
+          "role": "reply_tables",
+          "path": "app/chat.js",
+          "anchor": "function siyReplyHtml(text)"
+        },
+        {
+          "role": "riyadh_time",
+          "path": "app/chat.js",
+          "anchor": "function siyMessageTime("
+        },
+        {
+          "role": "open_tools_test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "the model builds, tests and publishes in one request and writes the reply itself"
+        },
+        {
+          "role": "activation_resume",
+          "path": "server.mjs",
+          "anchor": "if(input.op==='resume_employee_activation')"
+        },
+        {
+          "role": "activation_intent",
+          "path": "lib/company-profile.mjs",
+          "anchor": "async function pendingEmployeeActivation(companyId,employeeId=null)"
+        },
+        {
+          "role": "activation_resume_test",
+          "path": "scripts/employee-activation-resume-runtime.test.mjs",
+          "anchor": "manual activation and connection resume share one tested activation path"
+        },
+        {
+          "role": "native_receipt",
+          "path": "lib/chat-outcome.mjs",
+          "anchor": "export function nativeActionReceipt(name,result)"
+        },
+        {
+          "role": "usage",
+          "path": "server.mjs",
+          "anchor": "console.info('chat_model_usage'"
+        },
+        {
+          "role": "outcome_test",
+          "path": "scripts/chat-outcome-runtime.test.mjs",
+          "anchor": "native ActionRun completion is distinct from provider or FlowRun proof"
+        }
       ]
     },
     {
       "id": "customer_mcp_consent",
-      "aliases": ["تفويض الشركة", "بدء موافقة MCP", "ربط مساحة التنفيذ"],
+      "aliases": [
+        "تفويض الشركة",
+        "بدء موافقة MCP",
+        "ربط مساحة التنفيذ"
+      ],
       "name": "موافقة أدوات الشركة من جلسة العميل",
       "state": "draft_pr",
       "meaning": "وصلت PR64 إلى الإنتاج، وثبتت موافقة MCP من مستخدم Activepieces جديد بصلاحية MEMBER لمشروع شركته ونفس جلسة سيادة. الفرع الحالي يضيف دعوة PROJECT/Editor الأصلية قبل بدء الموافقة اعتمادًا على بريد واحد مؤكد من الخادم؛ لا يختار المتصفح البريد أو المشروع أو الصلاحية. لا يزال تسجيل الدخول أو التسجيل في نافذة الموافقة الأصلية مطلوبًا، ولم تثبت موافقة مزود خارجي بعد.",
       "linear": "ABO-69",
       "pr": "https://github.com/ALKHANFAR/t43/pull/65",
       "locations": [
-        {"role": "verified_native_identity", "path": "lib/account-auth.mjs", "anchor": "async function verifiedEmail(companyId)"},
-        {"role": "native_project_membership", "path": "lib/tenant-projects.mjs", "anchor": "async function ensureMember({tenantId,email})"},
-        {"role": "membership_test", "path": "scripts/tenant-projects-runtime.test.mjs", "anchor": "customer membership uses the stored project and native Editor invitation only"},
-        {"role": "membership_registration_gate", "path": "scripts/mcp-customer-session-runtime.test.mjs", "anchor": "unverified project membership stops OAuth registration before access is offered"},
+        {
+          "role": "verified_native_identity",
+          "path": "lib/account-auth.mjs",
+          "anchor": "async function verifiedEmail(companyId)"
+        },
+        {
+          "role": "native_project_membership",
+          "path": "lib/tenant-projects.mjs",
+          "anchor": "async function ensureMember({tenantId,email})"
+        },
+        {
+          "role": "membership_test",
+          "path": "scripts/tenant-projects-runtime.test.mjs",
+          "anchor": "customer membership uses the stored project and native Editor invitation only"
+        },
+        {
+          "role": "membership_registration_gate",
+          "path": "scripts/mcp-customer-session-runtime.test.mjs",
+          "anchor": "unverified project membership stops OAuth registration before access is offered"
+        },
         {
           "role": "route",
           "path": "server.mjs",
@@ -651,30 +1741,91 @@
           "path": "lib/activepieces-mcp.mjs",
           "anchor": "async function status(tenantId)"
         },
-        {"role": "ui", "path": "app/chat.js", "anchor": "async function authorizeWorkspace()"},
-        {"role": "ui_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "workspace consent opens only after a customer click and saved authorization never claims tool readiness"},
-        {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "### Customer MCP consent"},
-        {"role": "test", "path": "scripts/mcp-customer-session-runtime.test.mjs", "anchor": "customer MCP start uses verified session company and binds the original authorization"}
+        {
+          "role": "ui",
+          "path": "app/chat.js",
+          "anchor": "async function authorizeWorkspace()"
+        },
+        {
+          "role": "ui_test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "workspace consent opens only after a customer click and saved authorization never claims tool readiness"
+        },
+        {
+          "role": "contract",
+          "path": "CHAT_CONTRACT.md",
+          "anchor": "### Customer MCP consent"
+        },
+        {
+          "role": "test",
+          "path": "scripts/mcp-customer-session-runtime.test.mjs",
+          "anchor": "customer MCP start uses verified session company and binds the original authorization"
+        }
       ]
     },
     {
       "id": "gmail_send_pilot_43",
       "name": "إرسال بريد تجريبي من شركة 43",
-      "aliases": ["رسالة Gmail التجريبية", "معرف رسالة Google", "Gmail pilot send", "شركة 43"],
+      "aliases": [
+        "رسالة Gmail التجريبية",
+        "معرف رسالة Google",
+        "Gmail pilot send",
+        "شركة 43"
+      ],
       "state": "gap",
       "meaning": "تجربة شركة 43 سجل تاريخي فقط. فحص 6 أكتوبر أثبت غياب الحساب والطلبات والمنحة والتدفق القديم من البيانات الحالية؛ أزيلت الاستعادة الخاصة من الخادم ونقلت أدوات التحقق التاريخية إلى scripts/support للاختبار فقط. جميع طلبات Gmail الجديدة تستخدم الشات العام وMCP الأصلي داخل مشروع الشركة. لا حذف لبيانات العملاء.",
       "linear": "ABO-43",
       "locations": [
-        {"role": "flow_gate", "path": "scripts/support/gmail-send-pilot.mjs", "anchor": "export function validateGmailPilotFlow("},
-        {"role": "gmail_reconnect", "path": "app/chat.js", "anchor": "data-reconnect=\"1\""},
-        {"role": "read_only_recovery", "path": "scripts/support/gmail-pilot-runner.mjs", "anchor": "export function createGmailPilotRunner("},
-        {"role": "conversation_persistence", "path": "scripts/support/gmail-pilot-runner.mjs", "anchor": "export async function recordGmailPilotConversation("},
-        {"role": "dedupe", "path": "scripts/support/gmail-pilot-runner.mjs", "anchor": "export function gmailPilotLedgerIdentity("},
-        {"role": "provider_receipt", "path": "scripts/support/gmail-send-pilot.mjs", "anchor": "export function verifyGmailPilotRun("},
-        {"role": "contract", "path": "GMAIL-PILOT-CONTRACT.md", "anchor": "# شركة الاختبار 43"},
-        {"role": "test", "path": "scripts/gmail-send-pilot-runtime.test.mjs", "anchor": "pilot gate accepts only the exact company"},
-        {"role": "test", "path": "scripts/gmail-pilot-runner-runtime.test.mjs", "anchor": "Gmail pilot runner has no outbound webhook dispatch"},
-        {"role": "test", "path": "scripts/chat-request-ledger-runtime.test.mjs", "anchor": "Gmail pilot shares one ledger key across two chat conversations"}
+        {
+          "role": "flow_gate",
+          "path": "scripts/support/gmail-send-pilot.mjs",
+          "anchor": "export function validateGmailPilotFlow("
+        },
+        {
+          "role": "gmail_reconnect",
+          "path": "app/chat.js",
+          "anchor": "data-reconnect=\"1\""
+        },
+        {
+          "role": "read_only_recovery",
+          "path": "scripts/support/gmail-pilot-runner.mjs",
+          "anchor": "export function createGmailPilotRunner("
+        },
+        {
+          "role": "conversation_persistence",
+          "path": "scripts/support/gmail-pilot-runner.mjs",
+          "anchor": "export async function recordGmailPilotConversation("
+        },
+        {
+          "role": "dedupe",
+          "path": "scripts/support/gmail-pilot-runner.mjs",
+          "anchor": "export function gmailPilotLedgerIdentity("
+        },
+        {
+          "role": "provider_receipt",
+          "path": "scripts/support/gmail-send-pilot.mjs",
+          "anchor": "export function verifyGmailPilotRun("
+        },
+        {
+          "role": "contract",
+          "path": "GMAIL-PILOT-CONTRACT.md",
+          "anchor": "# شركة الاختبار 43"
+        },
+        {
+          "role": "test",
+          "path": "scripts/gmail-send-pilot-runtime.test.mjs",
+          "anchor": "pilot gate accepts only the exact company"
+        },
+        {
+          "role": "test",
+          "path": "scripts/gmail-pilot-runner-runtime.test.mjs",
+          "anchor": "Gmail pilot runner has no outbound webhook dispatch"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-request-ledger-runtime.test.mjs",
+          "anchor": "Gmail pilot shares one ledger key across two chat conversations"
+        }
       ]
     },
     {
@@ -690,8 +1841,16 @@
       "linear": "ABO-69",
       "pr": "https://github.com/ALKHANFAR/t43/pull/66",
       "locations": [
-        {"role": "single_execution_intent", "path": "lib/chat-intelligence.mjs", "anchor": "export function doNotRunIntent(message)"},
-        {"role": "single_execution_intent_test", "path": "scripts/chat-intelligence-runtime.test.mjs", "anchor": "a single execution limit does not forbid execution while explicit prohibitions still do"},
+        {
+          "role": "single_execution_intent",
+          "path": "lib/chat-intelligence.mjs",
+          "anchor": "export function doNotRunIntent(message)"
+        },
+        {
+          "role": "single_execution_intent_test",
+          "path": "scripts/chat-intelligence-runtime.test.mjs",
+          "anchor": "a single execution limit does not forbid execution while explicit prohibitions still do"
+        },
         {
           "role": "provider_error",
           "path": "server.mjs",
@@ -819,8 +1978,16 @@
       "meaning": "زر التهيئة الأساسي يحفظ نص الطلب في sessionStorage مع زمنه ثم يفتح الشات دون URL أو إرسال تلقائي. اقتراح الموظفين خيار ثانوي. فشل التخزين يبقي النص في مكانه ويمنع الانتقال. مستهلك الشات في مسار التكامل؛ غير منشور ولا يثبت تنفيذ طلب أو إنشاء موظف.",
       "linear": "ABO-69",
       "locations": [
-        {"role":"consumer","path":"app/chat.js","anchor":"function siyRestoreRequestDraft()"},
-        {"role":"consumer_test","path":"scripts/chat-runtime.test.mjs","anchor":"onboarding request arrives in the composer without creating an employee or sending"},
+        {
+          "role": "consumer",
+          "path": "app/chat.js",
+          "anchor": "function siyRestoreRequestDraft()"
+        },
+        {
+          "role": "consumer_test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "onboarding request arrives in the composer without creating an employee or sending"
+        },
         {
           "role": "producer",
           "path": "app/onboard.js",
@@ -884,13 +2051,41 @@
       "meaning": "يعرض snapshots نشاط backend المحدد بالطلب: بدأت الأداة أو وصل ردها أو تعثرت. آخر80، هوية ثابتة للاستدعاء وحالات محدثة بلا مضاعفة. أسماء native المعروفة بلغة العميل، المجهولة أداة العمل. returned ليس نجاح مزود؛ لا inputs/outputs أو أحداث محاكاة. لا يغير request/work_status. مسار قابل للطي برموز SVG موحدة، يحفظ الفتح والتركيز عبر تحديث الطلب نفسه، ويتبع اتجاه لغة الواجهة وتقليل الحركة. غير منشور.",
       "linear": "ABO-54",
       "locations": [
-        {"role":"timeline_style","path":"app/chat.html","anchor":".activity-timeline li{display:grid;"},
-        {"role":"timeline_icon","path":"app/chat.js","anchor":"function siyActivityIcon(state)"},
-        {"role":"timeline_test","path":"scripts/chat-runtime.test.mjs","anchor":"activity timeline keeps its open state and keyboard focus during same-request polling"},
-        {"role":"source","path":"server.mjs","anchor":"const item={id:++activityId,name:params.name,state:'started'}"},
-        {"role":"ledger","path":"lib/company-profile.mjs","anchor":"async function recordChatActivity("},
-        {"role":"source_test","path":"scripts/chat-open-tools-runtime.test.mjs","anchor":"tool activity follows real invocation boundaries"},
-        {"role":"contract","path":"CHAT_CONTRACT.md","anchor":"## Tool activity while a request runs"},
+        {
+          "role": "timeline_style",
+          "path": "app/chat.html",
+          "anchor": ".activity-timeline li{display:grid;"
+        },
+        {
+          "role": "timeline_icon",
+          "path": "app/chat.js",
+          "anchor": "function siyActivityIcon(state)"
+        },
+        {
+          "role": "timeline_test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "activity timeline keeps its open state and keyboard focus during same-request polling"
+        },
+        {
+          "role": "source",
+          "path": "server.mjs",
+          "anchor": "const item={id:++activityId,name:params.name,state:'started'}"
+        },
+        {
+          "role": "ledger",
+          "path": "lib/company-profile.mjs",
+          "anchor": "async function recordChatActivity("
+        },
+        {
+          "role": "source_test",
+          "path": "scripts/chat-open-tools-runtime.test.mjs",
+          "anchor": "tool activity follows real invocation boundaries"
+        },
+        {
+          "role": "contract",
+          "path": "CHAT_CONTRACT.md",
+          "anchor": "## Tool activity while a request runs"
+        },
         {
           "role": "render",
           "path": "app/chat.js",
@@ -903,7 +2098,7 @@
         }
       ]
     },
-{
+    {
       "id": "interactive_chat_experience_v2_preview",
       "name": "معاينة الموظف ومساحته الواحدة",
       "aliases": [
