@@ -39,9 +39,9 @@ const catalog=[
   {name:flowToolName,...hint(false),inputSchema:{type:'object',properties:{task:{type:'string'}}}},
 ];
 const say=content=>({content});
-const use=(...calls)=>({content:'',tool_calls:calls.map(([name,args],index)=>({id:`call_${name}_${index}`,function:{name,arguments:typeof args==='string'?args:JSON.stringify(args||{})}}))});
+const use=(...calls)=>({content:'',tool_calls:calls.map(([name,args],index)=>({id:`call_${name}_${index}`,function:{name,arguments:typeof args==='string'?args:JSON.stringify(['ap_build_flow','ap_create_flow'].includes(name)?{_siyadah_work_mode:'standing',...(args||{})}:args||{})}}))});
 
-function setup({script,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false,connections=[]}={}){
+function setup({script,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false,connections=[],flowReadOverride=null}={}){
   const log={model:[],tools:[],effects:0,states:[],owned:[],runs:[]};
   let stateAttempts=0,step=0,status=flowStatus,publishedVersionId=published?'v1':null,draftVersionId='v1',versionState=published?'LOCKED':'DRAFT',sampleData,updated='before',updatedBy,taskInput='{{trigger.task}}';
   const mcp={call:async(_company,method,params)=>{
@@ -73,7 +73,7 @@ function setup({script,toolResults={},flowStatus='DISABLED',published=false,edit
       recordEmployeeRun:async input=>{if(saveRunFailure)throw new Error('save failed');log.runs.push(input);return {recordId:input.employeeId,flowId:input.flowId,lastRunId:input.runId,status:'active'};},
       setEmployeeState:async({employeeId,status:next})=>{if(saveStateFailure===true||saveStateFailure==='once'&&stateAttempts++===0)throw new Error('save failed');log.states.push([employeeId,next]);return {recordId:employeeId,flowId,name:'أمين المحتوى',status:next};},
     }),
-    tenantProjects:async()=>({requireProject:async()=> 'P'.repeat(21),ownedFlow:async(_company,id)=>{log.owned.push(id);return {flow:{...publishedFlow,id,status,publishedVersionId,version:{...publishedFlow.version,id:draftVersionId,state:versionState,updated,...(updatedBy?{updatedBy}:{}),trigger:{...publishedFlow.version.trigger,settings:{...publishedFlow.version.trigger.settings,input:{...publishedFlow.version.trigger.settings.input,task:taskInput},...(sampleData?{sampleData}:{})}}}}};}}),
+    tenantProjects:async()=>({requireProject:async()=> 'P'.repeat(21),ownedFlow:async(_company,id)=>{log.owned.push(id);const snapshot={flow:{...publishedFlow,id,status,publishedVersionId,version:{...publishedFlow.version,id:draftVersionId,state:versionState,updated,...(updatedBy?{updatedBy}:{}),trigger:{...publishedFlow.version.trigger,settings:{...publishedFlow.version.trigger.settings,input:{...publishedFlow.version.trigger.settings.input,task:taskInput},...(sampleData?{sampleData}:{})}}}}};return flowReadOverride?flowReadOverride(snapshot):snapshot;}}),
     toolConnections:async()=>({list:async company=>{assert.equal(company,'company-1');if(connections instanceof Error)throw connections;return connections;},assertOwnedExternal:async({externalId})=>{if(externalId==='foreign')throw new TenantProjectError('connection_not_owned','الاتصال لا يخص هذه الشركة.',403);}}),
   };
   const deepseekReply=runInNewContext(`${source.slice(start,end)}; deepseekReply`,ctx);
@@ -696,4 +696,30 @@ test('tool activity follows real invocation boundaries and contains no arguments
 
 test('failed activity storage does not prevent a native tool call or invent a provider result',async()=>{
  const {run,log}=setup({script:[use(['ap_run_action',{}]),say('رد')],toolResults:{ap_run_action:{isError:true,content:[{type:'text',text:'error'}]}}});const answer=await run({onActivity:async()=>{throw new Error('storage down');}});assert.equal(log.tools.filter(([name])=>name==='ap_run_action').length,1);assert.equal(answer.toolReceipts[0].status,'error');
+});
+
+
+test('one-off Flow is built without creating an employee and internal intent never reaches native MCP',async()=>{
+ let drafts=0;const {run,log}=setup({script:[use(['ap_build_flow',{flowName:'مراجعة العقد',_siyadah_work_mode:'one_off'}]),say('حفظت العمل') ]});const answer=await run({createDraft:async()=>{drafts++;throw new Error('must not create employee');}});assert.equal(drafts,0);assert.equal(answer.employee,undefined);assert.equal(answer.workMode,'one_off');assert.equal(answer.flowId,flowId);assert.equal(log.tools.find(([name])=>name==='ap_build_flow')[1]._siyadah_work_mode,undefined);
+});
+
+test('one-off Flow can test publish and invoke its exact native tool once without employee persistence',async()=>{
+ const execution={runId,projectId:'P'.repeat(21),flowId,flowVersionId:'v1',environment:'PRODUCTION'};let captures=0;const {run,log}=setup({script:[use(['ap_build_flow',{flowName:'تقرير الآن',_siyadah_work_mode:'one_off'}]),use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),use([flowToolName,{task:'نفذ الآن'}]),say('النتيجة')],toolResults:{[flowToolName]:{structuredContent:{execution}}}});const answer=await run({onNativeExecution:async native=>{captures++;assert.equal(native.employee,null);assert.equal(native.flowId,flowId);assert.equal(native.publishedVersion,'v1');return {ok:true};},createDraft:async()=>{throw new Error('must not create employee');}});assert.equal(captures,1);assert.equal(answer.flowToolAttempted,true);assert.equal(answer.employee,undefined);assert.equal(answer.toolReceipts.at(-1).outcome,'flow_completed');assert.equal(log.runs.length,0);assert.equal(log.states.length,0);assert.equal(log.tools.filter(([name])=>name===flowToolName).length,1);
+});
+
+test('missing internal work intention cannot create a Flow or employee',async()=>{
+ let drafts=0;const {run,log}=setup({script:[use(['ap_build_flow','{"flowName":"طلب"}']),say('أحتاج تحديد وقت المتابعة') ]});await run({createDraft:async()=>{drafts++;return {};}});assert.equal(drafts,0);assert.equal(log.tools.some(([name])=>name==='ap_build_flow'),false);assert.match(toolMessages(log.model[1])[0],/work_intention_required/);
+});
+
+test('one-off continuation rejects retrying another Flow run before any retry dispatch',async()=>{
+ const {run,log}=setup({published:true,flowStatus:'ENABLED',script:[use(['ap_retry_run',{flowRunId:runId,strategy:'FROM_FAILED_STEP'}]),say('التشغيل لا يخص الطلب')],toolResults:{ap_get_run:{structuredContent:{id:runId,flowId:'X'.repeat(21)}}}});await run({oneOffWork:{flowId}});assert.equal(log.tools.some(([name])=>name==='ap_retry_run'),false);assert.match(toolMessages(log.model[1])[0],/employee_run_scope/);
+});
+
+
+test('one-off invocation rejects a changed published version before the native action',async()=>{
+ let reads=0;const {run,log}=setup({flowReadOverride:snapshot=>++reads>=7?{flow:{...snapshot.flow,publishedVersionId:'v2'}}:snapshot,script:[use(['ap_build_flow',{flowName:'تقرير الآن',_siyadah_work_mode:'one_off'}]),use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),use([flowToolName,{}]),say('تغيرت النسخة')]});const answer=await run({onNativeExecution:async()=>{throw new Error('must not invoke');}});assert.equal(log.tools.some(([name])=>name===flowToolName),false);assert.equal(answer.toolReceipts.at(-1).status,'error');assert.match(toolMessages(log.model.at(-1)).at(-1),/one_off_version_changed/);
+});
+
+test('a new goal in a conversation with earlier one-off work can build a different task without an employee',async()=>{
+ const {run,log}=setup({published:true,flowStatus:'DISABLED',script:[use(['ap_build_flow',{flowName:'طلب جديد',_siyadah_work_mode:'one_off'}]),say('جهزت الطلب الجديد')]});let created=0;await run({oneOffWork:{flowId},createDraft:async()=>{created++;return {};}});assert.equal(created,0);assert.equal(log.tools.filter(([name])=>name==='ap_build_flow').length,1);
 });

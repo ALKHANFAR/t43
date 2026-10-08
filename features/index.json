@@ -3,6 +3,24 @@
   "repository": "ALKHANFAR/t43",
   "features": [
     {
+      "id":"one_off_flow_request",
+      "name":"طلب ينتهي دون إنشاء موظف",
+      "aliases":["نفذ هذا الطلب الآن","مهمة متعددة الخطوات","لا أريد موظفا جديدا"],
+      "state":"draft_pr",
+      "meaning":"نية البناء داخلية للنموذج وليست شاشة تصنيف. one_off يبني فلو أصليًا دون موظف، ويتحقق من مشغل MCP واختبار النسخة قبل النشر ومن المشروع والفلو والنسخة قبل الاستدعاء ونتيجة التشغيل بعده. نتيجة الطلب محفوظة في ledger دون تحديث موظف. مرجع العمل السابق لا يفرض إعادة استخدامه لطلب جديد. فحوص محلية فقط؛ غير منشور ولا إثبات مزود حي.",
+      "linear":"ABO-37",
+      "locations":[
+        {"role":"returning_customer","path":"server.mjs","anchor":"const onboardingRequired=!(await (await companyProfiles()).read(account.company_id));"},
+        {"role":"login_test","path":"scripts/login-onboarding-runtime.test.mjs","anchor":"returning customer without employees goes to chat"},
+        {"role":"intent","path":"server.mjs","anchor":"_siyadah_work_mode:{type:'string'"},
+        {"role":"dispatch","path":"server.mjs","anchor":"one_off_version_changed"},
+        {"role":"continuation","path":"lib/company-profile.mjs","anchor":"async function findConversationWork("},
+        {"role":"recovery","path":"lib/employee-run-recovery.mjs","anchor":"if(!identity.employeeId){"},
+        {"role":"test","path":"scripts/chat-open-tools-runtime.test.mjs","anchor":"one-off Flow can test publish and invoke its exact native tool once without employee persistence"},
+        {"role":"version_test","path":"scripts/chat-open-tools-runtime.test.mjs","anchor":"one-off invocation rejects a changed published version before the native action"}
+      ]
+    },
+    {
       "id": "restored_pending_decision",
       "name": "القرار الذي ينتظرني بعد العودة",
       "aliases": ["بانتظارك", "موافقة محفوظة", "رجعت للمحادثة"],
@@ -215,7 +233,7 @@
       "linear": "ABO-55",
       "pr": "https://github.com/ALKHANFAR/t43/pull/17",
       "locations": [
-        {"role": "route", "path": "server.mjs", "anchor": "const draft=existing?.status==='draft'?existing:null"},
+        {"role": "route", "path": "server.mjs", "anchor": "const draft=!oneOffWork&&existing?.status==='draft'?existing:null"},
         {"role": "build", "path": "server.mjs", "anchor": "if(['ap_build_flow','ap_create_flow'].includes(name))"},
         {"role": "storage", "path": "lib/company-profile.mjs", "anchor": "async function createManualEmployeeDraft({companyId,name,requestId})"},
         {"role": "migration", "path": "migrations/0002-local-employee-drafts.sql", "anchor": "ADD COLUMN IF NOT EXISTS creation_request_id"},

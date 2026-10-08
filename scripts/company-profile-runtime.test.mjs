@@ -279,3 +279,7 @@ test('chat activity rejects malformed or oversized entries before SQL',async()=>
  for(const activity of [null,{},Array(81).fill({id:1,name:'tool',state:'started'}),[{id:0,name:'tool',state:'started'}],[{id:1.5,name:'tool',state:'started'}],[{id:1,name:'x'.repeat(121),state:'started'}],[{id:1,name:'tool secret',state:'started'}],[{id:1,name:'tool',state:'succeeded'}]])await assert.rejects(()=>service.recordChatActivity({...scope,activity}),{code:'invalid_chat_activity'});
  await assert.rejects(()=>service.recordChatActivity({...scope,claimToken:'',activity:[]}),{code:'invalid_chat_activity_scope'});
 });
+
+test('one-off continuation reads a valid Flow only from its own company conversation',async()=>{
+ const flow='F'.repeat(21),calls=[];let value=flow;const service=createCompanyProfileService({query:async(sql,values)=>{calls.push({sql,values});return {rows:[{flow_id:value}]};}});assert.deepEqual(await service.findConversationWork('company-a','conversation-a'),{flowId:flow});assert.deepEqual(calls[0].values,['company-a','conversation-a']);assert.match(calls[0].sql,/company_id=\$1 AND conversation_id=\$2/);assert.match(calls[0].sql,/work_mode.*one_off/);value='../foreign';assert.equal(await service.findConversationWork('company-a','conversation-a'),null);
+});
