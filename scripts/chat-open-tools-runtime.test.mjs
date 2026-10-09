@@ -98,6 +98,15 @@ function setup({script,extraTools=[],clock=Date,flowInputSchema=null,hideFlowToo
 }
 const toolMessages=request=>request.messages.filter(item=>item.role==='tool').map(item=>item.content);
 
+for(const chat of ['main','employee'])test(`${chat} chat rejects foreign memory updates by table while forwarding business updates unchanged`,async()=>{
+  const foreign='Z'.repeat(21),cells={scope:'employee',owner:'employee-other',key:'private',value:'99',source_quote:'سعرنا 99',source_request:'old',updated_at:'2026-10-07T10:00:00Z'};
+  const business={tableId:'B'.repeat(21),recordId:'C'.repeat(21),fields:{Name:'طلب عميل'}};
+  const h=setup({memoryRows:[{id:foreign,cells}],script:[use(['ap_update_record',{tableId:'T'.repeat(21),recordId:foreign,fields:{value:'100'}}]),request=>{assert.equal(JSON.parse(toolMessages(request).at(-1)).isError,true);return use(['ap_update_record',business]);},say('عدلت سجل الأعمال فقط.') ]});
+  await h.run({message:'حدّث السجل المطلوب.',...(chat==='employee'?{employee:{id:'employee-1',name:'نور',status:'draft',activepieces_flow_id:null}}:{})});
+  assert.deepEqual(h.log.tools.filter(([name])=>name==='ap_update_record'),[['ap_update_record',business]]);
+  assert.equal(h.savedMemories[0].cells.value,'99');
+});
+
 for(const chat of ['main','employee'])test(`${chat} chat rejects another employee memory deletion before native dispatch by memory table identity`,async()=>{
   const foreign='Z'.repeat(21),cells={scope:'employee',owner:'employee-other',key:'private',value:'99',source_quote:'سعرنا 99',source_request:'old',updated_at:'2026-10-07T10:00:00Z'};
   const h=setup({memoryRows:[{id:foreign,cells}],script:[use(['ap_delete_records',{tableId:'T'.repeat(21),recordIds:[foreign]}]),request=>{assert.equal(JSON.parse(toolMessages(request).at(-1)).isError,true);return say('لم أحذف الذاكرة.');}]});
