@@ -1081,6 +1081,19 @@ test('both chats receive every paginated native tool and full native description
  }
 });
 
+test('both chats forward each model tool call identity to the request-scoped native client',async()=>{
+ for(const employee of [null,{id:'employee-1',status:'draft',prompt:'تعليمات الموظف'}]){
+  const traces=[];
+  const mcp={forRequest:({conversationId})=>({
+   call:async(_company,method,params)=>method==='initialize'?{instructions:'native guide'}:{tools:[{name:'ap_list_flows',annotations:{readOnlyHint:true},inputSchema:{type:'object'}}]},
+   forToolCall:toolCallId=>({call:async(_company,method,params)=>{traces.push({conversationId,toolCallId,method,name:params.name});return {structuredContent:{flows:[]}};}})
+  })};
+  const h=setup({script:[use(['ap_list_flows',{}]),say('انتهيت')]});
+  await h.run({employee,mcp,conversationId:'chat-trace'});
+  assert.deepEqual(traces,[{conversationId:'chat-trace',toolCallId:'call_ap_list_flows_0',method:'tools/call',name:'ap_list_flows'}]);
+ }
+});
+
 test('the shared LLM explains an observed outcome without discovering or redispatching tools',async()=>{
  const h=setup({script:[say('حُفظت المسودة ولم يبدأ التشغيل.')]});
  const answer=await h.run({mcp:null,observedOutcome:{kind:'flow_draft',flowId,executed:false}});

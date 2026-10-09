@@ -429,7 +429,7 @@
         {"role": "native_run_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "native employee execution receipt reads its exact production run and saves proof before the next model call"},
         {"role": "prepared_employee_work_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "a newly prepared employee executes a subsequent work request through its published native tool"},
         {"role": "flow_tool", "path": "lib/mcp-flow-scope.mjs", "anchor": "export function employeeFlowMcpToolName("},
-        {"role": "mcp_transport", "path": "lib/activepieces-mcp.mjs", "anchor": "async function rpc(token,method,params)"},
+        {"role": "mcp_transport", "path": "lib/activepieces-mcp.mjs", "anchor": "async function rpc(token,method,params,trace={})"},
         {"role": "contract", "path": "CHAT_CONTRACT.md", "anchor": "For a provider result from a Flow"},
         {"role": "test", "path": "scripts/mcp-flow-scope-runtime.test.mjs", "anchor": "employee Flow ID comes from its saved record"}
       ]
@@ -502,6 +502,9 @@
         {"role": "catalog_dispatch_log", "path": "server.mjs", "anchor": "console.info('chat_mcp_catalog'"},
         {"role": "model_tool_choice_log", "path": "server.mjs", "anchor": "console.info('chat_model_tool_choice'"},
         {"role": "native_dispatch_log", "path": "lib/activepieces-mcp.mjs", "anchor": "console.info('native_mcp_dispatch'"},
+        {"role": "native_result_log", "path": "lib/activepieces-mcp.mjs", "anchor": "console.info('native_mcp_result'"},
+        {"role": "native_result_test", "path": "scripts/activepieces-mcp-runtime.test.mjs", "anchor": "native call receipt correlates a model call"},
+        {"role": "model_call_trace_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "both chats forward each model tool call identity"},
         {"role": "single_gateway_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "test('both chat composers use the same fixed gateway"},
         {"role": "paginated_model_catalog_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "test('both chats receive every paginated native tool"},
         {"role": "catalog_read_test", "path": "scripts/native-mcp-catalog-runtime.test.mjs", "anchor": "test('native catalog initializes first"},

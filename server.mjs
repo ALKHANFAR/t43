@@ -393,7 +393,7 @@ async function authRoute(req,res,operation){
   }
 }
 async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null,mcp=null,companyId=null,conversationId=null,deadlineMs=null,excludedTools=[],beforeEffect=null,onEffectStart=null,onNativeExecution=null,createDraft=null,memoryRequestId=null,userMemoryId=null,observedOutcome=null}){
-  mcp=mcp?.forRequest?.()||mcp;
+  mcp=mcp?.forRequest?.({conversationId})||mcp;
   const draftOnly=draftOnlyIntent(message),doNotRun=doNotRunIntent(message);
   const key=process.env.DEEPSEEK_API_KEY;
   if(!key)throw new TenantProjectError('assistant_not_configured','مساعد سيادة غير مهيأ الآن.',503);
@@ -509,6 +509,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
       }
       messages.push({role:'assistant',content:answer.content||'',reasoning_content:answer.reasoning_content||'',tool_calls:calls});
       for(const call of calls){
+        const toolMcp=mcp?.forToolCall?.(call.id)||mcp;
         const name=call?.function?.name;
         // Every result, a failed one included, returns to the model: Activepieces writes its errors as
         // instructions for the next call, and the model corrects itself from them.
@@ -538,7 +539,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           const employeeFlow=employee?.activepieces_flow_id||flowId||draftEmployee?.activepieces_flow_id;
           if(employee&&['ap_get_run','ap_retry_run'].includes(name)){
             if(!/^[A-Za-z0-9]{21}$/.test(String(args.flowRunId||'')))throw new TenantProjectError('employee_run_scope','معرّف تشغيل الموظف غير صالح.',403);
-            const observed=await mcp.call(companyId,'tools/call',{name:'ap_get_run',arguments:{flowRunId:args.flowRunId}});
+            const observed=await toolMcp.call(companyId,'tools/call',{name:'ap_get_run',arguments:{flowRunId:args.flowRunId}});
             if(observed?.isError===true||observed?.structuredContent?.id!==args.flowRunId||observed?.structuredContent?.flowId!==employeeFlow)throw new TenantProjectError('employee_run_scope','التشغيل لا يخص طريقة عمل هذا الموظف.',403);
           }
           if(args.flowId&&args.flowId===employeeFlow){
@@ -563,13 +564,13 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
             if(employee?.activepieces_flow_id)throw new TenantProjectError('employee_flow_conflict','طريقة عمل الموظف موجودة؛ عدّلها بدل استبدالها.',409);
             if(employee&&!draftEmployee)draftEmployee=employee;
             if(!draftEmployee&&!flowId&&createDraft){draftEmployee=await createDraft(args.flowName);createdDraft=draftEmployee;}
-            const done=await buildOwnedDraftFlow({mcp,companyId,args,draftEmployee:draftEmployee&&!draftEmployee.activepieces_flow_id&&!flowId?draftEmployee:null,onEffectStart:()=>{},toolName:name});
+            const done=await buildOwnedDraftFlow({mcp:toolMcp,companyId,args,draftEmployee:draftEmployee&&!draftEmployee.activepieces_flow_id&&!flowId?draftEmployee:null,onEffectStart:()=>{},toolName:name});
             result=done.result;
             if(done.built){flowId=done.built.flowId;effectFlowId=flowId;linked=done.updated||linked;if(employee){employee={...employee,activepieces_flow_id:flowId,status:'draft'};tools=modelTools();}}
           }else if(cumulativeMemory.handles(name,args)){
-            if(readOnly(name)){result=await mcp.call(companyId,'tools/call',{name,arguments:args});result=cumulativeMemory.scopeResult(result);}
+            if(readOnly(name)){result=await toolMcp.call(companyId,'tools/call',{name,arguments:args});result=cumulativeMemory.scopeResult(result);}
             else{result=await cumulativeMemory.mutate(name,args);executionReceipt={outcome:'memory_saved',memory_operation:result.structuredContent.operation||'setup',memory_table_id:(await cumulativeMemory.load()).tableId};}
-          }else result=await mcp.call(companyId,'tools/call',{name,arguments:args});
+          }else result=await toolMcp.call(companyId,'tools/call',{name,arguments:args});
           if(employee&&name==='ap_delete_flow'&&result?.isError!==true){
             // Stop local production invocation when native deletion is accepted;
             // retain the historical Flow link without claiming completed deletion.
@@ -603,7 +604,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
                 verification='published_mismatch';
                 const {flow}=await projects.ownedFlow(companyId,execution.flowId,execution.flowVersionId);
                 if(flow.status==='ENABLED'&&flow.publishedVersionId===execution.flowVersionId){
-                  const detail=await mcp.call(companyId,'tools/call',{name:'ap_get_run',arguments:{flowRunId:execution.runId}}),run=detail?.structuredContent;
+                  const detail=await toolMcp.call(companyId,'tools/call',{name:'ap_get_run',arguments:{flowRunId:execution.runId}}),run=detail?.structuredContent;
                   observedStatus=typeof run?.status==='string'?run.status.slice(0,40):null;verification='run_unverified';
                   if(detail?.isError!==true&&run?.id===execution.runId&&run.flowId===execution.flowId&&run.environment==='PRODUCTION'&&run.status==='SUCCEEDED'&&Array.isArray(run.steps)&&run.steps.length>0){
                     verification='save_mismatch';
@@ -618,7 +619,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           }
           if(name==='ap_test_flow'&&args.flowId===employeeFlow){
             testedFlowId=null;testedVersion=null;testedRun=null;
-            const verifiedRun=await successfulFlowTest(mcp,companyId,args.flowId,result,JSON.parse(versionBeforeTest).id);
+            const verifiedRun=await successfulFlowTest(toolMcp,companyId,args.flowId,result,JSON.parse(versionBeforeTest).id);
             if(verifiedRun){
               const versionAfterTest=flowTestSnapshot((await (await tenantProjects()).ownedFlow(companyId,args.flowId)).flow.version);
               if(versionBeforeTest===versionAfterTest){testedFlowId=args.flowId;testedVersion=versionAfterTest;testedRun=verifiedRun;}

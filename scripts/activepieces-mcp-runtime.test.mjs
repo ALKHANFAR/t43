@@ -8,7 +8,7 @@ const token=project=>'header.'+Buffer.from(JSON.stringify({projectId:project,exp
 const json=value=>new Response(JSON.stringify(value),{status:200,headers:{'content-type':'application/json'}});
 
 function harness(tokenProject=projectA,sse=false){
-  let grant=null,approval=null,mcpCalls=0,refreshCalls=0,tokenCalls=0,grantWrites=0,registrations=0,rejectMcp=false,rejectRefresh=false,lifetime=900,currentProject=projectA,rotate=false;
+  let grant=null,approval=null,mcpCalls=0,refreshCalls=0,tokenCalls=0,grantWrites=0,registrations=0,rejectMcp=false,rejectRefresh=false,toolError=false,lifetime=900,currentProject=projectA,rotate=false;
   const query=async(sql,values=[])=>{
     if(sql.includes('INSERT INTO siyadah_mcp_grants')){grantWrites++;grant={project_id:values[1],client_id:values[2],refresh_token_cipher:values[3],updated_at:new Date(Date.UTC(2026,9,6,0,0,grantWrites))};return {rows:[]};}
     if(sql.includes('SELECT project_id,client_id,refresh_token_cipher'))return {rows:grant&&values[0]==='company-a'?[grant]:[]};
@@ -31,13 +31,13 @@ function harness(tokenProject=projectA,sse=false){
     if(url.endsWith('/mcp')){
       mcpCalls++;
       if(rejectMcp)return new Response('{}',{status:401});
-      const payload={jsonrpc:'2.0',id:1,result:options.body.includes('tools/list')?{tools:[{name:'ap_search_actions'}]}:{content:[{type:'text',text:'ok'}]}};
+      const payload={jsonrpc:'2.0',id:1,result:options.body.includes('tools/list')?{tools:[{name:'ap_search_actions'}]}:{isError:toolError,content:[{type:'text',text:'ok'}]}};
       return sse?new Response(`event: message\ndata: ${JSON.stringify(payload)}\n\n`,{status:200,headers:{'content-type':'text/event-stream'}}):json(payload);
     }
     throw new Error('unexpected provider URL');
   };
   const service=createActivepiecesMcp({query,requireProject:async()=>currentProject,activepiecesUrl:'https://ap.example.test',origin:'https://siyadah.example.test',secret:'s'.repeat(40),fetchImpl});
-  return {service,get grant(){return grant;},get mcpCalls(){return mcpCalls;},get refreshCalls(){return refreshCalls;},get tokenCalls(){return tokenCalls;},dropGrant(){grant=null;},changeGrant(){grant.client_id+='-new';},foreignToken(){tokenProject=projectB;},rejectMcp(value){rejectMcp=value;},rejectRefresh(value){rejectRefresh=value;},setLifetime(value){lifetime=value;},changeProject(){currentProject=projectB;},rotate(){rotate=true;},corruptGrant(){grant.refresh_token_cipher+='x';}};
+  return {service,get grant(){return grant;},get mcpCalls(){return mcpCalls;},get refreshCalls(){return refreshCalls;},get tokenCalls(){return tokenCalls;},dropGrant(){grant=null;},changeGrant(){grant.client_id+='-new';},foreignToken(){tokenProject=projectB;},rejectMcp(value){rejectMcp=value;},rejectRefresh(value){rejectRefresh=value;},toolError(value){toolError=value;},setLifetime(value){lifetime=value;},changeProject(){currentProject=projectB;},rotate(){rotate=true;},corruptGrant(){grant.refresh_token_cipher+='x';}};
 }
 
 test('MCP OAuth grant is bound to the server-owned company project and stored encrypted',async()=>{
@@ -88,6 +88,22 @@ test('one chat request shares a token across discovery and parallel tool calls; 
   assert.equal(h.refreshCalls,1);
   await h.service.forRequest().call('company-a','tools/list',{});
   assert.equal(h.refreshCalls,2);
+});
+
+test('native call receipt correlates a model call with the dispatched arguments and returned MCP status without exposing input',async t=>{
+  const h=harness();await connect(h);const events=[];
+  t.mock.method(console,'info',(label,payload)=>{if(label.startsWith('native_mcp_'))events.push({label,...JSON.parse(payload)});});
+  const request=h.service.forRequest({conversationId:'chat-a'}).forToolCall('call-a');
+  const argumentsSent={flowName:'private draft'};
+  await request.call('company-a','tools/call',{name:'ap_build_flow',arguments:argumentsSent});
+  h.toolError(true);
+  await request.call('company-a','tools/call',{name:'ap_build_flow',arguments:argumentsSent});
+  h.rejectMcp(true);
+  await assert.rejects(()=>request.call('company-a','tools/call',{name:'ap_build_flow',arguments:argumentsSent}),{code:'mcp_grant_expired'});
+  assert.deepEqual(events.map(event=>[event.label,event.outcome]),[['native_mcp_dispatch',undefined],['native_mcp_result','returned'],['native_mcp_dispatch',undefined],['native_mcp_result','tool_error'],['native_mcp_dispatch',undefined],['native_mcp_result','http_error']]);
+  assert.ok(events.every(event=>event.conversation_id==='chat-a'&&event.tool_call_id==='call-a'&&event.arguments_sha256===createHash('sha256').update(JSON.stringify(argumentsSent)).digest('hex')));
+  assert.equal(events[1].http_status,200);assert.equal(events[5].http_status,401);
+  assert.ok(!JSON.stringify(events).includes('private draft'));
 });
 
 test('expiry renews the token before the next tool call',async t=>{
