@@ -310,6 +310,26 @@ test('a second build in one chat request cannot create an orphan Flow',async()=>
   assert.match(toolMessages(log.model.at(-1))[1],/employee_flow_conflict/);
 });
 
+test('main chat forwards a large native build unchanged and can build an independent employee in a new request',async()=>{
+  const args={flowName:'رحلة متعددة الأقسام',trigger:{type:'PIECE_TRIGGER'},steps:Array.from({length:60},(_,i)=>({name:`step_${i}`,type:i%3?'PIECE':'CODE',settings:{input:{previous:i?`{{step_${i-1}.output}}`:null}}}))};
+  // Transport fixture only: native schema validation belongs to Activepieces.
+  for(const id of ['employee-one','employee-two']){
+    const {run,log}=setup({script:[use(['ap_build_flow',args]),say('حفظت المسودة.')]});
+    const answer=await run({createDraft:async()=>({id,status:'draft',activepieces_flow_id:null})});
+    assert.deepEqual(log.tools,[['ap_build_flow',args]]);
+    assert.equal(answer.flowId,flowId);
+    assert.equal(log.effects,1);
+  }
+});
+
+test('the one-flow ceiling also rejects a distinct second main-chat build without a selected employee',async()=>{
+  const {run,log}=setup({script:[use(['ap_build_flow',{flowName:'تأهيل العملاء'}]),use(['ap_build_flow',{flowName:'متابعة العملاء'}]),say('الفلو الثاني لم يُبنَ.')]});
+  const answer=await run();
+  assert.equal(answer.flowId,flowId);
+  assert.deepEqual(log.tools.map(([name])=>name),['ap_build_flow']);
+  assert.match(toolMessages(log.model.at(-1)).at(-1),/employee_flow_conflict/);
+});
+
 test('invalid calls and company boundaries are answered to the model without dispatch',async()=>{
   const {run,log}=setup({script:[
     use(['ap_set_project_context',{projectId:'other'}],['ap_unknown',{}],['ap_add_step','not json'],['ap_run_action',{pieceName:'gmail',actionName:'send_email',connectionExternalId:'foreign'}]),
