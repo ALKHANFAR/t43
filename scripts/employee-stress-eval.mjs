@@ -72,7 +72,7 @@ export function draftBuildCase({corruptReadback=false}={}){
  if(params.name==='ap_get_flow'){if(params.arguments.flowId!==FLOW||!stored)return {isError:true};const version=structuredClone(stored);if(corruptReadback)version.steps.pop();return {structuredContent:{id:FLOW,status:'DISABLED',version}};}
  return c.toolFixture(params,trace);
  },verifyTrace:(trace,answer,chat)=>{
- const builds=trace.filter(t=>t.name==='ap_build_flow'),read=trace.find(t=>t.name==='ap_get_flow')?.result?.structuredContent;
+ const builds=trace.filter(t=>t.name==='ap_build_flow'),read=trace.filter(t=>t.name==='ap_get_flow').at(-1)?.result?.structuredContent;
  if(builds.length!==1||answer.effects.length!==1||!ownedReads||links!==1||read?.status!=='DISABLED')return false;
  const steps=read.version?.steps;if(!Array.isArray(steps)||!steps.length||JSON.stringify(steps)!==JSON.stringify(builds[0].args.steps))return false;
  if(JSON.stringify(steps.map(s=>s.input_from))!==JSON.stringify(shape(steps).map(s=>s.input_from)))return false;
@@ -85,13 +85,26 @@ export function draftBuildCase({corruptReadback=false}={}){
 }
 export function integrityCases(){return ['wrong_version','wrong_flow','failed_run'].map(corruption=>workflow({id:corruption,effect:true,corruption}));}
 export async function runStressSuite(options={}){
- const report=await runQualitySuite({...options,cases:options.build?[draftBuildCase()]:options.composition?[intentCompositionCase()]:options.integrity?integrityCases():stressCases()});
+ const trials=options.trials??1;
+ if(!Number.isInteger(trials)||trials<1||trials>10)throw new TypeError('invalid_trial_count');
+ const runs=[];
+ for(let trial=1;trial<=trials;trial++){
+ const run=await runQualitySuite({...options,cases:options.build?[draftBuildCase()]:options.composition?[intentCompositionCase()]:options.integrity?integrityCases():stressCases()});
+ runs.push({...run,trial});
+ if(run.mode==='live_unavailable')break;
+ }
+ const incomplete=runs.find(r=>r.mode.endsWith('incomplete')||r.mode==='live_unavailable');
+ const report={mode:incomplete?.mode||runs[0].mode,...(incomplete?{reason:incomplete.reason}:{}),modelCasesRun:runs.reduce((n,r)=>n+r.modelCasesRun,0),results:runs.flatMap(r=>r.results.map(result=>({...result,trial:r.trial})))};
+ const passed=r=>r.context_passed===true&&r.answer_quality?.passed===true&&r.workflow_passed!==false;
+ report.trials={requested:trials,completed:runs.filter(r=>!r.mode.endsWith('incomplete')&&r.mode!=='live_unavailable').length,failures:runs.filter(r=>r.mode.endsWith('incomplete')||r.mode==='live_unavailable').map(r=>({trial:r.trial,reason:r.reason})),chats:['main','employee'].map(chat=>{const rows=report.results.filter(r=>r.chat===chat);return {chat,evaluated:rows.length,passed:rows.filter(passed).length,failed:rows.filter(r=>r.answer_quality?.passed===false||r.workflow_passed===false||r.context_passed===false).length};})};
  report.summary={total:report.results.length,passed:report.results.filter(r=>r.context_passed&&r.answer_quality?.passed&&r.workflow_passed!==false).length,workflowCases:report.results.filter(r=>r.workflow_passed!==undefined).length,syntheticEffects:report.results.reduce((n,r)=>n+r.effects,0)};
- report.coverage={measured:options.build?['draft_construction','stored_graph_readback','step_dependencies','employee_flow_link']:options.composition?['intent_to_outcome_composition','tool_discovery','connection_discovery','impact_measure_definition']:options.integrity?['execution_identity','context_injection','independent_readback']:['answer_grounding','knowledge_selection','memory_scope','historical_updates','task_scope','tool_use','error_recovery','independent_readback'],notYetMeasured:['business_uplift','plan_efficiency','live_provider_outcome','UI_experience','long_term_learning_quality','multi_tenant_load','end_to_end_UI_latency','repeat_trial_reliability'],modelLoopTiming:report.results.map(r=>({id:r.id,chat:r.chat,elapsedMs:r.elapsedMs,tokens:r.usage.reduce((n,u)=>n+(u.tokens||0),0)}))};
- report.contract='Live DeepSeek, actual production chat loop, synthetic AP tools only. Every answer, evidence key, scope and required workflow must pass. Diagnostic retries never erase failures. No real provider effects or deployment proof.';
+ report.coverage={measured:options.build?['draft_construction','stored_graph_readback','step_dependencies','employee_flow_link']:options.composition?['intent_to_outcome_composition','tool_discovery','connection_discovery','impact_measure_definition']:options.integrity?['execution_identity','context_injection','independent_readback']:['answer_grounding','knowledge_selection','memory_scope','historical_updates','task_scope','tool_use','error_recovery','independent_readback'],notYetMeasured:['business_uplift','plan_efficiency','live_provider_outcome','UI_experience','long_term_learning_quality','multi_tenant_load','end_to_end_UI_latency','repeat_trial_reliability'],modelLoopTiming:report.results.map(r=>({id:r.id,chat:r.chat,trial:r.trial,elapsedMs:r.elapsedMs,tokens:r.usage.reduce((n,u)=>n+(u.tokens||0),0)}))};
+ if(report.mode==='live_unavailable')report.coverage.measured=[];
+ report.contract='Model status is recorded in mode; actual production chat loop, synthetic AP tools only. Every answer, evidence key, scope and required workflow must pass. Diagnostic retries never erase failures. No real provider effects or deployment proof.';
  return report;
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
- if(process.argv.slice(2).some(arg=>!['--live','--integrity','--composition','--build'].includes(arg))||process.argv.length>4||new Set(process.argv.slice(2)).size!==process.argv.slice(2).length){console.log(JSON.stringify({reason:'arguments_not_supported'}));process.exitCode=2;}
- else{const r=await runStressSuite({live:process.argv.includes('--live'),integrity:process.argv.includes('--integrity'),composition:process.argv.includes('--composition'),build:process.argv.includes('--build')});console.log(JSON.stringify(r,null,2));process.exitCode=r.mode.endsWith('incomplete')||r.mode==='live_unavailable'?2:r.results.some(x=>!x.context_passed||x.answer_quality?.passed===false||x.workflow_passed===false)?1:0;}
+ const args=process.argv.slice(2),trialArgs=args.filter(arg=>arg.startsWith('--trials='));
+ if(args.some(arg=>!['--live','--integrity','--composition','--build'].includes(arg)&&!/^--trials=(?:[1-9]|10)$/.test(arg))||trialArgs.length>1||args.filter(arg=>['--integrity','--composition','--build'].includes(arg)).length>1||new Set(args).size!==args.length){console.log(JSON.stringify({reason:'arguments_not_supported'}));process.exitCode=2;}
+ else{const r=await runStressSuite({live:process.argv.includes('--live'),integrity:process.argv.includes('--integrity'),composition:process.argv.includes('--composition'),build:process.argv.includes('--build'),trials:trialArgs.length?Number(trialArgs[0].split('=')[1]):1});console.log(JSON.stringify(r,null,2));process.exitCode=r.mode.endsWith('incomplete')||r.mode==='live_unavailable'?2:r.results.some(x=>!x.context_passed||x.answer_quality?.passed===false||x.workflow_passed===false)?1:0;}
 }

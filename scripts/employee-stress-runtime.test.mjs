@@ -85,3 +85,29 @@ test('a good final plan cannot hide omitted readback, a missing dependency, a ve
  assert.equal(r.answer_quality.passed,true);assert.equal(r.workflow_passed,false);
  }
 });
+
+test('draft grading uses the last readback and rejects a subsequently changed stored graph',async()=>{
+ const {draftBuildCase}=await import('./employee-stress-eval.mjs'),c=draftBuildCase();
+ const fixture=c.toolFixture;let reads=0;
+ c.toolFixture=async(...args)=>{const result=await fixture(...args);if(args[0].name==='ap_get_flow'&&++reads===2)result.structuredContent.version.steps.pop();return result;};
+ const script=buildScript(builtPlan());script.splice(-1,0,call('ap_get_flow',{flowId:'F'.repeat(21)}));
+ const r=await evaluateKnowledgeCase({testCase:c,chat:'employee',live:true,apiKey:'fixture',fetchImpl:scripted(script)});
+ assert.equal(r.answer_quality.passed,true);assert.equal(r.workflow_passed,false);
+});
+test('independent trials evaluate both chats and retain failure after later successful trials',async()=>{
+ const {runStressSuite}=await import('./employee-stress-eval.mjs');
+ const bad=buildScript(builtPlan());bad[bad.length-1]={content:'not JSON'};
+ const sequence=[...bad,...buildScript(builtPlan()),...buildScript(builtPlan()),...buildScript(builtPlan())];
+ const r=await runStressSuite({build:true,live:true,apiKey:'fixture',trials:2,fetchImpl:scripted(sequence)});
+ assert.equal(r.summary.total,4);assert.equal(r.summary.passed,3);assert.equal(r.trials.completed,2);
+ assert.deepEqual(r.results.map(x=>[x.trial,x.chat]),[[1,'main'],[1,'employee'],[2,'main'],[2,'employee']]);
+ assert.equal(r.results[0].answer_quality.passed,false);assert.equal(r.results[2].workflow_passed,true);
+ assert.deepEqual(r.trials.chats,[{chat:'main',evaluated:2,passed:1,failed:1},{chat:'employee',evaluated:2,passed:2,failed:0}]);
+});
+test('missing live key reports unavailable without model calls or successful trials',async()=>{
+ const {runStressSuite}=await import('./employee-stress-eval.mjs');let calls=0;
+ const r=await runStressSuite({build:true,live:true,apiKey:'',trials:3,fetchImpl:async()=>{calls++;throw Error('must not call');}});
+ assert.equal(r.mode,'live_unavailable');assert.equal(r.reason,'missing_model_key');assert.equal(r.modelCasesRun,0);assert.equal(calls,0);
+ assert.equal(r.trials.requested,3);assert.equal(r.trials.completed,0);assert.equal(r.summary.passed,0);
+ await assert.rejects(()=>runStressSuite({trials:11}),/invalid_trial_count/);
+});

@@ -494,7 +494,6 @@ var I = {
     renderSide(); renderThread(); $("#input").focus();
     siyMessage(text,list,selected?selected.id:null);
   }
-  function reply(list,html){ list.push({me:false,at:now(),t:html}); renderThread(); }
   /* قرار على بطاقة «ينتظر قرارك» */
   function resolveWait(e,list,mi,label,conf,skipMe,evs){
     var m=list[mi]; if(!m||m.done) return;

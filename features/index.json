@@ -10,7 +10,7 @@
         "نتيجة الموظف الحالية"
       ],
       "state": "draft_pr",
-      "meaning": "يعرض صفوف JSON البسيطة كجدول دون حذف أعمدة، ويبقي النتائج المتداخلة أو الكبيرة كنص كامل. يعرض معرّف التشغيل المؤكد من نتيجة الطلب الحالي، ولا يربط دليلًا برسالته إلا بتطابق معرّفي الطلب والمحادثة. سجل المحادثة مستقل عن نتيجة الرسالة. حُذف كود واجهة بلا مستهلك: اقتراحات SUGG الثابتة ودالة kpiFrom القديمة؛ عرض النتائج الحالي والمعاينة المستخدمة باقيان. منقول جزئيًا من PR64 إلى فرع التجميع؛ غير منشور.",
+      "meaning": "يعرض صفوف JSON البسيطة كجدول دون حذف أعمدة، ويبقي النتائج المتداخلة أو الكبيرة كنص كامل. يعرض معرّف التشغيل المؤكد من نتيجة الطلب الحالي، ولا يربط دليلًا برسالته إلا بتطابق معرّفي الطلب والمحادثة. سجل المحادثة مستقل عن نتيجة الرسالة. حُذف كود واجهة بلا مستهلك: اقتراحات SUGG الثابتة ودالة kpiFrom القديمة؛ أزيلت أيضًا دالة reply غير المستدعاة وعلامتا gateway/direct MCP غير المقروءتين؛ عرض النتائج الحالي والمعاينة المستخدمة باقيان. منقول جزئيًا من PR64 إلى فرع التجميع؛ غير منشور.",
       "linear": "ABO-69",
       "pr": "https://github.com/ALKHANFAR/t43/pull/62",
       "locations": [
@@ -495,6 +495,7 @@
         {"role": "activation_resume", "path": "server.mjs", "anchor": "if(input.op==='resume_employee_activation')"},
         {"role": "activation_intent", "path": "lib/company-profile.mjs", "anchor": "async function pendingEmployeeActivation(companyId,employeeId=null)"},
         {"role": "activation_resume_test", "path": "scripts/employee-activation-resume-runtime.test.mjs", "anchor": "manual activation and connection resume share one tested activation path"},
+        {"role": "activation_final_version_test", "path": "scripts/native-mcp-boundary-runtime.test.mjs", "anchor": "activation never records active when final publication differs from the tested version or graph"},
         {"role": "native_receipt", "path": "lib/chat-outcome.mjs", "anchor": "export function nativeActionReceipt(name,result)"},
         {"role": "usage", "path": "server.mjs", "anchor": "console.info('chat_model_usage'"},
         {"role": "outcome_test", "path": "scripts/chat-outcome-runtime.test.mjs", "anchor": "native ActionRun completion is distinct from provider or FlowRun proof"},
@@ -504,6 +505,7 @@
         {"role": "native_dispatch_log", "path": "lib/activepieces-mcp.mjs", "anchor": "console.info('native_mcp_dispatch'"},
         {"role": "native_result_log", "path": "lib/activepieces-mcp.mjs", "anchor": "console.info('native_mcp_result'"},
         {"role": "native_result_test", "path": "scripts/activepieces-mcp-runtime.test.mjs", "anchor": "native call receipt correlates a model call"},
+        {"role": "rpc_response_identity_test", "path": "scripts/activepieces-mcp-runtime.test.mjs", "anchor": "JSON and streamed MCP results must match the dispatched request id without replaying effects"},
         {"role": "model_call_trace_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "both chats forward each model tool call identity"},
         {"role": "single_gateway_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "test('both chat composers use the same fixed gateway"},
         {"role": "paginated_model_catalog_test", "path": "scripts/chat-open-tools-runtime.test.mjs", "anchor": "test('both chats receive every paginated native tool"},
@@ -782,7 +784,10 @@
           "role": "broken_graph_test",
           "path": "scripts/employee-stress-runtime.test.mjs",
           "anchor": "a good final plan cannot hide omitted readback"
-        }
+        },
+        {"role": "serialized_memory_budget_test", "path": "scripts/cumulative-memory-runtime.test.mjs", "anchor": "native memory readback budgets the complete serialized array including separators"},
+        {"role": "last_draft_readback_test", "path": "scripts/employee-stress-runtime.test.mjs", "anchor": "draft grading uses the last readback and rejects a subsequently changed stored graph"},
+        {"role": "independent_trials_test", "path": "scripts/employee-stress-runtime.test.mjs", "anchor": "independent trials evaluate both chats and retain failure after later successful trials"}
       ]
     },
     {
