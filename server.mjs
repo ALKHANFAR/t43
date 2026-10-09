@@ -468,6 +468,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   };
   let flowId=null,linked=null,createdDraft=null,statusChanged=false,flowToolAttempted=false,testedFlowId=null,testedVersion=null,testedRun=null,readinessReceipt=null;
   const effects=[],toolReceipts=[];
+  const testedFlows=new Map();
   const account=()=>`نُفّذت خطوات على مشروع شركتك (${[...new Set(effects)].join('، ')||'ap_build_flow'}) ثم توقف الطلب قبل كتابة الرد. اكتب «أكمل» لأقرأ الحالة وأتابع من حيث توقفت.`;
   // A Flow the model published or paused is the employee's real state; Siyadah's record follows it.
   const syncEmployeeState=async()=>{
@@ -542,19 +543,27 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
             const observed=await toolMcp.call(companyId,'tools/call',{name:'ap_get_run',arguments:{flowRunId:args.flowRunId}});
             if(observed?.isError===true||observed?.structuredContent?.id!==args.flowRunId||observed?.structuredContent?.flowId!==employeeFlow)throw new TenantProjectError('employee_run_scope','التشغيل لا يخص طريقة عمل هذا الموظف.',403);
           }
-          if(args.flowId&&args.flowId===employeeFlow){
-            if(name==='ap_lock_and_publish'||name==='ap_change_flow_status'&&args.status==='ENABLED'){
-              const current=(await (await tenantProjects()).ownedFlow(companyId,args.flowId)).flow,tested=testedVersion?JSON.parse(testedVersion):null;
+          if(args.flowId){
+            if(name==='ap_lock_and_publish'||name==='ap_change_flow_status'&&String(args.status||'').toUpperCase()==='ENABLED'){
+              const proof=testedFlows.get(args.flowId);
+              const current=(await (await tenantProjects()).ownedFlow(companyId,args.flowId)).flow,tested=proof?JSON.parse(proof.version):null;
               const currentVersion=current.publishedVersionId===tested?.id&&current.version?.state==='LOCKED'&&tested?.state==='DRAFT'?{...current.version,state:tested.state}:current.version;
-              if(testedFlowId!==args.flowId||testedVersion!==flowTestSnapshot(currentVersion))throw new TenantProjectError('employee_test_required','اختبر النسخة الحالية من طريقة عمل الموظف بنجاح قبل تفعيلها.',409);
+              if(!proof||proof.version!==flowTestSnapshot(currentVersion))throw new TenantProjectError('employee_test_required','اختبر النسخة الحالية من طريقة العمل بنجاح قبل تفعيلها.',409);
             }
-            if(!readOnly(name)&&!['ap_test_flow','ap_lock_and_publish','ap_change_flow_status'].includes(name)){testedFlowId=null;testedVersion=null;testedRun=null;}
+            if(!readOnly(name)&&!['ap_test_flow','ap_lock_and_publish','ap_change_flow_status'].includes(name)){
+              testedFlows.delete(args.flowId);
+              if(args.flowId===employeeFlow){testedFlowId=null;testedVersion=null;testedRun=null;}
+            }
           }
           if(name==='ap_run_action'&&args.connectionExternalId){
             const pieceName=String(args.pieceName||'');
             await (await toolConnections()).assertOwnedExternal({tenantId:companyId,externalId:args.connectionExternalId,pieceName:pieceName.startsWith('@activepieces/piece-')?pieceName:`@activepieces/piece-${pieceName}`});
           }
-          const versionBeforeTest=name==='ap_test_flow'&&args.flowId===employeeFlow?flowTestSnapshot((await (await tenantProjects()).ownedFlow(companyId,args.flowId)).flow.version):null;
+          const versionBeforeTest=name==='ap_test_flow'&&args.flowId?flowTestSnapshot((await (await tenantProjects()).ownedFlow(companyId,args.flowId)).flow.version):null;
+          if(versionBeforeTest){
+            testedFlows.delete(args.flowId);
+            if(args.flowId===employeeFlow){testedFlowId=null;testedVersion=null;testedRun=null;}
+          }
           checkDeadline();
           if(!readOnly(name)){await onEffectStart?.();effectAttempted=true;effectFlowId=args.flowId||null;effects.push(name);}
           if(name===flowToolName){flowToolAttempted=true;effectFlowId=employee.activepieces_flow_id;}
@@ -617,12 +626,16 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
             }catch(error){verification='exception';console.error('employee run readback failed',error?.code||error?.name||'unknown_error');}
             console.info('employee_run_verification',JSON.stringify({conversation_id:conversationId,reason:verification,run_status:observedStatus,execution_present:!!result?.structuredContent?.execution}));
           }
-          if(name==='ap_test_flow'&&args.flowId===employeeFlow){
-            testedFlowId=null;testedVersion=null;testedRun=null;
+          if(name==='ap_test_flow'&&versionBeforeTest){
+            testedFlows.delete(args.flowId);
+            if(args.flowId===employeeFlow){testedFlowId=null;testedVersion=null;testedRun=null;}
             const verifiedRun=await successfulFlowTest(toolMcp,companyId,args.flowId,result,JSON.parse(versionBeforeTest).id);
             if(verifiedRun){
               const versionAfterTest=flowTestSnapshot((await (await tenantProjects()).ownedFlow(companyId,args.flowId)).flow.version);
-              if(versionBeforeTest===versionAfterTest){testedFlowId=args.flowId;testedVersion=versionAfterTest;testedRun=verifiedRun;}
+              if(versionBeforeTest===versionAfterTest){
+                testedFlows.set(args.flowId,{version:versionAfterTest,run:verifiedRun});
+                if(args.flowId===employeeFlow){testedFlowId=args.flowId;testedVersion=versionAfterTest;testedRun=verifiedRun;}
+              }
             }
           }
         }catch(error){
