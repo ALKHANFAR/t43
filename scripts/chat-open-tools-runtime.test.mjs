@@ -357,6 +357,17 @@ test('main chat cannot publish an existing flow without a fresh test of that exa
   assert.equal(toolMessages(log.model.at(-1)).filter(item=>item.includes('employee_test_required')).length,3);
 });
 
+test('large native batches retain every receipt including an error after the eightieth call',async()=>{
+  let calls=0;
+  const {run,log}=setup({script:[use(...Array.from({length:90},()=>['ap_list_tables',{}])),say('قرأت النتائج.')],toolResults:{ap_list_tables:()=>++calls===85?{isError:true,content:[{type:'text',text:'read failed'}]}:{structuredContent:{tables:[],count:0}}}});
+  const answer=await run();
+  assert.equal(log.tools.length,90);
+  assert.equal(answer.toolReceipts.length,90);
+  assert.equal(answer.toolReceipts[84].status,'error');
+  assert.equal(answer.toolReceipts[89].status,'returned');
+  assert.equal(toolMessages(log.model.at(-1)).length,90);
+});
+
 test('main chat retains independent current-version tests for two existing flows',async()=>{
   const other='G'.repeat(21),otherRun='S'.repeat(21);
   const {run,log}=setup({script:[use(['ap_test_flow',{flowId}]),use(['ap_test_flow',{flowId:other}]),use(['ap_lock_and_publish',{flowId}]),use(['ap_lock_and_publish',{flowId:other}]),say('نشرت النسختين المختبرتين.')],toolResults:{
