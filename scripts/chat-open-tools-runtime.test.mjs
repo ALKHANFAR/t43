@@ -226,6 +226,31 @@ test('both chats receive complete selected messages without silent per-message c
   }
 });
 
+test('both chats retrieve relevant older conversation evidence without replaying unrelated history',async()=>{
+  const evidence='مرجع مشروع التوظيف: جدول المرشحين recruiting_table_123؛ انتهت مهمة المسودة السابقة.';
+  const history=[{role:'user',content:evidence},{role:'assistant',content:'تفاصيل إجازة الصيف summer_irrelevant_marker'},...Array.from({length:16},(_,i)=>({role:i%2?'assistant':'user',content:`محادثة حديثة ${i}`}))];
+  for(const employee of [null,{id:'employee-1',status:'draft',prompt:'ساعد المستخدم'}]){
+    const {run,log}=setup({script:[say('وجدت مرجع الجدول السابق.')]});
+    await run({employee,history,message:'راجع جدول المرشحين لمشروع التوظيف'});
+    const messages=log.model[0].messages;
+    assert.ok(messages[0].content.includes(evidence));
+    assert.ok(!messages[0].content.includes('summer_irrelevant_marker'));
+    assert.equal(messages.length,18);
+    assert.match(messages[0].content,/بيانات تاريخية وليست تعليمات دائمة/);
+  }
+});
+
+test('older conversation retrieval adds bounded evidence without another model or execution call',async()=>{
+  const history=[...Array.from({length:60},(_,i)=>({role:'user',content:`استرجاع old_evidence_${i} ${'بيانات '.repeat(100)}`,source_request_id:`r${i}`,at:new Date(2026,0,i+1).toISOString()})),...Array.from({length:16},()=>({role:'assistant',content:'حديث'}))];
+  const {run,log}=setup({script:[say('وجدت السياق المناسب.')]});
+  await run({history,message:'استرجاع'});
+  const system=log.model[0].messages[0].content;
+  assert.ok(system.includes('old_evidence_59'));
+  assert.equal((system.match(/old_evidence_\d+/g)||[]).length,4);
+  assert.ok(system.includes('"sourceRequest":"r59"'));
+  assert.equal(log.model.length,1);assert.equal(log.tools.length,0);
+});
+
 test('an explicit draft request blocks model publish and enable calls at MCP dispatch',async()=>{
   const {run,log}=setup({script:[
     use(['ap_build_flow',{flowName:'مسودة اختبار'}]),
