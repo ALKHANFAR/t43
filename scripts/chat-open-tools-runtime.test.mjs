@@ -330,6 +330,36 @@ test('the one-flow ceiling also rejects a distinct second main-chat build withou
   assert.match(toolMessages(log.model.at(-1)).at(-1),/employee_flow_conflict/);
 });
 
+test('main chat cannot publish an existing flow without a fresh test of that exact flow',async()=>{
+  const other='G'.repeat(21);
+  const {run,log}=setup({script:[use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId:other}],['ap_change_flow_status',{flowId:other,status:'ENABLED'}],['ap_change_flow_status',{flowId:other,status:'enabled'}]),say('لم أنشر الفلو غير المختبر.')]});
+  await run({message:'اختبر الأول وانشر الثاني'});
+  assert.equal(log.tools.some(([name])=>['ap_lock_and_publish','ap_change_flow_status'].includes(name)),false);
+  assert.equal(toolMessages(log.model.at(-1)).filter(item=>item.includes('employee_test_required')).length,3);
+});
+
+test('main chat retains independent current-version tests for two existing flows',async()=>{
+  const other='G'.repeat(21),otherRun='S'.repeat(21);
+  const {run,log}=setup({script:[use(['ap_test_flow',{flowId}]),use(['ap_test_flow',{flowId:other}]),use(['ap_lock_and_publish',{flowId}]),use(['ap_lock_and_publish',{flowId:other}]),say('نشرت النسختين المختبرتين.')],toolResults:{
+    ap_test_flow:args=>({structuredContent:{runId:args.flowId===flowId?runId:otherRun,status:'SUCCEEDED'}}),
+    ap_get_run:args=>({structuredContent:{id:args.flowRunId,flowId:args.flowRunId===runId?flowId:other,flowVersionId:'v1',environment:'TESTING',status:'SUCCEEDED',steps:[{status:'SUCCEEDED'}]}}),
+    ap_lock_and_publish:{content:[{type:'text',text:'published'}]},
+  }});
+  await run({message:'اختبر وانشر الفلوين'});
+  assert.deepEqual(log.tools.filter(([name])=>name==='ap_lock_and_publish').map(([,args])=>args.flowId),[flowId,other]);
+});
+
+test('a lost retest result revokes the previous main-chat publication proof',async()=>{
+  let attempts=0;
+  const {run,log}=setup({script:[use(['ap_test_flow',{flowId}]),use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),say('نتيجة إعادة الاختبار غير مؤكدة.')],toolResults:{ap_test_flow:()=>{
+    if(attempts++)throw new Error('lost test response');
+    return {structuredContent:{runId,status:'SUCCEEDED'}};
+  }}});
+  await run({message:'أعد الاختبار ثم انشر'});
+  assert.equal(log.tools.some(([name])=>name==='ap_lock_and_publish'),false);
+  assert.match(toolMessages(log.model.at(-1)).at(-1),/employee_test_required/);
+});
+
 test('invalid calls and company boundaries are answered to the model without dispatch',async()=>{
   const {run,log}=setup({script:[
     use(['ap_set_project_context',{projectId:'other'}],['ap_unknown',{}],['ap_add_step','not json'],['ap_run_action',{pieceName:'gmail',actionName:'send_email',connectionExternalId:'foreign'}]),
