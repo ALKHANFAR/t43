@@ -214,6 +214,18 @@ test('DeepSeek continues tool reasoning with results and saved employee context'
   assert.equal(log.model.length,2);assert.equal(log.effects,0);
 });
 
+test('both chats receive complete selected messages without silent per-message clipping',async()=>{
+  const previous='سياق '.repeat(950)+'\nشرط محفوظ في النهاية: استخدم جدول العملاء الحالي.';
+  const current='تفاصيل '.repeat(850)+'\nالنتيجة المطلوبة في النهاية: اربط الفلو الثاني بالأول.';
+  for(const employee of [null,{id:'employee-1',status:'draft',prompt:'ساعد المستخدم'}]){
+    const {run,log}=setup({script:[say('قرأت الطلب كاملًا.')]});
+    await run({employee,history:[{role:'user',content:previous}],message:current});
+    const messages=log.model[0].messages;
+    assert.equal(messages.find(item=>item.role==='user').content,previous);
+    assert.equal(messages.at(-1).content,current);
+  }
+});
+
 test('an explicit draft request blocks model publish and enable calls at MCP dispatch',async()=>{
   const {run,log}=setup({script:[
     use(['ap_build_flow',{flowName:'مسودة اختبار'}]),

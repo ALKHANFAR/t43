@@ -3,6 +3,18 @@ import assert from 'node:assert/strict';
 import {buildEmployeePrompt,createCompanyProfileService,normalizeAgentProfile,normalizeCompanyProfile,normalizeCompanySettings,recommendEmployees,selectCompanyUrls} from '../lib/company-profile.mjs';
 import {GMAIL_PILOT_COMMAND,gmailPilotLedgerIdentity,gmailPilotSuccessResponse,recordGmailPilotConversation} from './support/gmail-pilot-runner.mjs';
 
+test('conversation storage preserves long message endings and literal formatting',async()=>{
+  const userMessage='المواصفات\n'+('  حقل\n'.repeat(1000))+'شرط نهائي: لا تستبدل الجدول.';
+  const assistantMessage='الخطة\n'+('  خطوة\n'.repeat(900))+'مرجع الفلو النهائي.';
+  let stored;
+  const service=createCompanyProfileService({query:async(sql,values)=>{
+    if(sql.startsWith('INSERT INTO siyadah_conversation_messages'))stored=values;
+    return {rows:[]};
+  }});
+  await service.recordConversation({companyId:'company',conversationId:'chat',requestId:'request',userMessage,assistantMessage});
+  assert.equal(stored[3],userMessage);assert.equal(stored[4],assistantMessage);
+});
+
 test('selects bounded high-value pages from the same company site',()=>{
   const urls=selectCompanyUrls('https://example.com/',[
     'https://example.com/blog/post','https://example.com/services','https://example.com/about','https://evil.test/pricing','https://shop.example.com/products','https://example.com/faq',
