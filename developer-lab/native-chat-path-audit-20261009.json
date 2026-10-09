@@ -1,0 +1,510 @@
+{
+  "schema": "SiyadahNativeChatPathAuditV1",
+  "readOn": "2026-10-09",
+  "scope": "Read-only observation of previously recorded production requests; no live chat was sent and no provider effects triggered by this audit.",
+  "branchReviewed": "codex/siyadah-consolidation-20261007",
+  "branchBeforeChanges": "c13d06709341bd4024480a646bc2aa9fcb0f3a54",
+  "production": {
+    "serviceId": "7826abbe-c9ee-421c-b349-24a6b6db8443",
+    "deploymentId": "ce86e9f6-bfbd-4bd2-8449-75eb285f7822",
+    "repository": "ALKHANFAR/t43",
+    "branch": "codex/abo-38-isolation-gate-20261001",
+    "commit": "aaf2db17cd1ff36707310c3d7d55bdcf60391e99"
+  },
+  "activepieces": {
+    "deploymentCommit": "c92aec3f0533b1c76b3a0de295047024318a3dd6",
+    "imageTag": "activepieces/activepieces:0.92.1",
+    "upstreamSource": "23e0c254979c73cfbfbde00242668ee873e79508",
+    "toolIndexPath": "packages/server/api/src/app/mcp/tools/index.ts",
+    "sourceStaticToolCount": 44,
+    "sourceMissingFromModel": [],
+    "modelExtraFromStaticSource": []
+  },
+  "catalog": {
+    "timestamp": "2026-10-08T23:03:56.778614125Z",
+    "conversation_id": "chat_8bdae0b4-4b6b-4b57-bada-24f3e951eda9",
+    "observedAt": "2026-10-08T23:03:51.674Z",
+    "elapsedMs": 135,
+    "toolCount": 44,
+    "toolNames": [
+      "ap_add_branch",
+      "ap_add_step",
+      "ap_build_flow",
+      "ap_change_flow_status",
+      "ap_create_flow",
+      "ap_create_table",
+      "ap_delete_branch",
+      "ap_delete_flow",
+      "ap_delete_records",
+      "ap_delete_step",
+      "ap_delete_table",
+      "ap_duplicate_flow",
+      "ap_find_records",
+      "ap_flow_structure",
+      "ap_get_piece_props",
+      "ap_get_run",
+      "ap_insert_records",
+      "ap_list_ai_models",
+      "ap_list_connections",
+      "ap_list_flows",
+      "ap_list_runs",
+      "ap_list_tables",
+      "ap_lock_and_publish",
+      "ap_manage_fields",
+      "ap_manage_notes",
+      "ap_read_step_code",
+      "ap_read_step_settings",
+      "ap_rename_flow",
+      "ap_research_pieces",
+      "ap_resolve_property_chain",
+      "ap_resolve_property_options",
+      "ap_retry_run",
+      "ap_run_action",
+      "ap_search_actions",
+      "ap_search_triggers",
+      "ap_setup_guide",
+      "ap_test_flow",
+      "ap_test_step",
+      "ap_update_branch",
+      "ap_update_record",
+      "ap_update_step",
+      "ap_update_trigger",
+      "ap_validate_flow",
+      "ap_validate_step_config"
+    ],
+    "catalogSha256": "81f2acef6463a8ce28080baa5dd3e4352b5980a6a592c83393a1819475f07624"
+  },
+  "modelSamples": {
+    "first": {
+      "timestamp": "2026-10-08T23:07:20.506279737Z",
+      "conversation_id": "chat_8bdae0b4-4b6b-4b57-bada-24f3e951eda9",
+      "elapsed_ms": 3813,
+      "status": 200,
+      "prompt_tokens": 133160,
+      "completion_tokens": 288,
+      "total_tokens": 133448,
+      "cache_hit_tokens": 132736,
+      "cache_miss_tokens": 424,
+      "tool_names": [
+        "ap_build_flow",
+        "ap_create_flow",
+        "ap_duplicate_flow",
+        "ap_rename_flow",
+        "ap_list_flows",
+        "ap_flow_structure",
+        "ap_read_step_code",
+        "ap_read_step_settings",
+        "ap_validate_flow",
+        "ap_research_pieces",
+        "ap_search_actions",
+        "ap_search_triggers",
+        "ap_get_piece_props",
+        "ap_resolve_property_options",
+        "ap_resolve_property_chain",
+        "ap_validate_step_config",
+        "ap_list_connections",
+        "ap_update_trigger",
+        "ap_add_step",
+        "ap_update_step",
+        "ap_delete_step",
+        "ap_add_branch",
+        "ap_update_branch",
+        "ap_delete_branch",
+        "ap_lock_and_publish",
+        "ap_change_flow_status",
+        "ap_delete_flow",
+        "ap_manage_notes",
+        "ap_list_ai_models",
+        "ap_list_tables",
+        "ap_find_records",
+        "ap_create_table",
+        "ap_delete_table",
+        "ap_manage_fields",
+        "ap_insert_records",
+        "ap_update_record",
+        "ap_delete_records",
+        "ap_list_runs",
+        "ap_get_run",
+        "ap_test_flow",
+        "ap_test_step",
+        "ap_retry_run",
+        "ap_run_action",
+        "ap_setup_guide"
+      ],
+      "reasoning_tokens": 226
+    },
+    "remaining": [
+      {
+        "timestamp": "2026-10-08T23:07:28.194804827Z",
+        "elapsed_ms": 7747,
+        "status": 200,
+        "total_tokens": 135851,
+        "toolCount": 44,
+        "sameToolNamesAsFirst": true
+      },
+      {
+        "timestamp": "2026-10-08T23:07:35.127998757Z",
+        "elapsed_ms": 6791,
+        "status": 200,
+        "total_tokens": 137008,
+        "toolCount": 44,
+        "sameToolNamesAsFirst": true
+      },
+      {
+        "timestamp": "2026-10-08T23:07:55.446333846Z",
+        "elapsed_ms": 14321,
+        "status": 200,
+        "total_tokens": 139272,
+        "toolCount": 44,
+        "sameToolNamesAsFirst": true
+      },
+      {
+        "timestamp": "2026-10-08T23:07:55.446347596Z",
+        "elapsed_ms": 5001,
+        "status": 200,
+        "total_tokens": 140133,
+        "toolCount": 44,
+        "sameToolNamesAsFirst": true
+      },
+      {
+        "timestamp": "2026-10-08T23:08:01.435092488Z",
+        "elapsed_ms": 6206,
+        "status": 200,
+        "total_tokens": 141202,
+        "toolCount": 44,
+        "sameToolNamesAsFirst": true
+      },
+      {
+        "timestamp": "2026-10-08T23:08:05.176580848Z",
+        "elapsed_ms": 3548,
+        "status": 200,
+        "total_tokens": 141821,
+        "toolCount": 44,
+        "sameToolNamesAsFirst": true
+      },
+      {
+        "timestamp": "2026-10-08T23:08:10.189244359Z",
+        "elapsed_ms": 4926,
+        "status": 200,
+        "total_tokens": 144567,
+        "toolCount": 44,
+        "sameToolNamesAsFirst": true
+      },
+      {
+        "timestamp": "2026-10-08T23:08:13.067674946Z",
+        "elapsed_ms": 2618,
+        "status": 200,
+        "total_tokens": 145018,
+        "toolCount": 44,
+        "sameToolNamesAsFirst": true
+      },
+      {
+        "timestamp": "2026-10-08T23:08:19.438088631Z",
+        "elapsed_ms": 6014,
+        "status": 200,
+        "total_tokens": 146076,
+        "toolCount": 44,
+        "sameToolNamesAsFirst": true
+      },
+      {
+        "timestamp": "2026-10-08T23:08:27.038828913Z",
+        "elapsed_ms": 7430,
+        "status": 200,
+        "total_tokens": 147301,
+        "toolCount": 44,
+        "sameToolNamesAsFirst": true
+      }
+    ]
+  },
+  "correlatedDispatches": [
+    {
+      "model": {
+        "timestamp": "2026-10-08T23:07:14.212089908Z",
+        "event": "chat_model_tool_choice",
+        "conversation_id": "chat_8bdae0b4-4b6b-4b57-bada-24f3e951eda9",
+        "tool_call_id": "call_00_6jVd11wZ7BOX5ncwGUMl4512",
+        "name": "ap_build_flow",
+        "arguments_sha256": "b1604c7385088833bb832d9c8d1e166a786053437ca621018b70ae76a9675528"
+      },
+      "dispatch": {
+        "timestamp": "2026-10-08T23:07:14.212093158Z",
+        "event": "native_mcp_dispatch",
+        "endpoint": "https://activepieces-production-82ad.up.railway.app/mcp",
+        "method": "tools/call",
+        "name": "ap_build_flow",
+        "arguments_sha256": "e3d9aeea4fa9116e32dd0a11b9d242c1e9826d39de2696ee47b3764b0dc43ae1"
+      },
+      "digestMatches": false
+    },
+    {
+      "model": {
+        "timestamp": "2026-10-08T23:07:14.213447685Z",
+        "event": "chat_model_tool_choice",
+        "conversation_id": "chat_8bdae0b4-4b6b-4b57-bada-24f3e951eda9",
+        "tool_call_id": "call_00_bZHXIARWrt7OS7enPpkB2572",
+        "name": "ap_add_step",
+        "arguments_sha256": "f59cf7f9c790ceb2c088a027d4f8c89ab89e166d1f6077aa626eb1a8303346d9"
+      },
+      "dispatch": {
+        "timestamp": "2026-10-08T23:07:14.213450625Z",
+        "event": "native_mcp_dispatch",
+        "endpoint": "https://activepieces-production-82ad.up.railway.app/mcp",
+        "method": "tools/call",
+        "name": "ap_add_step",
+        "arguments_sha256": "f59cf7f9c790ceb2c088a027d4f8c89ab89e166d1f6077aa626eb1a8303346d9"
+      },
+      "digestMatches": true
+    },
+    {
+      "model": {
+        "timestamp": "2026-10-08T23:07:16.438803411Z",
+        "event": "chat_model_tool_choice",
+        "conversation_id": "chat_8bdae0b4-4b6b-4b57-bada-24f3e951eda9",
+        "tool_call_id": "call_00_rkcNaHikYm2nR0hKFvfq6655",
+        "name": "ap_add_branch",
+        "arguments_sha256": "79b9d83e4f50ff23dc5684f510649644813b92f14428a2142b927f9b8247c78d"
+      },
+      "dispatch": {
+        "timestamp": "2026-10-08T23:07:16.438806741Z",
+        "event": "native_mcp_dispatch",
+        "endpoint": "https://activepieces-production-82ad.up.railway.app/mcp",
+        "method": "tools/call",
+        "name": "ap_add_branch",
+        "arguments_sha256": "79b9d83e4f50ff23dc5684f510649644813b92f14428a2142b927f9b8247c78d"
+      },
+      "digestMatches": true
+    },
+    {
+      "model": {
+        "timestamp": "2026-10-08T23:07:20.506285107Z",
+        "event": "chat_model_tool_choice",
+        "conversation_id": "chat_8bdae0b4-4b6b-4b57-bada-24f3e951eda9",
+        "tool_call_id": "call_00_I4ECLwsDpdxCB1EKlKvA2296",
+        "name": "ap_flow_structure",
+        "arguments_sha256": "c0a082af117507761a71e55bac4b019c264bdf1861f3883ceadda912d5f4a099"
+      },
+      "dispatch": {
+        "timestamp": "2026-10-08T23:07:20.506290387Z",
+        "event": "native_mcp_dispatch",
+        "endpoint": "https://activepieces-production-82ad.up.railway.app/mcp",
+        "method": "tools/call",
+        "name": "ap_flow_structure",
+        "arguments_sha256": "c0a082af117507761a71e55bac4b019c264bdf1861f3883ceadda912d5f4a099"
+      },
+      "digestMatches": true
+    },
+    {
+      "model": {
+        "timestamp": "2026-10-08T23:07:28.194811367Z",
+        "event": "chat_model_tool_choice",
+        "conversation_id": "chat_8bdae0b4-4b6b-4b57-bada-24f3e951eda9",
+        "tool_call_id": "call_00_ycvyE5YQAkkpy8VV6O2j6540",
+        "name": "ap_delete_branch",
+        "arguments_sha256": "bd0a6f835b6860d0394cd457f8fa528fd6f08ff1fe59573f4970f11e05577a54"
+      },
+      "dispatch": {
+        "timestamp": "2026-10-08T23:07:28.206599196Z",
+        "event": "native_mcp_dispatch",
+        "endpoint": "https://activepieces-production-82ad.up.railway.app/mcp",
+        "method": "tools/call",
+        "name": "ap_delete_branch",
+        "arguments_sha256": "bd0a6f835b6860d0394cd457f8fa528fd6f08ff1fe59573f4970f11e05577a54"
+      },
+      "digestMatches": true
+    },
+    {
+      "model": {
+        "timestamp": "2026-10-08T23:07:35.128001737Z",
+        "event": "chat_model_tool_choice",
+        "conversation_id": "chat_8bdae0b4-4b6b-4b57-bada-24f3e951eda9",
+        "tool_call_id": "call_00_CmbJNRKeXLJeibvYv98h8036",
+        "name": "ap_add_step",
+        "arguments_sha256": "2efb0106a32810e246d236b3d82bb21fa853ac40e20144566fc936488e60ea1e"
+      },
+      "dispatch": {
+        "timestamp": "2026-10-08T23:07:35.137636600Z",
+        "event": "native_mcp_dispatch",
+        "endpoint": "https://activepieces-production-82ad.up.railway.app/mcp",
+        "method": "tools/call",
+        "name": "ap_add_step",
+        "arguments_sha256": "2efb0106a32810e246d236b3d82bb21fa853ac40e20144566fc936488e60ea1e"
+      },
+      "digestMatches": true
+    },
+    {
+      "model": {
+        "timestamp": "2026-10-08T23:07:55.446338496Z",
+        "event": "chat_model_tool_choice",
+        "conversation_id": "chat_8bdae0b4-4b6b-4b57-bada-24f3e951eda9",
+        "tool_call_id": "call_00_HcmnZiIV0OYCtPImnxuD4013",
+        "name": "ap_add_step",
+        "arguments_sha256": "3bc44ba29536c9abef8d7484c59f401bc1762a57bd1b14143a44c74af8c8557c"
+      },
+      "dispatch": {
+        "timestamp": "2026-10-08T23:07:55.446341596Z",
+        "event": "native_mcp_dispatch",
+        "endpoint": "https://activepieces-production-82ad.up.railway.app/mcp",
+        "method": "tools/call",
+        "name": "ap_add_step",
+        "arguments_sha256": "3bc44ba29536c9abef8d7484c59f401bc1762a57bd1b14143a44c74af8c8557c"
+      },
+      "digestMatches": true
+    },
+    {
+      "model": {
+        "timestamp": "2026-10-08T23:07:55.447268074Z",
+        "event": "chat_model_tool_choice",
+        "conversation_id": "chat_8bdae0b4-4b6b-4b57-bada-24f3e951eda9",
+        "tool_call_id": "call_00_yRTfXDZaaorNmlrC0b9H3161",
+        "name": "ap_add_step",
+        "arguments_sha256": "f2aaaf4619585b5f901d6736e58c7e685fe4eec33dbaf5943524e3d75b85165d"
+      },
+      "dispatch": {
+        "timestamp": "2026-10-08T23:07:55.447273244Z",
+        "event": "native_mcp_dispatch",
+        "endpoint": "https://activepieces-production-82ad.up.railway.app/mcp",
+        "method": "tools/call",
+        "name": "ap_add_step",
+        "arguments_sha256": "f2aaaf4619585b5f901d6736e58c7e685fe4eec33dbaf5943524e3d75b85165d"
+      },
+      "digestMatches": true
+    },
+    {
+      "model": {
+        "timestamp": "2026-10-08T23:08:01.435097928Z",
+        "event": "chat_model_tool_choice",
+        "conversation_id": "chat_8bdae0b4-4b6b-4b57-bada-24f3e951eda9",
+        "tool_call_id": "call_00_J2R57f2xsPXKt0gfQa1N1626",
+        "name": "ap_add_step",
+        "arguments_sha256": "31f67e6fa1bf8764917731fd399ad6be0a14518a4842fc4c5527b8980e61d1c4"
+      },
+      "dispatch": {
+        "timestamp": "2026-10-08T23:08:01.435102718Z",
+        "event": "native_mcp_dispatch",
+        "endpoint": "https://activepieces-production-82ad.up.railway.app/mcp",
+        "method": "tools/call",
+        "name": "ap_add_step",
+        "arguments_sha256": "31f67e6fa1bf8764917731fd399ad6be0a14518a4842fc4c5527b8980e61d1c4"
+      },
+      "digestMatches": true
+    },
+    {
+      "model": {
+        "timestamp": "2026-10-08T23:08:05.176583688Z",
+        "event": "chat_model_tool_choice",
+        "conversation_id": "chat_8bdae0b4-4b6b-4b57-bada-24f3e951eda9",
+        "tool_call_id": "call_00_ckipFN1QR2oyc84fU0EY7839",
+        "name": "ap_flow_structure",
+        "arguments_sha256": "c0a082af117507761a71e55bac4b019c264bdf1861f3883ceadda912d5f4a099"
+      },
+      "dispatch": {
+        "timestamp": "2026-10-08T23:08:05.184250926Z",
+        "event": "native_mcp_dispatch",
+        "endpoint": "https://activepieces-production-82ad.up.railway.app/mcp",
+        "method": "tools/call",
+        "name": "ap_flow_structure",
+        "arguments_sha256": "c0a082af117507761a71e55bac4b019c264bdf1861f3883ceadda912d5f4a099"
+      },
+      "digestMatches": true
+    },
+    {
+      "model": {
+        "timestamp": "2026-10-08T23:08:10.189247629Z",
+        "event": "chat_model_tool_choice",
+        "conversation_id": "chat_8bdae0b4-4b6b-4b57-bada-24f3e951eda9",
+        "tool_call_id": "call_00_Q1QFWiubaWq0ITGM9rr88943",
+        "name": "ap_add_step",
+        "arguments_sha256": "2f79d2e286ed43d889dc7bb9521996ffd308d92d0304d3cb2657e100a8e386ed"
+      },
+      "dispatch": {
+        "timestamp": "2026-10-08T23:08:10.189250149Z",
+        "event": "native_mcp_dispatch",
+        "endpoint": "https://activepieces-production-82ad.up.railway.app/mcp",
+        "method": "tools/call",
+        "name": "ap_add_step",
+        "arguments_sha256": "2f79d2e286ed43d889dc7bb9521996ffd308d92d0304d3cb2657e100a8e386ed"
+      },
+      "digestMatches": true
+    },
+    {
+      "model": {
+        "timestamp": "2026-10-08T23:08:13.067680875Z",
+        "event": "chat_model_tool_choice",
+        "conversation_id": "chat_8bdae0b4-4b6b-4b57-bada-24f3e951eda9",
+        "tool_call_id": "call_00_epC2bB17RZuxuR2aKz722857",
+        "name": "ap_validate_flow",
+        "arguments_sha256": "c0a082af117507761a71e55bac4b019c264bdf1861f3883ceadda912d5f4a099"
+      },
+      "dispatch": {
+        "timestamp": "2026-10-08T23:08:13.363245603Z",
+        "event": "native_mcp_dispatch",
+        "endpoint": "https://activepieces-production-82ad.up.railway.app/mcp",
+        "method": "tools/call",
+        "name": "ap_validate_flow",
+        "arguments_sha256": "c0a082af117507761a71e55bac4b019c264bdf1861f3883ceadda912d5f4a099"
+      },
+      "digestMatches": true
+    },
+    {
+      "model": {
+        "timestamp": "2026-10-08T23:08:19.438093521Z",
+        "event": "chat_model_tool_choice",
+        "conversation_id": "chat_8bdae0b4-4b6b-4b57-bada-24f3e951eda9",
+        "tool_call_id": "call_00_zkVRbT1Q6z5iiciV0y8J4665",
+        "name": "ap_setup_guide",
+        "arguments_sha256": "6d3d55a87aa3d4ff712425eb3ae8217100bec565882f7ab8e657c8204f0bb9ec"
+      },
+      "dispatch": {
+        "timestamp": "2026-10-08T23:08:19.438096471Z",
+        "event": "native_mcp_dispatch",
+        "endpoint": "https://activepieces-production-82ad.up.railway.app/mcp",
+        "method": "tools/call",
+        "name": "ap_setup_guide",
+        "arguments_sha256": "6d3d55a87aa3d4ff712425eb3ae8217100bec565882f7ab8e657c8204f0bb9ec"
+      },
+      "digestMatches": true
+    }
+  ],
+  "unpairedNativeDispatches": [
+    {
+      "timestamp": "2026-10-08T23:08:28.515793266Z",
+      "event": "native_mcp_dispatch",
+      "endpoint": "https://activepieces-production-82ad.up.railway.app/mcp",
+      "method": "tools/call",
+      "name": "ap_list_connections",
+      "arguments_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "timestamp": "2026-10-08T23:08:28.661999982Z",
+      "event": "native_mcp_dispatch",
+      "endpoint": "https://activepieces-production-82ad.up.railway.app/mcp",
+      "method": "tools/call",
+      "name": "ap_validate_flow",
+      "arguments_sha256": "c0a082af117507761a71e55bac4b019c264bdf1861f3883ceadda912d5f4a099"
+    },
+    {
+      "timestamp": "2026-10-08T23:08:29.641833204Z",
+      "event": "native_mcp_dispatch",
+      "endpoint": "https://activepieces-production-82ad.up.railway.app/mcp",
+      "method": "tools/call",
+      "name": "ap_list_connections",
+      "arguments_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "timestamp": "2026-10-08T23:08:29.797790081Z",
+      "event": "native_mcp_dispatch",
+      "endpoint": "https://activepieces-production-82ad.up.railway.app/mcp",
+      "method": "tools/call",
+      "name": "ap_validate_flow",
+      "arguments_sha256": "c0a082af117507761a71e55bac4b019c264bdf1861f3883ceadda912d5f4a099"
+    }
+  ],
+  "limits": [
+    "44 tool definitions observed, not 46. Dynamic enabled MCP flows may add more tools; the model catalog is not hardcoded.",
+    "All 44 definition names match the deployed release source. This does not prove every tool executed successfully.",
+    "Name/digest correlation is bounded to adjacent records in this observed conversation/time window. Native dispatch logs lack a request ID; do not infer universal concurrency-safe correlation.",
+    "The ap_build_flow model and native argument digests differ. The deployed code strips internal work-mode metadata, but these digest-only logs cannot identify the exact differing input.",
+    "Dispatch logs precede HTTP completion and do not prove tool success, provider outcome or business result.",
+    "The new branch changes have only local scripted regressions; they are not deployed."
+  ]
+}

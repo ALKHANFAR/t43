@@ -1,3 +1,5 @@
+import {createHash} from 'node:crypto';
+import {discoverMcpCatalog} from '../lib/activepieces-mcp.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -73,7 +75,7 @@ function setup({script,clock=Date,flowInputSchema=null,hideFlowToolUntilPublishe
   const ctx={
     console:{error:()=>{},info:()=>{},warn:()=>{}},process:{env:{DEEPSEEK_API_KEY:'test-key'}},
     AbortController,setTimeout,clearTimeout,Date:clock,JSON,String,Array,Object,Math,
-    TenantProjectError,CompanyProfileError,selectKnowledgeContext,createCumulativeMemory,MEMORY_TABLE,MEMORY_FIELDS,MEMORY_LIMITS,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext,
+    createHash,discoverMcpCatalog,TenantProjectError,CompanyProfileError,selectKnowledgeContext,createCumulativeMemory,MEMORY_TABLE,MEMORY_FIELDS,MEMORY_LIMITS,nativeActionReceipt,flowTestSnapshot,builtFlowResult,conversationMemory,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext,
     fetch:async(url,options)=>{
       const request=JSON.parse(options.body);log.model.push(request);
       const message=script[Math.min(step++,script.length-1)];
@@ -119,7 +121,7 @@ test('direct replies retain company and employee context without a configured MC
     assert.equal(context.selectedEmployee.instructionVersion,3);
     assert.equal(request.messages[1].content,'نركز على سرعة الرد.');
     assert.equal(request.tools,undefined);
-    assert.deepEqual(calls,['tools/list']);
+    assert.deepEqual(calls,['initialize']);
     assert.equal(answer.effects.length,0);
     assert.equal(answer.toolReceipts.length,0);
     assert.equal(log.effects,0);
@@ -451,7 +453,7 @@ test('a long request answers queued once, keeps working, and settles the same re
     console:{error:()=>{},info:()=>{},warn:()=>{}},JSON,String,Object,Number,Array,Boolean,
     setTimeout:(fn,ms)=>{timers.push({fn,ms});return timers.length;},clearTimeout:id=>{if(timers[id-1])timers[id-1].cleared=true;},
     randomUUID:()=>'11111111-1111-4111-8111-111111111111',createHash:()=>({update(){return this;},digest:()=>'hash'}),
-    TenantProjectError,CompanyProfileError,chatExecutionBudget,draftOnlyIntent,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
+    createHash,discoverMcpCatalog,TenantProjectError,CompanyProfileError,chatExecutionBudget,draftOnlyIntent,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
     body:async()=>({op:'message',message:'ابنِ طريقة عمل كاملة',conversation_id:'c1',request_id:'r1'}),
     tenantSession:async()=>({session:{companyId:'company-1'},account:{company_name:'شركة'},headers:{}}),
     companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),
@@ -511,7 +513,7 @@ test('a second message waits for the first result before reaching the model',asy
   const ctx={console:{error:()=>{}},JSON,String,Object,Number,Array,Boolean,Date,
     setTimeout:(fn,ms)=>ms===1000?setTimeout(fn,1):1,clearTimeout:()=>{},
     randomUUID:()=> 'u1',createHash:()=>({update(){return this;},digest:()=> 'hash'}),
-    TenantProjectError,CompanyProfileError,chatExecutionBudget,draftOnlyIntent,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
+    createHash,discoverMcpCatalog,TenantProjectError,CompanyProfileError,chatExecutionBudget,draftOnlyIntent,Date,GmailPilotError:class extends Error{},GMAIL_PILOT_COMMAND:'pilot',
     body:async req=>({op:'message',message:req.id,conversation_id:'c1',request_id:req.id}),
     tenantSession:async()=>({session:{companyId:'company-1'},account:{company_name:'شركة'},headers:{}}),
     companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),
@@ -970,7 +972,7 @@ test('different server contexts block overlapping company effects while direct r
   function instance(){
     const ctx={console:{error:()=>{}},JSON,String,Object,Number,Array,Boolean,Date,setTimeout,clearTimeout,
       randomUUID:()=> 'unused',createHash:()=>({update(){return this;},digest:()=> 'hash'}),
-      TenantProjectError,CompanyProfileError,chatExecutionBudget,draftOnlyIntent,createCompanyEffectLock,database,effectDatabase:database,
+      createHash,discoverMcpCatalog,TenantProjectError,CompanyProfileError,chatExecutionBudget,draftOnlyIntent,createCompanyEffectLock,database,effectDatabase:database,
       body:async req=>({op:'message',message:req.id,conversation_id:req.id,request_id:req.id}),
       tenantSession:async()=>({session:{companyId:'company-a'},account:{company_name:'شركة'},headers:{}}),
       companyProfiles:async()=>profiles,activepiecesMcp:async()=>({}),failedChatExecution,
@@ -1064,4 +1066,24 @@ test('both chats use ranked knowledge instead of stale profile facts and retain 
   if(employee){assert.equal(context.selectedEmployee.instructions,employee.prompt);assert.equal(context.selectedEmployee.instructionVersion,3);}
   assert.equal(company.profile.facts[0].value,'stale_profile_price_100');assert.equal(h.log.effects,0);
  }
+});
+
+test('both chats receive every paginated native tool and full native descriptions without a local tool limit',async()=>{
+ const native=Array.from({length:46},(_,i)=>({name:'native_read_'+i,annotations:{readOnlyHint:true},description:'d'.repeat(4100),inputSchema:{type:'object',properties:{value:{type:'string',description:'native input'}}}}));
+ for(const employee of [null,{id:'employee-1',status:'draft',prompt:'تعليمات الموظف'}]){
+  const calls=[];
+  const mcp={call:async(company,method,args)=>{calls.push({company,method,args});if(method==='initialize')return {instructions:'native guide '+ 'g'.repeat(9000)};return args.cursor?{tools:native.slice(23)}:{tools:native.slice(0,23),nextCursor:'page2'};}};
+  const h=setup({script:[say('رد النموذج')]});await h.run({employee,mcp});
+  assert.deepEqual(calls.map(x=>x.method),['initialize','tools/list','tools/list']);
+  assert.ok(calls.every(x=>x.company==='company-1'));
+  assert.ok(h.log.model[0].messages[0].content.includes('native guide '+ 'g'.repeat(9000)));
+  assert.deepEqual(h.log.model[0].tools.map(x=>({name:x.function.name,description:x.function.description,inputSchema:x.function.parameters})),native.map(({name,description,inputSchema})=>({name,description,inputSchema})));
+ }
+});
+
+test('the shared LLM explains an observed outcome without discovering or redispatching tools',async()=>{
+ const h=setup({script:[say('حُفظت المسودة ولم يبدأ التشغيل.')]});
+ const answer=await h.run({mcp:null,observedOutcome:{kind:'flow_draft',flowId,executed:false}});
+ assert.equal(answer.reply,'حُفظت المسودة ولم يبدأ التشغيل.');assert.equal(h.log.model.length,1);
+ assert.match(h.log.model[0].messages[0].content,/flow_draft/);assert.equal(h.log.model[0].tools,undefined);assert.deepEqual(h.log.tools,[]);
 });

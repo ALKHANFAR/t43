@@ -1,3 +1,5 @@
+import {createHash} from 'node:crypto';
+import {discoverMcpCatalog} from '../lib/activepieces-mcp.mjs';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {pathToFileURL} from 'node:url';
@@ -69,7 +71,7 @@ export async function evaluateKnowledgeCase({testCase,chat,live=false,apiKey='',
     return {ok:response.ok,status:response.status,json:async()=>data};
   };
   const context={console:{info:()=>{},warn:()=>{},error:()=>{}},process:{env:{DEEPSEEK_API_KEY:apiKey||'offline-fixture'}},AbortController,setTimeout,clearTimeout,fetch:modelFetch,
-    selectKnowledgeContext,createCumulativeMemory,MEMORY_TABLE,MEMORY_FIELDS,MEMORY_LIMITS,TenantProjectError,CompanyProfileError,conversationMemory,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,bindEmployeeFlowContext,scopeMcpTool,nativeActionReceipt,flowTestSnapshot};
+    createHash,discoverMcpCatalog,selectKnowledgeContext,createCumulativeMemory,MEMORY_TABLE,MEMORY_FIELDS,MEMORY_LIMITS,TenantProjectError,CompanyProfileError,conversationMemory,draftOnlyIntent,doNotRunIntent,employeeFlowMcpToolName,bindEmployeeFlowContext,scopeMcpTool,nativeActionReceipt,flowTestSnapshot};
   Object.assign(context,testCase.services||{});
   if(testCase.useFlowLifecycle)Object.assign(context,createChatFlowLifecycle({...testCase.services,logger:context.console}));
   const run=runInNewContext(source.slice(start,end)+';deepseekReply',context);

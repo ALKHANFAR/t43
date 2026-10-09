@@ -15,7 +15,7 @@ const proof={recordId:'proof-record-1',employeeId:employee.recordId,flowId:emplo
 
 test('chat UI never bypasses Siyadah with a direct Activepieces webhook',()=>{
   assert.ok(!source.includes('activepieces-p8l1-455.up.railway.app/api/v1/webhooks'));
-  assert.match(source,/SIYADAH_CHAT_GATEWAY\|\|"\/siyadah-api\/v1\/chat"/);
+  assert.match(source,/SIY_GATEWAY="\/siyadah-api\/v1\/chat"/);
   assert.ok(!source.includes('localStorage.getItem("siyadah_token")'));
 });
 
@@ -1338,5 +1338,19 @@ test('mixed action receipts explain completed action without upgrading unknown r
 test('invalid or absent completed-action identity cannot change unknown request wording',async()=>{
  for(const run of ['', '<img src=x>', 1e20, null]){
   const p=await page({message:{ok:true,conversation_id:'mixed',request_status:'not_observed',work_status:'unknown',outcome_kind:'unverified',reply:'رد المصدر',tool_receipts:[{name:'ap_run_action',status:'error',effect_attempted:true},{name:'ap_run_action',status:'returned',run_id:run,outcome:'action_completed',effect_attempted:true}]}});try{send(p,'اقرأ');await flush();assert.equal(p.d.querySelector('.request-state').textContent,'النتيجة غير مؤكدة');}finally{p.close();}
+ }
+});
+
+// Every typed message uses the authenticated gateway, including a preview without a real-account flag.
+test('both chat composers use the same fixed gateway and never generate a local fallback',async()=>{
+ for(const selected of [null,'fahad']){
+  const p=await page({real:false,hash:'',message:{ok:true,conversation_id:'gateway-proof',reply:'رد النموذج من الخادم'}});
+  try{
+   if(selected)p.d.querySelector('#emps [data-emp="'+selected+'"]').click();
+   send(p,'وش صار اليوم؟');await flush();
+   const calls=p.requests.filter(x=>x.body?.op==='message');
+   assert.equal(calls.length,1);assert.equal(calls[0].url,'/siyadah-api/v1/chat');
+   assert.equal(calls[0].body.employee_id,selected);assert.match(thread(p),/رد النموذج من الخادم/);
+  }finally{p.close();}
  }
 });

@@ -476,73 +476,6 @@ var I = {
       '</div></details></div>';
   }
 
-  /* ---------- ردود الموظف: موجّه نوايا صغير بصوت كل موظف ---------- */
-  function lastLog(e,n){ return e.log.slice(0,n).map(function(l){return '<span class="num">'+l[0]+'</span> '+l[1]}).join("<br>"); }
-  function statusReply(e){
-    var k=e.kpi.map(function(x){ return x.l+' <b class="num">'+x.v+'</b>'+(x.t&&x.t!=="—"?' <span class="num">('+x.t+')</span>':''); }).join("، ");
-    return { t:'<p>'+e.v.hi+' اليوم: '+k+'.</p><p>آخر ثلاث حركات:<br>'+lastLog(e,3)+'</p><p>'+e.v.q+'</p>',
-             why:"الأرقام من عدّاد اليوم وسجلي — التغيّر مقارنة بنفس اليوم من الأسبوع الماضي." };
-  }
-  function whyReply(e,text){
-    var W=e.v.why, m=text.match(/(?:تابعت|تابعتي|ذكّرت|ذكرت|رديت|أرسلت|ارسلت|راسلت|نشرت|صعّدت|صعدت|حجزت|أوقفت|اوقفت)\s*(?:على|لـ|مع|عن)?\s*([^؟?.،!]+)/);
-    var subj=(m&&m[1]?m[1].trim():"")||(text.match(/\d{3,}/)||[])[0]||W.subj;
-    var rule=e.rules[W.rule][0], log=e.log.filter(function(l){ return subj.split(/\s+/).some(function(t){ return t.length>2&&l[1].indexOf(t)>-1; }); })[0]||e.log[W.log];
-    return { t:'<p>'+subj+' — '+W.act+'. آخر سطر في سجلي: «<span class="num">'+log[0]+'</span> '+log[1].replace(/\.$/,"")+'». قاعدتك: «'+rule+'»، '+W.extra+'.</p><p>'+W.retry+'</p>',
-             why:"قاعدتك: «"+rule+"» — من تعليماتك، وسجلي فيه الوقت." };
-  }
-  /* فهد يستشهد: الجواب من قاعدة المعرفة يجي بذيل «من: … · ثقة …» — والذيل يظهر فقط لما يكون الجواب فعلًا من المعرفة */
-  function refundReply(){
-    return { t:'<p>سياستنا: استرجاع كامل خلال 14 يوم إذا المنتج بحالته — بعدها استبدال أو رصيد.</p>'+
-               '<p class="cite nr">من: سياسة الاسترجاع · ثقة <span class="num">96%</span></p>',
-             why:"الجواب حرفيًا من ملف سياسة الاسترجاع في قاعدة المعرفة — ما غيّرت فيه." };
-  }
-  /* ثقة منخفضة: ما يخمّن — يرفعها لك بطاقة «ينتظر قرارك» بنفس آلية الانتظارات والشارة */
-  function shipReply(e){
-    var w={t:"سؤال عن الشحن ما عندي جوابه.",s:"رفعته لك بدل ما أخمّن.",a:["اكتب الجواب","أضفها للمعرفة"],
-           r:["تم. رديت على العميل بجوابك، وأضفته لقاعدة المعرفة عشان ما يرجع لك.","تم. أضفتها لقائمة «ناقص في المعرفة» — يوصلك تذكير تكتب جوابها."]};
-    e.waits.push(w); e.wait++;
-    empThread(e.id).push({me:false,wait:w,at:"ينتظر قرارك"});
-    renderSide();
-    return { t:'<p>ما عندي جواب موثوق عن الشحن (ثقة <span class="num">41%</span>) — رفعتها لك بدل ما أخمّن.</p>',
-             why:"قاعدتي: أجاوب من قاعدة المعرفة فقط — والشحن ما له صفحة فيها، فالتخمين مو خيار." };
-  }
-  function adjustReply(e,text){
-    var add=text.replace(/[.!؟?]+$/,"").trim(), del="", hours=null;
-    var tm=text.match(/بعد\s*(?:الساعة\s*)?(\d{1,2})\s*(مساءً|مساء|م\b|صباحًا|صباحا|ص\b)?/);
-    if(tm){ var h=tm[1], pm=!tm[2]||/م/.test(tm[2]); add="ما "+(e.f?"ترسلين":"ترسل")+" أي رسالة بعد الساعة "+h+(pm?" مساءً":" صباحًا")+"."; if(pm){ hours=e.hours.replace(/–.*$/,"– "+h+" م"); del="ساعات العمل: "+e.hours; } }
-    else if(/نبرة|النبرة/.test(text)){ var formal=/رسمي|جدّي|جدي/.test(text); add="النبرة: "+(formal?"رسمية.":"ودّية."); del="النبرة: "+TONE[e.tone]; }
-    else if(/^(لا|ما)\s/.test(add)) add=add+".";
-    else add=add+".";
-    var line="صار. "+(hours?"أوقف الإرسال بعد "+tm[1]+" مساءً وأؤجّل الباقي للصباح.":"أطبّقها من الرسالة الجاية.");
-    return { t:'<p>'+line+' هذا اللي يتغير في تعليماتي:</p>', diff:{add:add,del:del,hours:hours}, why:"غيّرت سطرًا واحدًا في تعليماتي — والخطوط الحمراء ما تتأثر." };
-  }
-  function needReply(e){
-    var off=e.tools.filter(function(s){return !toolOf(s).on});
-    if(!off.length) return { t:'<p>كل أدواتي مربوطة'+(e.wait?' — اللي ناقصني بس قرارك على اللي فوق ('+e.wait+').':'.')+'</p><p>تبي أضيف أداة؟</p>', why:"أدواتي: "+toolNames(e)+" — وكلها مربوطة." };
-    return { t:'<p>ناقصني '+off.map(function(s){ return (TN[s]||s)+' <button type="button" class="link nr" data-c="'+s+'">اربط</button>'; }).join(" و")+' — بدونها أشتغل جزئيًا.</p><p>تربطها الحين وأكمّل؟</p>',
-             why:"ما أوصل لأي أداة ما ربطتها أنت." };
-  }
-  function pauseReply(e,on){
-    if(window.__SIY_REAL__) return {t:"<p>تغيير التشغيل غير متاح بعد؛ حالة الموظف لم تتغير.</p>"};
-    e.on=on; renderSide(); siyPatch(e.n,"status",on?"نشط":"متوقف");
-    return { t:'<p>'+(on?e.v.resume:e.v.pause)+'</p>', why:on?"شغّلتني من المحادثة — نفس مفتاح التشغيل فوق.":"وقّفتني من المحادثة — نفس مفتاح التشغيل فوق." };
-  }
-  function fallbackReply(e,text){
-    var s=text.length>48?text.slice(0,48).replace(/\s\S*$/,"")+"…":text;
-    return { t:'<p>'+e.v.ack+' «'+esc(s)+'» — '+e.v.ackq+'</p>', why:"ما نفّذت شيء بعد — أسأل قبل ما أفترض." };
-  }
-  function empReply(e,text){
-    var t=text.trim(), short=t.split(/\s+/).length<=4;
-    if(short&&/(^|\s)(وقف|توقف|توقّف|وقّف|أوقف|اوقف)(\s|$)/.test(t)) return pauseReply(e,false);
-    if(short&&/(^|\s)(كمّل|كمل|رجّع|رجع|شغّل|شغل|اشتغل|ارجع)(\s|$)/.test(t)) return pauseReply(e,true);
-    if(/ليش|ليه|وش السبب|لماذا/.test(t)) return whyReply(e,t);
-    if(e.id==="fahad"&&/استرجاع|الاسترجاع|سياسة|refund/i.test(t)) return refundReply();
-    if(e.id==="fahad"&&/شحن|الشحن|توصيل/.test(t)) return shipReply(e);
-    if(/خلّ|خلي|خلّي|غيّر|غير |لا ترسل|ما ترسل|أوقف|اوقف|زد |زيد|قلّل|قلل|بعد الساعة|بعد \d|نبرة/.test(t)) return adjustReply(e,t);
-    if(/وش تحتاج|محتاج|ناقصك|تحتاج/.test(t)) return needReply(e);
-    if(/وش صار|اليوم|وين وصلنا|تقرير|وش سوّيت|وش سويت|ملخص|الوضع/.test(t)) return statusReply(e);
-    return fallbackReply(e,t);
-  }
   /* يكتب… ثم يكشف الرد */
   function typeReply(e,list,build){
     var ty={me:false,typing:true,at:""}; list.push(ty); if(who===e.id) renderThread();
@@ -551,50 +484,15 @@ var I = {
   }
 
   /* ---------- الإرسال ---------- */
-  function isBuild(t){ return /أبي|أبغى|ابن|وظّف|وظف|موظف|يتابع|يطارد|يطالب|يرد على/.test(t); }
   function send(text){
-    text=(text||"").trim(); if(!text) return;
-    if(window.__SIY_REAL__){
-      if(window.__SIY_LOAD_ERROR__){ window.alert(loadErrorCopy()); return; }
-    }
-    /* معاينة قيد التعديل: إرسال النص من المحرر = إعادة اعتماد وتكملة التشغيل */
-    if(pendEdit){ var pe=pendEdit; pendEdit=null; var pl=pe.ctx.list;
-      pe.row.text=text; pe.row.state="approved"; pe.row.at=now();
-      pl.push({me:true,t:text,at:now()});
-      $("#input").value=""; $("#input").style.height="auto";
-      if(curList()===pl) renderThread();
-      pe.ctx.next(); return; }
-    if(who==="tools") return;
-    $("#input").focus();
-    var list, w=who;
-    if(isEmp()){ var e=emp(who); list=empThread(who); list.push({me:true,t:text,at:now()});
-      $("#input").value=""; $("#input").style.height="auto"; renderThread();
-      if(pendAns&&pendAns.who===who){ var p=pendAns; pendAns=null; resolveWait(e,list,p.mi,"كتبت الجواب",list[p.mi].wait.r[0],true); return; }
-      if(window.__SIY_REAL__){ siyMessage(text,list,e.id); return; } /* رد فعلي من الخلفية */
-      typeReply(e,list,function(){ return empReply(e,text); }); return; }
-    list = chatId ? CHATS[chatId].msgs : (live.siyadah=live.siyadah||[]);
-    if(!window.__SIY_REAL__ && !chatId && !list.length){ // السجل التجريبي فقط؛ الهوية الحقيقية يصدرها الخادم
-      var id="n"+Date.now(); CHATS[id]={with:"siyadah",t:title(text),when:"today",msgs:list}; chatId=id; live.siyadah=null;
-    }
+    text=(text||"").trim(); if(!text||who==="tools") return;
+    if(window.__SIY_REAL__&&window.__SIY_LOAD_ERROR__){window.alert(loadErrorCopy());return;}
+    var selected=isEmp()?emp(who):null;
+    var list=selected?empThread(selected.id):(chatId?CHATS[chatId].msgs:(live.siyadah=live.siyadah||[]));
     list.push({me:true,t:text,at:now()});
-    renderSide();
-    $("#input").value=""; $("#input").style.height="auto"; renderThread();
-    if(window.__SIY_REAL__){
-      siyMessage(text,list,null); return;
-    }
-    setTimeout(function(){
-      if(w==="siyadah"&&/وش تعرف|ايش تعرف|تعرف عنا|الذاكرة/.test(text)) list.push({me:false,at:now(),t:memHtml(),why:"كل سطر في الذاكرة له مصدر — محادثة أو قاعدة كتبتها أنت."});
-      else if(w==="siyadah"&&isBuild(text)) list.push({me:false,plan:true,at:now(),t:"جهّزت ثلاثة. هذي خطتهم — ما يتحرك شيء قبل موافقتك:"});
-      else list.push({me:false,at:now(),t:"<p>وصل. أجهّز لك الخطة، وما يتحرك شيء قبل موافقتك.</p>"});
-      if(who===w) renderThread();
-    },650);
-  }
-  /* الذاكرة الحيّة: سيادة تسرد اللي تحفظه — سطر لكل معلومة مع مصدرها */
-  function memHtml(){
-    if(!MEM.length) return "<p>الذاكرة فاضية للحين — أي قاعدة تحفظها من المحادثات تنحفظ هنا.</p>";
-    return '<p>هذا اللي أحفظه عنكم:</p><p>'+MEM.map(function(m){
-      return '<b>'+esc(m.k)+':</b> '+esc(m.v)+' <span class="msrc">· '+esc(m.src)+'</span>';
-    }).join('<br>')+'</p><p>تعدّلها من الإعدادات › الذاكرة.</p>';
+    $("#input").value=""; $("#input").style.height="auto";
+    renderSide(); renderThread(); $("#input").focus();
+    siyMessage(text,list,selected?selected.id:null);
   }
   function reply(list,html){ list.push({me:false,at:now(),t:html}); renderThread(); }
   /* قرار على بطاقة «ينتظر قرارك» */
@@ -1268,7 +1166,7 @@ var I = {
   });
 
   /* نطاق الشركة يأتي من جلسة HttpOnly على الخادم فقط. */
-  var SIY_GATEWAY=window.SIYADAH_CHAT_GATEWAY||"/siyadah-api/v1/chat",SIY_ONBOARDING="/siyadah-api/v1/onboarding";
+  var SIY_GATEWAY="/siyadah-api/v1/chat",SIY_ONBOARDING="/siyadah-api/v1/onboarding";
   var siyPolls={}, siyGeneration=0, siyEmployeeStatePending={};
   function siyBuilderState(text,connected){ var node=$("#builderConnectState"); if(!node) return; node.textContent=text==='مساحة شركتك'?ui('مساحة شركتك','Your workspace'):text; node.classList.toggle("apstate--ok",connected===true); }
   function siyRefreshBuilderConnection(){

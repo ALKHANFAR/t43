@@ -23,12 +23,13 @@ function harness({invalidSession=false,input={},grantPresent=false,grantRevision
       status:async company=>{calls.push(['status',company]);if(projectMissing)throw new TenantProjectError('project_not_ready','project',409);return {grantPresent,grantRevision};},
       complete:async(url,options)=>{calls.push(['complete',options]);if(boundCallback&&options.sessionBinding!=='session-bound')throw new TenantProjectError('mcp_session_mismatch','session',403);},
     };},
+    discoverMcpCatalog:async(_client,company)=>{calls.push(['catalog',company]);return {receipt:{toolCount:44,toolNames:['ap_build_flow'],catalogSha256:'proof'}};},
     json:(_res,status,body)=>({status,body}),
   };
   return {calls,run:runInNewContext(`${accessSource}; customerMcpAccess`,context),callback:runInNewContext(`${callbackSource}; finishMcpGrant`,context)};
 }
 test('customer MCP access rejects invalid sessions before provisioning or provider access',async()=>{
-  for(const op of ['start','status']){const h=harness({invalidSession:true});const r=await h.run({headers:{origin}}, {},op);assert.equal(r.status,401);assert.deepEqual(h.calls,['session']);}
+  for(const op of ['start','status','catalog']){const h=harness({invalidSession:true});const r=await h.run({headers:{origin}}, {},op);assert.equal(r.status,401);assert.deepEqual(h.calls,['session']);}
 });
 test('customer MCP start rejects all client-supplied scope and unsupported bodies before provider access',async()=>{
   for(const input of [{companyId:'foreign'},{tenantId:'foreign'},{projectId:'foreign'},{scope:'foreign'},{op:'start'},[],null]){
@@ -70,4 +71,12 @@ test('a rejected bound callback returns a failed page and never substitutes a di
   const h=harness({invalidSession:true,boundCallback:true});let status;let page;
   await h.callback({url:'/callback?state=bound&code=native',headers:{}},{writeHead:value=>{status=value;},end:value=>{page=value;}});
   assert.equal(status,400);assert.equal(h.calls.filter(value=>Array.isArray(value)&&value[0]==='complete').length,1);assert.match(page,/لم يكتمل/);
+});
+
+test('catalog receipt is discovered for the authenticated company without client scope or tokens',async()=>{
+ const h=harness();const r=await h.run({headers:{origin}}, {},'catalog');
+ assert.equal(r.status,200);assert.equal(r.body.source,'activepieces_native_mcp');
+ assert.equal(r.body.liveVerified,true);assert.equal(r.body.toolCount,44);
+ assert.ok(h.calls.some(x=>Array.isArray(x)&&x[0]==='catalog'&&x[1]==='company-a'));
+ assert.equal(JSON.stringify(r.body).includes('token'),false);
 });
