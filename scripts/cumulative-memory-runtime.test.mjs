@@ -102,3 +102,19 @@ test('text retrieval normalizes Arabic marks, keeps evidence whole and uses empl
   assert.deepEqual(selectKnowledgeContext([large,small],{message:'السعر',maxChars:100}),[small]);
   assert.deepEqual(selectKnowledgeContext(facts,{maxFacts:0}),[]);
 });
+
+
+test('native memory readback budgets the complete serialized array including separators',async()=>{
+  const rows=Array.from({length:10},(_,i)=>{
+    const item=row(String(i).padStart(21,'0'),{key:'fact '+i,value:''});
+    item.cells.value='x'.repeat(600-JSON.stringify(item).length);
+    assert.equal(JSON.stringify(item).length,600);
+    assert.ok(item.cells.value.length<=MEMORY_LIMITS.valueChars);
+    return item;
+  });
+  const h=harness({rows});await h.service.load();
+  const result=h.service.scopeResult({structuredContent:{records:rows,count:rows.length}});
+  assert.ok(result.content[0].text.length<=MEMORY_LIMITS.contextChars);
+  assert.deepEqual(JSON.parse(result.content[0].text),result.structuredContent.records);
+  assert.equal(result.structuredContent.records.length,9);
+});
