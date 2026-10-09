@@ -15,13 +15,21 @@ function harness({rows=[],configured=true,ignoreFilters=false,readbackFailure=fa
     if(name==='ap_create_table'){exists=true;return {content:[{type:'text',text:'created'}]};}
     if(name==='ap_insert_records'){if(!readbackFailure)for(const cells of args.records)records.push({id:String(serial++).padStart(21,'0'),cells});return {content:[{type:'text',text:'inserted'}]};}
     if(name==='ap_update_record'){if(!readbackFailure)Object.assign(records.find(row=>row.id===args.recordId).cells,args.fields);return {content:[{type:'text',text:'updated'}]};}
-    if(name==='ap_delete_records'){records=records.filter(row=>!args.recordIds.includes(row.id));return {};}
+    if(name==='ap_delete_records'){assert.equal(args.tableId,TABLE);records=records.filter(row=>!args.recordIds.includes(row.id));return {};}
     throw Error(name);
   }};
   const service=createCumulativeMemory({mcp,companyId:'company-a',userId:'user-a',employeeId:'employee-a',requestId:'current',message:'سعرنا 99 ثم سعرنا 100 وأفضل الاختصار',tools});
   return {service,calls,records:()=>records};
 }
 const row=(id,cells)=>({id,cells:{...base,...cells}});
+test('native memory deletion is intercepted by table even for foreign records while business tables remain native',async()=>{
+  const h=harness({rows:[row(OTHER,{scope:'employee',owner:'employee-b'})]});await h.service.load();
+  const args={tableId:TABLE,recordIds:[OTHER]};
+  assert.equal(h.service.handles('ap_delete_records',args),true);
+  await assert.rejects(()=>h.service.mutate('ap_delete_records',args),{code:'memory_unverified'});
+  assert.equal(h.calls.some(c=>c.name==='ap_delete_records'),false);
+  assert.equal(h.service.handles('ap_delete_records',{tableId:'B'.repeat(21),recordIds:['C'.repeat(21)]}),false);
+});
 test('both chat scopes share company knowledge while user and employee memories remain isolated',async()=>{
   const rows=[row('A'.repeat(21),{}),row('B'.repeat(21),{scope:'user',owner:'user-a',key:'tone'}),row('C'.repeat(21),{scope:'user',owner:'user-b',key:'private'}),row('D'.repeat(21),{scope:'employee',owner:'employee-a',key:'goal'}),row('E'.repeat(21),{scope:'employee',owner:'employee-b',key:'other'})];
   const h=harness({rows});assert.deepEqual((await h.service.load()).facts.map(f=>f.key),['pricing','tone','goal']);

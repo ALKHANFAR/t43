@@ -98,6 +98,14 @@ function setup({script,extraTools=[],clock=Date,flowInputSchema=null,hideFlowToo
 }
 const toolMessages=request=>request.messages.filter(item=>item.role==='tool').map(item=>item.content);
 
+for(const chat of ['main','employee'])test(`${chat} chat rejects another employee memory deletion before native dispatch by memory table identity`,async()=>{
+  const foreign='Z'.repeat(21),cells={scope:'employee',owner:'employee-other',key:'private',value:'99',source_quote:'سعرنا 99',source_request:'old',updated_at:'2026-10-07T10:00:00Z'};
+  const h=setup({memoryRows:[{id:foreign,cells}],script:[use(['ap_delete_records',{tableId:'T'.repeat(21),recordIds:[foreign]}]),request=>{assert.equal(JSON.parse(toolMessages(request).at(-1)).isError,true);return say('لم أحذف الذاكرة.');}]});
+  await h.run({message:'احذف هذه المعلومة.',...(chat==='employee'?{employee:{id:'employee-1',name:'نور',status:'draft',activepieces_flow_id:null}}:{})});
+  assert.equal(h.log.tools.some(([name])=>name==='ap_delete_records'),false);
+  assert.equal(h.savedMemories.length,1);
+});
+
 for(const chat of ['main','employee']){
   test(`${chat} chat delivers large native tool schemas and parallel results to their exact model call IDs without truncation`,async()=>{
     const extraTools=['ap_get_piece_props','ap_search_actions'].map(name=>({name,...hint(true),inputSchema:{type:'object',properties:{}}}));
