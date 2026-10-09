@@ -49,13 +49,13 @@ const catalog=[
 const say=content=>({content});
 const use=(...calls)=>({content:'',tool_calls:calls.map(([name,args],index)=>({id:`call_${name}_${index}`,function:{name,arguments:typeof args==='string'?args:JSON.stringify(args||{})}}))});
 
-function setup({script,clock=Date,flowInputSchema=null,hideFlowToolUntilPublished=false,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false,memoryRows=null,additionalFlows={}}={}){
+function setup({script,extraTools=[],clock=Date,flowInputSchema=null,hideFlowToolUntilPublished=false,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false,memoryRows=null,additionalFlows={}}={}){
   const log={model:[],tools:[],effects:0,states:[],owned:[],runs:[],links:[]};
   const savedMemories=memoryRows===null?null:structuredClone(memoryRows);let memorySerial=1;
   const memoryTools=['ap_find_records','ap_insert_records','ap_update_record','ap_delete_records','ap_create_table'].map(name=>({name,...hint(name==='ap_find_records'),inputSchema:{type:'object',properties:{}}}));
   let stateAttempts=0,step=0,status=flowStatus,publishedVersionId=published?'v1':null,draftVersionId='v1',versionState=published?'LOCKED':'DRAFT',sampleData,updated='before',updatedBy,taskInput='{{trigger.task}}';
   const mcp={call:async(_company,method,params)=>{
-    if(method==='tools/list')return {tools:[...catalog,...(savedMemories?memoryTools:[])].filter(tool=>!hideFlowToolUntilPublished||publishedVersionId||tool.name!==flowToolName).map(tool=>tool.name===flowToolName&&flowInputSchema?{...tool,inputSchema:flowInputSchema}:tool)};
+    if(method==='tools/list')return {tools:[...catalog,...extraTools,...(savedMemories?memoryTools:[])].filter(tool=>!hideFlowToolUntilPublished||publishedVersionId||tool.name!==flowToolName).map(tool=>tool.name===flowToolName&&flowInputSchema?{...tool,inputSchema:flowInputSchema}:tool)};
     if(method==='initialize')return {instructions:'## Activepieces MCP Server\n1. Discover 2. Schema 3. Build 4. Validate 5. Publish'};
     log.tools.push([params.name,params.arguments]);
     if(savedMemories!==null){
@@ -97,6 +97,35 @@ function setup({script,clock=Date,flowInputSchema=null,hideFlowToolUntilPublishe
   return {run,log,savedMemories,setVersion:id=>{draftVersionId=id;}};
 }
 const toolMessages=request=>request.messages.filter(item=>item.role==='tool').map(item=>item.content);
+
+for(const chat of ['main','employee'])for(const mode of ['semantic','keyword']){
+  test(`${chat} chat preserves native ${mode} discovery and schema results across repeated searches before draft building`,async()=>{
+    const extraTools=['ap_search_actions','ap_search_triggers','ap_get_piece_props'].map(name=>({name,...hint(true),inputSchema:{type:'object',properties:{}}}));
+    const first={query:'اكتشف طلب عميل جديد',limit:7},second={query:'تابع الطلب حتى الرد',limit:9};
+    const trigger={pieceName:'@activepieces/piece-intake',triggerName:'new_request',connected:false};
+    const action={pieceName:'@activepieces/piece-followup',actionName:'follow_request',connected:false};
+    const schema={pieceName:action.pieceName,actionName:action.actionName};
+    const props={structuredContent:{props:{requestId:{type:'SHORT_TEXT',required:true}},auth:{required:true}}};
+    const build={flowName:'رحلة متابعة الطلب',steps:[{pieceName:action.pieceName,actionName:action.actionName,input:{requestId:'{{trigger.id}}'}}]};
+    const h=setup({extraTools,toolResults:{
+      ap_search_triggers:{structuredContent:{mode,results:[trigger]}},
+      ap_search_actions:args=>({structuredContent:{mode,results:args.query===second.query?[action]:[]}}),
+      ap_get_piece_props:props,
+    },script:[
+      request=>{assert.ok(extraTools.every(tool=>request.tools.some(t=>t.function.name===tool.name)));return use(['ap_search_triggers',first]);},
+      request=>{assert.deepEqual(JSON.parse(toolMessages(request).at(-1)),{structuredContent:{mode,results:[trigger]}});return use(['ap_search_actions',{query:'صياغة أولى لا تطابق شيئًا'}]);},
+      request=>{assert.deepEqual(JSON.parse(toolMessages(request).at(-1)),{structuredContent:{mode,results:[]}});return use(['ap_search_actions',second]);},
+      request=>{assert.deepEqual(JSON.parse(toolMessages(request).at(-1)),{structuredContent:{mode,results:[action]}});return use(['ap_get_piece_props',schema]);},
+      request=>{assert.deepEqual(JSON.parse(toolMessages(request).at(-1)),props);return use(['ap_build_flow',build]);},
+      say('حفظت المسودة؛ ربط الخدمة ما زال مطلوبًا.'),
+    ]});
+    const answer=await h.run({message:'جهز مسودة رحلة متابعة الطلب.',...(chat==='employee'?{employee:{id:'employee-1',name:'نور',status:'draft',activepieces_flow_id:null}}:{})});
+    assert.deepEqual(h.log.tools,[['ap_search_triggers',first],['ap_search_actions',{query:'صياغة أولى لا تطابق شيئًا'}],['ap_search_actions',second],['ap_get_piece_props',schema],['ap_build_flow',build]]);
+    assert.equal(answer.flowId,flowId);
+    assert.equal(h.log.effects,1);
+    assert.equal(h.log.states.length,0);
+  });
+}
 
 test('direct replies retain company and employee context without a configured MCP connection',async()=>{
   for(const code of ['mcp_not_connected','project_not_ready','mcp_not_configured']){
