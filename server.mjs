@@ -721,7 +721,7 @@ async function publicChat(req,res){
         return (await profiles.listEmployees(companyId)).find(item=>item.recordId===saved.id);
       }
       if(status==='disabled')await profiles.clearEmployeeActivationIntent({companyId,employeeId:saved.id,flowId:saved.activepieces_flow_id});
-      let publishDraft=false,mcp;
+      let publishDraft=false,mcp,testedActivationVersion,finalFlow;
       if(status==='active'){
         const projects=await tenantProjects(),{flow:latest}=await projects.ownedFlow(companyId,saved.activepieces_flow_id);
         publishDraft=!latest.publishedVersionId;
@@ -748,12 +748,14 @@ async function publicChat(req,res){
         if(!await successfulFlowTest(mcp,companyId,saved.activepieces_flow_id,test,flow.version.id))throw new CompanyProfileError('employee_test_required','لم تنجح تجربة طريقة عمل الموظف أو لم نتأكد من نتيجتها؛ بقي غير مفعّل.',409);
         const tested=(await projects.ownedFlow(companyId,saved.activepieces_flow_id)).flow;
         if(flowTestSnapshot(tested.version)!==flowTestSnapshot(latest.version))throw new CompanyProfileError('employee_test_required','تغيرت طريقة العمل أثناء التجربة؛ أعد اختبار نسختها الحالية.',409);
+        testedActivationVersion=tested.version;
       }
       if(publishDraft){
         try{await mcp.call(companyId,'tools/call',{name:'ap_lock_and_publish',arguments:{flowId:saved.activepieces_flow_id}});}
         catch(error){console.error('employee publish result uncertain',error?.code||error?.name||'unknown_error');}
         const {flow}=await (await tenantProjects()).ownedFlow(companyId,saved.activepieces_flow_id);
         if(flow.status!=='ENABLED'||!flow.publishedVersionId)throw new CompanyProfileError('employee_not_ready','لم نتأكد من نشر طريقة العمل وتفعيلها؛ تحقّق من حالتها قبل المحاولة مجددًا.',409);
+        finalFlow=flow;
       }else{
         const projects=await tenantProjects(),desired=status==='active'?'ENABLED':'DISABLED';
         await projects.ownedFlow(companyId,saved.activepieces_flow_id);
@@ -762,6 +764,11 @@ async function publicChat(req,res){
         catch(error){console.error('employee status result uncertain',error?.code||error?.name||'unknown_error');}
         const {flow}=await projects.ownedFlow(companyId,saved.activepieces_flow_id);
         if(flow.status!==desired)throw new CompanyProfileError('employee_not_ready','لم نتأكد من تغيير حالة طريقة العمل؛ تحقّق من حالتها قبل المحاولة مجددًا.',409);
+        finalFlow=flow;
+      }
+      if(status==='active'){
+        const finalVersion=finalFlow.version?.state==='LOCKED'&&testedActivationVersion.state==='DRAFT'?{...finalFlow.version,state:'DRAFT'}:finalFlow.version;
+        if(finalFlow.publishedVersionId!==testedActivationVersion.id||!finalVersion||flowTestSnapshot(finalVersion)!==flowTestSnapshot(testedActivationVersion))throw new CompanyProfileError('employee_test_required','النسخة المنشورة لا تطابق النسخة المختبرة؛ أعد اختبار طريقة العمل الحالية.',409);
       }
       const updated=await profiles.setEmployeeState({companyId,employeeId:saved.id,status});
       if(status==='active')await profiles.clearEmployeeActivationIntent({companyId,employeeId:saved.id,flowId:saved.activepieces_flow_id});

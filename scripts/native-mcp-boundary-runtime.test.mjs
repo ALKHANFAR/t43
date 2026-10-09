@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {createCompanyEffectLock} from '../lib/company-effect-lock.mjs';
+import {flowTestSnapshot} from '../lib/chat-outcome.mjs';
 
 const source=readFileSync(new URL('../server.mjs',import.meta.url),'utf8');
 const createSource=source.slice(source.indexOf('async function createTenantFlow('),source.indexOf('async function provisionTenant('));
@@ -54,4 +55,28 @@ test('foreign Flow is rejected before native status mutation',async()=>{
 test('company effect contention blocks manual employee state mutation before MCP',async()=>{
   const h=stateHarness({busy:true});await assert.rejects(h.run,{code:'company_effect_busy'});
   assert.deepEqual(h.calls,[]);assert.deepEqual(h.stateWrites,[]);
+});
+
+function activationHarness({published=false,changed=false,changedGraph=false}={}){
+  const stateWrites=[],flowId='F'.repeat(21),version={id:'v1',state:published?'LOCKED':'DRAFT',connectionIds:[],trigger:{name:'trigger',settings:{input:{price:100}}}};
+  let dispatched=false;
+  class CompanyProfileError extends Error{constructor(code,message,status){super(message);this.code=code;this.status=status;}}
+  const database=async()=>({connect:async()=>({query:async()=>({rows:[{locked:true,unlocked:true}]}),release(){}})});
+  const handler=runInNewContext(`${stateSource}; changeEmployeeState`,{
+    companyId:'company-a',CompanyProfileError,createCompanyEffectLock,flowTestSnapshot,console:{error:()=>{}},database,effectDatabase:database,
+    companyProfiles:async()=>({clearEmployeeActivationIntent:async()=>{},setEmployeeState:async input=>{stateWrites.push(input);return input;}}),
+    tenantProjects:async()=>({ownedFlow:async()=>({flow:{id:flowId,status:dispatched?'ENABLED':'DISABLED',publishedVersionId:dispatched?(changed?'v2':'v1'):published?'v1':null,version:{...version,id:dispatched&&changed?'v2':'v1',state:dispatched?'LOCKED':version.state,trigger:dispatched&&changedGraph?{name:'trigger',settings:{input:{price:999}}}:version.trigger}}})}),
+    successfulFlowTest:async()=>true,
+    activepiecesMcp:async()=>({call:async(_company,_method,{name})=>{if(['ap_lock_and_publish','ap_change_flow_status'].includes(name))dispatched=true;return {structuredContent:{valid:true}};}}),
+  });
+  return {run:()=>handler({id:'employee-a',activepieces_flow_id:flowId},'active'),stateWrites};
+}
+test('activation never records active when final publication differs from the tested version or graph',async()=>{
+  for(const published of [false,true])for(const change of [{changed:true},{changedGraph:true}]){
+    const h=activationHarness({published,...change});
+    await assert.rejects(h.run,error=>error.code==='employee_test_required');assert.equal(h.stateWrites.length,0);
+  }
+});
+test('activation accepts the exact tested published version including the native draft to locked transition',async()=>{
+  for(const published of [false,true]){const h=activationHarness({published});await h.run();assert.equal(h.stateWrites.length,1);}
 });
