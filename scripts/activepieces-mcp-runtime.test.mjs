@@ -8,7 +8,7 @@ const token=project=>'header.'+Buffer.from(JSON.stringify({projectId:project,exp
 const json=value=>new Response(JSON.stringify(value),{status:200,headers:{'content-type':'application/json'}});
 
 function harness(tokenProject=projectA,sse=false){
-  let grant=null,approval=null,mcpCalls=0,refreshCalls=0,tokenCalls=0,grantWrites=0,registrations=0,rejectMcp=false,rejectRefresh=false,toolError=false,lifetime=900,currentProject=projectA,rotate=false,toolResult=null;
+  let grant=null,approval=null,mcpCalls=0,refreshCalls=0,tokenCalls=0,grantWrites=0,registrations=0,rejectMcp=false,rejectRefresh=false,toolError=false,lifetime=900,currentProject=projectA,rotate=false,toolResult=null,responseId=1;
   const query=async(sql,values=[])=>{
     if(sql.includes('INSERT INTO siyadah_mcp_grants')){grantWrites++;grant={project_id:values[1],client_id:values[2],refresh_token_cipher:values[3],updated_at:new Date(Date.UTC(2026,9,6,0,0,grantWrites))};return {rows:[]};}
     if(sql.includes('SELECT project_id,client_id,refresh_token_cipher'))return {rows:grant&&values[0]==='company-a'?[grant]:[]};
@@ -31,14 +31,27 @@ function harness(tokenProject=projectA,sse=false){
     if(url.endsWith('/mcp')){
       mcpCalls++;
       if(rejectMcp)return new Response('{}',{status:401});
-      const payload={jsonrpc:'2.0',id:1,result:options.body.includes('tools/list')?{tools:[{name:'ap_search_actions'}]}:toolResult??{isError:toolError,content:[{type:'text',text:'ok'}]}};
+      const payload={jsonrpc:'2.0',id:responseId,result:options.body.includes('tools/list')?{tools:[{name:'ap_search_actions'}]}:toolResult??{isError:toolError,content:[{type:'text',text:'ok'}]}};
       return sse?new Response(`event: message\ndata: ${JSON.stringify(payload)}\n\n`,{status:200,headers:{'content-type':'text/event-stream'}}):json(payload);
     }
     throw new Error('unexpected provider URL');
   };
   const service=createActivepiecesMcp({query,requireProject:async()=>currentProject,activepiecesUrl:'https://ap.example.test',origin:'https://siyadah.example.test',secret:'s'.repeat(40),fetchImpl});
-  return {service,setToolResult(value){toolResult=value;},get grant(){return grant;},get mcpCalls(){return mcpCalls;},get refreshCalls(){return refreshCalls;},get tokenCalls(){return tokenCalls;},dropGrant(){grant=null;},changeGrant(){grant.client_id+='-new';},foreignToken(){tokenProject=projectB;},rejectMcp(value){rejectMcp=value;},rejectRefresh(value){rejectRefresh=value;},toolError(value){toolError=value;},setLifetime(value){lifetime=value;},changeProject(){currentProject=projectB;},rotate(){rotate=true;},corruptGrant(){grant.refresh_token_cipher+='x';}};
+  return {service,setResponseId(value){responseId=value;},setToolResult(value){toolResult=value;},get grant(){return grant;},get mcpCalls(){return mcpCalls;},get refreshCalls(){return refreshCalls;},get tokenCalls(){return tokenCalls;},dropGrant(){grant=null;},changeGrant(){grant.client_id+='-new';},foreignToken(){tokenProject=projectB;},rejectMcp(value){rejectMcp=value;},rejectRefresh(value){rejectRefresh=value;},toolError(value){toolError=value;},setLifetime(value){lifetime=value;},changeProject(){currentProject=projectB;},rotate(){rotate=true;},corruptGrant(){grant.refresh_token_cipher+='x';}};
 }
+
+test('JSON and streamed MCP results must match the dispatched request id without replaying effects',async()=>{
+  for(const sse of [false,true]){
+    const h=harness(projectA,sse);await connect(h);
+    for(const id of [2,'1',null,undefined]){
+      h.setResponseId(id);const calls=h.mcpCalls;
+      await assert.rejects(()=>h.service.call('company-a','tools/call',{name:'ap_run_action',arguments:{}}),{code:'mcp_call_failed'});
+      assert.equal(h.mcpCalls,calls+1);
+    }
+    h.setResponseId(1);
+    assert.equal((await h.service.call('company-a','tools/list',{})).tools[0].name,'ap_search_actions');
+  }
+});
 
 test('native search receipts report the provider mode without changing results or logging private content',async t=>{
   const h=harness();await connect(h);const events=[];
