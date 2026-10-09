@@ -98,6 +98,30 @@ function setup({script,extraTools=[],clock=Date,flowInputSchema=null,hideFlowToo
 }
 const toolMessages=request=>request.messages.filter(item=>item.role==='tool').map(item=>item.content);
 
+for(const chat of ['main','employee']){
+  test(`${chat} chat delivers large native tool schemas and parallel results to their exact model call IDs without truncation`,async()=>{
+    const extraTools=['ap_get_piece_props','ap_search_actions'].map(name=>({name,...hint(true),inputSchema:{type:'object',properties:{}}}));
+    const schema={content:[{type:'text',text:'شرح الحقول\n'+ 'تفاصيل '.repeat(5000)+'نهاية وصف الأداة'}],structuredContent:{props:Object.fromEntries(Array.from({length:180},(_,i)=>[`field_${i}`,{type:'SHORT_TEXT',required:i===179,description:'وصف '.repeat(40)+i}])),lastRequiredField:'field_179'}};
+    const search={structuredContent:{mode:'semantic',results:[{pieceName:'@activepieces/piece-discovered',actionName:'final_action',connected:false}]}};
+    const h=setup({extraTools,toolResults:{ap_get_piece_props:schema,ap_search_actions:search},script:[
+      use(['ap_get_piece_props',{pieceName:'@activepieces/piece-complex',actionName:'complex_action'}],['ap_search_actions',{query:'اكتشف خطوة مكملة'}]),
+      request=>{
+        const outputs=request.messages.filter(item=>item.role==='tool');
+        assert.equal(outputs.length,2);
+        assert.deepEqual(JSON.parse(outputs.find(item=>item.tool_call_id==='call_ap_get_piece_props_0').content),schema);
+        assert.deepEqual(JSON.parse(outputs.find(item=>item.tool_call_id==='call_ap_search_actions_1').content),search);
+        assert.ok(outputs[0].content.length>6000);
+        return say('قرأت الحقول كاملة؛ الحقل الأخير مطلوب والربط ما زال مطلوبًا.');
+      },
+    ]});
+    const result=await h.run({message:'راجع حقول الأدوات فقط دون تغيير.',...(chat==='employee'?{employee:{id:'employee-1',name:'نور',status:'draft',activepieces_flow_id:null}}:{})});
+    assert.equal(h.log.tools.length,2);
+    assert.equal(h.log.effects,0);
+    assert.equal(result.toolReceipts.length,2);
+    assert.equal(h.log.model.length,2);
+  });
+}
+
 for(const chat of ['main','employee'])for(const mode of ['semantic','keyword']){
   test(`${chat} chat preserves native ${mode} discovery and schema results across repeated searches before draft building`,async()=>{
     const extraTools=['ap_search_actions','ap_search_triggers','ap_get_piece_props'].map(name=>({name,...hint(true),inputSchema:{type:'object',properties:{}}}));
