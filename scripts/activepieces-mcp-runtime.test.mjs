@@ -8,7 +8,7 @@ const token=project=>'header.'+Buffer.from(JSON.stringify({projectId:project,exp
 const json=value=>new Response(JSON.stringify(value),{status:200,headers:{'content-type':'application/json'}});
 
 function harness(tokenProject=projectA,sse=false){
-  let grant=null,approval=null,mcpCalls=0,refreshCalls=0,tokenCalls=0,grantWrites=0,registrations=0,rejectMcp=false,rejectRefresh=false,toolError=false,lifetime=900,currentProject=projectA,rotate=false;
+  let grant=null,approval=null,mcpCalls=0,refreshCalls=0,tokenCalls=0,grantWrites=0,registrations=0,rejectMcp=false,rejectRefresh=false,toolError=false,lifetime=900,currentProject=projectA,rotate=false,toolResult=null;
   const query=async(sql,values=[])=>{
     if(sql.includes('INSERT INTO siyadah_mcp_grants')){grantWrites++;grant={project_id:values[1],client_id:values[2],refresh_token_cipher:values[3],updated_at:new Date(Date.UTC(2026,9,6,0,0,grantWrites))};return {rows:[]};}
     if(sql.includes('SELECT project_id,client_id,refresh_token_cipher'))return {rows:grant&&values[0]==='company-a'?[grant]:[]};
@@ -31,14 +31,41 @@ function harness(tokenProject=projectA,sse=false){
     if(url.endsWith('/mcp')){
       mcpCalls++;
       if(rejectMcp)return new Response('{}',{status:401});
-      const payload={jsonrpc:'2.0',id:1,result:options.body.includes('tools/list')?{tools:[{name:'ap_search_actions'}]}:{isError:toolError,content:[{type:'text',text:'ok'}]}};
+      const payload={jsonrpc:'2.0',id:1,result:options.body.includes('tools/list')?{tools:[{name:'ap_search_actions'}]}:toolResult??{isError:toolError,content:[{type:'text',text:'ok'}]}};
       return sse?new Response(`event: message\ndata: ${JSON.stringify(payload)}\n\n`,{status:200,headers:{'content-type':'text/event-stream'}}):json(payload);
     }
     throw new Error('unexpected provider URL');
   };
   const service=createActivepiecesMcp({query,requireProject:async()=>currentProject,activepiecesUrl:'https://ap.example.test',origin:'https://siyadah.example.test',secret:'s'.repeat(40),fetchImpl});
-  return {service,get grant(){return grant;},get mcpCalls(){return mcpCalls;},get refreshCalls(){return refreshCalls;},get tokenCalls(){return tokenCalls;},dropGrant(){grant=null;},changeGrant(){grant.client_id+='-new';},foreignToken(){tokenProject=projectB;},rejectMcp(value){rejectMcp=value;},rejectRefresh(value){rejectRefresh=value;},toolError(value){toolError=value;},setLifetime(value){lifetime=value;},changeProject(){currentProject=projectB;},rotate(){rotate=true;},corruptGrant(){grant.refresh_token_cipher+='x';}};
+  return {service,setToolResult(value){toolResult=value;},get grant(){return grant;},get mcpCalls(){return mcpCalls;},get refreshCalls(){return refreshCalls;},get tokenCalls(){return tokenCalls;},dropGrant(){grant=null;},changeGrant(){grant.client_id+='-new';},foreignToken(){tokenProject=projectB;},rejectMcp(value){rejectMcp=value;},rejectRefresh(value){rejectRefresh=value;},toolError(value){toolError=value;},setLifetime(value){lifetime=value;},changeProject(){currentProject=projectB;},rotate(){rotate=true;},corruptGrant(){grant.refresh_token_cipher+='x';}};
 }
+
+test('native search receipts report the provider mode without changing results or logging private content',async t=>{
+  const h=harness();await connect(h);const events=[];
+  t.mock.method(console,'info',(label,payload)=>{if(label==='native_mcp_result')events.push(JSON.parse(payload));});
+  for(const name of ['ap_search_actions','ap_search_triggers']){
+    for(const mode of ['semantic','keyword','private-unrecognized-mode',undefined]){
+      const result={content:[{type:'text',text:'private-result'}],structuredContent:{mode,results:[{pieceName:'private-piece',connected:false}]}};
+      h.setToolResult(result);
+      const returned=await h.service.forRequest({conversationId:'chat-a'}).forToolCall('call-a').call('company-a','tools/call',{name,arguments:{query:'private-query'}});
+      assert.deepEqual(returned,JSON.parse(JSON.stringify(result)));
+      assert.equal(events.at(-1).search_mode,['semantic','keyword'].includes(mode)?mode:'unknown');
+      assert.equal(events.at(-1).search_result_count,1);
+      assert.equal(events.at(-1).tool_call_id,'call-a');
+    }
+  }
+  h.setToolResult({structuredContent:{mode:'semantic',results:[]}});
+  await h.service.call('company-a','tools/call',{name:'ap_search_actions',arguments:{}});
+  assert.equal(events.at(-1).search_result_count,0);
+  h.setToolResult({isError:true,content:[{type:'text',text:'private-error'}]});
+  await h.service.call('company-a','tools/call',{name:'ap_search_triggers',arguments:{}});
+  assert.equal(events.at(-1).search_mode,'unknown');
+  assert.equal(events.at(-1).search_result_count,null);
+  assert.equal(events.at(-1).outcome,'tool_error');
+  await h.service.call('company-a','tools/call',{name:'ap_list_flows',arguments:{}});
+  assert.equal(Object.hasOwn(events.at(-1),'search_mode'),false);
+  assert.ok(!JSON.stringify(events).includes('private-'));
+});
 
 test('MCP OAuth grant is bound to the server-owned company project and stored encrypted',async()=>{
   const h=harness(),url=await h.service.begin('company-a');
