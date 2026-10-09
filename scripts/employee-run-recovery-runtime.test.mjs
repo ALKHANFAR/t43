@@ -6,6 +6,42 @@ import {createEmployeeRunRecovery} from '../lib/employee-run-recovery.mjs';
 import {createCompanyProfileService} from '../lib/company-profile.mjs';
 
 const url=process.env.SIYADAH_RECOVERY_TEST_DATABASE_URL;
+test('recovery after a lost readback uses the saved identity and never repeats execution',async()=>{
+  // In-memory query boundary tests orchestration only; PostgreSQL durability is tested below.
+  const companyId='company',requestId='request',conversationId='conversation';
+  const identity={runId:'R'.repeat(21),projectId:'P'.repeat(21),flowId:'F'.repeat(21),flowVersionId:'v1',environment:'PRODUCTION',employeeId:'employee'};
+  let row={conversation_id:conversationId,execution_identity_json:identity,status:'unknown',response_json:{result:'stale output'}},failRead=true,failSave=false;
+  const calls=[],writes=[];
+  const query=async(sql,values)=>{
+    if(sql.startsWith('SELECT'))return {rows:[structuredClone(row)]};
+    assert.ok(sql.startsWith('WITH receipt AS'));
+    if(failSave)throw new Error('receipt storage unavailable');
+    writes.push(values);row={...row,status:'succeeded',response_json:JSON.parse(values[3])};return {rows:[{created_at:'now'}]};
+  };
+  const projects={requireProject:async()=>identity.projectId,ownedFlow:async(company,flow,version)=>{
+    assert.equal(company,companyId);assert.equal(flow,identity.flowId);assert.equal(version,'v1');
+  }};
+  const mcp={call:async(company,method,params)=>{
+    calls.push(params);assert.equal(company,companyId);assert.equal(method,'tools/call');
+    assert.deepEqual(params,{name:'ap_get_run',arguments:{flowRunId:identity.runId}});
+    if(failRead)throw new Error('readback lost');
+    return {structuredContent:{id:identity.runId,flowId:identity.flowId,flowVersionId:'v1',projectId:identity.projectId,environment:'PRODUCTION',status:'SUCCEEDED',steps:[{output:{value:42}}]}};
+  }};
+  const fresh=()=>createEmployeeRunRecovery({query,projects,mcp}),context={companyId,requestId,conversationId};
+  await assert.rejects(fresh().reconcile(context),/readback lost/);
+  assert.equal(writes.length,0);
+  failRead=false;failSave=true;
+  await assert.rejects(fresh().reconcile(context),/receipt storage unavailable/);
+  assert.equal(row.status,'unknown');assert.equal(writes.length,0);
+  failSave=false;
+  const recovered=await fresh().reconcile(context);
+  assert.equal(recovered.work_status,'succeeded');assert.match(recovered.reply,/42/);
+  assert.equal(Object.hasOwn(recovered,'result'),false);assert.equal(writes.length,1);
+  assert.deepEqual(await fresh().reconcile(context),recovered);
+  assert.equal(calls.length,3);assert.equal(writes.length,1);
+  assert.equal(await fresh().reconcile({...context,conversationId:'foreign'}),null);
+  assert.equal(calls.length,3);
+});
 test('durable native receipts survive restart, expiry and concurrent reconciliation in PostgreSQL',{skip:!url},async t=>{
   const parsed=new URL(url);
   assert.ok(['127.0.0.1','localhost'].includes(parsed.hostname)&&parsed.pathname.startsWith('/siyadah_receipt_'),'use an isolated local test database');
