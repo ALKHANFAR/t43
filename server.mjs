@@ -650,7 +650,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           if(!known)console.error('chat tool call failed',name,error?.code||error?.name||'unknown_error');
           result={isError:true,content:[{type:'text',text:error?.name==='TimeoutError'?'انتهت مهلة الأداة ونتيجتها غير معروفة. اقرأ الحالة الحالية قبل أي محاولة جديدة.':known?`${error.code}: ${error.message}`:'تعذّر تنفيذ الأداة.'}]};
         }
-        if(toolReceipts.length<80)toolReceipts.push({...nativeActionReceipt(name,result),...(executionReceipt||{}),...(effectAttempted?{effect_attempted:true,...(effectFlowId?{flow_id:effectFlowId}:{})}:{})});
+        toolReceipts.push({...nativeActionReceipt(name,result),...(executionReceipt||{}),...(effectAttempted?{effect_attempted:true,...(effectFlowId?{flow_id:effectFlowId}:{})}:{})});
         console.info('chat_tool_timing',JSON.stringify({conversation_id:conversationId,name,elapsed_ms:Date.now()-toolStarted,error:result?.isError===true}));
         if(result?.isError!==true&&['ap_lock_and_publish','ap_change_flow_status'].includes(name))await syncEmployeeState();
         // Keep the native MCP result intact and expose only the employee state saved by Siyadah.
