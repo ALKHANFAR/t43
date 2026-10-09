@@ -393,6 +393,7 @@ async function authRoute(req,res,operation){
   }
 }
 async function deepseekReply({company,settings,knowledge,team,history,message,employee=null,draftEmployee=null,mcp=null,companyId=null,conversationId=null,deadlineMs=null,excludedTools=[],beforeEffect=null,onEffectStart=null,onNativeExecution=null,createDraft=null,memoryRequestId=null,userMemoryId=null,observedOutcome=null}){
+  const employeeScoped=Boolean(employee);
   mcp=mcp?.forRequest?.({conversationId})||mcp;
   const draftOnly=draftOnlyIntent(message),doNotRun=doNotRunIntent(message);
   const key=process.env.DEEPSEEK_API_KEY;
@@ -469,6 +470,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   let flowId=null,linked=null,createdDraft=null,statusChanged=false,flowToolAttempted=false,testedFlowId=null,testedVersion=null,testedRun=null,readinessReceipt=null;
   const effects=[],toolReceipts=[];
   const testedFlows=new Map();
+  const flowArtifacts=[];
   const account=()=>`نُفّذت خطوات على مشروع شركتك (${[...new Set(effects)].join('، ')||'ap_build_flow'}) ثم توقف الطلب قبل كتابة الرد. اكتب «أكمل» لأقرأ الحالة وأتابع من حيث توقفت.`;
   // A Flow the model published or paused is the employee's real state; Siyadah's record follows it.
   const syncEmployeeState=async()=>{
@@ -495,7 +497,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
   };
   const finish=async reply=>{
     await syncEmployeeState();
-    return {reply:String(reply).slice(0,6000),effects,toolReceipts,flowToolAttempted,...(readinessReceipt?{readinessReceipt}:{}),...(flowId?{flowId}:{}),...(linked||createdDraft?{employee:linked||createdDraft}:{})};
+    return {reply:String(reply).slice(0,6000),effects,toolReceipts,flowToolAttempted,...(flowArtifacts.length?{flows:flowArtifacts}:{}),...(readinessReceipt?{readinessReceipt}:{}),...(flowId?{flowId}:{}),...(linked||createdDraft?{employee:linked||createdDraft}:{})};
   };
   try{
     for(let turn=0;turn<40;turn++){
@@ -520,15 +522,15 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           if(!tools.some(tool=>tool.function.name===name))throw new TenantProjectError('mcp_tool_invalid','هذه الأداة غير متاحة في هذه المحادثة.',502);
           if(readOnlyRequest&&!readOnly(name))throw new TenantProjectError('chat_read_only','طلبك الحالي مسودة أو قراءة فقط؛ لن تُستدعى أداة مؤثرة.',403);
           if(excludedTools.includes(name))throw new TenantProjectError('mcp_effect_already_completed','اكتمل هذا الإجراء في الطلب الحالي؛ تابع من نتيجته دون تكراره.',409);
-          if(draftEmployee?.activepieces_flow_id&&['ap_build_flow','ap_create_flow'].includes(name))throw new TenantProjectError('employee_flow_conflict','طريقة عمل المسودة محفوظة؛ اقرأها وعدّلها دون إنشاء نسخة ثانية.',409);
+          if(employeeScoped&&draftEmployee?.activepieces_flow_id&&['ap_build_flow','ap_create_flow'].includes(name))throw new TenantProjectError('employee_flow_conflict','طريقة عمل المسودة محفوظة؛ اقرأها وعدّلها دون إنشاء نسخة ثانية.',409);
           let args;try{args=JSON.parse(call.function.arguments||'{}');}catch{args=null;}
           if(!args||typeof args!=='object'||Array.isArray(args))throw new TenantProjectError('mcp_arguments_invalid','مدخلات الأداة يجب أن تكون كائن JSON واحدًا.',502);
           console.info('chat_model_tool_choice',JSON.stringify({conversation_id:conversationId,tool_call_id:call.id,name,arguments_sha256:createHash('sha256').update(JSON.stringify(args)).digest('hex')}));
           if(draftOnly&&(name==='ap_lock_and_publish'||name==='ap_change_flow_status'&&String(args.status||'').toUpperCase()==='ENABLED'))throw new TenantProjectError('draft_only_publish_forbidden','طلب المستخدم إبقاء الفلو مسودة؛ لا تنشره أو تفعّله.',403);
           if(doNotRun&&(['ap_test_flow','ap_test_step','ap_retry_run','ap_run_action'].includes(name)||name.endsWith('_mcp')))throw new TenantProjectError('flow_run_forbidden','طلب المستخدم عدم تشغيل الفلو أو اختبار تنفيذه.',403);
-          if(['ap_build_flow','ap_create_flow'].includes(name)&&flowId)throw new TenantProjectError('employee_flow_conflict','بُني Flow في هذا الطلب. اقرأه وعدّل خطواته بدل إنشاء نسخة ثانية.',409);
+          if(employeeScoped&&['ap_build_flow','ap_create_flow'].includes(name)&&flowId)throw new TenantProjectError('employee_flow_conflict','طريقة عمل الموظف موجودة؛ عدّلها بدل استبدالها.',409);
           if(name===flowToolName&&flowToolAttempted)throw new TenantProjectError('employee_run_already_dispatched','أُرسل تشغيل الموظف لهذا الطلب. تحقّق من نتيجته دون إعادة تشغيله.',409);
-          args=scopeMcpTool(available.find(tool=>tool.name===name),args,employee,flowToolName);
+          args=scopeMcpTool(available.find(tool=>tool.name===name),args,employeeScoped?employee:null,flowToolName);
           if(name===flowToolName)args=bindEmployeeFlowContext(available.find(tool=>tool.name===name),args,{request:String(message||''),context:{company:context.company,selectedEmployee:context.selectedEmployee,settings:context.settings,knowledge:context.knowledge,cumulativeMemory:context.cumulativeMemory},memory,history:executionHistory});
           if(!readOnly(name))await beforeEffect?.({name,args});
           if(name===flowToolName){
@@ -538,7 +540,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
             publishedEmployeeVersion=published.publishedVersionId;
           }
           const employeeFlow=employee?.activepieces_flow_id||flowId||draftEmployee?.activepieces_flow_id;
-          if(employee&&['ap_get_run','ap_retry_run'].includes(name)){
+          if(employeeScoped&&employee&&['ap_get_run','ap_retry_run'].includes(name)){
             if(!/^[A-Za-z0-9]{21}$/.test(String(args.flowRunId||'')))throw new TenantProjectError('employee_run_scope','معرّف تشغيل الموظف غير صالح.',403);
             const observed=await toolMcp.call(companyId,'tools/call',{name:'ap_get_run',arguments:{flowRunId:args.flowRunId}});
             if(observed?.isError===true||observed?.structuredContent?.id!==args.flowRunId||observed?.structuredContent?.flowId!==employeeFlow)throw new TenantProjectError('employee_run_scope','التشغيل لا يخص طريقة عمل هذا الموظف.',403);
@@ -567,20 +569,24 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
           checkDeadline();
           if(!readOnly(name)){await onEffectStart?.();effectAttempted=true;effectFlowId=args.flowId||null;effects.push(name);}
           if(name===flowToolName){flowToolAttempted=true;effectFlowId=employee.activepieces_flow_id;}
-          if(name==='ap_lock_and_publish'||name==='ap_change_flow_status')statusChanged=true;
+          if((name==='ap_lock_and_publish'||name==='ap_change_flow_status')&&args.flowId===employeeFlow)statusChanged=true;
           if(['ap_build_flow','ap_create_flow'].includes(name)){
             // A Flow built in main chat belongs to an employee: the saved draft, or one named after the Flow the model designed.
-            if(employee?.activepieces_flow_id)throw new TenantProjectError('employee_flow_conflict','طريقة عمل الموظف موجودة؛ عدّلها بدل استبدالها.',409);
+            if(employeeScoped&&employee?.activepieces_flow_id)throw new TenantProjectError('employee_flow_conflict','طريقة عمل الموظف موجودة؛ عدّلها بدل استبدالها.',409);
             if(employee&&!draftEmployee)draftEmployee=employee;
             if(!draftEmployee&&!flowId&&createDraft){draftEmployee=await createDraft(args.flowName);createdDraft=draftEmployee;}
             const done=await buildOwnedDraftFlow({mcp:toolMcp,companyId,args,draftEmployee:draftEmployee&&!draftEmployee.activepieces_flow_id&&!flowId?draftEmployee:null,onEffectStart:()=>{},toolName:name});
             result=done.result;
-            if(done.built){flowId=done.built.flowId;effectFlowId=flowId;linked=done.updated||linked;if(employee){employee={...employee,activepieces_flow_id:flowId,status:'draft'};tools=modelTools();}}
+            if(done.built){
+              effectFlowId=done.built.flowId;
+              flowArtifacts.push({flow_id:effectFlowId,build_verified:true,incomplete:done.built.incomplete,employee_id:done.updated?.recordId||null});
+              if(!flowId){flowId=effectFlowId;linked=done.updated||linked;if(employeeScoped&&employee){employee={...employee,activepieces_flow_id:flowId,status:'draft'};tools=modelTools();}}
+            }
           }else if(cumulativeMemory.handles(name,args)){
             if(readOnly(name)){result=await toolMcp.call(companyId,'tools/call',{name,arguments:args});result=cumulativeMemory.scopeResult(result);}
             else{result=await cumulativeMemory.mutate(name,args);executionReceipt={outcome:'memory_saved',memory_operation:result.structuredContent.operation||'setup',memory_table_id:(await cumulativeMemory.load()).tableId};}
           }else result=await toolMcp.call(companyId,'tools/call',{name,arguments:args});
-          if(employee&&name==='ap_delete_flow'&&result?.isError!==true){
+          if(employee&&name==='ap_delete_flow'&&args.flowId===employee.activepieces_flow_id&&result?.isError!==true){
             // Stop local production invocation when native deletion is accepted;
             // retain the historical Flow link without claiming completed deletion.
             linked=await (await companyProfiles()).setEmployeeState({companyId,employeeId:employee.id,status:'disabled'});
@@ -588,10 +594,10 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
             employee={...employee,status:'disabled'};readinessReceipt=null;testedFlowId=null;testedVersion=null;testedRun=null;
             tools=modelTools();
           }
-          if(employee&&name==='ap_duplicate_flow'&&result?.isError!==true){
+          if(employee&&name==='ap_duplicate_flow'&&args.flowId===employee.activepieces_flow_id&&result?.isError!==true){
             result={...result,siyadahContext:{employee_id:employee.id,employee_flow_id:employee.activepieces_flow_id,duplicate_scope:'independent_company_flow',employee_link_changed:false}};
           }
-          if(employee&&name==='ap_list_flows'&&result?.isError!==true){
+          if(employeeScoped&&employee&&name==='ap_list_flows'&&result?.isError!==true){
             const rows=result?.structuredContent?.flows;
             if(!Array.isArray(rows))throw new TenantProjectError('employee_flow_scope','تعذّر تحديد طريقة عمل الموظف من القائمة.',502);
             const flows=rows.filter(item=>item?.id===employee.activepieces_flow_id);
@@ -649,7 +655,7 @@ ${memory?`ذاكرة العمل من تعليمات المستخدم الساب�
         if(result?.isError!==true&&['ap_lock_and_publish','ap_change_flow_status'].includes(name))await syncEmployeeState();
         // Keep the native MCP result intact and expose only the employee state saved by Siyadah.
         const localState=linked||createdDraft;
-        const modelResult=localState?{...result,siyadahContext:statusChanged?{employeeStateVerified:false}:{employee:localState,...(readinessReceipt?{readinessReceipt}:{})}}:result;
+        const modelResult=localState||flowArtifacts.length?{...result,siyadahContext:statusChanged?{employeeStateVerified:false,flows:flowArtifacts}:{...(localState?{employee:localState}:{}),flows:flowArtifacts,...(readinessReceipt?{readinessReceipt}:{})}}:result;
         messages.push({role:'tool',tool_call_id:call.id,content:JSON.stringify(modelResult)});
       }
     }
@@ -968,8 +974,8 @@ async function publicChat(req,res){
       const activationIntent=!draftOnly&&answer.flowId&&answer.employee?.flowId===answer.flowId&&answer.employee.status==='disabled'?{auto_activate_after_connection:true,auto_activate_employee_id:answer.employee.recordId,auto_activate_flow_id:answer.flowId}:{};
       const reply=answer.employee&&!answer.flowId&&!answer.readinessReceipt?`حُفظ سجل ${answer.employee.name}، وحالة بناء طريقة عمله غير مؤكدة؛ تحقّق من مشروع الشركة قبل إعادة البناء. ${answer.reply}`:answer.reply;
       await profiles.recordConversation({companyId,conversationId,employeeId:null,requestId,userMessage:input.message,assistantMessage:reply});
-      if(answer.effects?.some(name=>name!=='ap_build_flow')||(answer.effects?.includes('ap_build_flow')&&!answer.flowId))return await finish(200,{ok:true,conversation_id:conversationId,...completedToolActions(answer),work_id:`request_${requestId}`,reply,tool_receipts:answer.toolReceipts,...activationIntent,...(answer.flowId?{flow_id:answer.flowId}:{}),...(answer.employee?{employee:answer.employee}:{})});
-      return await finish(200,{...completedWithoutExecution(answer.employee?.status==='disabled'?'employee_draft':'conversation_reply',{ok:true,conversation_id:conversationId,reply,...activationIntent,...(answer.flowId?{flow_id:answer.flowId,draft:answer.employee?.status!=='active'}:{}),...(answer.employee?{employee:answer.employee}:{experience:{understood_company:true,knowledge_version:Number(knowledge?.knowledgeVersion||0),catalog_reviewed:true}})}),...(answer.toolReceipts?.length?{tool_receipts:answer.toolReceipts}:{}),...(answer.approval?{approval:answer.approval,work_status:'awaiting_input'}:{})});
+      if(answer.effects?.some(name=>name!=='ap_build_flow')||answer.toolReceipts?.some(receipt=>receipt.effect_attempted&&receipt.status==='error')||(answer.effects?.includes('ap_build_flow')&&!answer.flowId))return await finish(200,{ok:true,conversation_id:conversationId,...completedToolActions(answer),work_id:`request_${requestId}`,reply,tool_receipts:answer.toolReceipts,...activationIntent,...(answer.flows?{flows:answer.flows}:{}),...(answer.flowId?{flow_id:answer.flowId}:{}),...(answer.employee?{employee:answer.employee}:{})});
+      return await finish(200,{...completedWithoutExecution(answer.employee?.status==='disabled'?'employee_draft':'conversation_reply',{ok:true,conversation_id:conversationId,reply,...activationIntent,...(answer.flows?{flows:answer.flows}:{}),...(answer.flowId?{flow_id:answer.flowId,draft:answer.employee?.status!=='active'}:{}),...(answer.employee?{employee:answer.employee}:{experience:{understood_company:true,knowledge_version:Number(knowledge?.knowledgeVersion||0),catalog_reviewed:true}})}),...(answer.toolReceipts?.length?{tool_receipts:answer.toolReceipts}:{}),...(answer.approval?{approval:answer.approval,work_status:'awaiting_input'}:{})});
     }
     return json(res,400,{ok:false,error:'unsupported_operation'},sessionHeaders);
   }catch(error){

@@ -49,8 +49,8 @@ const catalog=[
 const say=content=>({content});
 const use=(...calls)=>({content:'',tool_calls:calls.map(([name,args],index)=>({id:`call_${name}_${index}`,function:{name,arguments:typeof args==='string'?args:JSON.stringify(args||{})}}))});
 
-function setup({script,clock=Date,flowInputSchema=null,hideFlowToolUntilPublished=false,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false,memoryRows=null}={}){
-  const log={model:[],tools:[],effects:0,states:[],owned:[],runs:[]};
+function setup({script,clock=Date,flowInputSchema=null,hideFlowToolUntilPublished=false,toolResults={},flowStatus='DISABLED',published=false,editDuringTest=false,nativeTestMetadata=false,editInputDuringTest=false,publishDifferentVersion=false,saveStateFailure=false,saveRunFailure=false,memoryRows=null,additionalFlows={}}={}){
+  const log={model:[],tools:[],effects:0,states:[],owned:[],runs:[],links:[]};
   const savedMemories=memoryRows===null?null:structuredClone(memoryRows);let memorySerial=1;
   const memoryTools=['ap_find_records','ap_insert_records','ap_update_record','ap_delete_records','ap_create_table'].map(name=>({name,...hint(name==='ap_find_records'),inputSchema:{type:'object',properties:{}}}));
   let stateAttempts=0,step=0,status=flowStatus,publishedVersionId=published?'v1':null,draftVersionId='v1',versionState=published?'LOCKED':'DRAFT',sampleData,updated='before',updatedBy,taskInput='{{trigger.task}}';
@@ -85,11 +85,11 @@ function setup({script,clock=Date,flowInputSchema=null,hideFlowToolUntilPublishe
     companyProfiles:async()=>({
       clearEmployeeActivationIntent:async()=>{},
       findEmployee:async()=>({id:'employee-1',status:'draft',activepieces_flow_id:null}),
-      linkEmployeeFlow:async({flowId:id})=>({recordId:'employee-1',flowId:id,name:'أمين المحتوى',status:'disabled'}),
+      linkEmployeeFlow:async({flowId:id})=>{log.links.push(id);return {recordId:'employee-1',flowId:id,name:'أمين المحتوى',status:'disabled'};},
       recordEmployeeRun:async input=>{if(saveRunFailure)throw new Error('save failed');log.runs.push(input);return {recordId:input.employeeId,flowId:input.flowId,lastRunId:input.runId,status:'active'};},
       setEmployeeState:async({employeeId,status:next})=>{if(saveStateFailure===true||saveStateFailure==='once'&&stateAttempts++===0)throw new Error('save failed');log.states.push([employeeId,next]);return {recordId:employeeId,flowId,name:'أمين المحتوى',status:next};},
     }),
-    tenantProjects:async()=>({requireProject:async()=> 'P'.repeat(21),ownedFlow:async(_company,id)=>{log.owned.push(id);return {flow:{...publishedFlow,id,status,publishedVersionId,version:{...publishedFlow.version,id:draftVersionId,state:versionState,updated,...(updatedBy?{updatedBy}:{}),trigger:{...publishedFlow.version.trigger,settings:{...publishedFlow.version.trigger.settings,input:{...publishedFlow.version.trigger.settings.input,task:taskInput},...(sampleData?{sampleData}:{})}}}}};}}),
+    tenantProjects:async()=>({requireProject:async()=> 'P'.repeat(21),ownedFlow:async(_company,id)=>{log.owned.push(id);if(additionalFlows[id])return {flow:additionalFlows[id]};return {flow:{...publishedFlow,id,status,publishedVersionId,version:{...publishedFlow.version,id:draftVersionId,state:versionState,updated,...(updatedBy?{updatedBy}:{}),trigger:{...publishedFlow.version.trigger,settings:{...publishedFlow.version.trigger.settings,input:{...publishedFlow.version.trigger.settings.input,task:taskInput},...(sampleData?{sampleData}:{})}}}}};}}),
     toolConnections:async()=>({assertOwnedExternal:async({externalId})=>{if(externalId==='foreign')throw new TenantProjectError('connection_not_owned','الاتصال لا يخص هذه الشركة.',403);}}),
   };
   const deepseekReply=runInNewContext(`${helpers}\n${source.slice(start,end)}; deepseekReply`,ctx);
@@ -298,16 +298,21 @@ test('a Flow built with no saved draft creates the employee under the name the m
   assert.equal(answer.flowId,flowId);
 });
 
-test('a second build in one chat request cannot create an orphan Flow',async()=>{
+test('main chat tracks two native builds without replacing the first employee link',async()=>{
+  const other='G'.repeat(21);let builds=0;
   const {run,log}=setup({script:[
     use(['ap_build_flow',{flowName:'أمين المحتوى',trigger:{},steps:[]}]),
     use(['ap_build_flow',{flowName:'نسخة أخرى',trigger:{},steps:[]}]),
     say('أكملت تعديل التدفق الأول.'),
-  ]});
+  ],toolResults:{ap_build_flow:()=>({structuredContent:{flowId:builds++?other:flowId,invalidSteps:[],skippedSteps:[],unknownProps:[]}})}});
   const answer=await run({createDraft:async name=>({id:'employee-1',name,activepieces_flow_id:null})});
   assert.equal(answer.flowId,flowId);
-  assert.deepEqual(log.tools.map(item=>item[0]),['ap_build_flow']);
-  assert.match(toolMessages(log.model.at(-1))[1],/employee_flow_conflict/);
+  assert.deepEqual(log.tools.map(item=>item[0]),['ap_build_flow','ap_build_flow']);
+  assert.deepEqual(log.links,[flowId]);
+  assert.deepEqual(Array.from(answer.flows,flow=>flow.flow_id),[flowId,other]);
+  assert.deepEqual(Array.from(answer.flows,flow=>flow.employee_id),['employee-1',null]);
+  assert.deepEqual(Array.from(answer.toolReceipts,receipt=>receipt.flow_id),[flowId,other]);
+  assert.deepEqual(JSON.parse(toolMessages(log.model.at(-1)).at(-1)).siyadahContext.flows,JSON.parse(JSON.stringify(answer.flows)));
 });
 
 test('main chat forwards a large native build unchanged and can build an independent employee in a new request',async()=>{
@@ -322,12 +327,26 @@ test('main chat forwards a large native build unchanged and can build an indepen
   }
 });
 
-test('the one-flow ceiling also rejects a distinct second main-chat build without a selected employee',async()=>{
+test('main chat can create multiple company flows without a selected employee',async()=>{
   const {run,log}=setup({script:[use(['ap_build_flow',{flowName:'تأهيل العملاء'}]),use(['ap_build_flow',{flowName:'متابعة العملاء'}]),say('الفلو الثاني لم يُبنَ.')]});
   const answer=await run();
   assert.equal(answer.flowId,flowId);
-  assert.deepEqual(log.tools.map(([name])=>name),['ap_build_flow']);
-  assert.match(toolMessages(log.model.at(-1)).at(-1),/employee_flow_conflict/);
+  assert.deepEqual(log.tools.map(([name])=>name),['ap_build_flow','ap_build_flow']);
+  assert.equal(answer.flows.length,2);
+});
+
+test('publishing the first employee does not reintroduce main-chat scope for additional company flows',async()=>{
+  const other='G'.repeat(21);let builds=0;
+  const {run,log}=setup({additionalFlows:{[other]:{id:other,status:'DISABLED',version:{id:'v-other',trigger:{}}}},script:[use(['ap_build_flow',{flowName:'CRM intake'}]),use(['ap_test_flow',{flowId}]),use(['ap_lock_and_publish',{flowId}]),use(['ap_build_flow',{flowName:'CRM followup'}]),use(['ap_add_step',{flowId:other,name:'followup'}]),use(['ap_list_flows',{}]),say('الأول مفعّل والثاني مسودة.')],toolResults:{
+    ap_build_flow:()=>({structuredContent:{flowId:builds++?other:flowId,invalidSteps:[],skippedSteps:[],unknownProps:[]}}),
+    ap_list_flows:{structuredContent:{flows:[{id:flowId},{id:other}],count:2}},
+  }});
+  const answer=await run({createDraft:async()=>({id:'employee-1',status:'draft',activepieces_flow_id:null})});
+  assert.deepEqual(log.links,[flowId]);assert.equal(answer.employee.flowId,flowId);assert.equal(answer.employee.status,'active');
+  assert.deepEqual(Array.from(answer.flows,item=>item.flow_id),[flowId,other]);
+  assert.ok(log.tools.some(([name,args])=>name==='ap_add_step'&&args.flowId===other));
+  assert.equal(JSON.parse(toolMessages(log.model.at(-1)).at(-1)).structuredContent.flows.length,2);
+  assert.equal(completedToolActions(answer).work_status,'unknown');
 });
 
 test('main chat cannot publish an existing flow without a fresh test of that exact flow',async()=>{
@@ -522,13 +541,15 @@ test('a long request answers queued once, keeps working, and settles the same re
   wait.fn();
   assert.equal(writes.length,1);
   assert.deepEqual([writes[0].body.request_status,writes[0].body.work_id],['queued','request_r1']);
-  release({reply:'بُنيت ونُشرت.',flowId});
+  const flows=[{flow_id:flowId,build_verified:true,employee_id:'employee-1'},{flow_id:'G'.repeat(21),build_verified:true,employee_id:null}];
+  release({reply:'بُنيت ونُشرت.',flowId,flows});
   await running;
   assert.equal(writes.length,1);
   assert.equal(settled.length,1);
   assert.equal(settled[0].status,'succeeded');
   assert.equal(settled[0].response.reply,'بُنيت ونُشرت.');
   assert.equal(settled[0].response.flow_id,flowId);
+  assert.deepEqual(settled[0].response.flows,flows);
   assert.equal(recorded.at(-1).assistantMessage,'بُنيت ونُشرت.');
   assert.ok(wait.cleared);
   // A failed accepted message survives reload too; it is not left as an unanswered user row.
@@ -976,12 +997,36 @@ test('main and every employee state receive the complete native catalog without 
   }
 });
 
-test('saved draft sees creation tools but cannot create a replacement Flow',async()=>{
-  const {run,log}=setup({script:[use(['ap_create_flow',{flowName:'replacement'}]),say('نستخدم المسودة الموجودة')]});
-  await run({draftEmployee:{id:'employee-1',status:'draft',activepieces_flow_id:flowId}});
+test('main chat can create another company flow without replacing a saved draft link',async()=>{
+  const other='G'.repeat(21);
+  const {run,log}=setup({script:[use(['ap_create_flow',{flowName:'additional'}]),say('حفظت فلو إضافيًا')],toolResults:{ap_create_flow:{structuredContent:{flowId:other,invalidSteps:[],skippedSteps:[],unknownProps:[]}}}});
+  const answer=await run({draftEmployee:{id:'employee-1',status:'draft',activepieces_flow_id:flowId}});
   assert.ok(log.model[0].tools.some(x=>x.function.name==='ap_create_flow'));
-  assert.deepEqual(log.tools,[]);
-  assert.match(toolMessages(log.model[1])[0],/employee_flow_conflict/);
+  assert.deepEqual(log.tools,[['ap_create_flow',{flowName:'additional'}]]);
+  assert.deepEqual(log.links,[]);
+  assert.equal(answer.flows[0].flow_id,other);
+  assert.equal(answer.flows[0].employee_id,null);
+});
+
+test('a failed second native build retains the first flow and its separate failed receipt',async()=>{
+  let calls=0;
+  const {run,log}=setup({script:[use(['ap_build_flow',{flowName:'CRM intake'}]),use(['ap_build_flow',{flowName:'CRM followup'}]),say('الأول محفوظ، والثاني فشل.')],toolResults:{ap_build_flow:()=>calls++?{isError:true,content:[{type:'text',text:'missing connection'}]}:{structuredContent:{flowId,invalidSteps:[],skippedSteps:[],unknownProps:[]}}}});
+  const answer=await run({createDraft:async()=>({id:'employee-1',status:'draft',activepieces_flow_id:null})});
+  assert.equal(answer.flows.length,1);assert.equal(answer.flows[0].flow_id,flowId);
+  assert.deepEqual(log.links,[flowId]);
+  assert.deepEqual(Array.from(answer.toolReceipts,receipt=>receipt.status),['returned','error']);
+  assert.equal(completedToolActions(answer).work_status,'unknown');
+});
+
+test('main HTTP response preserves partial multi-flow results without declaring the whole draft successful',async()=>{
+  const start=source.indexOf('      const existing=await profiles.findConversationDraft(companyId,conversationId);');
+  const end=source.indexOf('\n    }\n    return json',start);assert.ok(start>0&&end>start);
+  const flows=[{flow_id:flowId,build_verified:true,employee_id:'employee-1'}];
+  const answer={reply:'الأول محفوظ والثاني غير مؤكد.',flowId,flows,employee:{recordId:'employee-1',flowId,status:'disabled'},effects:['ap_build_flow','ap_build_flow'],toolReceipts:[{name:'ap_build_flow',status:'returned',effect_attempted:true,flow_id:flowId},{name:'ap_build_flow',status:'error',effect_attempted:true}]};
+  const ctx={profiles:{findConversationDraft:async()=>null,recordConversation:async()=>{}},companyId:'company',conversationId:'c1',requestId:'r1',userMemoryId:null,acceptedAt:Date.now(),resolved:{account:{company_name:'شركة'}},profile:{},settings:{},knowledge:{},team:[],history:[],input:{message:'ابنِ فلوين'},Date,Number,activepiecesMcp:async()=>({}),deepseekReply:async()=>answer,chatExecutionBudget,draftOnlyIntent,completedToolActions,completedWithoutExecution:()=>{throw Error('partial failure cannot be a completed draft');},finish:async(status,response)=>({status,response})};
+  const result=await runInNewContext(`(async()=>{${source.slice(start,end)}})()`,ctx);
+  assert.equal(result.status,200);assert.equal(result.response.work_status,'unknown');
+  assert.deepEqual(result.response.flows,flows);assert.equal(result.response.flow_id,flowId);
 });
 
 test('completed effect stays visible but cannot be dispatched again in a continuation',async()=>{
