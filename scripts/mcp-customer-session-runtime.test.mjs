@@ -94,3 +94,11 @@ test('catalog receipt is discovered for the authenticated company without client
  assert.ok(h.calls.some(x=>Array.isArray(x)&&x[0]==='catalog'&&x[1]==='company-a'));
  assert.equal(JSON.stringify(r.body).includes('token'),false);
 });
+
+ test('native global enablement covers new companies without allowing an empty tenant',()=>{
+  const config=source.slice(source.indexOf('const nativeMcpCompanies='),source.indexOf('const nativeMcpEnabled='))+source.split('\n').find(line=>line.startsWith('const nativeMcpEnabled='));
+  for(const flag of [undefined,'false','true']){
+    const enabled=runInNewContext(config+'; nativeMcpEnabled',{process:{env:{SIYADAH_NATIVE_MCP_ALL_COMPANIES:flag,SIYADAH_NATIVE_MCP_COMPANY_IDS:'company-a'}}});
+    assert.equal(enabled('company-a'),true);assert.equal(enabled('company-new'),flag==='true');assert.equal(enabled(''),false);assert.equal(enabled(null),false);
+  }
+});

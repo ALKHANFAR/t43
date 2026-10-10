@@ -41,7 +41,7 @@ let effectDatabasePromise;
 let firecrawlClient;
 let mcpPromise;
 const nativeMcpCompanies=new Set(String(process.env.SIYADAH_NATIVE_MCP_COMPANY_IDS||'').split(',').map(value=>value.trim()).filter(Boolean));
-const nativeMcpEnabled=companyId=>nativeMcpCompanies.has(companyId);
+const nativeMcpEnabled=companyId=>Boolean(companyId)&&(process.env.SIYADAH_NATIVE_MCP_ALL_COMPANIES==='true'||nativeMcpCompanies.has(companyId));
 const {buildOwnedDraftFlow,successfulFlowTest}=createChatFlowLifecycle({database,companyProfiles,tenantProjects});
 const mailer=createMailer({apiKey:process.env.RESEND_API_KEY,from:process.env.SIYADAH_MAIL_FROM,replyTo:process.env.SIYADAH_MAIL_REPLY_TO});
 
