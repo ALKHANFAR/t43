@@ -3,6 +3,45 @@
   "repository": "ALKHANFAR/t43",
   "features": [
     {
+      "id": "adaptive_employee_chat_ui",
+      "name": "بطاقة الموظف التفاعلية داخل الشات",
+      "aliases": [
+        "واجهة متكيفة",
+        "تعديل الموظف من الشات"
+      ],
+      "state": "draft_pr",
+      "meaning": "عقد عرض خادمي مشتق من بيانات الرد الموجودة دون استدعاء نموذج إضافي. بطاقة موظف آمنة وأزرار تهيئة نص للتعديل ومراجعة النواقص وخطة التجربة؛ النقر وإعادة العرض لا ينفذان أدوات. النص البسيط يبقى نصا والموافقة والتنفيذ ودليل النتيجة تستخدم المسارات الحالية. دفعة أولى؛ لا بث تدريجي ولا مولد مكونات من النموذج ولا قياس حي أو استعادة بطاقة تاريخية من التخزين.",
+      "linear": "ABO-69",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/62",
+      "locations": [
+        {
+          "role": "contract",
+          "path": "lib/chat-ui.mjs",
+          "anchor": "export function chatUiForResponse("
+        },
+        {
+          "role": "renderer",
+          "path": "app/chat.js",
+          "anchor": "function siyAdaptiveUi(data)"
+        },
+        {
+          "role": "action",
+          "path": "app/chat.js",
+          "anchor": "var adaptiveAction=t.closest('[data-ui-operation]');"
+        },
+        {
+          "role": "test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "adaptive employee controls only prepare chat input"
+        },
+        {
+          "role": "security_test",
+          "path": "scripts/chat-runtime.test.mjs",
+          "anchor": "adaptive UI leaves simple replies as text"
+        }
+      ]
+    },
+    {
       "id": "chat_current_run_proof_scope",
       "name": "عرض نتيجة الموظف ودليل الطلب الحالي في الشات",
       "aliases": [

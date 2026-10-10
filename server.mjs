@@ -23,6 +23,7 @@ import {assertSchemaReady} from './lib/schema-ready.mjs';
 import {toolIcon} from './lib/tool-icons.mjs';
 import {createPublicWaitlist,PublicWaitlistError} from './lib/public-waitlist.mjs';
 import {createActivepiecesMcp,discoverMcpCatalog} from './lib/activepieces-mcp.mjs';
+import {chatUiForResponse} from './lib/chat-ui.mjs';
 import {employeeFlowMcpToolName,employeeMcpToolReady,scopeMcpTool,visibleMcpTool,bindEmployeeFlowContext} from './lib/mcp-flow-scope.mjs';
 
 const root=process.cwd();
@@ -41,7 +42,7 @@ let mcpPromise;
 const {buildOwnedDraftFlow,successfulFlowTest}=createChatFlowLifecycle({database,companyProfiles,tenantProjects});
 const mailer=createMailer({apiKey:process.env.RESEND_API_KEY,from:process.env.SIYADAH_MAIL_FROM,replyTo:process.env.SIYADAH_MAIL_REPLY_TO});
 
-function json(res,status,body,headers={}){if(res.headersSent)return;res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...headers});res.end(JSON.stringify(body));}
+function json(res,status,body,headers={}){if(res.headersSent)return;const chatUi=chatUiForResponse(body);res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...headers});res.end(JSON.stringify(chatUi?{...body,ui:chatUi}:body));}
 async function body(req,limit=32_000){let raw='';for await(const chunk of req){raw+=chunk;if(raw.length>limit)throw new TenantProjectError('request_too_large','الطلب كبير جدًا.',413);}try{return JSON.parse(raw||'{}');}catch{throw new TenantProjectError('invalid_json','طلب غير صالح.',400);}}
 function authorized(req){
   const expected=String(process.env.SIYADAH_INTERNAL_TOKEN||''),actual=String(req.headers.authorization||'').replace(/^Bearer\s+/i,'');

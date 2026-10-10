@@ -712,6 +712,14 @@ var I = {
     var t=e.target, list, mEl=t.closest(".m"), mi=mEl?+mEl.dataset.mi:-1;
     if(t.closest("[data-siy-retry]")){ var retryList=curList(); if(retryList&&retryList[mi]&&retryList[mi].siyRetry) retryList[mi].siyRetry(); return; }
     if(t.closest("[data-retry-tools]")){ realTools(); return; }
+    var adaptiveAction=t.closest('[data-ui-operation]');
+    if(adaptiveAction){
+      var actionList=curList(),actionRow=actionList&&actionList[mi],action=actionRow&&actionRow.uiActions&&actionRow.uiActions[Number(adaptiveAction.dataset.uiOperation)];
+      var target=action&&emp(action.employee_id);
+      if(!target||!['edit_employee','review_employee','test_employee'].includes(action.operation_id))return;
+      var prompts={edit_employee:ui('أريد تعديل مهارات وتعليمات الموظف «','I want to edit the skills and instructions of employee “')+target.n+ui('». التعديل المطلوب: ','”. Requested change: '),review_employee:ui('راجع جاهزية الموظف «','Review the readiness of employee “')+target.n+ui('» للقراءة فقط وحدد الناقص دون تغيير أو تشغيل.','” read-only and identify gaps without changes or execution.'),test_employee:ui('أريد تجربة الموظف «','I want to test employee “')+target.n+ui('» ببيانات اصطناعية. اعرض خطة الاختبار وأي أثر خارجي للمراجعة قبل التنفيذ.','” with synthetic data. Show the test plan and any external effects for review before execution.')};
+      var actionInput=$('#input');actionInput.value=prompts[action.operation_id];actionInput.focus();return;
+    }
     if(t.closest("[data-siy-approval]")){ var approvalList=curList(), approvalRow=approvalList&&approvalList[mi]; siyDecideBuilder(approvalRow,t.closest("[data-siy-approval]").dataset.siyApproval); return; }
     if(window.__SIY_REAL__ && t.closest("#instrPrev,[data-save],[data-approve],[data-decide],[data-opt],[data-pv],[data-hcancel],[data-undo]")){ siyUnsupported(); return; }
     if(t.closest("#renameBtn")){ renameEmp(); return; }
@@ -1433,7 +1441,20 @@ var I = {
     var r=data.readiness_receipt,e=data.employee;
     return r&&e&&e.status==='active'&&typeof r.employee_id==='string'&&r.employee_id===e.recordId&&r.flow_id===e.flowId&&r.test_environment==='TESTING'&&[r.flow_id,r.published_version_id,r.test_run_id].every(function(id){return typeof id==='string'&&/^[0-9A-Za-z]{21}$/.test(id);})&&(!Object.prototype.hasOwnProperty.call(r,'used_mock_trigger_data')||typeof r.used_mock_trigger_data==='boolean')?r:null;
   }
+  function siyAdaptiveUi(data){
+    var schema=data.ui;
+    if(!schema||schema.version!==1||schema.type!=='adaptive_reply'||!Array.isArray(schema.components)||!Array.isArray(schema.actions)||schema.components.length>8||schema.actions.length>8)return {html:'',actions:[]};
+    var employee=data.employee,actions=[],parts=[];
+    schema.components.forEach(function(component){
+      if(!component||component.type!=='employee'||!employee||component.employee_id!==employee.recordId||component.title!==employee.name||!['active','draft','paused'].includes(component.state)||component.state!==(employee.status==='active'?'active':employee.flowId?'paused':'draft'))return;
+      var skills=Array.isArray(component.skills)?component.skills.filter(function(s){return typeof s==='string';}):[];
+      var cardActions=schema.actions.filter(function(a){return a&&a.employee_id===employee.recordId&&['edit_employee','review_employee','test_employee'].includes(a.operation_id)&&typeof a.idempotency_key==='string'&&typeof a.approval_required==='boolean';});
+      parts.push('<section class="adaptive-employee" aria-label="'+ui('الموظف','Employee')+'"><h3 dir="auto">'+esc(component.title)+'</h3><p dir="auto">'+esc(typeof component.role==='string'?component.role:'')+'</p><p>'+ (component.state==='active'?ui('الموظف مفعّل؛ نتيجة كل مهمة تُتحقق مستقلاً.','Employee enabled; each task outcome is verified separately.'):component.state==='paused'?ui('طريقة العمل متوقفة؛ لا تعني نتيجتها السابقة أن الموظف يعمل الآن.','Workflow disabled; previous results do not mean the employee is running now.'):ui('مسودة محفوظة؛ لم يبدأ العمل.','Saved draft; work has not started.'))+'</p>'+(skills.length?'<p>'+ui('أدوات الموظف؛ تحقق من ربطها قبل العمل: ','Employee tools; verify their connections before work: ')+skills.map(esc).join('، ')+'</p>':'')+'<div class="acts">'+cardActions.map(function(a){var index=actions.length;actions.push(a);return '<button type="button" class="lnk" data-ui-operation="'+index+'">'+({edit_employee:ui('عدّل الموظف','Edit employee'),review_employee:ui('وش ينقصه؟','Review gaps'),test_employee:ui('جهّز تجربته','Prepare a test')})[a.operation_id]+'</button>';}).join('')+'</div></section>');
+    });
+    return {html:parts.join(''),actions:actions};
+  }
   function siyResultRow(data){
+    var adaptive=siyAdaptiveUi(data);
     var state=data.work_status, kind=data.outcome_kind, text=data.reply,ready=siyReadinessReceipt(data);
     if(kind==='employee_ready'){var complete=ready&&data.request_status==='succeeded'&&state==='succeeded';if(!complete)state='unknown';if(!text)text=complete?ui('اختبرنا طريقة العمل وفعّلناها. لم تُثبت نتيجة مهمة إنتاجية بعد.','We tested and activated the workflow. A production task result is not verified yet.'):ui('لم نتأكد من اختبار طريقة العمل وتفعيلها.','Workflow testing and activation are unverified.');}
     if(!text&&kind==='conversation_reply'&&state==='not_started') text=ui('اكتملت معالجة السؤال دون تشغيل أداة، لكن تفاصيل الرد غير متاحة.','The question was processed without running a tool, but the reply details are unavailable.');
@@ -1449,7 +1470,7 @@ var I = {
     var receipts=Array.isArray(data.tool_receipts)?data.tool_receipts.filter(function(r){return r&&typeof r.name==='string'&&['returned','error'].includes(r.status);}).slice(0,80):[];
     var partialActionResult=state==='unknown'&&receipts.some(function(r){return r.name==='ap_run_action'&&r.status==='returned'&&r.outcome==='action_completed'&&typeof r.run_id==='string'&&/^[0-9A-Za-z]{21}$/.test(r.run_id);})&&receipts.some(function(r){return r.status==='error'||r.effect_attempted===true&&r.outcome!=='action_completed';});
     var tools=receipts.length?'<details class="plan nr" style="margin-top:10px"><summary>'+ui('استدعاءات الأدوات','Tool calls')+' · '+receipts.length+'</summary>'+receipts.map(function(r,i){var run=r.name==='ap_run_action'&&typeof r.run_id==='string'&&/^[0-9A-Za-z]{21}$/.test(r.run_id)?r.run_id:'';return '<div class="prow"><b>'+(i+1)+'</b><span>'+esc(r.name)+' · '+(r.status==='error'?ui('تعذّر الاستدعاء','Call failed'):run&&r.outcome==='action_completed'?ui('اكتمل استدعاء الإجراء','Action completed'):ui('أعادت ردًا','Returned a response'))+(run?'<small>'+ui('مرجع الإجراء: ','Action run: ')+'<code>'+esc(run)+'</code></small>':'')+(r.output_limited===true?'<small>'+ui('اختصرت الخدمة بعض الحقول؛ اطلب نطاقًا أضيق لعرضها كاملة.','The service shortened some fields; request a narrower scope to display them in full.')+'</small>':'')+'</span></div>';}).join('')+'<p>'+ui('رد الأداة وحده لا يثبت نتيجة الخدمة.','A tool response alone does not prove the provider outcome.')+'</p></details>':'';
-    return {me:false,at:now(),requestState:state,partialActionResult:partialActionResult,t:siyReplyHtml(text)+readiness+verifiedRun+tools+siyBuilderProposalHtml(data)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,ui('نتائج هذا الطلب','Results for this request')):'')+siyLegacyProofHtml(records)+draft,workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;}),builderApproval:data.approval&&data.approval.required===true?{id:data.approval.approval_id,conversationId:data.conversation_id}:null};
+    return {me:false,at:now(),uiActions:adaptive.actions,requestState:state,partialActionResult:partialActionResult,t:siyReplyHtml(text)+adaptive.html+readiness+verifiedRun+tools+siyBuilderProposalHtml(data)+siyAcceptanceHtml(data.acceptance)+(scoped.length?siyWorkHtml(scoped,ui('نتائج هذا الطلب','Results for this request')):'')+siyLegacyProofHtml(records)+draft,workId:data.work_id||null,proofIds:records.map(function(r){return r.recordId;}),builderApproval:data.approval&&data.approval.required===true?{id:data.approval.approval_id,conversationId:data.conversation_id}:null};
   }
   async function siyDecideBuilder(row,decision){
     if(!row||!row.builderApproval||row.siyInFlight) return;

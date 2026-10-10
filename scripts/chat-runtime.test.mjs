@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
+import {chatUiForResponse} from '../lib/chat-ui.mjs';
 
 const source=readFileSync(new URL('../app/chat.js',import.meta.url),'utf8');
 const html=readFileSync(new URL('../app/chat.html',import.meta.url),'utf8');
@@ -12,6 +13,37 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
 const empty={ok:true,company:'Server Company',brain:null,memory:[],team:[],recent_work:[],conversations:[]};
 const employee={recordId:'employee-record-1',flowId:'flow-1',name:'سارة',role:'تسجيل الفرص',status:'active',tools:['gmail']};
 const proof={recordId:'proof-record-1',employeeId:employee.recordId,flowId:employee.flowId,runId:'run-1',work_id:'work-1',subject:'فرصة أ',message:'سُجلت الفرصة',status:'succeeded',proof:'قراءة السجل مؤكدة'};
+
+test('adaptive employee controls only prepare chat input and never execute on rendering or click',async()=>{
+  const draft={...employee,name:'<img src=x onerror=alert(1)>',status:'disabled',tools:['gmail']};
+  const response={ok:true,conversation_id:'adaptive-chat',work_status:'not_started',request_status:'succeeded',outcome_kind:'employee_draft',reply:'حفظت الموظف',employee:draft};
+  response.ui=chatUiForResponse(response);
+  const p=await page({message:response});try{
+    send(p,'جهز موظف');await flush();await flush();
+    assert.ok(p.d.querySelector('.adaptive-employee'));
+    assert.equal(p.d.querySelector('.adaptive-employee img'),null);
+    assert.match(thread(p),/أدوات الموظف/);
+    const before=p.requests.length;
+    p.d.querySelector('[data-ui-operation="0"]').click();
+    assert.match(p.d.querySelector('#input').value,/التعديل المطلوب/);
+    p.d.querySelector('[data-ui-operation="2"]').click();
+    assert.match(p.d.querySelector('#input').value,/قبل التنفيذ/);
+    p.d.querySelector('#localeToggle').click();await flush();
+    assert.equal(p.requests.length,before);
+  }finally{p.close();}
+});
+
+test('adaptive UI leaves simple replies as text and rejects foreign employee cards and arbitrary operations',async()=>{
+  const simple={ok:true,conversation_id:'c',reply:'جواب قصير',work_status:'not_started'};
+  assert.equal(chatUiForResponse(simple),null);
+  const response={...simple,employee,ui:{version:1,type:'adaptive_reply',components:[{type:'html',html:'<script>alert(1)</script>'},{type:'employee',title:employee.name,employee_id:'foreign',state:'active'}],actions:[{operation_id:'tools/call',employee_id:employee.recordId,idempotency_key:'x',approval_required:false}]}};
+  const p=await page({message:response});try{
+    send(p,'راجع الموظف');await flush();await flush();
+    assert.equal(p.d.querySelector('.adaptive-employee'),null);
+    assert.equal(p.d.querySelector('[data-ui-operation]'),null);
+    assert.match(thread(p),/جواب قصير/);
+  }finally{p.close();}
+});
 
 test('chat UI never bypasses Siyadah with a direct Activepieces webhook',()=>{
   assert.ok(!source.includes('activepieces-p8l1-455.up.railway.app/api/v1/webhooks'));
