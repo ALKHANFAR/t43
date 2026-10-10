@@ -937,6 +937,7 @@ var I = {
   }
   async function authorizeWorkspace(){
     if(!rc)return;var tool=rc.tool,button=$("[data-workspace-connect]",$("#mF"));
+    if(rc.authMode==='native'){await realConnect(tool);return;}
     var popup=window.open("about:blank","siyadah_workspace_oauth","width=520,height=680");
     if(!popup){rcBox('<p class="mf__e" role="alert">'+ui('اسمح بالنوافذ المنبثقة، ثم أعد المحاولة.','Allow pop-ups and try again.')+'</p>'+workspaceAuthorizationControl(true));return;}
     if(button)button.disabled=true;var stopped=false,pollTimer,expiryTimer;
@@ -966,13 +967,19 @@ var I = {
   }
   async function realConnect(tool){
     rc={tool:tool,methods:[],index:0};rcBox('<p class="mf__m">'+ui('أجهّز طرق الربط الآمنة…','Preparing secure connection methods…')+'</p>');
-    var authorizationStored=false;
+    var authorizationStored=false,authorizationControl='';
     try{
       var status=await workspaceAuthorizationStatus();if(!rc||rc.tool!==tool)return;
+      rc.authMode=status.authMode;
+      if(status.authMode==='native'&&status.state==='project_required'){
+        status=await siyPost('/siyadah-api/v1/mcp/connect',{});if(!rc||rc.tool!==tool)return;
+      }
+      if(rc.authMode==='native'&&(status.authMode!=='native'||status.state!=='authorization_stored'||status.liveVerified!==true))throw new Error(ui('تعذّر تجهيز أدوات الشركة. أعد المحاولة أو تواصل مع الدعم.','Could not prepare company tools. Retry or contact support.'));
       authorizationStored=status.state==="authorization_stored";
       if(!authorizationStored){rcBox(workspaceAuthorizationControl(true));return;}
-      var data=await integration({op:"methods",piece:tool.s});if(!rc||rc.tool!==tool)return;if(data.noAuth){rcBox('<p class="mf__m">'+ui('هذه الأداة لا تحتاج حسابًا أو مفتاحًا. تصبح جاهزة عند استخدامها داخل مهمة.','This tool needs no account or key. It becomes available when used in a task.')+'</p>'+workspaceAuthorizationControl(false));return;}rc.methods=data.methods||[];if(!rc.methods.length)throw new Error(ui("لا توجد طريقة ربط لهذه الأداة.","No connection method is available for this tool."));rcRender();$("#mF form").insertAdjacentHTML("beforeend",workspaceAuthorizationControl(false));
-    }catch(error){if(rc&&rc.tool===tool)rcBox('<p class="mf__e" role="alert">'+esc(error.message||ui("تعذّر تجهيز الربط.","Could not prepare the connection."))+'</p>'+(authorizationStored?workspaceAuthorizationControl(false):''));}
+      authorizationControl=rc.authMode==='native'?'':workspaceAuthorizationControl(false);
+      var data=await integration({op:"methods",piece:tool.s});if(!rc||rc.tool!==tool)return;if(data.noAuth){rcBox('<p class="mf__m">'+ui('هذه الأداة لا تحتاج حسابًا أو مفتاحًا. تصبح جاهزة عند استخدامها داخل مهمة.','This tool needs no account or key. It becomes available when used in a task.')+'</p>'+authorizationControl);return;}rc.methods=data.methods||[];if(!rc.methods.length)throw new Error(ui("لا توجد طريقة ربط لهذه الأداة.","No connection method is available for this tool."));rcRender();$("#mF form").insertAdjacentHTML("beforeend",authorizationControl);
+    }catch(error){if(rc&&rc.tool===tool)rcBox('<p class="mf__e" role="alert">'+esc(error.message||ui("تعذّر تجهيز الربط.","Could not prepare the connection."))+'</p>'+authorizationControl);}
   }
   function rcValues(method){var values={};for(var i=0;i<(method.fields||[]).length;i++){var field=method.fields[i];if(field.type==="markdown")continue;var el=$("#mf"+i),value=field.type==="multiselect"?Array.from(el.selectedOptions).filter(function(option){return option.value!=="";}).map(function(option){return field.options[+option.value].value;}):field.type==="checkbox"?el.checked:field.type==="dropdown"?(el.value===""?"":field.options[+el.value].value):field.type==="number"?(el.value===""?"":Number(el.value)):el.value.trim();if(field.required&&(value===""||value==null||Array.isArray(value)&&!value.length)){rcMsg(ui("أكمل «","Complete “")+(field.label||field.name)+ui("» أولًا.","” first."));el.focus();return null;}if(value!=="")values[field.name]=value;}return values;}
   async function rcPost(payload){var tool=rc.tool,button=$("#mOk");button.disabled=true;rcMsg("");try{var data=await integration(payload);tool.connection=data.connection;tool.on=data.connection.status==='ACTIVE';tool.by=usersOf(tool.s);tool.sug="";rc=null;closeModal();toolsCount();renderThread();if(tool.on)siyResumePendingActivation();}catch(error){button=$("#mOk");if(button)button.disabled=false;rcMsg(error.message||ui("تعذّر الربط. راجع البيانات وحاول مرة ثانية.","Could not connect. Check the details and try again."));}}

@@ -11,6 +11,7 @@ import {createCompanyEffectLock} from './lib/company-effect-lock.mjs';
 import {createChatFlowLifecycle} from './lib/chat-flow-lifecycle.mjs';
 import {createEmployeeRunRecovery} from './lib/employee-run-recovery.mjs';
 import {createToolConnectionService} from './lib/tool-connections.mjs';
+import {createNativeMcpAuth} from './lib/activepieces-native-auth.mjs';
 import {createGoogleOAuthAttemptStore} from './lib/google-oauth-attempts.mjs';
 import {SESSION_COOKIE,cookieValue,createTenantSession,readTenantSession,sessionCookie} from './lib/tenant-session.mjs';
 import {createFirecrawlClient,FirecrawlError} from './lib/firecrawl.mjs';
@@ -39,6 +40,8 @@ let databasePromise;
 let effectDatabasePromise;
 let firecrawlClient;
 let mcpPromise;
+const nativeMcpCompanies=new Set(String(process.env.SIYADAH_NATIVE_MCP_COMPANY_IDS||'').split(',').map(value=>value.trim()).filter(Boolean));
+const nativeMcpEnabled=companyId=>nativeMcpCompanies.has(companyId);
 const {buildOwnedDraftFlow,successfulFlowTest}=createChatFlowLifecycle({database,companyProfiles,tenantProjects});
 const mailer=createMailer({apiKey:process.env.RESEND_API_KEY,from:process.env.SIYADAH_MAIL_FROM,replyTo:process.env.SIYADAH_MAIL_REPLY_TO});
 
@@ -69,7 +72,7 @@ async function toolConnections(){
 async function activepiecesMcp(){
   if(!mcpPromise)mcpPromise=(async()=>{
     const projects=await tenantProjects(),pool=await database();
-    return createActivepiecesMcp({query:(sql,values)=>pool.query(sql,values),requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,origin:publicOrigin(),secret:process.env.SIYADAH_SESSION_SECRET});
+    return createActivepiecesMcp({query:(sql,values)=>pool.query(sql,values),requireProject:projects.requireProject,activepiecesUrl:process.env.ACTIVEPIECES_URL,origin:publicOrigin(),secret:process.env.SIYADAH_SESSION_SECRET,native:createNativeMcpAuth({url:process.env.ACTIVEPIECES_URL,email:process.env.ACTIVEPIECES_OPERATOR_EMAIL,password:process.env.ACTIVEPIECES_OPERATOR_PASSWORD}),nativeEnabled:nativeMcpEnabled});
   })().catch(error=>{mcpPromise=null;throw error;});
   return mcpPromise;
 }
@@ -158,14 +161,21 @@ async function finishMcpGrant(req,res){
 }
 
 async function customerMcpAccess(req,res,op){
+  let authMode;
   try{
     const resolved=await tenantSession(req),tenantId=resolved.session.companyId;
+    authMode=nativeMcpEnabled(tenantId)?'native':'oauth';
     if(op==='start'){
       if(!publicOrigin()||req.headers.origin!==publicOrigin())throw new TenantProjectError('origin_not_allowed','ابدأ الربط من سيادة.',403);
       const input=await body(req);
       if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).length)throw new TenantProjectError('client_scope_forbidden','نطاق الشركة يحدده الخادم فقط.',400);
       const pool=await database();
       await provisionVerifiedTenant({tenantId,query:(sql,values)=>pool.query(sql,values),ensureProject:async value=>(await tenantProjects()).ensure(value)});
+      if(authMode==='native'){
+        const result=await (await activepiecesMcp()).status(tenantId);
+        if(!result.grantPresent||!result.liveVerified)return json(res,503,{ok:false,authMode,error:'native_mcp_unavailable'});
+        return json(res,200,{ok:true,authMode,state:'authorization_stored',grantRevision:result.grantRevision,liveVerified:true});
+      }
       const email=await (await accountAuth()).verifiedEmail(tenantId);
       await (await tenantProjects()).ensureMember({tenantId,email});
       const authorizationUrl=await (await activepiecesMcp()).begin(tenantId,{sessionBinding:oauthSessionBinding(req)});
@@ -179,9 +189,9 @@ async function customerMcpAccess(req,res,op){
       return json(res,200,{ok:true,source:'activepieces_native_mcp',liveVerified:true,...catalog.receipt});
     }
     const result=await (await activepiecesMcp()).status(tenantId);
-    return json(res,200,{ok:true,state:result.grantPresent?'authorization_stored':'authorization_required',grantRevision:result.grantPresent?result.grantRevision:null,liveVerified:false});
+    return json(res,200,{ok:true,authMode,state:result.grantPresent?'authorization_stored':'authorization_required',grantRevision:result.grantPresent?result.grantRevision:null,liveVerified:result.liveVerified===true});
   }catch(error){
-    if(op==='status'&&error?.code==='project_not_ready')return json(res,200,{ok:true,state:'project_required',liveVerified:false});
+    if(op==='status'&&error?.code==='project_not_ready')return json(res,200,{ok:true,authMode,state:'project_required',liveVerified:false});
     if(error instanceof TenantProjectError||error instanceof AccountAuthError)return json(res,error.status,{ok:false,error:error.code,message:error.message});
     console.warn('customer MCP access failed',error?.code||error?.name||'unknown_error');
     return json(res,502,{ok:false,error:'mcp_unavailable'});

@@ -386,6 +386,30 @@ test('unavailable native connection setup explains availability without exposing
   }
 });
 
+test('native workspace setup never opens Activepieces consent and retains provider OAuth',async()=>{
+  for(const locale of ['ar','en']){
+    let opened=0;
+    const p=await page({locale,hash:'',mcpStatus:{ok:true,authMode:'native',state:'project_required',liveVerified:false},mcpConnect:{ok:true,authMode:'native',state:'authorization_stored',liveVerified:true},integrations:{list:{ok:true,connections:[]},methods:{ok:true,methods:[{type:'OAUTH2',displayName:'Google',available:true,fields:[]}]},oauth_start:{ok:true,authorizationUrl:'https://accounts.google.com/o/oauth2/auth',allowedOrigin:'https://accounts.siyadah-ai.com'}}});
+    try{
+      p.w.open=()=>{opened++;return {closed:false,close(){},location:{replace(){}}};};
+      p.d.querySelector('#toolsLink').click();await flush();p.d.querySelector('#allTgl').click();await flush();p.d.querySelector('[data-c="gmail"]').click();await flush();await flush();
+      assert.equal(opened,0);assert.equal(p.d.querySelector('[data-workspace-connect]'),null);assert.ok(p.d.querySelector('#mF form'));
+      assert.equal(p.requests.filter(r=>r.url.endsWith('/mcp/connect')).length,1);
+      p.d.querySelector('#mF form').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));await flush();
+      assert.equal(opened,1,'only provider consent opens a popup');
+    }finally{p.close();}
+  }
+});
+test('failed or unverified native status cannot expose consent or claim tool readiness',async()=>{
+  for(const state of ['authorization_required','authorization_stored']){
+    let opened=0;const p=await page({hash:'',mcpStatus:{ok:true,authMode:'native',state,liveVerified:false}});
+    try{p.w.open=()=>{opened++;};p.d.querySelector('#toolsLink').click();await flush();p.d.querySelector('#allTgl').click();await flush();p.d.querySelector('[data-c="gmail"]').click();await flush();
+      assert.equal(opened,0);assert.equal(p.d.querySelector('[data-workspace-connect]'),null);assert.equal(p.d.querySelector('#mF form'),null);assert.ok(p.d.querySelector('#mF [role="alert"]'));
+      assert.equal(p.requests.some(r=>r.body?.op==='methods'),false);
+    }finally{p.close();}
+  }
+});
+
 test('Google connect popup opens in the submit gesture before OAuth preparation returns',async()=>{
   let finishStart,opened=0;
   const start=new Promise(resolve=>{finishStart=resolve;});

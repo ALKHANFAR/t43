@@ -26,7 +26,7 @@ function assertCustomerConnection(connection,slug){
   assert.doesNotMatch(JSON.stringify(connection),/@activepieces\//);
 }
 function harness(overrides={}){
-  const calls=[];
+  const calls=[],metadataCalls=[];
   const pending=new Map(),attemptStore={save:async value=>{pending.set(value.state,value);},consume:async value=>{const prior=pending.get(value.state);if(!prior||prior.companyId!==value.companyId||prior.sessionBinding!==value.sessionBinding||prior.expiresAt<Date.now())return false;pending.delete(value.state);return true;}};
   const projects=stage=>Object.hasOwn(overrides,stage)?overrides[stage]:(overrides.foreign&&stage==='list'?[OTHER]:[PROJECT]);
   const fetchImpl=async(url,options={})=>{
@@ -47,8 +47,30 @@ function harness(overrides={}){
     if(url.endsWith('/api/v1/app-connections')){const b=JSON.parse(options.body);return response(201,{id:CONNECTION,pieceName:b.pieceName,pieceVersion:b.pieceVersion,displayName:b.displayName,status:'ACTIVE',scope:'PROJECT',projectIds:projects('create')});}
     throw new Error(`unexpected ${url}`);
   };
-  return {calls,pending,service:createToolConnectionService({requireProject:async tenant=>tenant==='company-a'?PROJECT:OTHER,fetchImpl,activepiecesUrl:'https://ap.example',apiKey:'platform-key',attemptSecret:'s'.repeat(48),attemptStore,googleOAuth:overrides.googleOAuth,customerOrigin:overrides.customerOrigin,gmailOAuthProvider:overrides.gmailOAuthProvider,mcpCall:overrides.mcpCall,readFlow:overrides.readFlow,onFlowPaused:overrides.onFlowPaused})};
+  const mcpCall=async(tenantId,method,params)=>{
+    if(params.name!=='ap_setup_guide')return overrides.mcpCall?.(tenantId,method,params);
+    metadataCalls.push({tenantId,method,params});
+    if(Object.hasOwn(overrides,'schemaResult'))return overrides.schemaResult;
+    const name=params.arguments.pieceName,meta=name===stripe.name?stripe:name===whatsapp.name?whatsapp:name===slack.name?slack:overrides.gmail||gmail;
+    return {structuredContent:{schemaVersion:1,piece:meta}};
+  };
+  return {calls,pending,metadataCalls,service:createToolConnectionService({requireProject:async tenant=>tenant==='company-a'?PROJECT:OTHER,fetchImpl,activepiecesUrl:'https://ap.example',apiKey:'platform-key',attemptSecret:'s'.repeat(48),attemptStore,googleOAuth:overrides.googleOAuth,customerOrigin:overrides.customerOrigin,gmailOAuthProvider:overrides.gmailOAuthProvider,mcpCall,readFlow:overrides.readFlow,onFlowPaused:overrides.onFlowPaused})};
 }
+
+test('connection auth metadata comes only from company MCP for both grant modes',async()=>{
+  for(const tenantId of ['company-a','company-b']){
+    const h=harness();await h.service.methods({tenantId,piece:'stripe'});
+    assert.deepEqual(h.metadataCalls,[{tenantId,method:'tools/call',params:{name:'ap_setup_guide',arguments:{topic:'connection',pieceName:stripe.name}}}]);
+    assert.equal(h.calls.some(call=>call.url.includes('/api/v1/pieces')),false);
+  }
+});
+test('missing malformed foreign or failed MCP schema never falls back to REST or noAuth',async()=>{
+  for(const schemaResult of [{},{isError:true,structuredContent:{schemaVersion:1,piece:stripe}},{structuredContent:{schemaVersion:2,piece:stripe}},{structuredContent:{schemaVersion:1,piece:{...stripe,name:gmail.name}}},{structuredContent:{schemaVersion:1,piece:{...stripe,auth:[null]}}}]){
+    const h=harness({schemaResult});
+    await assert.rejects(()=>h.service.methods({tenantId:'company-a',piece:'stripe'}),{code:'native_mcp_discovery_required'});
+    assert.equal(h.calls.length,0);
+  }
+});
 
 test('shows only valid flow references from a project-owned connection',async()=>{
   const {service}=harness();

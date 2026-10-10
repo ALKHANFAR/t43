@@ -131,7 +131,7 @@
       "name": "إيقاف إنشاء الفلو واكتشاف الأدوات والحقول عبر REST",
       "aliases": ["بناء الفلو", "منع REST", "اكتشاف الحقول", "MCP فقط للبناء"],
       "state": "draft_pr",
-      "meaning": "حذف إنشاء الفلو وتغيير حالته من محول REST؛ المسار الداخلي القديم يعيد 410. البناء والاكتشاف في MCP الشركة، وتغيير الحالة عبر MCP مع قراءة تأكيد. قراءة تفاصيل الفلو وتهيئة المشاريع وإدارة الاتصالات الحالية تبقى. تجهيز اتصال جديد يستعيد مسار موافقة Activepieces وبيانات المصادقة فقط، منفصلًا عن اكتشاف الأفعال وحقول التشغيل عبر MCP. تغيير محلي غير منشور.",
+      "meaning": "حذف إنشاء الفلو وتغيير حالته من محول REST؛ المسار الداخلي القديم يعيد 410. البناء والاكتشاف وتعريف حقول مصادقة الاتصال عبر MCP الشركة. حفظ الاتصالات وجردها وإعادة التحقق والفصل وقراءة الفلو تبقى في Activepieces REST. تعريف مصادقة مفقود أو مخالف لا يرجع إلى REST. نقل محلي غير منشور وغير مثبت حيًا.",
       "linear": "ABO-69",
       "pr": "https://github.com/ALKHANFAR/t43/pull/60",
       "locations": [
@@ -140,6 +140,26 @@
         {"role": "native_connection_auth_metadata", "path": "lib/tool-connections.mjs", "anchor": "Connection consent uses Activepieces auth metadata"},
         {"role": "contract", "path": "docs/mcp-tool-discovery-boundary.md", "anchor": "# Tool discovery boundary"},
         {"role": "test", "path": "scripts/native-mcp-boundary-runtime.test.mjs", "anchor": "closed internal create route never initializes a provider"}
+      ]
+    },
+    {
+      "id": "native_company_mcp_auth",
+      "name": "ربط أدوات الشركة دون صفحة Activepieces",
+      "aliases": ["دخول المشغل", "ربط داخلي", "native_mcp_auth", "بدون اختيار المشروع"],
+      "state": "draft_pr",
+      "meaning": "نقل محول دخول المشغل من VF مع رمز MCP خاص بالمشروع، وتحقيق tools/list قبل إعلان الجاهزية. تفعيل بمعرفات شركات محددة من الخادم ومطفأ افتراضيًا؛ لا رجوع تلقائي إلى OAuth عند الفشل ولا عضوية عميل في هذا المسار. الواجهة تخفي تفويض Activepieces وتبقي موافقة المزود. اختبارات محلية فقط؛ رفع رأس الفرع معلّق لأن الإنتاج أصبح مرتبطًا به. لا إثبات عزل أو ربط مزود حي.",
+      "linear": "ABO-69",
+      "pr": "https://github.com/ALKHANFAR/t43/pull/62",
+      "locations": [
+        {"role": "operator_auth", "path": "lib/activepieces-native-auth.mjs", "anchor": "export function createNativeMcpAuth"},
+        {"role": "native_mode", "path": "lib/activepieces-mcp.mjs", "anchor": "async function callNative"},
+        {"role": "server_opt_in", "path": "server.mjs", "anchor": "const nativeMcpCompanies="},
+        {"role": "native_start", "path": "server.mjs", "anchor": "if(authMode==='native')"},
+        {"role": "ui", "path": "app/chat.js", "anchor": "authorizationControl=rc.authMode==='native'"},
+        {"role": "test", "path": "scripts/native-connection-runtime.test.mjs", "anchor": "native auth coalesces concurrent minting"},
+        {"role": "route_test", "path": "scripts/mcp-customer-session-runtime.test.mjs", "anchor": "native customer start provisions verified company"},
+        {"role": "ui_test", "path": "scripts/chat-runtime.test.mjs", "anchor": "native workspace setup never opens Activepieces consent"},
+        {"role": "contract", "path": "docs/native-connection-transfer.md", "anchor": "# Native connection transfer into t43"}
       ]
     },
     {
@@ -308,7 +328,7 @@
       "name": "ربط أداة الشركة عند الحاجة",
       "aliases": ["ربط الأدوات", "اتصال أداة", "تسجيل دخول الأداة", "OAuth الأداة", "كتالوج الأدوات", "company tool connection", "tool catalog"],
       "state": "gap",
-      "meaning": "أُعيد في فرع التوحيد مسار ربط أدوات الشركة الموجود: بيانات المصادقة والموافقة من Activepieces، اتصال PROJECT حصري للشركة، وعودة OAuth مرتبطة بالجلسة وتُستهلك مرة واحدة. اكتشاف الأفعال وحقول التشغيل وبناء وتنفيذ الفلو تبقى عبر MCP. الفصل المؤكد يوقف التدفقات التابعة عبر MCP ويتحقق من توقفها ويحدث الموظفين قبل حذف الاتصال؛ أي فشل يبقي الاتصال وقد تكون بعض التدفقات توقفت. الاختبارات محلية؛ الربط والفصل الجديدان غير منشورين وغير مثبتين حيًا.",
+      "meaning": "مسار ربط عام يستخدم تعريف المصادقة من ap_setup_guide عبر MCP الشركة دون REST fallback. الاتصالات PROJECT حصرية وعودة OAuth مرتبطة بالجلسة وتستهلك مرة واحدة، والحفظ وإدارة الرمز داخل Activepieces. حافظ النقل على الفصل المؤكد الذي يوقف الفلوز عبر MCP ويتحقق منها قبل حذف الاتصال. client_credentials غير مدعوم بعد. اختبارات محلية فقط؛ النقل الجديد غير منشور وغير مثبت حيًا.",
       "linear": "ABO-61",
       "pr": "https://github.com/ALKHANFAR/t43/pull/60",
       "locations": [

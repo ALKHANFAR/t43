@@ -9,9 +9,9 @@ const accessSource=source.slice(source.indexOf('async function customerMcpAccess
 const callbackSource=source.slice(source.indexOf('async function finishMcpGrant('),source.indexOf('async function customerMcpAccess('));
 class TenantProjectError extends Error{constructor(code,message,status){super(message);this.code=code;this.status=status;}}
 const origin='https://accounts.example';
-function harness({invalidSession=false,input={},grantPresent=false,grantRevision=null,projectMissing=false,verificationError=false,membershipError=false,boundCallback=false,authorizationUrl='https://ap.example/authorize?client_id=registered-client&state=sealed'}={}){
+function harness({native=false,liveVerified=false,invalidSession=false,input={},grantPresent=false,grantRevision=null,projectMissing=false,verificationError=false,membershipError=false,boundCallback=false,authorizationUrl='https://ap.example/authorize?client_id=registered-client&state=sealed'}={}){
   const calls=[];
-  const context={TenantProjectError,AccountAuthError:TenantProjectError,createHash,URL,console:{warn(){}},publicOrigin:()=>origin,
+  const context={TenantProjectError,AccountAuthError:TenantProjectError,createHash,URL,console:{warn(){}},publicOrigin:()=>origin,nativeMcpEnabled:company=>native&&company==='company-a',
     tenantSession:async()=>{calls.push('session');if(invalidSession)throw new TenantProjectError('unauthorized','login',401);return {session:{companyId:'company-a'}};},
     body:async()=>{calls.push('body');return input;},oauthSessionBinding:()=> 'session-bound',
     database:async()=>{calls.push('database');return {query:async()=>({rows:[]})};},
@@ -20,7 +20,7 @@ function harness({invalidSession=false,input={},grantPresent=false,grantRevision
     provisionVerifiedTenant:async value=>{calls.push(['provision',value.tenantId]);if(verificationError)throw new TenantProjectError('email_not_verified','verify',403);},
     activepiecesMcp:async()=>{calls.push('adapter');return {
       begin:async(company,options)=>{calls.push(['begin',company,options.sessionBinding]);return authorizationUrl;},
-      status:async company=>{calls.push(['status',company]);if(projectMissing)throw new TenantProjectError('project_not_ready','project',409);return {grantPresent,grantRevision};},
+      status:async company=>{calls.push(['status',company]);if(projectMissing)throw new TenantProjectError('project_not_ready','project',409);return {grantPresent,grantRevision,liveVerified};},
       complete:async(url,options)=>{calls.push(['complete',options]);if(boundCallback&&options.sessionBinding!=='session-bound')throw new TenantProjectError('mcp_session_mismatch','session',403);},
     };},
     discoverMcpCatalog:async(_client,company)=>{calls.push(['catalog',company]);return {receipt:{toolCount:44,toolNames:['ap_build_flow'],catalogSha256:'proof'}};},
@@ -28,6 +28,20 @@ function harness({invalidSession=false,input={},grantPresent=false,grantRevision
   };
   return {calls,run:runInNewContext(`${accessSource}; customerMcpAccess`,context),callback:runInNewContext(`${callbackSource}; finishMcpGrant`,context)};
 }
+test('native customer start provisions verified company without membership registration or consent',async()=>{
+  const h=harness({native:true,grantPresent:true,liveVerified:true,grantRevision:'native-revision',membershipError:true});
+  const r=await h.run({headers:{origin}},{},'start');
+  assert.equal(r.status,200);assert.equal(r.body.authMode,'native');assert.equal(r.body.state,'authorization_stored');assert.equal(r.body.liveVerified,true);
+  assert.equal(r.body.authorizationUrl,undefined);
+  assert.deepEqual(h.calls,['session','body','database',['provision','company-a'],'adapter',['status','company-a']]);
+});
+test('native start failure never falls back to consent and missing project keeps explicit auth mode',async()=>{
+  const h=harness({native:true,grantPresent:true});const r=await h.run({headers:{origin}},{},'start');
+  assert.equal(r.status,503);assert.equal(r.body.authMode,'native');assert.equal(r.body.authorizationUrl,undefined);
+  assert.equal(h.calls.some(call=>Array.isArray(call)&&['begin','membership'].includes(call[0])),false);
+  const missing=await harness({native:true,projectMissing:true}).run({headers:{}},{},'status');
+  assert.equal(missing.body.authMode,'native');assert.equal(missing.body.state,'project_required');
+});
 test('customer MCP access rejects invalid sessions before provisioning or provider access',async()=>{
   for(const op of ['start','status','catalog']){const h=harness({invalidSession:true});const r=await h.run({headers:{origin}}, {},op);assert.equal(r.status,401);assert.deepEqual(h.calls,['session']);}
 });
