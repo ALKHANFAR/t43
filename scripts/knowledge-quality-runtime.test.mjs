@@ -4,7 +4,7 @@ import {QUALITY_CASES,scoreQualityAnswer,evaluateKnowledgeCase,runQualitySuite} 
 
 test('quality retrieval suite exercises both production chat contexts without scoring a fake model',async()=>{
   const report=await runQualitySuite({fetchImpl:()=>{throw Error('network forbidden');}});
-  assert.equal(report.mode,'retrieval_only');assert.equal(report.modelCasesRun,0);assert.equal(report.results.length,14);
+  assert.equal(report.mode,'retrieval_only');assert.equal(report.modelCasesRun,0);assert.equal(report.results.length,QUALITY_CASES.length*2);
   assert.ok(report.results.every(r=>r.context_passed&&r.effects===0&&r.modelCalls===0&&!Object.hasOwn(r,'answer_quality')));
 });
 test('missing DeepSeek key reports unavailable rather than a passing answer score',async()=>{
@@ -12,7 +12,7 @@ test('missing DeepSeek key reports unavailable rather than a passing answer scor
   assert.equal(report.mode,'live_unavailable');assert.equal(report.reason,'missing_model_key');assert.equal(report.modelCasesRun,0);assert.deepEqual(report.results,[]);
 });
 test('quality scorer rejects outdated answers, fabricated citations, false abstention and malformed output',()=>{
-  const price=QUALITY_CASES[0],missing=QUALITY_CASES.find(c=>c.id==='missing_fact');
+  const price=QUALITY_CASES.find(c=>c.id==='latest_price'),missing=QUALITY_CASES.find(c=>c.id==='missing_fact');
   const score=(answer,c=price)=>scoreQualityAnswer(JSON.stringify(answer),c,'main');
   assert.equal(score({status:'answered',answer:'120',evidence_keys:['current_price']}).passed,true);
   assert.equal(score({status:'answered',answer:'100',evidence_keys:['current_price']}).passed,false);
@@ -22,6 +22,19 @@ test('quality scorer rejects outdated answers, fabricated citations, false abste
   assert.equal(score({status:'unknown',answer:'120',evidence_keys:[]},missing).passed,false);
   assert.equal(score({status:'unknown',answer:'',evidence_keys:[]},missing).passed,true);
   assert.equal(scoreQualityAnswer('not JSON',price,'main').passed,false);
+});
+test('cross-language cases retain the policy source in both chats and reject the wrong answer language',async()=>{
+  const cases=QUALITY_CASES.filter(c=>['arabic_question_english_source','english_question_arabic_source'].includes(c.id));
+  assert.equal(cases.length,2);
+  const report=await runQualitySuite({cases,fetchImpl:()=>{throw Error('network forbidden');}});
+  assert.equal(report.results.length,4);
+  assert.ok(report.results.every(r=>r.context_passed&&r.effects===0&&!Object.hasOwn(r,'answer_quality')));
+  for(const c of cases)for(const chat of ['main','employee']){
+    const reply=answer=>JSON.stringify({status:'answered',answer,evidence_keys:['refund_policy']});
+    assert.equal(scoreQualityAnswer(reply(c.answer),c,chat).passed,true);
+    assert.equal(scoreQualityAnswer(reply(c.answer==='14 days'?'14 يومًا':'14 days'),c,chat).passed,false);
+    assert.equal(scoreQualityAnswer(JSON.stringify({status:'answered',answer:c.answer,evidence_keys:['parking']}),c,chat).passed,false);
+  }
 });
 test('model quality harness uses actual chat request, scoped AP memory and bounded DeepSeek call',async()=>{
   const c=QUALITY_CASES.find(c=>c.id==='employee_scope');let calls=0;

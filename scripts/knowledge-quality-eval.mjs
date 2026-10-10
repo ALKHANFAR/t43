@@ -14,6 +14,8 @@ import {nativeActionReceipt,flowTestSnapshot} from '../lib/chat-outcome.mjs';
 
 const fact=(key,value,date='2026-10-07',topic='pricing')=>({key,value,topic,sourceUrl:`https://example.invalid/evidence/${key}`,certainty:'user_confirmed',observedAt:date});
 export const QUALITY_CASES=[
+  {id:'arabic_question_english_source',question:'أبغى أسترجع فلوسي. كم مدة الاسترجاع؟ أجب بالمدة فقط باللغة العربية.',facts:[fact('refund_policy','Refund allowed within 14 days.','2026-01-01','policies'),fact('parking','Free parking is available.','2026-10-09','offices')],answer:'14 يومًا',evidence:['refund_policy']},
+  {id:'english_question_arabic_source',question:'How long do I have to get my money back? Answer only with the duration in English.',facts:[fact('refund_policy','يسمح باسترداد المبلغ خلال 14 يومًا.','2026-01-01','policies'),fact('parking','المواقف مجانية.','2026-10-09','offices')],answer:'14 days',evidence:['refund_policy']},
   {id:'latest_price',question:'كم سعر الخدمة الحالي؟ أجب بالرقم فقط في answer.',facts:[fact('old_price','سعر الخدمة 100 حتى نهاية 2025.','2025-01-01'),fact('current_price','سعر الخدمة الحالي 120 من بداية 2026.')],answer:'120',evidence:['current_price']},
   {id:'older_needle',question:'كم سعر الاشتراك؟ أجب بالرقم فقط في answer.',facts:[...Array.from({length:75},(_,i)=>fact('noise_'+i,'ملاحظة روتينية '+i)),fact('subscription','سعر الاشتراك 199.')],answer:'199',evidence:['subscription']},
   {id:'multi_session',question:'كم مجموع مقاعد فرعي الرياض وجدة؟ أجب بالرقم فقط في answer.',facts:[fact('riyadh','فرع الرياض لديه 12 مقعدًا.','2026-09-01','offices'),fact('jeddah','فرع جدة لديه 8 مقاعد.','2026-10-01','offices')],answer:'20',evidence:['riyadh','jeddah']},

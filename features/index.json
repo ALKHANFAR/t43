@@ -726,6 +726,11 @@
           "anchor": "read-only evaluation refuses a model-requested write"
         },
         {
+          "role": "cross_language_quality_test",
+          "path": "scripts/knowledge-quality-runtime.test.mjs",
+          "anchor": "cross-language cases retain the policy source in both chats and reject the wrong answer language"
+        },
+        {
           "role": "stress_evaluation",
           "path": "scripts/employee-stress-eval.mjs",
           "anchor": "export async function runStressSuite("
