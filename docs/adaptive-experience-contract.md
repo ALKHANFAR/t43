@@ -42,3 +42,10 @@ chat_model_usage يتضمن company_id/request_id/conversation_id/model/model_ca
 
 
 التحقق المحلي النهائي: runtime 543، نجاح542، تخطي PostgreSQL واحد، صفر فشل؛ index28/316، lint/HTML/diff ناجحة. axe/jsdom صفر مخالفات عبر7 صفحات؛ Chrome والجوال المرئي لم يُختبرا. developer-lab/adaptive-experience-validation-20261010.json يسجل المتبقي بصراحة. هذه دفعة النموذج الأولي، لا إغلاق لمهمة UX360.
+
+
+### أداة تقييم اختيار العرض بالنموذج
+
+`scripts/adaptive-experience-eval.mjs` يعيد استخدام harness حلقة الإنتاج نفسها، وليس نموذج ردود جديدًا.20 طلبًا متنوعة × الشاتين، بإجابات فعلية محفوظة للمراجعة البشرية وusage/cache مرتبطين بهوية منفصلة لكل حالة وشات. بدون `--live` يطبع خطة فقط ولا يحسب نجاحًا. `--live` يحتاج DEEPSEEK_API_KEY في بيئة العملية الآمنة؛ AP اصطناعي/قراءة فقط دائمًا. لا يثبت الأداة موظفًا محفوظًا أو تشغيلًا خارجيًا. تظل quality_verified=false حتى تقييم بشري مستقل. يمكن تزويد ورقة أسعار مؤرخة عبر `--prices=reviewed-prices.json`؛ غيابها يبقي التكلفة null.
+
+في هذه البيئة تشغيل `--live` أعاد live_unavailable/missing_model_key مع modelCasesRun=0؛ لم يُنفذ40طلبًا حيًا ولم يُدّع نجاحها.

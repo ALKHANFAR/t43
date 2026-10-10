@@ -17,6 +17,7 @@
         {"role":"schema","path":"app/reply-view.js","anchor":"function parse(raw)"},
         {"role":"replay_test","path":"scripts/chat-runtime.test.mjs","anchor":"adaptive plan form table and suggestion replay safely"},
         {"role":"cost","path":"lib/journey-cost.mjs","anchor":"export function measureJourney"},
+        {"role":"model_evaluation","path":"scripts/adaptive-experience-eval.mjs","anchor":"export async function evaluateExperience"},
         {
           "role": "contract",
           "path": "lib/chat-ui.mjs",
