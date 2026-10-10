@@ -41,7 +41,7 @@ test('root hides the broken duplicate and redirects to the working chat',async()
     assert.equal(root.headers.get('location'),'/app/chat.html');
     const chat=await fetch(`http://127.0.0.1:${port}/app/chat.html`);
     assert.equal(chat.status,200);
-    assert.match(await chat.text(),/chat\.js\?v=1\.11\.1/);
+    assert.match(await chat.text(),/chat\.js\?v=1\.11\.2/);
     assert.equal((await fetch(`http://127.0.0.1:${port}/app/chat.js?v=1.11.1`)).status,200);
     assert.equal((await fetch(`http://127.0.0.1:${port}/chat.js?v=1.11.1`)).status,404);
     for(const path of ['/server.mjs','/package.json','/lib/account-auth.mjs','/scripts/server-runtime.test.mjs','/developer-lab/index.html']){

@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-10",
+  "repository": "ALKHANFAR/t43",
+  "branch": "codex/siyadah-consolidation-20261007",
+  "pr": "https://github.com/ALKHANFAR/t43/pull/62",
+  "evidence_level": "local_runtime_and_repository_review",
+  "production_ready": false,
+  "deployment_readback": {
+    "t43": "aaf2db17cd1ff36707310c3d7d55bdcf60391e99",
+    "siyadah_vf": "03f97290c7977e1b8f67b39b96ba49b2026446f3"
+  },
+  "checks": {
+    "runtime": {
+      "total": 543,
+      "passed": 542,
+      "failed": 0,
+      "skipped": 1,
+      "skip_reason": "isolated PostgreSQL recovery integration unavailable"
+    },
+    "feature_index": {
+      "features": 28,
+      "anchors": 316
+    },
+    "javascript_syntax": "passed",
+    "html": "passed",
+    "axe_jsdom": {
+      "pages": 7,
+      "violations": 0,
+      "chrome_visual_checks": "not_run"
+    },
+    "local_ui": {
+      "chats": [
+        "main",
+        "employee"
+      ],
+      "languages": [
+        "ar",
+        "en"
+      ],
+      "prepare_clicks_per_combination": 20,
+      "additional_network_requests": 0,
+      "evidence": "jsdom fetch spy, not provider telemetry",
+      "replay_and_draft_preservation": "passed",
+      "duplicate_blocks_and_locale_redraw": "passed"
+    },
+    "cost": {
+      "calculator": "tested with synthetic rates; unknown data remains null",
+      "real_journey_model_cost_usd": null,
+      "provider_calls_run": 0
+    }
+  },
+  "unproved": [
+    "real DeepSeek UI selection and proactive usefulness",
+    "live sales employee created and modified using this branch",
+    "isolated tenant A/B provider acceptance",
+    "current-version live run and provider outcome",
+    "100-journey before/after quality and cost experiment",
+    "rendered mobile/desktop browser and user acceptance",
+    "SSE/delta progress"
+  ],
+  "blocked_by": [
+    "no local DeepSeek key",
+    "no authenticated isolated deployed environment for this branch",
+    "Chrome unavailable"
+  ],
+  "external_changes": "none; no merge/deploy/provider writes"
+}

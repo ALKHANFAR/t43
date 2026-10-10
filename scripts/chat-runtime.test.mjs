@@ -5,6 +5,7 @@ import { JSDOM } from 'jsdom';
 import {chatUiForResponse} from '../lib/chat-ui.mjs';
 
 const source=readFileSync(new URL('../app/chat.js',import.meta.url),'utf8');
+const replyViewSource=readFileSync(new URL('../app/reply-view.js',import.meta.url),'utf8');
 const html=readFileSync(new URL('../app/chat.html',import.meta.url),'utf8');
 const onboardingHtml=readFileSync(new URL('../app/onboard.html',import.meta.url),'utf8');
 const onboardingSource=readFileSync(new URL('../app/onboard.js',import.meta.url),'utf8');
@@ -13,6 +14,51 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
 const empty={ok:true,company:'Server Company',brain:null,memory:[],team:[],recent_work:[],conversations:[]};
 const employee={recordId:'employee-record-1',flowId:'flow-1',name:'سارة',role:'تسجيل الفرص',status:'active',tools:['gmail']};
 const proof={recordId:'proof-record-1',employeeId:employee.recordId,flowId:employee.flowId,runId:'run-1',work_id:'work-1',subject:'فرصة أ',message:'سُجلت الفرصة',status:'succeeded',proof:'قراءة السجل مؤكدة'};
+
+test('adaptive plan form table and suggestion replay safely in both chats and languages',async()=>{
+  for(const locale of ['ar','en'])for(const employeeChat of [false,true]){
+    const raw=JSON.stringify({schema_version:'1',fallback_text:locale==='en'?'Sales employee proposal':'اقتراح موظف المبيعات',blocks:[
+      {type:'plan',title:'الخطة',items:['راجع سياسة الأسعار','جهّز العرض للمراجعة']},
+      {type:'plan',title:'الخطة',items:['راجع سياسة الأسعار','جهّز العرض للمراجعة']},
+      {type:'form',title:'الناقص فقط',items:['سياسة الخصم']},
+      {type:'table',title:'المقارنة',items:[['Email','<img src=x onerror=alert(1)>']]},
+      {type:'suggestion',title:'اقتراح اختياري',items:['متابعة غير المستجيبين']}
+    ]});
+    const p=await page({locale,hash:employeeChat?'#e=employee-record-1':'',hydrate:{...empty,team:[employee],conversations:[{id:'adaptive-replay',employee_id:employeeChat?employee.recordId:null,title:'Sales',messages:[{role:'assistant',content:raw,at:'09:00'}]}]}});
+    try{
+      if(!employeeChat){const history=p.d.querySelector('[data-chat="adaptive-replay"]');assert.ok(history);history.click();await flush();}
+      assert.equal(p.d.querySelectorAll('.adaptive-view').length,5);
+      assert.equal(p.d.querySelector('.adaptive-view img'),null);
+      assert.equal(p.d.querySelector('[data-ui-operation]'),null,'history cannot invent server employee actions');
+      const field=p.d.querySelector('[data-reply-field]');field.value='10%';field.focus();
+      p.d.querySelector('.adaptive-view details').open=true;
+      p.d.querySelector('#input').value='أريد تغيير أسلوبه';
+      const before=p.requests.length;
+      for(let i=0;i<20;i++)p.d.querySelector('[data-reply-compose]').click();
+      assert.match(p.d.querySelector('#input').value,/أريد تغيير أسلوبه/);
+      assert.match(p.d.querySelector('#input').value,/سياسة الخصم: 10%/);
+      p.d.querySelector('[data-reply-suggestion]').click();
+      assert.match(p.d.querySelector('#input').value,/دون تنفيذه|without executing/);
+      p.d.querySelector('[data-reply-dismiss]').click();
+      p.d.querySelector('#localeToggle').click();await flush();
+      assert.equal(p.d.querySelector('[data-reply-field]').value,'10%');
+      assert.equal(p.d.querySelectorAll('.adaptive-view').length,5,'identical blocks remain separate');
+      assert.equal(p.d.querySelectorAll('.adaptive-view details')[0].open,true);
+      assert.equal(p.d.querySelectorAll('.adaptive-view details')[1].open,false);
+      assert.equal(p.d.querySelector('[data-reply-compose]').textContent,locale==='en'?'جهّز ردي':'Prepare my reply');
+      assert.equal((p.d.querySelector('#input').value.match(/سياسة الخصم: 10%/g)||[]).length,1,'repeated local clicks do not duplicate the draft');
+      assert.equal(p.d.querySelector('[data-reply-dismiss]').closest('.adaptive-view').hidden,true);
+      assert.equal(p.requests.length,before,'local interactions issue no API/model requests');
+    }finally{p.close();}
+  }
+});
+
+test('invalid model UI falls back once and cannot forge executable employee or receipt metadata',async()=>{
+  const raw=JSON.stringify({schema_version:'1',fallback_text:'اقتراح للمراجعة <script>alert(1)</script>',blocks:[{type:'employee_card',employee_id:'foreign',status:'active'}],actions:[{operation_id:'publish'}]});
+  assert.equal(chatUiForResponse({ok:true,conversation_id:'c',reply:raw}),null);
+  const p=await page({message:{ok:true,conversation_id:'c',reply:raw,work_status:'not_started',request_status:'succeeded'}});
+  try{send(p,'راجع فقط');await flush();await flush();assert.match(thread(p),/اقتراح للمراجعة/);assert.equal(p.d.querySelector('.adaptive-view'),null);assert.equal(p.d.querySelector('[data-ui-operation]'),null);assert.equal(p.d.querySelector('#thread script'),null);}finally{p.close();}
+});
 
 test('adaptive employee controls only prepare chat input and never execute on rendering or click',async()=>{
   const draft={...employee,name:'<img src=x onerror=alert(1)>',status:'disabled',tools:['gmail']};
@@ -167,7 +213,7 @@ async function page({storage={},locale,hydrate=empty,message,work,approve,employ
     if(response?.httpStatus)return {ok:false,status:response.httpStatus,json:async()=>response};
     return {ok:true,status:200,json:async()=>response};
   };
-  w.alert=text=>alerts.push(text);w.__SIY_NAVIGATE__=url=>navigations.push(url);w.eval(source);await flush();await flush();
+  w.alert=text=>alerts.push(text);w.__SIY_NAVIGATE__=url=>navigations.push(url);w.eval(replyViewSource);w.eval(source);await flush();await flush();
   return {dom,w,d:w.document,requests,activationRequests,alerts,polls,navigations,timeout:()=>hydrateTimer(),close:()=>setImmediate(()=>w.close())};
 }
 function send(p,text){p.d.querySelector('#input').value=text;p.d.querySelector('#send').click();}

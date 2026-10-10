@@ -353,6 +353,7 @@ var I = {
     var t=$("#thread"), scroll=t.scrollTop, nearEnd=t.scrollHeight-t.clientHeight-scroll<80; t.classList.toggle("thread--emp",isEmp());
     if(who==="tools"){ t.innerHTML=toolsHtml(); bindTools(); return; }
     var savedPanel=window.__SIY_REAL__&&t.siyEmployee===who&&t.siyEmployeeGeneration===siyGeneration?$("#instrWrap"):null, savedFocus=savedPanel&&savedPanel.contains(document.activeElement)?document.activeElement:null, savedSelection=savedFocus&&savedFocus.id==='instr'?[savedFocus.selectionStart,savedFocus.selectionEnd,savedFocus.selectionDirection]:null;
+    var preservedViews=t.siyList===curList()?Array.from(t.querySelectorAll('.adaptive-view')).map(function(node){var fields=Array.from(node.querySelectorAll('[data-reply-field]'));return {mi:node.closest('.m').dataset.mi,key:node.dataset.viewKey,hidden:node.hidden,open:node.querySelector('details')?.open,values:fields.map(function(f){return f.value;}),focus:fields.indexOf(document.activeElement)};}):[];
     var list, w;
     if(isEmp()){ var e=emp(who); list=empThread(who); w=who;
       t.innerHTML='<div class="col'+(window.__SIY_REAL__&&e.draft&&!list.length?' col--draft':'')+'">'+pinHtml(e)+'<div id="instrWrap" hidden>'+instrHtml(e)+'</div>'+list.map(function(m,i){return msgHtml(m,who,i)}).join("")+(window.__SIY_REAL__&&e.draft&&!list.length?'<div class="emp-start"><span class="drop" aria-hidden="true"></span><button type="button" id="reviewStart" aria-expanded="false" aria-controls="instrWrap">'+ui('راجع التعليمات','Review instructions')+'</button></div>':'')+siyEmployeeProofHtml(e,list)+'</div>';
@@ -365,6 +366,7 @@ var I = {
       t.innerHTML='<div class="col">'+list.map(function(m,i){return msgHtml(m, w, i)}).join("")+'</div>';
     }
     if(savedPanel&&isEmp()){var freshPanel=$("#instrWrap"),freshApply=freshPanel.querySelector('#instrApply'),savedApply=savedPanel.querySelector('#instrApply');if(freshApply&&!savedApply)savedPanel.querySelector('#instrF').appendChild(freshApply);else if(!freshApply&&savedApply)savedApply.remove();freshPanel.replaceWith(savedPanel);var toggle=$("#instrTgl")||$("#reviewStart");if(toggle)toggle.setAttribute('aria-expanded',String(!savedPanel.hidden));if(savedFocus){savedFocus.focus({preventScroll:true});if(savedSelection)savedFocus.setSelectionRange(savedSelection[0],savedSelection[1],savedSelection[2]);}}
+    t.querySelectorAll('.adaptive-view').forEach(function(node){var oldIndex=preservedViews.findIndex(function(v){return v.mi===node.closest('.m').dataset.mi&&v.key===node.dataset.viewKey;});if(oldIndex>=0){var old=preservedViews.splice(oldIndex,1)[0];node.hidden=old.hidden;var details=node.querySelector('details');if(details)details.open=old.open===true;node.querySelectorAll('[data-reply-field]').forEach(function(field,index){field.value=old.values[index]||'';if(index===old.focus)field.focus({preventScroll:true});});}if(window.SiyadahReplyView)window.SiyadahReplyView.localize(node,locale==='en');});
     t.siyEmployee=isEmp()?who:null;t.siyEmployeeGeneration=siyGeneration;
     var follow=t.siyList!==list||nearEnd||(list.length>t.siyCount&&list[list.length-1].me);
     t.siyList=list; t.siyCount=list.length; t.scrollTop=follow?t.scrollHeight:scroll;
@@ -707,18 +709,28 @@ var I = {
   $("#newChat").addEventListener("click",newChat);
   $("#hq").addEventListener("input",function(){ filterHist(); if(palOpen) renderPal(); });
 
+  function siyPrepareLocalReply(text){var input=$('#input');if(input.value!==text&&!input.value.endsWith('\n'+text))input.value=(input.value.trim()?input.value+'\n':'')+text;input.focus();}
   /* كل نقرة داخل المحادثة — مستمع واحد */
   $("#thread").addEventListener("click",function(e){
     var t=e.target, list, mEl=t.closest(".m"), mi=mEl?+mEl.dataset.mi:-1;
     if(t.closest("[data-siy-retry]")){ var retryList=curList(); if(retryList&&retryList[mi]&&retryList[mi].siyRetry) retryList[mi].siyRetry(); return; }
     if(t.closest("[data-retry-tools]")){ realTools(); return; }
+    if(t.closest('[data-reply-dismiss]')){t.closest('.adaptive-view').hidden=true;return;}
+    var suggestion=t.closest('[data-reply-suggestion]');
+    if(suggestion){siyPrepareLocalReply(ui('ناقش هذا الاقتراح دون تنفيذه: ','Discuss this suggestion without executing it: ')+suggestion.dataset.replySuggestion);return;}
+    var composeView=t.closest('[data-reply-compose]');
+    if(composeView){
+      var viewSection=composeView.closest('.adaptive-view'),values=[];
+      viewSection.querySelectorAll('[data-reply-field]').forEach(function(field){if(field.value.trim())values.push(field.dataset.replyField+': '+field.value.trim());});
+      if(values.length){siyPrepareLocalReply(values.join('\n'));}return;
+    }
     var adaptiveAction=t.closest('[data-ui-operation]');
     if(adaptiveAction){
       var actionList=curList(),actionRow=actionList&&actionList[mi],action=actionRow&&actionRow.uiActions&&actionRow.uiActions[Number(adaptiveAction.dataset.uiOperation)];
       var target=action&&emp(action.employee_id);
       if(!target||!['edit_employee','review_employee','test_employee'].includes(action.operation_id))return;
       var prompts={edit_employee:ui('أريد تعديل مهارات وتعليمات الموظف «','I want to edit the skills and instructions of employee “')+target.n+ui('». التعديل المطلوب: ','”. Requested change: '),review_employee:ui('راجع جاهزية الموظف «','Review the readiness of employee “')+target.n+ui('» للقراءة فقط وحدد الناقص دون تغيير أو تشغيل.','” read-only and identify gaps without changes or execution.'),test_employee:ui('أريد تجربة الموظف «','I want to test employee “')+target.n+ui('» ببيانات اصطناعية. اعرض خطة الاختبار وأي أثر خارجي للمراجعة قبل التنفيذ.','” with synthetic data. Show the test plan and any external effects for review before execution.')};
-      var actionInput=$('#input');actionInput.value=prompts[action.operation_id];actionInput.focus();return;
+      siyPrepareLocalReply(prompts[action.operation_id]);return;
     }
     if(t.closest("[data-siy-approval]")){ var approvalList=curList(), approvalRow=approvalList&&approvalList[mi]; siyDecideBuilder(approvalRow,t.closest("[data-siy-approval]").dataset.siyApproval); return; }
     if(window.__SIY_REAL__ && t.closest("#instrPrev,[data-save],[data-approve],[data-decide],[data-opt],[data-pv],[data-hcancel],[data-undo]")){ siyUnsupported(); return; }
@@ -1283,6 +1295,10 @@ var I = {
     }
   }
   function siyReplyHtml(text){
+    var view=window.SiyadahReplyView&&window.SiyadahReplyView.parse(text);
+    if(view)return '<p dir="auto">'+esc(view.fallback_text)+'</p>'+view.blocks.map(function(block){return window.SiyadahReplyView.render(document,block,locale==='en');}).join('');
+    var fallback=window.SiyadahReplyView&&window.SiyadahReplyView.fallback(text);
+    if(fallback)return '<p dir="auto">'+esc(fallback)+'</p>';
     // Provider text stays verbatim; escape before adding our own formatting tags.
     function inline(value){ return esc(value).replace(/\*\*([^*\n]+)\*\*/g,"<strong>$1</strong>").replace(/`([^`\n]+)`/g,"<code>$1</code>"); }
     function cells(line){ return line.trim().replace(/^\|/,"").replace(/\|$/,"").split(/(?<!\\)\|/).map(function(cell){return cell.trim().replace(/\\\|/g,"|");}); }

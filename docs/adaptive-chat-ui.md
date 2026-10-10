@@ -13,3 +13,8 @@ Validation: 538 runtime cases, 537 passed, one PostgreSQL integration skipped, z
 This is a foundation implementation, not the complete research vision. Remaining work: optional model-selected schema within the existing model response, schema-aware historical persistence, missing-field forms backed by actual server contracts, genuine incremental transport/rendering, and a comparison experiment measuring first useful result, clicks, task completion, execution errors and token usage. Streaming cannot be replaced with a cosmetic typing animation. Optional expanded journeys must follow customer intent, not be compulsory. No migration to React, automatic external action, deployment or live provider acceptance occurred.
 
 Release requires fresh end-to-end main/employee chat acceptance on the candidate SHA, real provider evidence for any claimed result, PostgreSQL isolation/recovery checks, and explicit production authorization. Reverting this presentation change requires no database rollback.
+
+
+## Adaptive contract extension — 10 October 2026
+
+The optional model-selected plan/form/table/suggestion contract now shares one parser between server and browser. Historical message text can replay the validated presentation; local field values/details/dismissal survive redraw without crossing conversations, controls relocalize, and repeated prepare clicks do not duplicate the unsent input. No model-defined executable actions or results are accepted. See adaptive-experience-contract.md and adaptive-experience-audit.md for the exact scope, usage/pricing measurement and remaining live acceptance. Streaming, 100-journey comparison and live sales-employee outcome remain unproved.
